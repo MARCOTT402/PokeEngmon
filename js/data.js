@@ -326,7 +326,7 @@ function questionsFromCSV(text) {
     const [topic, sentence, answerRaw, keyword, hint] = c;
     if (!topic || !sentence || !answerRaw || !sentence.includes("___")) { skipped++; return; }
 
-    const answers = answerRaw.split("|").map(s => s.trim()).filter(Boolean);
+    const answers = answerRaw.split(/[|/]/).map(s => s.trim()).filter(Boolean);
     if (answers.length === 0) { skipped++; return; }
 
     questions.push({

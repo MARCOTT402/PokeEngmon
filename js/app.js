@@ -191,8 +191,8 @@ const App = {
             <ul>
               <li><b>題型</b>：分類名（同名會歸入同一題型）</li>
               <li><b>句子</b>：必須有 <code>___</code>（三個底線）做空位</li>
-              <li><b>答案</b>：正確答案；多個可接受答案用 <code>|</code> 分隔</li>
-              <li><b>關鍵詞</b>（可留空）：句子內要著色嘅詞語</li>
+              <li><b>答案</b>：正確答案；多個可接受答案用 <code>|</code> 或 <code>/</code> 分隔（如 <code>were not / weren't</code>）</li>
+              <li><b>關鍵詞</b>（可留空）：句子內要著色嘅詞語，多個用 <code>/</code> 分隔（箭咀會由每個詞指去空位）</li>
               <li><b>提示</b>（可留空）：答錯時顯示嘅短解釋</li>
             </ul>
             <p><b>例子：</b></p>
@@ -251,12 +251,26 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
       return;
     }
     const st = loadState();
-    st.customQuestions = (st.customQuestions || []).concat(questions);
+    /* 防重複：同題型＋同句子＋同答案已存在就跳過（重新匯入唔會令題目加倍） */
+    const seen = new Set((st.customQuestions || []).map(q => `${q.topic}\u0001${q.sentence}\u0001${q.answer}`));
+    let added = 0;
+    questions.forEach(q => {
+      const key = `${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      (st.customQuestions = st.customQuestions || []).push(q);
+      added++;
+    });
     saveState();
     this.closeModal();
     this.selectedTopics = new Set(getTopics().map(t => t.topic));   // 新題型自動選上
     this.renderSetup();
-    this.toast(`成功匯入 ${questions.length} 題${skipped > 0 ? `（${skipped} 行略過）` : ""}！`);
+    if (added === 0) {
+      this.toast("啲題目之前已經匯入咗，冇重複加入");
+    } else {
+      const dup = questions.length - added;
+      this.toast(`成功匯入 ${added} 題${dup > 0 ? `（${dup} 題重複略過）` : ""}${skipped > 0 ? `，${skipped} 行格式唔啱略過` : ""}！`);
+    }
   },
 
   /* ---------- 完成一組 → 結算 ---------- */
