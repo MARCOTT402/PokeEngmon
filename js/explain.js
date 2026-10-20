@@ -53,13 +53,20 @@ const Explain = {
     window.addEventListener("resize", () => this._drawArrow(sentBox, sent, svg));
   },
 
-  /* 句子 HTML：___ → 藍色空位；keyword → 黃色底 */
+  /* 句子 HTML：___ → 藍色空位；keyword → 黃色底（不分大小寫） */
   _buildSentenceHTML(q) {
     let html = escapeHTML(q.sentence);
     html = html.replace(/___/, `<span class="ex-blank">&nbsp;___&nbsp;</span>`);
     const kw = q.explain.keyword;
-    if (kw && html.includes(escapeHTML(kw))) {
-      html = html.replace(escapeHTML(kw), `<span class="ex-keyword">${escapeHTML(kw)}</span>`);
+    if (kw) {
+      const esc = escapeHTML(kw);
+      const lower = html.toLowerCase();
+      const idx = lower.indexOf(esc.toLowerCase());
+      if (idx !== -1) {
+        html = html.slice(0, idx) +
+          `<span class="ex-keyword">` + html.slice(idx, idx + esc.length) + `</span>` +
+          html.slice(idx + esc.length);
+      }
     }
     return html;
   },
