@@ -88,6 +88,18 @@ const Explain = {
     return html.replace(/\u0001/, `<span class="ex-blank">&nbsp;___&nbsp;</span>`);
   },
 
+  /* 揀最接近目標 x 嘅文字 fragment：關鍵詞換行嗰陣 getBoundingClientRect 會俾成舖 union rect，起點會指錯位 */
+  _nearestFragment(el, targetX) {
+    const rects = [...el.getClientRects()];
+    if (rects.length <= 1) return el.getBoundingClientRect();
+    let best = rects[0], bestD = Infinity;
+    rects.forEach(r => {
+      const d = Math.abs(r.left + r.width / 2 - targetX);
+      if (d < bestD) { bestD = d; best = r; }
+    });
+    return best;
+  },
+
   /* 由每個關鍵詞畫彎曲箭咀去空位（多個關鍵詞 → 多條箭咀） */
   _drawArrow(wrap, sent, svg) {
     const blank = sent.querySelector(".ex-blank");
@@ -96,10 +108,11 @@ const Explain = {
 
     const wRect = wrap.getBoundingClientRect();
     const b = blank.getBoundingClientRect();
+    const bx = b.left + b.width / 2;
     const y2 = b.top - wRect.top - 3;
 
     const paths = kws.map((kw, i) => {
-      const k = kw.getBoundingClientRect();
+      const k = this._nearestFragment(kw, bx);
       const x1 = k.left + k.width / 2 - wRect.left;
       const y1 = k.top - wRect.top - 3;
       /* 多條箭咀喺空位度散開啲，唔會疊埋一齊 */
