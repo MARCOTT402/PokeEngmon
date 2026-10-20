@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PokeEngmon">
+  <meta name="theme-color" content="#ffcb05">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>PokeEngmon - Isaac 英文練習</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ 主畫面 ============ -->
+    <section id="view-home" class="view">
+      <header class="topbar">
+        <div class="topbar-name" id="topbar-name">Isaac</div>
+        <div class="topbar-res">
+          <span class="chip chip-diamond">💎 <b id="topbar-diamonds">0</b></span>
+          <span class="chip chip-ticket">🎫 普通抽 <b id="topbar-pulls">0</b></span>
+        </div>
+      </header>
+
+      <div class="home-hero">
+        <div class="hero-label" id="hero-label">我嘅拍檔</div>
+        <div class="hero-card" id="hero-card">
+          <img id="hero-sprite" class="hero-sprite" alt="我的 Pokemon">
+          <div class="hero-info">
+            <div class="hero-name" id="hero-name">未有 Pokemon</div>
+            <div class="hero-stage" id="hero-stage"></div>
+            <div class="expbar"><i id="hero-expbar"></i></div>
+            <div class="hero-exp-text" id="hero-exp-text">完成題目 → 抽 Pokemon！</div>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-start-quiz" class="btn-big btn-primary">▶ 開始做題（10 題）</button>
+
+      <div class="home-nav">
+        <button id="btn-home-pokedex" class="btn-big btn-secondary">📕 圖鑑 <span id="home-dex-progress" class="nav-badge"></span></button>
+        <button id="btn-home-calendar" class="btn-big btn-secondary">📅 練習日曆</button>
+      </div>
+
+      <footer class="home-stats" id="home-stats"></footer>
+    </section>
+
+    <!-- ============ 題型選擇（做題前） ============ -->
+    <section id="view-quiz-setup" class="view">
+      <h2 class="setup-title">📚 揀題型</h2>
+      <p class="setup-sub">揀想練習嘅題型，題目會由入面隨機抽取</p>
+      <div class="setup-mini-row">
+        <button id="btn-topic-all" class="btn-mini">全選</button>
+        <button id="btn-topic-none" class="btn-mini">全唔選</button>
+      </div>
+      <div id="topic-list" class="topic-list"></div>
+      <div id="custom-q-count" class="custom-q-count"></div>
+      <button id="btn-setup-start" class="btn-big btn-primary">▶ 開始做題</button>
+      <button id="btn-import-csv" class="btn-big btn-secondary">📥 匯入 CSV 題目</button>
+      <button id="btn-setup-back" class="btn-big btn-plain">返回主頁</button>
+    </section>
+
+    <!-- ============ 做題 ============ -->
+    <section id="view-quiz" class="view">
+      <div class="quiz-top">
+        <span class="quiz-progress" id="quiz-progress">1 / 10</span>
+        <span class="quiz-timer" id="quiz-timer">⏱ 0:00</span>
+      </div>
+      <div class="progressbar"><i id="quiz-bar"></i></div>
+      <div class="quiz-topic" id="quiz-topic"></div>
+      <div class="quiz-card">
+        <div class="quiz-sentence" id="quiz-sentence"></div>
+      </div>
+      <div class="quiz-answer-box">
+        <input id="quiz-answer" class="quiz-answer-input" type="text"
+               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="喺度打答案…">
+        <button id="btn-quiz-submit" class="btn-big btn-primary">提交 ✔</button>
+      </div>
+      <div class="quiz-feedback" id="quiz-feedback"></div>
+    </section>
+
+    <!-- ============ 結算 ============ -->
+    <section id="view-settlement" class="view">
+      <h2 class="settle-title" id="settle-title">做完喇！</h2>
+      <div class="settle-score" id="settle-score"></div>
+      <div class="settle-rewards" id="settle-rewards"></div>
+      <div class="settle-buttons">
+        <button id="btn-pull-normal" class="btn-big btn-primary">🎯 立即普通抽</button>
+        <button id="btn-pull-rare" class="btn-big btn-rare">💎 用鑽石抽稀有</button>
+        <button id="btn-review" class="btn-big btn-secondary">📖 先睇今次錯題</button>
+        <button id="btn-settle-home" class="btn-big btn-plain">返回主頁</button>
+      </div>
+    </section>
+
+    <!-- ============ 錯題解釋 ============ -->
+    <section id="view-review" class="view">
+      <h2 class="review-title">📖 錯題解釋</h2>
+      <div id="review-list" class="review-list"></div>
+      <button id="btn-review-back" class="btn-big btn-secondary">返回</button>
+    </section>
+
+    <!-- ============ 抽獎 ============ -->
+    <section id="view-gacha" class="view">
+      <h2 class="gacha-title" id="gacha-title">🎯 扭蛋機</h2>
+      <div class="gacha-stage" id="gacha-stage">
+        <div class="gacha-machine" id="gacha-machine">
+          <div class="gacha-dome">
+            <span class="mini-ball mb-red"></span>
+            <span class="mini-ball mb-blue"></span>
+            <span class="mini-ball mb-red"></span>
+            <span class="mini-ball mb-blue"></span>
+            <span class="mini-ball mb-red"></span>
+          </div>
+          <div class="gacha-body">
+            <div class="gacha-coin-slot" id="gacha-coin-slot"></div>
+            <div class="gacha-knob"></div>
+            <div class="gacha-outlet"></div>
+          </div>
+        </div>
+        <div class="gacha-flash" id="gacha-flash"></div>
+        <div class="gacha-dropzone" id="gacha-dropzone"></div>
+        <div class="gacha-result" id="gacha-result"></div>
+      </div>
+      <div class="gacha-controls">
+        <button id="btn-do-pull" class="btn-big btn-primary">投入硬幣，開始抽！</button>
+        <button id="btn-gacha-home" class="btn-big btn-plain">返回主頁</button>
+      </div>
+    </section>
+
+    <!-- ============ 圖鑑 ============ -->
+    <section id="view-pokedex" class="view">
+      <h2 class="dex-title">📕 圖鑑</h2>
+      <div class="dex-progress" id="dex-progress"></div>
+      <div id="pokedex-grid" class="pokedex-grid"></div>
+      <button id="btn-dex-back" class="btn-big btn-secondary">返回主頁</button>
+    </section>
+
+    <!-- ============ 日曆 ============ -->
+    <section id="view-calendar" class="view">
+      <div class="cal-header">
+        <button id="btn-cal-prev" class="btn-nav">‹</button>
+        <h2 id="cal-month-label">2026年10月</h2>
+        <button id="btn-cal-next" class="btn-nav">›</button>
+      </div>
+      <div class="cal-weekdays" id="cal-weekdays"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend" id="cal-legend"></div>
+      <button id="btn-cal-back" class="btn-big btn-secondary">返回主頁</button>
+    </section>
+
+    <!-- Modal / Toast -->
+    <div id="modal-root"></div>
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/explain.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/gacha.js"></script>
+  <script src="js/pokedex.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
