@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" href="icons/icon-192.png">
   <title>The PokéEngmon Trainer | PokeEngmon</title>
-  <link rel="stylesheet" href="css/style.css?v=21">
+  <link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
   <div id="app">
@@ -27,24 +27,40 @@
         </div>
       </header>
 
-      <div class="home-hero">
-        <div class="hero-label" id="hero-label">My Partner</div>
-        <div class="hero-card" id="hero-card">
-          <img id="hero-sprite" class="hero-sprite" alt="My Pokémon">
-          <div class="hero-info">
+      <div class="pokedex-device">
+        <div class="pd-top" aria-hidden="true">
+          <svg class="pd-seam" viewBox="0 0 400 60" preserveAspectRatio="none">
+            <path d="M0 48 H115 C145 48 150 26 185 26 H400" fill="none" stroke="#8a1712" stroke-width="2.5"/>
+          </svg>
+          <span class="pd-lens"></span>
+          <span class="pd-ball"></span>
+        </div>
+
+        <div class="pd-screen">
+          <div class="pd-hero">
+            <div class="hero-label" id="hero-label">My Partner</div>
+            <img id="hero-sprite" class="hero-sprite" alt="My Pokémon">
             <div class="hero-name" id="hero-name">No Pokémon yet</div>
             <div class="hero-stage" id="hero-stage"></div>
             <div class="expbar"><i id="hero-expbar"></i></div>
             <div class="hero-exp-text" id="hero-exp-text">Answer questions → pull a Pokémon!</div>
           </div>
+
+          <nav class="pd-menu">
+            <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
+            <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
+            <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
+          </nav>
         </div>
-      </div>
 
-      <button id="btn-start-quiz" class="btn-big btn-primary">▶ Start Quiz (10 questions)</button>
-
-      <div class="home-nav">
-        <button id="btn-home-pokedex" class="btn-big btn-secondary">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
-        <button id="btn-home-calendar" class="btn-big btn-secondary">📅 Practice Calendar</button>
+        <div class="pd-bottom" aria-hidden="true">
+          <div class="pd-greenbar"></div>
+          <div class="pd-controls">
+            <span class="pd-dpad"><i></i></span>
+            <span class="pd-screen-btn"></span>
+            <span class="pd-rounds"><i class="pd-round-red"></i><i class="pd-round-green"></i></span>
+          </div>
+        </div>
       </div>
 
       <footer class="home-stats" id="home-stats"></footer>
@@ -167,14 +183,14 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="js/data.js?v=21"></script>
-  <script src="js/pokemon.js?v=21"></script>
-  <script src="js/storage.js?v=21"></script>
-  <script src="js/explain.js?v=21"></script>
-  <script src="js/quiz.js?v=21"></script>
-  <script src="js/gacha.js?v=21"></script>
-  <script src="js/pokedex.js?v=21"></script>
-  <script src="js/calendar.js?v=21"></script>
-  <script src="js/app.js?v=21"></script>
+  <script src="js/data.js?v=24"></script>
+  <script src="js/pokemon.js?v=24"></script>
+  <script src="js/storage.js?v=24"></script>
+  <script src="js/explain.js?v=24"></script>
+  <script src="js/quiz.js?v=24"></script>
+  <script src="js/gacha.js?v=24"></script>
+  <script src="js/pokedex.js?v=24"></script>
+  <script src="js/calendar.js?v=24"></script>
+  <script src="js/app.js?v=24"></script>
 </body>
 </html>
