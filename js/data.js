@@ -334,20 +334,39 @@ function getCourses() {
   });
 }
 
-/* 由指定題型隨機抽一組題目（不重複）。keys 為空陣列＝全部題型 */
-function drawQuestionSet(size, keys) {
+/* 可作答題目：已揀題型，而且記憶曲線夠鐘（未做過＝即時可答） */
+function availableQuestions(keys) {
   let pool = getAllQuestions();
   if (keys && keys.length > 0) {
     const allow = new Set(keys);
     pool = pool.filter(q => allow.has(questionTopicKey(q)));
   }
-  pool = pool.slice();
-  const set = [];
-  while (set.length < size && pool.length > 0) {
-    const i = Math.floor(Math.random() * pool.length);
-    set.push(pool.splice(i, 1)[0]);
-  }
-  return set;
+  const now = Date.now();
+  return pool.filter(q => srsDue(q, now));
+}
+
+/* 抽一組題目：記憶曲線 stage 越高越優先
+   （30 → 14 → 7 → 2 → 1 → 0.5 → 0），同 stage 內隨機；未夠鐘嘅題目唔會抽 */
+function drawQuestionSet(size, keys) {
+  const pool = availableQuestions(keys);
+  const byStage = new Map();
+  pool.forEach(q => {
+    const s = srsStage(q);
+    if (!byStage.has(s)) byStage.set(s, []);
+    byStage.get(s).push(q);
+  });
+
+  const ordered = [];
+  [...byStage.keys()].sort((a, b) => b - a).forEach(s => {
+    const arr = byStage.get(s);
+    for (let i = arr.length - 1; i > 0; i--) {   // Fisher-Yates 洗牌
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    ordered.push(...arr);
+  });
+
+  return ordered.slice(0, size);
 }
 
 /* ---------- CSV 匯入 ----------

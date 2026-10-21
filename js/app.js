@@ -224,12 +224,15 @@ const App = {
     });
 
     const selCount = this.selectedTopics.size;
-    const qCount = getAllQuestions().filter(q => this.selectedTopics.has(questionTopicKey(q))).length;
+    /* 記憶曲線：未夠鐘嘅題目唔計（使用者唔會見到原因） */
+    const qCount = availableQuestions([...this.selectedTopics]).length;
     const startBtn = document.getElementById("btn-setup-start");
-    startBtn.disabled = selCount === 0;
+    startBtn.disabled = selCount === 0 || qCount === 0;
     startBtn.textContent = selCount === 0
       ? "請最少揀一個題型"
-      : `▶ 開始做題（${Math.min(GAME_CONFIG.SET_SIZE, qCount)} 題）`;
+      : qCount === 0
+        ? "暫時冇題目，轉頭再嚟"
+        : `▶ 開始做題（${Math.min(GAME_CONFIG.SET_SIZE, qCount)} 題）`;
 
     /* 題目來源數量 */
     const st = loadState();

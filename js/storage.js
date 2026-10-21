@@ -17,7 +17,8 @@ function defaultState() {
     entries: [],             // 擁有嘅 Pokemon { uid, chainKey, stage, exp, branch?, ownedSpecies:[dexId], obtainedAt }
     activeUid: null,         // 最近獲得（練經驗目標）
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
-    customQuestions: []      // 家長用 CSV 匯入嘅自訂題目
+    customQuestions: [],      // 家長用 CSV 匯入嘅自訂題目
+    srs: {}                   // 記憶曲線（隱藏）：題目 key → { stage, lastAt, dueAt }
   };
 }
 
@@ -127,6 +128,47 @@ function collectedCount() {
   const set = new Set();
   st.entries.forEach(e => e.ownedSpecies.forEach(id => set.add(id)));
   return set.size;
+}
+
+/* ---------- 記憶曲線（間隔重複，隱藏功能） ----------
+   stage 0 → 0.5 → 1 → 2 → 7 → 14 → 30
+   答對升一級，答錯一律返 stage 0；stage 30 答對維持 30
+   各階段最少要相隔指定分鐘先可以再答 */
+const SRS_STAGES = [0, 0.5, 1, 2, 7, 14, 30];
+const SRS_INTERVAL_MIN = { 0: 0, 0.5: 20, 1: 1440, 2: 2880, 7: 10080, 14: 20160, 30: 43200 };
+
+function srsRecord(q) {
+  return loadState().srs[questionKey(q)] || null;
+}
+
+function srsStage(q) {
+  const r = srsRecord(q);
+  return r && typeof r.stage === "number" ? r.stage : 0;
+}
+
+/* 夠鐘未？未做過 = 即時可以答 */
+function srsDue(q, now) {
+  const r = srsRecord(q);
+  return !r || r.dueAt <= (now || Date.now());
+}
+
+/* 答題後更新階段 */
+function updateSrs(q, correct, now) {
+  const st = loadState();
+  const key = questionKey(q);
+  const rec = st.srs[key] || { stage: 0 };
+  const t = now || Date.now();
+  let next = 0;
+  if (correct) {
+    const i = SRS_STAGES.indexOf(rec.stage);
+    next = SRS_STAGES[Math.min(i + 1, SRS_STAGES.length - 1)];
+  }
+  st.srs[key] = {
+    stage: next,
+    lastAt: t,
+    dueAt: t + (SRS_INTERVAL_MIN[next] || 0) * 60000
+  };
+  saveState();
 }
 
 /* ---------- 練習記錄 ---------- */

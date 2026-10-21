@@ -15,7 +15,7 @@ const Quiz = {
   start(topics) {
     this.set = drawQuestionSet(GAME_CONFIG.SET_SIZE, topics);
     if (this.set.length === 0) {
-      App.toast("冇題目可以做，請先匯入題目！");
+      App.toast("暫時冇題目，轉頭再嚟！");
       return;
     }
     this.idx = 0;
@@ -107,6 +107,7 @@ const Quiz = {
     const q = this.set[this.idx];
     const correct = this._isCorrect(q, text);
     this.results.push({ qid: q.id, chosen: text.trim(), correct, topic: q.topic });
+    updateSrs(q, correct);   // 記憶曲線（隱藏）
 
     input.disabled = true;
     document.getElementById("btn-quiz-submit").disabled = true;
