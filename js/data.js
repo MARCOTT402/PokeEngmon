@@ -240,6 +240,26 @@ const QUESTION_BANK = [
 /* 網站題目（根目錄 questions.csv，開網站時自動載入） */
 let SITE_QUESTIONS = [];
 
+/* 內建題庫冇課題／難度欄，用題型對應返 */
+const TOPIC_DEFAULTS = {
+  "There is / There are": { course: "基本句型", level: 1 },
+  "am / is / are":        { course: "基本句型", level: 1 },
+  "This / That":          { course: "基本句型", level: 2 },
+  "a / an":               { course: "冠詞與名詞", level: 1 },
+  "加 s":                  { course: "冠詞與名詞", level: 2 },
+  "have / has":           { course: "動詞與擁有", level: 1 },
+  "位置字":                { course: "位置與時間", level: 1 },
+  "疑問詞":                { course: "疑問詞", level: 2 }
+};
+
+/* 題型選擇鍵：同名題型可以出現在唔同課題，所以用「課題＋題型」做 key */
+function topicKey(course, topic) {
+  return `${course}\u0001${topic}`;
+}
+function questionTopicKey(q) {
+  return topicKey(q.course, q.topic);
+}
+
 /* 題目唯一鍵：同題型＋同句子＋同答案＝同一題 */
 function questionKey(q) {
   return `${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
@@ -252,6 +272,14 @@ function hashString(str) {
   return h.toString(36);
 }
 
+/* 補齊課題／難度（舊資料或內建題庫） */
+function normalizeQuestion(q) {
+  const d = TOPIC_DEFAULTS[q.topic] || {};
+  if (!q.course) q.course = d.course || "未分類";
+  if (!q.level) q.level = d.level || 1;
+  return q;
+}
+
 /* 載入網站題庫。失敗（例如用 file:// 開）就靜靜用返內建題庫 */
 async function loadSiteQuestions() {
   try {
@@ -259,6 +287,7 @@ async function loadSiteQuestions() {
     if (!res.ok) return 0;
     const { questions } = questionsFromCSV(await res.text());
     questions.forEach(q => {
+      normalizeQuestion(q);
       q.id = "s" + hashString(questionKey(q));
       q.custom = false;
     });
@@ -276,6 +305,7 @@ function getAllQuestions() {
   const out = [];
   [QUESTION_BANK, SITE_QUESTIONS, st.customQuestions || []].forEach(list => {
     list.forEach(q => {
+      q = normalizeQuestion(q);
       const k = questionKey(q);
       if (!seen.has(k)) { seen.add(k); out.push(q); }
     });
@@ -288,21 +318,26 @@ function findQuestion(qid) {
   return getAllQuestions().find(q => q.id === qid) || null;
 }
 
-/* 題型一覽：[{ topic, count }]，按題庫出現次序 */
-function getTopics() {
+/* 課題一覽：[{ course, count, topics: [{ key, topic, count }] }]，按題庫出現次序 */
+function getCourses() {
   const map = new Map();
   getAllQuestions().forEach(q => {
-    map.set(q.topic, (map.get(q.topic) || 0) + 1);
+    if (!map.has(q.course)) map.set(q.course, new Map());
+    const tm = map.get(q.course);
+    tm.set(q.topic, (tm.get(q.topic) || 0) + 1);
   });
-  return [...map.entries()].map(([topic, count]) => ({ topic, count }));
+  return [...map].map(([course, tm]) => {
+    const topics = [...tm].map(([topic, count]) => ({ key: topicKey(course, topic), topic, count }));
+    return { course, topics, count: topics.reduce((s, t) => s + t.count, 0) };
+  });
 }
 
-/* 由指定題型隨機抽一組題目（不重複）。topics 為空陣列＝全部題型 */
-function drawQuestionSet(size, topics) {
+/* 由指定題型隨機抽一組題目（不重複）。keys 為空陣列＝全部題型 */
+function drawQuestionSet(size, keys) {
   let pool = getAllQuestions();
-  if (topics && topics.length > 0) {
-    const allow = new Set(topics);
-    pool = pool.filter(q => allow.has(q.topic));
+  if (keys && keys.length > 0) {
+    const allow = new Set(keys);
+    pool = pool.filter(q => allow.has(questionTopicKey(q)));
   }
   pool = pool.slice();
   const set = [];
@@ -314,14 +349,16 @@ function drawQuestionSet(size, topics) {
 }
 
 /* ---------- CSV 匯入 ----------
-   格式（每行一題，逗號分隔，可用雙引號包住內容）：
-     題型,句子,答案,關鍵詞,提示
-   - 題型：分類名；同名歸入同一題型
+   新格式（7 欄）：課題,題型,難度,句子,答案,關鍵詞,提示
+   舊格式（5 欄）：題型,句子,答案,關鍵詞,提示（課題＝未分類、難度＝1）
+   - 課題：大分類（例如「過去式」）；同一個課題下面可以有多個題型
+   - 題型：課題入面嘅小分類；同名歸入同一題型
+   - 難度：1、2、3、4…（答題時顯示同等數量嘅星星）
    - 句子：必須有 ___ （三個底線）做空位
-   - 答案：正確答案；多個可接受答案用 | 分隔（例：is|'s）
-   - 關鍵詞（可留空）：句子內要 highlight 嘅詞語
+   - 答案：正確答案；多個可接受答案用 | 或 / 分隔（例：were not / weren't）
+   - 關鍵詞（可留空）：句子內要 highlight 嘅詞語，多個用 / 分隔
    - 提示（可留空）：答錯時顯示嘅短解釋
-   第一行如果係標題（含「題型」或 "topic"）會自動略過 */
+   第一行如果係標題（第一格係「課題」或「題型」）會自動略過 */
 
 function parseCSV(text) {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);   // 去除 UTF-8 BOM
@@ -358,20 +395,38 @@ function questionsFromCSV(text) {
   const questions = [];
   let skipped = 0;
   const stamp = Date.now().toString(36);
+  if (rows.length === 0) return { questions, skipped };
+
+  /* 判斷新舊格式：第一行有 7 欄，或者第一格寫「課題／課程」 */
+  const firstRow = rows[0].map(s => s.trim());
+  const isNew = firstRow.length >= 7 || /^(課題|課程|course)$/i.test(firstRow[0] || "");
 
   rows.forEach((cols, idx) => {
     const c = cols.map(s => s.trim());
-    /* 略過標題行（第一格啱啱好係「題型」或 "topic" 先當標題） */
-    if (idx === 0 && /^(題型|topic)$/i.test(c[0] || "")) return;
-    const [topic, sentence, answerRaw, keyword, hint] = c;
-    if (!topic || !sentence || !answerRaw || !sentence.includes("___")) { skipped++; return; }
+    /* 略過標題行（第一格啱啱好係「課題」或「題型」先當標題） */
+    if (idx === 0 && /^(課題|課程|題型|course|topic)$/i.test(c[0] || "")) return;
+
+    let course, topic, levelRaw, sentence, answerRaw, keyword, hint;
+    if (isNew) {
+      [course, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+    } else {
+      [topic, sentence, answerRaw, keyword, hint] = c;
+      course = "未分類";
+      levelRaw = "1";
+    }
+
+    if (!course || !topic || !sentence || !answerRaw || !sentence.includes("___")) { skipped++; return; }
 
     const answers = answerRaw.split(/[|/]/).map(s => s.trim()).filter(Boolean);
     if (answers.length === 0) { skipped++; return; }
 
+    const level = Math.min(9, Math.max(1, parseInt(levelRaw, 10) || 1));
+
     questions.push({
       id: `c${stamp}-${questions.length}`,
+      course,
       topic,
+      level,
       sentence,
       answer: answers[0],
       accept: answers.slice(1),

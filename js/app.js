@@ -138,33 +138,93 @@ const App = {
     });
   },
 
-  /* ---------- 題型選擇（做題前） ---------- */
+  /* ---------- 題型選擇（做題前）：先揀課題，再展開揀個別題型 ---------- */
   openSetup() {
-    this.selectedTopics = new Set(getTopics().map(t => t.topic));   // 預設全選
+    this.selectedTopics = new Set(getCourses().flatMap(c => c.topics.map(t => t.key)));
+    this._expanded = new Set();
     this.renderSetup();
     this.showView("view-quiz-setup");
   },
 
+  _allTopicKeys() {
+    return getCourses().flatMap(c => c.topics.map(t => t.key));
+  },
+
   renderSetup() {
-    const topics = getTopics();
+    const courses = getCourses();
     const list = document.getElementById("topic-list");
     list.innerHTML = "";
+    if (!this._expanded) this._expanded = new Set();
 
-    topics.forEach(({ topic, count }) => {
-      const on = this.selectedTopics.has(topic);
-      const btn = document.createElement("button");
-      btn.className = "topic-chip" + (on ? " on" : "");
-      btn.innerHTML = `<span class="topic-name">${escapeHTML(topic)}</span><span class="topic-count">${count} 題</span>`;
-      btn.onclick = () => {
-        if (this.selectedTopics.has(topic)) this.selectedTopics.delete(topic);
-        else this.selectedTopics.add(topic);
+    courses.forEach(({ course, topics, count }) => {
+      const keys = topics.map(t => t.key);
+      const sel = keys.filter(k => this.selectedTopics.has(k)).length;
+      const all = sel === keys.length;
+      const open = this._expanded.has(course);
+
+      const card = document.createElement("div");
+      card.className = "course-card" + (all ? " course-all" : "") + (open ? " open" : "");
+
+      /* 課題列：☑ 一次過全選／取消成個課題；撳名或箭咀展開題型 */
+      const head = document.createElement("div");
+      head.className = "course-head";
+      head.innerHTML = `
+        <span class="course-check" role="checkbox" aria-checked="${all}">${all ? "☑" : sel > 0 ? "◩" : "☐"}</span>
+        <span class="course-name">${escapeHTML(course)}</span>
+        <span class="course-count">${sel}/${keys.length} 題型 · ${count} 題</span>
+        <span class="course-arrow">${open ? "▾" : "▸"}</span>`;
+      head.querySelector(".course-check").onclick = (e) => {
+        e.stopPropagation();
+        if (all) keys.forEach(k => this.selectedTopics.delete(k));
+        else keys.forEach(k => this.selectedTopics.add(k));
         this.renderSetup();
       };
-      list.appendChild(btn);
+      head.onclick = () => {
+        if (open) this._expanded.delete(course);
+        else this._expanded.add(course);
+        this.renderSetup();
+      };
+      card.appendChild(head);
+
+      /* 展開後：課題入面嘅個別題型 */
+      if (open) {
+        const box = document.createElement("div");
+        box.className = "course-topics";
+
+        const mini = document.createElement("div");
+        mini.className = "setup-mini-row course-mini-row";
+        const bAll = document.createElement("button");
+        bAll.className = "btn-mini";
+        bAll.textContent = "全選此課題";
+        bAll.onclick = () => { keys.forEach(k => this.selectedTopics.add(k)); this.renderSetup(); };
+        const bNone = document.createElement("button");
+        bNone.className = "btn-mini";
+        bNone.textContent = "全唔選";
+        bNone.onclick = () => { keys.forEach(k => this.selectedTopics.delete(k)); this.renderSetup(); };
+        mini.appendChild(bAll);
+        mini.appendChild(bNone);
+        box.appendChild(mini);
+
+        topics.forEach(({ topic, count: n, key }) => {
+          const on = this.selectedTopics.has(key);
+          const b = document.createElement("button");
+          b.className = "topic-chip" + (on ? " on" : "");
+          b.innerHTML = `<span class="topic-name">${escapeHTML(topic)}</span><span class="topic-count">${n} 題</span>`;
+          b.onclick = () => {
+            if (on) this.selectedTopics.delete(key);
+            else this.selectedTopics.add(key);
+            this.renderSetup();
+          };
+          box.appendChild(b);
+        });
+        card.appendChild(box);
+      }
+
+      list.appendChild(card);
     });
 
     const selCount = this.selectedTopics.size;
-    const qCount = getAllQuestions().filter(q => this.selectedTopics.has(q.topic)).length;
+    const qCount = getAllQuestions().filter(q => this.selectedTopics.has(questionTopicKey(q))).length;
     const startBtn = document.getElementById("btn-setup-start");
     startBtn.disabled = selCount === 0;
     startBtn.textContent = selCount === 0
@@ -189,20 +249,22 @@ const App = {
         <details class="csv-guide">
           <summary>📖 CSV 格式指引（撳開睇）</summary>
           <div class="csv-guide-body">
-            <p><b>每行一題，5 欄，用逗號分隔：</b></p>
-            <pre>題型,句子,答案,關鍵詞,提示</pre>
+            <p><b>每行一題，7 欄，用逗號分隔：</b></p>
+            <pre>課題,題型,難度,句子,答案,關鍵詞,提示</pre>
             <ul>
-              <li><b>題型</b>：分類名（同名會歸入同一題型）</li>
+              <li><b>課題</b>：大分類（例如 <code>過去式</code>）；同一課題下面可以有多個題型</li>
+              <li><b>題型</b>：課題入面嘅小分類（例如 <code>動詞過去式</code>）；同名會歸入同一題型</li>
+              <li><b>難度</b>：數字 <code>1</code>、<code>2</code>、<code>3</code>、<code>4</code>…（答題時顯示同等數量嘅 ★）</li>
               <li><b>句子</b>：必須有 <code>___</code>（三個底線）做空位</li>
               <li><b>答案</b>：正確答案；多個可接受答案用 <code>|</code> 或 <code>/</code> 分隔（如 <code>were not / weren't</code>）</li>
               <li><b>關鍵詞</b>（可留空）：句子內要著色嘅詞語，多個用 <code>/</code> 分隔（箭咀會由每個詞指去空位）</li>
               <li><b>提示</b>（可留空）：答錯時顯示嘅短解釋</li>
             </ul>
             <p><b>例子：</b></p>
-            <pre>題型,句子,答案,關鍵詞,提示
-am / is / are,She ___ my sister.,is,She,一個人 → is
-疑問詞,___ is your name?,What|what,name,問名 → What</pre>
-            <p class="csv-note">⚠ 第一行如果係標題行（第一格寫「題型」）會自動略過。內容有逗號請用雙引號包住。</p>
+            <pre>課題,題型,難度,句子,答案,關鍵詞,提示
+過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went
+基本句型,am / is / are,1,She ___ my sister.,is,She,一個人 → is</pre>
+            <p class="csv-note">⚠ 第一行如果係標題行（第一格寫「課題」）會自動略過。內容有逗號請用雙引號包住。<br>舊版 5 欄格式（題型,句子,答案,關鍵詞,提示）都仍然匯入得，會當成「未分類」、難度 1。</p>
           </div>
         </details>
 
@@ -210,7 +272,7 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
         <input type="file" id="csv-file" accept=".csv,text/csv,text/plain" class="import-file">
 
         <label class="import-label">方法二：直接貼上內容</label>
-        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="題型,句子,答案,關鍵詞,提示&#10;am / is / are,She ___ my sister.,is,She,一個人 → is"></textarea>
+        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="課題,題型,難度,句子,答案,關鍵詞,提示&#10;過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went"></textarea>
 
         <div class="confirm-row">
           <button id="btn-do-import" class="btn-big btn-primary">匯入</button>
@@ -266,7 +328,7 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
     });
     saveState();
     this.closeModal();
-    this.selectedTopics = new Set(getTopics().map(t => t.topic));   // 新題型自動選上
+    this.selectedTopics = new Set(this._allTopicKeys());   // 新題型自動選上
     this.renderSetup();
     if (added === 0) {
       this.toast("啲題目之前已經匯入咗，冇重複加入");
@@ -419,7 +481,7 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
     /* 題型選擇畫面 */
     document.getElementById("btn-setup-start").onclick = () => Quiz.start([...this.selectedTopics]);
     document.getElementById("btn-topic-all").onclick = () => {
-      this.selectedTopics = new Set(getTopics().map(t => t.topic));
+      this.selectedTopics = new Set(this._allTopicKeys());
       this.renderSetup();
     };
     document.getElementById("btn-topic-none").onclick = () => {

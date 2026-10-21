@@ -43,7 +43,10 @@ const Quiz = {
 
     document.getElementById("quiz-progress").textContent = `${this.idx + 1} / ${this.set.length}`;
     document.getElementById("quiz-bar").style.width = `${(this.idx / this.set.length) * 100}%`;
-    document.getElementById("quiz-topic").textContent = q.topic;
+    /* 答題畫面唔顯示課題／題型，只顯示難度星星 */
+    const level = Math.max(1, q.level || 1);
+    document.getElementById("quiz-topic").innerHTML =
+      `<span class="quiz-level" aria-label="難度 ${level}">${"★".repeat(level)}</span>`;
 
     /* 句子（空位藍色） */
     document.getElementById("quiz-sentence").innerHTML =

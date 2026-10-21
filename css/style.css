@@ -144,6 +144,29 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .topic-chip:not(.on) .topic-name::before { content: "☐ "; color: #b6bdd0; }
 .topic-chip:not(.on) { opacity: .65; }
 .topic-count { font-size: .85rem; color: #7a8299; font-weight: 700; }
+
+/* 課題（大分類）：撳☑全選，撳名／箭咀展開入面嘅題型 */
+.course-card {
+  background: #fff; border: 3px solid #dbe2ee; border-radius: 16px; overflow: hidden;
+}
+.course-card.course-all { border-color: var(--blue); background: #f7faff; }
+.course-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px; cursor: pointer; user-select: none; -webkit-user-select: none;
+}
+.course-check {
+  font-size: 1.2rem; color: var(--blue); width: 1.4em;
+  text-align: center; cursor: pointer; flex: none; line-height: 1;
+}
+.course-name { font-size: 1.08rem; font-weight: 800; color: var(--ink); flex: 1; }
+.course-count { font-size: .78rem; color: #7a8299; font-weight: 700; white-space: nowrap; }
+.course-arrow { color: #9aa5b1; font-weight: 800; flex: none; }
+.course-topics {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px 12px; border-top: 2px dashed #e6ebf5;
+}
+.course-mini-row { justify-content: flex-start; }
+.course-topics .topic-chip { padding: 10px 14px; font-size: .98rem; }
 .custom-q-count { text-align: center; color: #2e7d32; font-weight: 800; font-size: .9rem; min-height: 1.2em; }
 
 /* ---------- CSV 匯入 Modal ---------- */
@@ -183,6 +206,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   align-self: flex-start; padding: 4px 14px; border-radius: 999px;
   background: #eef3ff; color: var(--blue); font-weight: 700; font-size: .9rem;
 }
+.quiz-level { color: #ffb300; letter-spacing: 3px; font-size: 1.05rem; }
 
 .quiz-card {
   background: var(--card); border-radius: var(--radius); padding: 26px 18px;
