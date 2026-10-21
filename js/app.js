@@ -732,7 +732,7 @@ const App = {
         reloading = true;
         location.reload();
       });
-      navigator.serviceWorker.register("sw.js")
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
         .then(reg => reg.update().catch(() => {}))
         .catch(() => {});
     }
