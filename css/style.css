@@ -208,10 +208,12 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 }
 .quiz-level { color: #ffb300; letter-spacing: 3px; font-size: 1.05rem; }
 
-/* 題目圖片：固定大細嘅顯示窗；冇圖片就成個收起 */
+/* 題目圖片：隨螢幕高度自適應嘅顯示窗；冇圖片就成個收起 */
 .quiz-image-box {
   display: none; align-items: center; justify-content: center;
-  width: 100%; height: 180px; padding: 8px;
+  width: 100%; height: 180px;
+  height: clamp(180px, 27dvh, 260px);   /* 細機 180px，大機最多 260px */
+  padding: 8px;
   background: #fff; border: 3px solid #dce6f5; border-radius: 16px;
   overflow: hidden;
 }
