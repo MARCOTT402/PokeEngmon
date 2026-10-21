@@ -122,6 +122,20 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   text-decoration: underline; cursor: pointer; font-family: inherit;
 }
 
+.site-footer { text-align: center; padding: 4px 0 2px; }
+.footer-link {
+  background: none; border: none; color: #8d97ab; font-size: .78rem; font-weight: 800;
+  text-decoration: underline; cursor: pointer; font-family: inherit; padding: 4px 6px;
+}
+.footer-note { margin: 2px 0 0; color: #b0b8c8; font-size: .68rem; line-height: 1.35; }
+
+.disclaimer-box { color: #4a5164; font-size: .9rem; line-height: 1.55; }
+.disclaimer-box h3 { margin: 0 0 10px; font-size: 1.2rem; color: var(--ink); }
+.disclaimer-box h4 { margin: 16px 0 6px; font-size: .95rem; color: var(--ink); }
+.disclaimer-box p { margin: 0 0 8px; }
+.disclaimer-box a { color: var(--blue); word-break: break-all; }
+.disclaimer-box .btn-big { margin-top: 12px; }
+
 /* ============================================================
    題型選擇（做題前）
    ============================================================ */

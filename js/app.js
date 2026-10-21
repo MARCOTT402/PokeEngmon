@@ -506,6 +506,27 @@ const App = {
     };
   },
 
+  /* ---------- 版權 / 免責聲明 ---------- */
+  openDisclaimer() {
+    this.showModal(`
+      <div class="disclaimer-box">
+        <h3>Copyright &amp; Disclaimer</h3>
+        <p>This website is an unofficial, non-commercial educational and reward tool. It is <b>NOT</b> affiliated with, endorsed, sponsored, or approved by Nintendo, Game Freak, Creatures Inc., or The Pokémon Company.</p>
+        <p>Pokémon and Pokémon character names, images, sprites, cries, and related game assets are trademarks of © Nintendo, Creatures Inc., and GAME FREAK inc. All rights belong to their respective owners.</p>
+        <p>All assets are used only for non-commercial educational, learning-reward, and motivational purposes.</p>
+
+        <h4>Data &amp; Image Credits</h4>
+        <p>Pokémon base stats, moves, evolution data, sprites, and type icons are provided by <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>.</p>
+        <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
+
+        <h4>In-Game Items</h4>
+        <p>All diamonds, pull tickets, candies, cards, and Pokémon in this app are virtual learning rewards. They have no real-world value and cannot be exchanged for money or physical goods. There is no real-money trading.</p>
+
+        <button id="btn-disclaimer-close" class="btn-big btn-primary">Close</button>
+      </div>`);
+    document.getElementById("btn-disclaimer-close").onclick = () => this.closeModal();
+  },
+
   /* ---------- Modal / Toast ---------- */
   showModal(html, noClose) {
     const root = document.getElementById("modal-root");
@@ -535,6 +556,7 @@ const App = {
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
+    document.getElementById("btn-disclaimer").onclick = () => this.openDisclaimer();
     /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
     document.getElementById("btn-top-diamond").onclick = () => {
       const st = loadState();
