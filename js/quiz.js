@@ -85,11 +85,10 @@ const Quiz = {
     });
   },
 
-  /* 比對答案：trim + 不分大小寫；accept 列表都接受 */
+  /* 比對答案：trim + 不分大小寫；accept 列表都接受；答案留空＝要留空 */
   _isCorrect(q, text) {
     const norm = s => String(s).trim().toLowerCase().replace(/\s+/g, " ");
     const mine = norm(text);
-    if (mine === "") return false;
     if (mine === norm(q.answer)) return true;
     return (q.accept || []).some(a => norm(a) === mine);
   },
@@ -98,11 +97,6 @@ const Quiz = {
     if (this.locked) return;
     const input = document.getElementById("quiz-answer");
     const text = input.value;
-    if (text.trim() === "") {
-      input.classList.add("shake");
-      setTimeout(() => input.classList.remove("shake"), 400);
-      return;
-    }
     this.locked = true;
     const q = this.set[this.idx];
     const correct = this._isCorrect(q, text);
@@ -118,7 +112,7 @@ const Quiz = {
       fb.textContent = ["好嘢！", "答對了！", "勁呀！", "Excellent!"][Math.floor(Math.random() * 4)];
       fb.className = "quiz-feedback good";
     } else {
-      fb.textContent = `答案係「${q.answer}」`;
+      fb.textContent = q.answer ? `答案係「${q.answer}」` : "答案係「（留空）」";
       fb.className = "quiz-feedback bad";
     }
 

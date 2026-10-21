@@ -1,51 +1,291 @@
 編號,課題,題型,難度,句子,答案,關鍵詞,提示
-00001,過去式,動詞過去式,1,1. Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went
-00002,過去式,動詞過去式,1,2. She ___(eat) an apple this morning.,ate,this morning,eat 嘅過去式係 ate
-00003,過去式,動詞過去式,1,3. We ___(watch) a funny movie last night.,watched,last night,watch 係 Regular verb，字尾加 ed
-00004,過去式,動詞過去式,2,4. My father ___(buy) a new car last Sunday.,bought,last Sunday,buy 嘅過去式係 bought
-00005,過去式,動詞過去式,1,5. Tim ___(finish) his homework two hours ago.,finished,two hours ago,finish 係 Regular verb，字尾加 ed
-00006,過去式,動詞過去式,2,6. They ___(drink) milk for breakfast today.,drank,breakfast today,drink 嘅過去式係 drank
-00007,過去式,動詞過去式,2,7. Mary ___(find) her lost key under the sofa.,found,lost key (已發生的動作),find 嘅過去式係 found
-00008,過去式,動詞過去式,2,8. I ___(hear) a loud noise last night.,heard,last night,hear 嘅過去式係 heard
-00009,過去式,動詞過去式,2,9. The student ___(write) a letter to his teacher yesterday.,wrote,yesterday,write 嘅過去式係 wrote
-00010,過去式,動詞過去式,2,10. The baby ___(sleep) for two hours this afternoon.,slept,this afternoon,sleep 嘅過去式係 slept
-00011,過去式,動詞過去式,1,11. We ___(play) soccer in the playground yesterday.,played,yesterday,play 係 Regular verb，字尾加 ed
-00012,過去式,動詞過去式,2,12. Mum ___(make) a big cake for my birthday last week.,made,last week,make 嘅過去式係 made
-00013,過去式,動詞過去式,3,13. The boy ___(trip) over a stone and fell down just now.,tripped,just now,trip 字尾係短元音+單輔音，要雙寫 p 再加 ed (tripped)
-00014,過去式,動詞過去式,2,14. Uncle Ray ___(give) us a nice present yesterday.,gave,yesterday,give 嘅過去式係 gave
-00015,過去式,動詞過去式,1,15. She ___(brush) her teeth before going to bed last night.,brushed,last night,brush 係 Regular verb，字尾加 ed
-00016,過去式,動詞過去式,2,16. I ___(see) a pretty bird in the tree ten minutes ago.,saw,ten minutes ago,see 嘅過去式係 saw
-00017,過去式,動詞過去式,1,17. They ___(walk) to school on foot yesterday morning.,walked,yesterday morning,walk 係 Regular verb，字尾加 ed
-00018,過去式,動詞過去式,1,18. The dog ___(bark) at the stranger just now.,barked,just now,bark 係 Regular verb，字尾加 ed
-00019,過去式,動詞過去式,2,19. My teacher ___(tell) us a story this morning.,told,this morning,tell 嘅過去式係 told
-00020,過去式,動詞過去式,2,20. Ben ___(draw) a picture of his dog last night.,drew,last night,draw 嘅過去式係 drew
-00021,過去式,否定句過去式,3,21. I didn't ___(go) to the library yesterday.,go,didn't,didn't 後面必須用 Verb Root (原形動詞 go)
-00022,過去式,疑問句過去式,3,22. Did you ___(see) the fireworks last night?,see,Did,句首用咗 Did 問，後面動詞要用原形 (see)
-00023,過去式,Be動詞過去式,2,23. My sister and I ___(be) at home yesterday.,were,yesterday / My sister and I,主語係複數 (We)，Be 動詞過去式要用 were
-00024,過去式,Be動詞過去式,2,24. The test ___(be) very easy yesterday.,was,yesterday / The test,主語係單數 (It)，Be 動詞過去式要用 was
-00025,過去式,否定句過去式,3,25. Sam didn't ___(clean) his room last weekend.,clean,didn't,didn't 後面要用原形動詞 (clean)
-00026,過去式,疑問句過去式,3,26. ___(Did / Do) you buy any apples at the supermarket yesterday?,Did,yesterday / buy,過去式嘅 Yes/No 疑問句要用 Did 開頭
-00027,過去式,動詞過去式,2,27. The cat ___(run) up the tree quickly two minutes ago.,ran,two minutes ago,run 嘅過去式係 ran
-00028,過去式,動詞過去式,2,28. We ___(have) a great time at the party last night.,had,last night,have 嘅過去式係 had
-00029,過去式,動詞過去式,2,29. Jenny ___(spend) $20 to buy a notebook yesterday.,spent,yesterday,spend 嘅過去式係 spent
-00030,過去式,動詞過去式,3,30. The bus ___(stop) at the bus stop five minutes ago.,stopped,five minutes ago,stop 係短元音+單輔音，要雙寫 p 再加 ed (stopped)
-00031,過去式,Be動詞過去式 (否定),3,31. They ___(not be) hungry after lunch yesterday.,were not / weren't,yesterday / They,主語係 They，Be 動詞否定過去式係 were not / weren't
-00032,過去式,Be動詞過去式 (否定),3,32. It ___(not be) rainy last Sunday.,was not / wasn't,last Sunday / It,主語係 It，Be 動詞否定過去式係 was not / wasn't
-00033,過去式,疑問句過去式,3,33. What time did you ___(wake) up this morning?,wake,did,問句中有 did，動詞要回復原形 (wake)
-00034,過去式,動詞過去式,2,34. Harry ___(find) his lost keys under the table just now.,found,just now,find 嘅過去式係 found
-00035,過去式,動詞過去式,2,35. The teacher ___(give) us a quiz two days ago.,gave,two days ago,give 嘅過去式係 gave
-00036,過去式,否定句過去式,3,36. We didn't ___(have) music class last Tuesday.,have,didn't,didn't 後面接原形動詞 (have)
-00037,過去式,動詞過去式,3,37. The little girl ___(cry) loudly because she lost her toy.,cried,lost (過去式 context),cry 字尾係輔音+y，要去 y 加 ied (cried)
-00038,過去式,動詞過去式,2,38. Mr. Chan ___(teach) English to us last year.,taught,last year,teach 嘅過去式係 taught
-00039,過去式,動詞過去式,2,39. She ___(sing) a sweet song in the school concert yesterday.,sang,yesterday,sing 嘅過去式係 sang
-00040,過去式,動詞過去式,2,40. They ___(drink) all the juice at the picnic yesterday.,drank,yesterday,drink 嘅過去式係 drank
-00041,過去式,時態混合對比,4,"41. Tom usually walks to school, but he ___(take) a bus yesterday.",took,yesterday (對比 usually),usually 用 Simple Present，但後半句有 yesterday 必須改用過去式 (took)
-00042,過去式,感官/助動詞陷阱,4,42. Mum helped me ___(do) my homework last night.,do,helped me (help + O + base verb),雖然係 last night，但 help 屬特殊動詞，後面接原形動詞 (do)
-00043,過去式,常態 vs 過去事件,4,"43. I ___(be) late for school this morning, so teacher scolded me.",was,this morning,今朝早遲到係已發生的事，I 配合 was
-00044,過去式,特殊不變動詞,3,44. My father ___(cut) the birthday cake five minutes ago.,cut,five minutes ago,cut 嘅過去式依然係 cut（不變形）
-00045,過去式,特殊不變動詞,3,45. He ___(put) his books into the bag just now.,put,just now,put 嘅過去式依然係 put（不變形）
-00046,過去式,名校複合句,4,"46. Although it was cold, they still ___(go) swimming yesterday.",went,was cold / yesterday,前半句 was 顯示全句為過去時態，go 要變 went
-00047,過去式,疑問詞過去式,3,47. Where did your family ___(go) for vacation last summer?,go,did / last summer,句中有助動詞 did，後面動詞必須用原形 (go)
-00048,過去式,動詞過去式 (綴字陷阱),3,48. The chef ___(fry) some chicken wings for us last night.,fried,last night,fry 字尾係輔音+y，要去 y 加 ied (fried)
-00049,過去式,時間順序動詞鏈,4,"49. Yesterday, Alex came home, ___(wash) his hands and ate dinner.",washed,Yesterday / came / ate,連續動作，came 同 ate 均為過去式，同鏈動詞 wash 亦須改為 washed
-00050,過去式,Be動詞主謂一致,4,50. There ___(be) many people in the park last Sunday.,were,last Sunday / many people,past tense 加名詞複數 (many people)，Be 動詞要用 were
+00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
+00002,Articles,Articles: Basics,1,I can see ___ big dog under the tree.,a,big,Consonant sound (big)
+00003,Articles,Articles: Basics,1,Look at ___ sun! It is bright today.,the,sun,One of a kind (sun)
+00004,Articles,Articles: Basics,1,She eats ___ banana every morning.,a,banana,"Singular noun, general sense (banana)"
+00005,Articles,Articles: Basics,1,He has ___ umbrella because it is raining.,an,umbrella,Vowel sound (umbrella)
+00006,Articles,Articles: Basics,1,Can you pass me ___ salt on the table?,the,salt,The salt on the table
+00007,Articles,Articles: Basics,1,I need ___ pencil to write this note.,a,pencil,"Singular noun, general sense (pencil)"
+00008,Articles,Articles: Basics,1,There is ___ cat sleeping on the sofa.,a,cat,"Singular noun, general sense (cat)"
+00009,Articles,Articles: Basics,1,___ moon looks very beautiful tonight.,The,moon,One of a kind (moon)
+00010,Articles,Articles: Basics,1,I live in ___ small house in London.,a,small,"Singular noun, general sense (small)"
+00011,Articles,Articles: Basics,1,He brings ___ egg for his breakfast.,an,egg,Vowel sound (egg)
+00012,Articles,Articles: Basics,1,Please turn off ___ light before leaving.,the,light,The lamp in the room
+00013,Articles,Articles: Basics,1,My sister plays ___ flute very well.,the,flute,Western musical instrument (flute)
+00014,Articles,Articles: Basics,1,"In ___ morning, I drink warm water.",the,morning,Fixed time of day (in the morning)
+00015,Articles,Articles: Usage,3,They go to school on ___ foot.,,foot,Fixed phrase (on foot)
+00016,Articles,Articles: Basics,1,I have ___ orange in my lunch box.,an,orange,Vowel sound (orange)
+00017,Articles,Articles: Basics,1,She wears ___ pink dress to the party.,a,pink,Consonant sound (pink)
+00018,Articles,Articles: Basics,1,___ sky is very blue this afternoon.,The,sky,One of a kind (sky)
+00019,Articles,Articles: Basics,1,"Give me ___ glass of milk, please.",a,glass,"Singular noun, general sense (glass)"
+00020,Articles,Articles: Basics,1,There is ___ owl in the old tree.,an,owl,Vowel sound (owl)
+00021,Articles,Articles: Basics,1,Ben has ___ new bicycle for his birthday.,a,new,Consonant sound (new)
+00022,Articles,Articles: Basics,1,Do you want ___ ice cream cone?,an,ice,Vowel sound (ice cream)
+00023,Articles,Articles: Basics,1,___ Earth goes around the sun.,The,Earth,One of a kind (Earth)
+00024,Articles,Articles: Basics,1,He is eating ___ sandwich for lunch.,a,sandwich,"Singular noun, general sense (sandwich)"
+00025,Articles,Articles: Basics,1,Look at ___ birds flying in the air!,the,birds,The bird you can see
+00026,Articles,Articles: Basics,1,My mother buys ___ onion at the market.,an,onion,Vowel sound (onion)
+00027,Articles,Articles: Basics,1,There is ___ clock on the wall.,a,clock,Consonant sound (clock)
+00028,Articles,Articles: Basics,1,Pass me ___ water bottle beside you.,the,water,The water bottle nearby
+00029,Articles,Articles: Basics,1,We live on ___ third floor.,the,third,Ordinal number → the
+00030,Articles,Articles: Basics,1,She found ___ insect in the garden.,an,insect,Vowel sound (insect)
+00031,Articles,Articles: Basics,1,He wants to be ___ pilot one day.,a,pilot,Job name (pilot)
+00032,Articles,Articles: Basics,1,___ stars are shining brightly tonight.,The,stars,The stars in the sky tonight
+00033,Articles,Articles: Basics,1,I saw ___ alligator at the zoo.,an,alligator,Vowel sound (alligator)
+00034,Articles,Articles: Basics,1,She has ___ red bag on her shoulder.,a,red,Consonant sound (red)
+00035,Articles,Articles: Basics,1,"Close ___ door behind you, please.",the,door,The door in front
+00036,Articles,Articles: Basics,1,It takes ___ hour to finish the test.,an,hour,"Silent H — use ""an"" (hour)"
+00037,Articles,Articles: Basics,1,My brother has ___ green ball.,a,green,Consonant sound (green)
+00038,Articles,Articles: Basics,1,We saw ___ airplane flying high.,an,airplane,Vowel sound (airplane)
+00039,Articles,Articles: Basics,1,Is there ___ bakery nearby?,a,bakery,"Singular noun, general sense (bakery)"
+00040,Articles,Articles: Basics,1,Where is ___ teacher's desk?,the,teacher's,The teacher's desk
+00041,Articles,Articles: Basics,1,I ate ___ pear after dinner.,a,pear,"Singular noun, general sense (pear)"
+00042,Articles,Articles: Basics,1,She needs ___ eraser for her mistake.,an,eraser,Vowel sound (eraser)
+00043,Articles,Articles: Basics,1,___ wind is blowing very hard.,The,wind,The wind right now
+00044,Articles,Articles: Basics,1,He is wearing ___ blue shirt.,a,blue,Consonant sound (blue)
+00045,Articles,Articles: Basics,1,She drew ___ artist's palette.,an,artist's,Vowel sound (artist's)
+00046,Articles,Articles: Basics,1,Please open ___ window near the board.,the,window,The window by the blackboard
+00047,Articles,Articles: Usage,3,They live near ___ sea.,the,sea,Particular sea (the sea)
+00048,Articles,Articles: Basics,1,My dad is ___ doctor at the clinic.,a,doctor,Job name (doctor)
+00049,Articles,Articles: Basics,1,I saw ___ iguana in the pet store.,an,iguana,Vowel sound (iguana)
+00050,Articles,Articles: Basics,1,There is ___ book on my table.,a,book,"Singular noun, general sense (book)"
+00051,Articles,Articles: Basics,1,Put ___ shoes near the front door.,the,shoes,The specific shoes
+00052,Articles,Articles: Basics,1,She ate ___ avocado for lunch.,an,avocado,Vowel sound (avocado)
+00053,Articles,Articles: Basics,1,He rides ___ scooter to the shop.,a,scooter,Consonant sound (scooter)
+00054,Articles,Articles: Basics,1,___ rain stopped an hour ago.,The,rain,The rain just now
+00055,Articles,Articles: Basics,1,Do you have ___ ruler in your pencil box?,a,ruler,"Singular noun, general sense (ruler)"
+00056,Articles,Articles: Basics,1,We stayed in ___ hotel in Tokyo.,a,hotel,"Singular noun, general sense (hotel)"
+00057,Articles,Articles: Basics,1,My aunt is ___ nurse.,a,nurse,Job name (nurse)
+00058,Articles,Articles: Basics,1,He saw ___ ostrich in the safari park.,an,ostrich,Vowel sound (ostrich)
+00059,Articles,Articles: Basics,1,Where is ___ classroom key?,the,classroom,The classroom key
+00060,Articles,Articles: Basics,1,I drink ___ cup of tea every morning.,a,cup,"Singular noun, general sense (cup)"
+00061,Articles,Articles: Basics,1,She bought ___ apron for cooking.,an,apron,Vowel sound (apron)
+00062,Articles,Articles: Basics,1,There is ___ spider on the ceiling.,a,spider,"Singular noun, general sense (spider)"
+00063,Articles,Articles: Basics,1,He sits on ___ chair next to Mary.,the,chair,The chair next to Mary
+00064,Articles,Articles: Basics,1,___ sea water tastes salty.,The,sea,The seawater
+00065,Articles,Articles: Basics,1,I bought ___ pair of socks.,a,pair,Fixed unit (a pair of)
+00066,Articles,Articles: Basics,1,She holds ___ envelope in her hand.,an,envelope,Vowel sound (envelope)
+00067,Articles,Articles: Basics,1,Can I have ___ piece of paper?,a,piece,Fixed unit (a piece of)
+00068,Articles,Articles: Basics,1,___ boy in the yellow shirt is my brother.,The,boy,Person with a specific feature → the
+00069,Articles,Articles: Basics,1,He found ___ acorn under the oak tree.,an,acorn,Vowel sound (acorn)
+00070,Articles,Articles: Basics,1,We have ___ kitten at home.,a,kitten,"Singular noun, general sense (kitten)"
+00071,Articles,Articles: Basics,1,Is this ___ path to the playground?,the,path,The road to the park
+00072,Articles,Articles: Basics,1,My uncle drives ___ taxi.,a,taxi,Job / transport (taxi)
+00073,Articles,Articles: Basics,1,She saw ___ eagle in the sky.,an,eagle,Vowel sound (eagle)
+00074,Articles,Articles: Basics,1,"Pass me ___ pepper, please.",the,pepper,The pepper on the table
+00075,Articles,Articles: Basics,1,There is ___ flower in the vase.,a,flower,"Singular noun, general sense (flower)"
+00076,Articles,Articles: Basics,1,He carries ___ heavy backpack.,a,heavy,Consonant sound (heavy)
+00077,Articles,Articles: Basics,1,We saw ___ octopus in the aquarium.,an,octopus,Vowel sound (octopus)
+00078,Articles,Articles: Basics,1,"Clean ___ floor, please.",the,floor,The floor
+00079,Articles,Articles: Basics,1,She has ___ friendly smile.,a,friendly,Consonant sound (friendly)
+00080,Articles,Articles: Basics,1,There is ___ ant on my desk.,an,ant,Vowel sound (ant)
+00081,Articles,Articles: Usage,3,We will leave in ___ hour.,an,hour,Silent H — silent letter (hour)
+00082,Articles,Articles: Usage,3,My father is ___ honest man.,an,honest,Silent H — silent letter (honest)
+00083,Articles,Articles: Usage,3,He goes to school by ___ bus every day.,,bus,Transport phrase — zero article (by bus)
+00084,Articles,Articles: Usage,3,I bought a book. ___ book is about dinosaurs.,The,book,Mentioned before → the (a->the)
+00085,Articles,Articles: Usage,3,She wants to wear ___ uniform to school.,a,uniform,Letter U sounds like /ju:/ — consonant sound (uniform)
+00086,Articles,Articles: Usage,3,It is ___ European custom.,a,European,Eu sounds like /ju:/ — consonant sound (European)
+00087,Articles,Articles: Usage,3,My uncle is ___ University professor.,a,University,Letter U sounds like /ju:/ — consonant sound (University)
+00088,Articles,Articles: Usage,3,We usually have ___ breakfast at 8:00 a.m.,,breakfast,Meal name — zero article (breakfast)
+00089,Articles,Articles: Usage,3,They love playing ___ football in the park.,,football,Ball sport — zero article (football)
+00090,Articles,Articles: Usage,3,She speaks ___ English fluently.,,English,Language name — zero article (English)
+00091,Articles,Articles: Usage,3,There is a bird in the garden. ___ bird is singing.,The,bird,Mentioned before → the (the bird)
+00092,Articles,Articles: Usage,3,Where is ___ key to the front door?,the,key,The front-door key
+00093,Articles,Articles: Usage,3,Please turn off ___ radio. It is too noisy.,the,radio,The radio in the room
+00094,Articles,Articles: Usage,3,Mount Everest is ___ highest mountain in the world.,the,highest,Superlative adjective (the highest)
+00095,Articles,Articles: Usage,3,They traveled to Japan in ___ May.,,May,Month name — zero article (May)
+00096,Articles,Articles: Usage,3,We don't go to school on ___ Saturday.,,Saturday,Day name — zero article (Saturday)
+00097,Articles,Articles: Usage,3,___ Dogs are faithful animals.,,Dogs,"Plural noun, general sense — zero article (Dogs)"
+00098,Articles,Articles: Usage,3,___ Atlantic Ocean separates Europe and America.,The,Atlantic,Ocean name → the (Atlantic)
+00099,Articles,Articles: Usage,3,Is ___ USA a large country?,the,USA,Country with a plural/union word → the (the USA)
+00100,Articles,Articles: Usage,3,It is ___ useful book for learning English.,a,useful,Letter U sounds like /ju:/ — consonant sound (useful)
+00101,Articles,Articles: Usage,3,He played ___ piano at the concert.,the,piano,Musical instrument → the (the piano)
+00102,Articles,Articles: Usage,3,We travel by ___ train during holidays.,,train,Transport phrase — zero article (by train)
+00103,Articles,Articles: Usage,3,She enjoys listening to ___ music.,,music,Abstract uncountable noun — zero article (music)
+00104,Articles,Articles: Usage,3,This is ___ unique design.,a,unique,Letter U sounds like /ju:/ — consonant sound (unique)
+00105,Articles,Articles: Usage,3,He is ___ heir to a large fortune.,an,heir,Silent H — silent letter (heir)
+00106,Articles,Articles: Usage,3,They had ___ lunch at a restaurant.,,lunch,Meal name — zero article (lunch)
+00107,Articles,Articles: Usage,3,___ Pacific Ocean is very deep.,The,Pacific,Ocean name → the (Pacific)
+00108,Articles,Articles: Usage,3,I like playing ___ badminton with friends.,,badminton,Ball sport — zero article (badminton)
+00109,Articles,Articles: Usage,3,He left ___ hour ago.,an,hour,Silent H — silent letter (an hour)
+00110,Articles,Articles: Usage,3,She bought a dress. ___ dress is blue.,The,dress,Mentioned before → the (a-> the)
+00111,Articles,Articles: Usage,3,My brother learns ___ French at school.,,French,Language name — zero article (French)
+00112,Articles,Articles: Usage,3,___ Nile is a famous river in Africa.,The,Nile,River name → the (The Nile)
+00113,Articles,Articles: Usage,3,They went home by ___ car.,,car,Transport phrase — zero article (by car)
+00114,Articles,Articles: Usage,3,It was ___ universal belief long ago.,a,universal,Letter U sounds like /ju:/ — consonant sound (universal)
+00115,Articles,Articles: Usage,3,We sleep at ___ night.,,night,Fixed phrase (at night)
+00116,Articles,Articles: Usage,3,She is ___ tallest girl in class.,the,tallest,Superlative adjective (the tallest)
+00117,Articles,Articles: Usage,3,They visited ___ Philippines last summer.,the,Philippines,Island-group country → the
+00118,Articles,Articles: Usage,3,He gives us ___ good advice.,,good,Uncountable noun — zero article (advice)
+00119,Articles,Articles: Usage,3,___ Gold is a precious metal.,,Gold,"Mass noun, general sense — zero article"
+00120,Articles,Articles: Usage,3,We met on ___ Tuesday.,,Tuesday,Day name — zero article (Tuesday)
+00121,Articles,Articles: Usage,3,She plays ___ violin gracefully.,the,violin,Musical instrument → the (the violin)
+00122,Articles,Articles: Usage,3,Is he ___ honorable gentleman?,an,honorable,Silent H — silent letter (honorable)
+00123,Articles,Articles: Usage,3,They go to ___ church every Sunday morning.,,church,Religion / occasion usage — zero article
+00124,Articles,Articles: Usage,3,My cousin lives in ___ Netherlands.,the,Netherlands,Country with a plural name → the (the Netherlands)
+00125,Articles,Articles: Usage,3,___ Cats like sleeping in warm places.,,Cats,"Plural noun, general sense — zero article"
+00126,Articles,Articles: Usage,3,He ate ___ dinner with his family.,,dinner,Meal name — zero article (dinner)
+00127,Articles,Articles: Usage,3,We visited ___ British Museum.,the,British,Named building → the (the British Museum)
+00128,Articles,Articles: Usage,3,She has ___ eucalyptus tree in her yard.,a,eucalyptus,Eu sounds like /ju:/ — consonant sound (eucalyptus)
+00129,Articles,Articles: Usage,3,They crossed ___ Sahara Desert.,The,Sahara,Desert name → the (the Sahara)
+00130,Articles,Articles: Usage,3,I go to work by ___ subway.,,subway,Transport phrase — zero article (by subway)
+00131,Articles,Articles: Usage,3,___ Paper is made from wood.,,Paper,"Mass noun, general sense — zero article"
+00132,Articles,Articles: Usage,3,He gave me ___ useful advice.,,useful,Uncountable noun — zero article (advice)
+00133,Articles,Articles: Usage,3,It is ___ United Nations meeting.,a,United,Letter U sounds like /ju:/ — consonant sound (a United...)
+00134,Articles,Articles: Usage,3,She plays ___ chess very well.,,chess,Board game — zero article (chess)
+00135,Articles,Articles: Usage,3,They flew across ___ Indian Ocean.,the,Indian,Ocean name → the (Indian Ocean)
+00136,Articles,Articles: Usage,3,We celebrate New Year in ___ January.,,January,Month name — zero article (January)
+00137,Articles,Articles: Usage,3,This is ___ European standard.,a,European,Eu sounds like /ju:/ — consonant sound (European)
+00138,Articles,Articles: Usage,3,___ Lions are strong hunters.,,Lions,"Plural noun, general sense — zero article"
+00139,Articles,Articles: Usage,3,He goes to ___ work at 8:00 a.m.,,work,Fixed phrase (go to work)
+00140,Articles,Articles: Usage,3,She can speak ___ Japanese.,,Japanese,Language name — zero article (Japanese)
+00141,Articles,Articles: Usage,3,I found a stray dog. ___ dog was friendly.,The,dog,Mentioned before → the (a -> the)
+00142,Articles,Articles: Usage,3,He plays ___ guitar in a band.,the,guitar,Musical instrument → the (the guitar)
+00143,Articles,Articles: Usage,3,They travel by ___ plane.,,plane,Transport phrase — zero article (by plane)
+00144,Articles,Articles: Usage,3,She is ___ most intelligent student.,the,most,Superlative adjective (the most)
+00145,Articles,Articles: Usage,3,It was ___ one-time offer.,a,one-time,Letter O sounds like /w/ — consonant sound (one-time)
+00146,Articles,Articles: Usage,3,___ Himalaya Mountains are very high.,The,Himalaya,Mountain range → the
+00147,Articles,Articles: Usage,3,We will meet in ___ afternoon.,the,afternoon,Fixed time of day (in the afternoon)
+00148,Articles,Articles: Usage,3,He is ___ UK citizen.,a,UK,Letter U sounds like /ju:/ — consonant sound (a UK...)
+00149,Articles,Articles: Usage,3,They went by ___ boat to the island.,,boat,Transport phrase — zero article (by boat)
+00150,Articles,Articles: Usage,3,___ Water boils at 100 degrees Celsius.,,Water,"Mass noun, general sense — zero article"
+00151,Articles,Articles: Usage,3,She plays ___ tennis on weekends.,,tennis,Ball sport — zero article (tennis)
+00152,Articles,Articles: Usage,3,Is ___ Amazon River long?,the,Amazon,River name → the (the Amazon)
+00153,Articles,Articles: Usage,3,It was ___ hourly bus service.,an,hourly,Silent H — silent letter (hourly)
+00154,Articles,Articles: Usage,3,They live in ___ United Arab Emirates.,the,United,United country name → the (the UAE)
+00155,Articles,Articles: Usage,3,He loves studying ___ science.,,science,School subject — zero article (science)
+00156,Articles,Articles: Usage,3,___ Sun rises in the east.,The,Sun,Unique thing / direction → the
+00157,Articles,Articles: Usage,3,She wears ___ uniform to work.,a,uniform,Letter U sounds like /ju:/ — consonant sound (uniform)
+00158,Articles,Articles: Usage,3,We had ___ supper at 7 p.m.,,supper,Meal name — zero article (supper)
+00159,Articles,Articles: Usage,3,He is ___ honest worker.,an,honest,Silent H — silent letter (honest)
+00160,Articles,Articles: Usage,3,___ Red Sea is located near Egypt.,The,Red,Sea name → the (The Red Sea)
+00161,Articles,Articles: Advanced,4,This is ___ one-way street.,a,one-way,Letter O sounds like /w/ — consonant sound (one-way)
+00162,Articles,Articles: Advanced,4,He gave me ___ MP3 player for my birthday.,an,MP3,Letter M sounds like /em/ (MP3)
+00163,Articles,Articles: Advanced,4,She wrote ___ SOS message on the sand.,an,SOS,Letter S sounds like /es/ (SOS)
+00164,Articles,Articles: Advanced,4,Is he ___ FBI agent?,an,FBI,Letter F sounds like /ef/ (FBI)
+00165,Articles,Articles: Advanced,4,It was ___ honor to meet the famous author.,an,honor,Silent H — silent letter (honor)
+00166,Articles,Articles: Advanced,4,I lost ___ umbrella my mother bought for me.,the,umbrella,Limited by a following modifier → the
+00167,Articles,Articles: Advanced,4,___ milk in this glass smells sour.,The,milk,The milk in the cup
+00168,Articles,Articles: Advanced,4,She went to ___ hospital to visit her sick friend.,the,hospital,Specific purpose: visiting the hospital → the
+00169,Articles,Articles: Advanced,4,The children go to ___ bed at 9:00 p.m.,,bed,Fixed phrase (go to bed)
+00170,Articles,Articles: Advanced,4,Look! There is ___ one-legged bird on the fence.,a,one-legged,Letter O sounds like /w/ — consonant sound (one-legged)
+00171,Articles,Articles: Advanced,4,___ rich should help the poor.,The,rich,The + adjective = a group of people
+00172,Articles,Articles: Advanced,4,"He gave me ___ advice, but I didn't take it.",,advice,Uncountable noun — zero article (advice)
+00173,Articles,Articles: Advanced,4,He was in ___ middle of the room.,the,middle,Fixed direction phrase (in the middle of)
+00174,Articles,Articles: Advanced,4,"All of ___ sudden, it started to rain.",a,sudden,Fixed phrase (all of a sudden)
+00175,Articles,Articles: Advanced,4,___ Amazon River flows through South America.,The,Amazon,River name → the (The Amazon)
+00176,Articles,Articles: Advanced,4,"She can play ___ violin, but she cannot play basketball.",the,violin,Musical instrument → the / ball sport → zero article
+00177,Articles,Articles: Advanced,4,___ United Kingdom consists of four countries.,The,United,United country name → The
+00178,Articles,Articles: Advanced,4,My family goes to ___ church on Sundays.,,church,Worship / plural day — zero article
+00179,Articles,Articles: Advanced,4,He studies at ___ university in London.,a,university,Letter U sounds like /ju:/ — consonant sound (university)
+00180,Articles,Articles: Advanced,4,___ Pacific Ocean is the largest ocean on Earth.,The,Pacific,Ocean name → the (Pacific Ocean)
+00181,Articles,Articles: Advanced,4,He received ___ NBA jersey as a present.,an,NBA,Letter N sounds like /en/ (NBA)
+00182,Articles,Articles: Advanced,4,She is ___ UFO researcher.,a,UFO,Letter U sounds like /ju:/ — consonant sound (a UFO...)
+00183,Articles,Articles: Advanced,4,I need ___ X-ray scan for my broken arm.,an,X-ray,Letter X sounds like /eks/ (X-ray)
+00184,Articles,Articles: Advanced,4,He has ___ NGO background.,an,NGO,Letter N sounds like /en/ (NGO)
+00185,Articles,Articles: Advanced,4,She met ___ one-eyed man in the story.,a,one-eyed,Letter O sounds like /w/ — consonant sound (one-eyed)
+00186,Articles,Articles: Advanced,4,It is ___ HTML document.,an,HTML,Letter H sounds like /eitʃ/ (HTML)
+00187,Articles,Articles: Advanced,4,___ water in this lake is polluted.,The,water,Limited by a following prepositional phrase → the
+00188,Articles,Articles: Advanced,4,He went to ___ prison to interview an inmate.,the,prison,Specific purpose: visiting the prison → the
+00189,Articles,Articles: Advanced,4,My brother went to ___ prison for his crime.,,prison,Serving a sentence — zero article (go to prison)
+00190,Articles,Articles: Advanced,4,She was in ___ hospital for her heart surgery.,,hospital,Illness / hospital phrase — zero article (in hospital)
+00191,Articles,Articles: Advanced,4,___ unemployed are seeking job opportunities.,The,unemployed,The + adjective = a group of people
+00192,Articles,Articles: Advanced,4,"He gave an explanation, but it was ___ nonsense.",,nonsense,Uncountable noun — zero article (nonsense)
+00193,Articles,Articles: Advanced,4,"In ___ end, they solved the mystery.",the,end,Fixed phrase (in the end)
+00194,Articles,Articles: Advanced,4,She caught him by ___ arm.,the,arm,Specific body part (by the arm)
+00195,Articles,Articles: Advanced,4,___ Yellow River is the second longest in China.,The,Yellow,River name → the (Yellow River)
+00196,Articles,Articles: Advanced,4,Is this ___ UNESCO heritage site?,a,UNESCO,Letter U sounds like /ju:/ — consonant sound (a UNESCO...)
+00197,Articles,Articles: Advanced,4,He left without ___ word of thanks.,a,word,Fixed phrase (without a word)
+00198,Articles,Articles: Advanced,4,___ elderly need more medical care.,The,elderly,The + adjective = a group of people
+00199,Articles,Articles: Advanced,4,She won ___ MBA degree last year.,an,MBA,Letter M sounds like /em/ (MBA)
+00200,Articles,Articles: Advanced,4,He was driving at 100 miles ___ hour.,an,hour,"Silent H — use ""an"" (an hour)"
+00201,Articles,Articles: Advanced,4,___ Republic of Korea is in East Asia.,The,Republic,"Country with ""Republic"" → The"
+00202,Articles,Articles: Advanced,4,They met on ___ top of the mountain.,the,top,Fixed direction phrase (on the top of)
+00203,Articles,Articles: Advanced,4,He acted as ___ chairman of the meeting.,,chairman,Unique title — zero article
+00204,Articles,Articles: Advanced,4,___ youth of today face many challenges.,The,youth,Today's young people (The youth)
+00205,Articles,Articles: Advanced,4,She made ___ mistake of trusting him.,the,mistake,A specific mistake (the mistake of)
+00206,Articles,Articles: Advanced,4,They sailed across ___ Atlantic.,the,Atlantic,Abbreviated ocean name → the (the Atlantic)
+00207,Articles,Articles: Advanced,4,He bought ___ SMS package for his phone.,an,SMS,Letter S sounds like /es/ (SMS)
+00208,Articles,Articles: Advanced,4,She works for ___ NGO in Geneva.,an,NGO,Letter N sounds like /en/ (NGO)
+00209,Articles,Articles: Advanced,4,___ blind rely on guide dogs.,The,blind,The + adjective = a group of people
+00210,Articles,Articles: Advanced,4,He has ___ VIP ticket for the concert.,a,VIP,Letter V sounds like /vi:/ — consonant sound (a VIP...)
+00211,Articles,Articles: Advanced,4,___ cake that Mary made was delicious.,The,cake,Limited by a following relative clause → the
+00212,Articles,Articles: Advanced,4,They met at ___ dawn.,,dawn,Fixed time phrase — zero article (at dawn)
+00213,Articles,Articles: Advanced,4,She was elected ___ president of the club.,,president,Unique title — zero article (president)
+00214,Articles,Articles: Advanced,4,He is ___ YMCA member.,a,YMCA,Letter Y sounds like /wai/ — consonant sound (a YMCA...)
+00215,Articles,Articles: Advanced,4,___ Alps are popular for skiing.,The,Alps,Mountain range → the (The Alps)
+00216,Articles,Articles: Advanced,4,She has ___ SUV car.,an,SUV,Letter S sounds like /es/ (SUV)
+00217,Articles,Articles: Advanced,4,"In ___ case of emergency, press the button.",the,case,Fixed phrase (in the case of)
+00218,Articles,Articles: Advanced,4,___ injured were taken to the nearest hospital.,The,injured,The + adjective = a group of people
+00219,Articles,Articles: Advanced,4,He did it for ___ sake of peace.,the,sake,Fixed phrase (for the sake of)
+00220,Articles,Articles: Advanced,4,They live in ___ Czech Republic.,the,Czech,"Country with ""Republic"" → the"
+00221,Articles,Articles: Advanced,4,It was ___ LCD monitor.,an,LCD,Letter L sounds like /el/ (LCD)
+00222,Articles,Articles: Advanced,4,He was appointed ___ headmaster.,,headmaster,Unique title — zero article (headmaster)
+00223,Articles,Articles: Advanced,4,___ brave deserve respect.,The,brave,The + adjective = a group of people
+00224,Articles,Articles: Advanced,4,She has ___ L-shaped desk.,an,L-shaped,Letter L sounds like /el/ (L-shaped)
+00225,Articles,Articles: Advanced,4,We met at ___ dusk.,,dusk,Fixed time phrase — zero article (at dusk)
+00226,Articles,Articles: Advanced,4,He was in ___ mood for a walk.,a,mood,Fixed phrase (in a mood)
+00227,Articles,Articles: Advanced,4,___ Thames runs through London.,The,Thames,River name → the (The Thames)
+00228,Articles,Articles: Advanced,4,She received ___ SOS signal.,an,SOS,Letter S sounds like /es/ (SOS)
+00229,Articles,Articles: Advanced,4,___ sick require proper nourishment.,The,sick,The + adjective = a group of people
+00230,Articles,Articles: Advanced,4,He works as ___ HR manager.,an,HR,Letter H sounds like /eitʃ/ (HR)
+00231,Articles,Articles: Advanced,4,They arrived at ___ nightfall.,,nightfall,Fixed time phrase — zero article (at nightfall)
+00232,Articles,Articles: Advanced,4,She had ___ stomachache yesterday.,a,stomachache,"Illness with ""a"" — fixed usage"
+00233,Articles,Articles: Advanced,4,___ Persian Gulf is strategically important.,The,Persian,Gulf name → the (The Persian Gulf)
+00234,Articles,Articles: Advanced,4,He gave ___ one-word answer.,a,one-word,Letter O sounds like /w/ — consonant sound (one-word)
+00235,Articles,Articles: Advanced,4,She has ___ F-16 model airplane.,an,F-16,Letter F sounds like /ef/ (F-16)
+00236,Articles,Articles: Advanced,4,___ deaf use sign language.,The,deaf,The + adjective = a group of people
+00237,Articles,Articles: Advanced,4,"In ___ presence of the king, everyone bowed.",the,presence,Fixed phrase (in the presence of)
+00238,Articles,Articles: Advanced,4,He has ___ MP4 player.,an,MP4,Letter M sounds like /em/ (MP4)
+00239,Articles,Articles: Advanced,4,___ homeless need shelter in winter.,The,homeless,The + adjective = a group of people
+00240,Articles,Articles: Advanced,4,She has ___ unique opportunity.,a,unique,Letter U sounds like /ju:/ — consonant sound (a unique...)
+00241,Past Tense,Past Tense Verbs,1,1. Yesterday I ___(go) to the park.,went,Yesterday,Past tense of go is went.
+00242,Past Tense,Past Tense Verbs,1,2. She ___(eat) an apple this morning.,ate,this morning,Past tense of eat is ate.
+00243,Past Tense,Past Tense Verbs,1,3. We ___(watch) a funny movie last night.,watched,last night,watch is a regular verb — add -ed.
+00244,Past Tense,Past Tense Verbs,2,4. My father ___(buy) a new car last Sunday.,bought,last Sunday,Past tense of buy is bought.
+00245,Past Tense,Past Tense Verbs,1,5. Tim ___(finish) his homework two hours ago.,finished,two hours ago,finish is a regular verb — add -ed.
+00246,Past Tense,Past Tense Verbs,2,6. They ___(drink) milk for breakfast today.,drank,breakfast today,Past tense of drink is drank.
+00247,Past Tense,Past Tense Verbs,2,7. Mary ___(find) her lost key under the sofa.,found,lost key,Past tense of find is found.
+00248,Past Tense,Past Tense Verbs,2,8. I ___(hear) a loud noise last night.,heard,last night,Past tense of hear is heard.
+00249,Past Tense,Past Tense Verbs,2,9. The student ___(write) a letter to his teacher yesterday.,wrote,yesterday,Past tense of write is wrote.
+00250,Past Tense,Past Tense Verbs,2,10. The baby ___(sleep) for two hours this afternoon.,slept,this afternoon,Past tense of sleep is slept.
+00251,Past Tense,Past Tense Verbs,1,11. We ___(play) soccer in the playground yesterday.,played,yesterday,play is a regular verb — add -ed.
+00252,Past Tense,Past Tense Verbs,2,12. Mum ___(make) a big cake for my birthday last week.,made,last week,Past tense of make is made.
+00253,Past Tense,Past Tense Verbs,3,13. The boy ___(trip) over a stone and fell down just now.,tripped,just now,trip ends in a short vowel + single consonant — double the p and add -ed (tripped).
+00254,Past Tense,Past Tense Verbs,2,14. Uncle Ray ___(give) us a nice present yesterday.,gave,yesterday,Past tense of give is gave.
+00255,Past Tense,Past Tense Verbs,1,15. She ___(brush) her teeth before going to bed last night.,brushed,last night,brush is a regular verb — add -ed.
+00256,Past Tense,Past Tense Verbs,2,16. I ___(see) a pretty bird in the tree ten minutes ago.,saw,ten minutes ago,Past tense of see is saw.
+00257,Past Tense,Past Tense Verbs,1,17. They ___(walk) to school on foot yesterday morning.,walked,yesterday morning,walk is a regular verb — add -ed.
+00258,Past Tense,Past Tense Verbs,1,18. The dog ___(bark) at the stranger just now.,barked,just now,bark is a regular verb — add -ed.
+00259,Past Tense,Past Tense Verbs,2,19. My teacher ___(tell) us a story this morning.,told,this morning,Past tense of tell is told.
+00260,Past Tense,Past Tense Verbs,2,20. Ben ___(draw) a picture of his dog last night.,drew,last night,Past tense of draw is drew.
+00261,Past Tense,Negative Sentences,3,21. I didn't ___(go) to the library yesterday.,go,didn't,Use the base verb after didn't (go).
+00262,Past Tense,Questions,3,22. Did you ___(see) the fireworks last night?,see,Did,"After Did, use the base verb (see)."
+00263,Past Tense,Be-Verb (Past),2,23. My sister and I ___(be) at home yesterday.,were,yesterday / My sister and I,Plural subject (My sister and I) → were.
+00264,Past Tense,Be-Verb (Past),2,24. The test ___(be) very easy yesterday.,was,yesterday / The test,Singular subject (The test) → was.
+00265,Past Tense,Negative Sentences,3,25. Sam didn't ___(clean) his room last weekend.,clean,didn't,Use the base verb after didn't (clean).
+00266,Past Tense,Questions,3,26. ___(Did / Do) you buy any apples at the supermarket yesterday?,Did,yesterday / buy,Past Yes/No questions start with Did.
+00267,Past Tense,Past Tense Verbs,2,27. The cat ___(run) up the tree quickly two minutes ago.,ran,two minutes ago,Past tense of run is ran.
+00268,Past Tense,Past Tense Verbs,2,28. We ___(have) a great time at the party last night.,had,last night,Past tense of have is had.
+00269,Past Tense,Past Tense Verbs,2,29. Jenny ___(spend) $20 to buy a notebook yesterday.,spent,yesterday,Past tense of spend is spent.
+00270,Past Tense,Past Tense Verbs,3,30. The bus ___(stop) at the bus stop five minutes ago.,stopped,five minutes ago,stop ends in a short vowel + single consonant — double the p and add -ed (stopped).
+00271,Past Tense,Be-Verb Negatives,3,31. They ___(not be) hungry after lunch yesterday.,were not / weren't,yesterday / They,They → were not / weren't.
+00272,Past Tense,Be-Verb Negatives,3,32. It ___(not be) rainy last Sunday.,was not / wasn't,last Sunday / It,It → was not / wasn't.
+00273,Past Tense,Questions,3,33. What time did you ___(wake) up this morning?,wake,did,"With did, use the base verb (wake)."
+00274,Past Tense,Past Tense Verbs,2,34. Harry ___(find) his lost keys under the table just now.,found,just now,Past tense of find is found.
+00275,Past Tense,Past Tense Verbs,2,35. The teacher ___(give) us a quiz two days ago.,gave,two days ago,Past tense of give is gave.
+00276,Past Tense,Negative Sentences,3,36. We didn't ___(have) music class last Tuesday.,have,didn't,Use the base verb after didn't (have).
+00277,Past Tense,Past Tense Verbs,3,37. The little girl ___(cry) loudly because she lost her toy.,cried,lost,Consonant + y → change y to i and add -ed (cried).
+00278,Past Tense,Past Tense Verbs,2,38. Mr. Chan ___(teach) English to us last year.,taught,last year,Past tense of teach is taught.
+00279,Past Tense,Past Tense Verbs,2,39. She ___(sing) a sweet song in the school concert yesterday.,sang,yesterday,Past tense of sing is sang.
+00280,Past Tense,Past Tense Verbs,2,40. They ___(drink) all the juice at the picnic yesterday.,drank,yesterday,Past tense of drink is drank.
+00281,Past Tense,Mixed Tenses,4,"41. Tom usually walks to school, but he ___(take) a bus yesterday.",took,yesterday / usually,usually → present; yesterday → past (took).
+00282,Past Tense,Sense Verbs & Auxiliaries,4,42. Mum helped me ___(do) my homework last night.,do,helped me,"Even with last night, help takes the base verb (do)."
+00283,Past Tense,Habits vs Past Events,4,"43. I ___(be) late for school this morning, so teacher scolded me.",was,this morning,A finished event this morning → was.
+00284,Past Tense,Unchanged Verbs,3,44. My father ___(cut) the birthday cake five minutes ago.,cut,five minutes ago,The past tense of cut is still cut (no change).
+00285,Past Tense,Unchanged Verbs,3,45. He ___(put) his books into the bag just now.,put,just now,The past tense of put is still put (no change).
+00286,Past Tense,Complex Sentences,4,"46. Although it was cold, they still ___(go) swimming yesterday.",went,was cold,was shows the past; go → went.
+00287,Past Tense,Wh- Questions,3,47. Where did your family ___(go) for vacation last summer?,go,did / last summer,"With did, use the base verb (go)."
+00288,Past Tense,Spelling Traps,3,48. The chef ___(fry) some chicken wings for us last night.,fried,last night,Consonant + y → change y to i and add -ed (fried).
+00289,Past Tense,Verb Chains,4,"49. Yesterday, Alex came home, ___(wash) his hands and ate dinner.",washed,Yesterday / came / ate,A chain of past actions: came … ate … washed.
+00290,Past Tense,Be-Verb Agreement,4,50. There ___(be) many people in the park last Sunday.,were,last Sunday / many people,Past tense + plural noun (many people) → were.

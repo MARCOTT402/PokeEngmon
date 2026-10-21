@@ -4,7 +4,7 @@
 
 叫 AI 生成題目時，**由下面「# 任務」嗰行開始，成份複製貼俾 AI**，再加一句你想要咩題目，例如：
 
-> 用以下指引，生成 30 題 P.3 現在完成式，分 3 個課題、每課題 2–3 個題型，難度 1–4。
+> 用以下指引，生成 30 題 P.3 現在完成式，分 2 個課題、每課題 2–3 個題型，難度 1–4。
 
 AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 題目 → 方法二：貼上」匯入；
 亦可以取代網站根目錄嘅 `questions.csv`，咁所有手機一開網站就有新題。
@@ -12,6 +12,7 @@ AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 
 （如果 AI 幫你儲成 .csv 檔案，用「方法一：揀 CSV 檔案」，檔案要 UTF-8 編碼。）
 
 ---
+
 以下係貼俾 AI 嘅部分：
 
 # 任務：生成英文填空練習題（CSV 格式）
@@ -31,13 +32,21 @@ AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 
 | 欄 | 必填 | 規則 |
 |----|------|------|
 | 編號 | 可留空 | 五位數，例如 `00001`。用嚟對應 `image_file/00001.png` 做題目圖片；留空就冇圖片 |
-| 課題 | ✓ | 大分類，例如 `過去式`、`現在完成式`。**同一個課題嘅寫法要完全一致**（app 會用佢做第一層選擇） |
-| 題型 | ✓ | 課題入面嘅小分類，例如 `動詞過去式`、`否定句過去式`。同一課題內同名歸為同一題型 |
+| 課題 | ✓ | **英文**大分類，例如 `Articles`、`Past Tense`。**同一個課題嘅寫法要完全一致**（app 會用佢做第一層選擇） |
+| 題型 | ✓ | **英文**小分類，例如 `Articles: Basics`、`Past Tense Verbs`。同一課題內同名歸為同一題型 |
 | 難度 | ✓ | 正整數 `1`、`2`、`3`、`4`…（1＝最淺）。答題畫面會顯示同等數量嘅 ★ |
 | 句子 | ✓ | 完整英文句子，必須包埋 `___`（三個底線）做填空位，一題一個空位 |
-| 答案 | ✓ | 填空位嘅正確答案。多個可接受答案用 `/` 或 `\|` 分隔，例如 `were not / weren't` |
+| 答案 | 可留空 | 填空位嘅正確答案。多個可接受答案用 `/` 或 `\|` 分隔，例如 `were not / weren't`。**留空＝零冠詞題**（小朋友要唔填、直接提交） |
 | 關鍵詞 | 可留空 | 句子入面要畫箭咀強調嘅詞語，多個用 `/` 分隔。**必須係句子入面一字不差出現嘅字** |
-| 提示 | 可留空 | 答錯時顯示嘅一句廣東話解釋，例如 `go 嘅過去式係 went` |
+| 提示 | ✓ | 答錯時顯示嘅**英文**短解釋，例如 `Past tense of go is went.` 或 `Vowel sound (apple)` |
+
+## 答案留空（零冠詞題）
+
+- 如果正確做法係「唔加冠詞」，答案欄就**完全留空**，例如：
+  `00005,Articles,Articles: Advanced,3,We go to ___ school by bus.,,school,Zero article: go to school`
+- 呢類題目嘅句子仍然要有 `___`，小朋友答題時要**留空輸入框**再提交。
+- 只有零冠詞題可以留空答案；其他題目一定要填答案。
+- 唔可以用 `X`、`-`、`none` 等符號代替留空。
 
 ## 題目編號同圖片
 
@@ -53,8 +62,8 @@ AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 
 - **課題**＝一個大學習範圍，通常一個 CSV 有 1–5 個課題。
 - **題型**＝課題入面嘅具體考法，一個課題通常有 2–6 個題型。
 - 例：
-  - 課題 `過去式` → 題型 `動詞過去式`、`否定句過去式`、`疑問句過去式`、`Be動詞過去式`
-  - 課題 `現在完成式` → 題型 `have/has + p.p.`、`since / for`、`already / yet`
+  - 課題 `Articles` → 題型 `Articles: Basics`、`Articles: Usage`、`Articles: Advanced`
+  - 課題 `Past Tense` → 題型 `Past Tense Verbs`、`Negative Sentences`、`Questions`、`Be-Verb (Past)`
 
 ## 難度建議
 
@@ -80,12 +89,21 @@ AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 
 6. 關鍵詞唔想畫箭咀就留空，唔可以亂填句子冇嘅字。
 7. 答案唔好包逗號；如果有逗號需求就改寫答案。
 8. 輸出係 UTF-8 純文字，除表頭同行與行之間，唔好加空行。
+9. **課題、題型、提示一律用英文**；提示要短，避免文法術語，盡量用例子帶出規則。
+
+## 關鍵詞點揀（建議）
+
+- 揀**空位後面第一個實詞**（通常就係決定答案嘅名詞或形容詞），例如：
+  - `This is ___ apple.` → `apple`
+  - `I can see ___ big dog.` → `big`
+  - `Look at ___ sun!` → `sun`
+- 關鍵詞只會喺答錯解釋度出現，所以揀最有提示性嘅一個詞就夠。
+- 如果一個關鍵詞都揀唔到，寧願留空，唔好硬填。
 
 ## 建議
 
-- 句子用 `1. ` `2. ` `3. ` 編號開頭（編號會照顯示，方便對答案）。
 - 程度配合用户指定年級，句子要短而自然。
-- 同一批題目：課題名一致、題型名一致，唔好一時寫「動詞過去式」一時寫「過去式動詞」。
+- 同一批題目：課題名一致、題型名一致，唔好一時寫 `Past Tense` 一時寫 `Past tense`。
 - 每批 20–50 題，分 2–5 個課題。
 
 ## 輸出前自我檢查（逐行）
@@ -94,7 +112,8 @@ AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 
 - [ ] 編號五位數、冇重複（有填嘅話）
 - [ ] 句子有 `___`
 - [ ] 難度係 1–5 嘅整數
-- [ ] 答案唔係空白
+- [ ] 答案有填；只有零冠詞題先可以留空（唔好用 `X`）
+- [ ] 課題、題型、提示全部係英文
 - [ ] 每個關鍵詞（用 `/` 拆開逐個計）都可以喺句子入面搵到
 - [ ] 包半形逗號嘅欄已經用雙引號包住
 
@@ -102,9 +121,11 @@ AI 輸出嘅 CSV 可以直接喺 app 嘅「▶ 開始做題 → 📥 匯入 CSV 
 
 ```
 編號,課題,題型,難度,句子,答案,關鍵詞,提示
-00001,過去式,動詞過去式,1,1. Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went
-00002,過去式,Be動詞過去式,2,2. My sister and I ___(be) at home yesterday.,were,yesterday / My sister and I,主語係複數，用 were
-00003,過去式,否定句過去式,3,3. I didn't ___(go) to the library yesterday.,go,didn't,didn't 後面必須用原形動詞
-00004,過去式,時態混合對比,4,"4. Tom usually walks to school, but he ___(take) a bus yesterday.",took,yesterday,usually 係現在式，有 yesterday 就要轉過去式
-00005,過去式,Be動詞過去式 (否定),3,5. They ___(not be) hungry after lunch yesterday.,were not / weren't,yesterday / They,主語係 They，否定係 weren't
+00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
+00002,Articles,Articles: Basics,1,I can see ___ big dog under the tree.,a,big,Consonant sound (big)
+00003,Articles,Articles: Advanced,3,We go to ___ school by bus.,,school,Zero article: go to school
+00004,Past Tense,Past Tense Verbs,2,2. Yesterday I ___(go) to the park.,went,Yesterday,Past tense of go is went.
+00005,Past Tense,Be-Verb (Past),3,"3. My sister and I ___(be) at home yesterday.",were,My sister and I,Plural subject → were.
+00006,Past Tense,Negative Sentences,3,I didn't ___(go) to the library yesterday.,go,didn't,Use the base verb after didn't.
+00007,Past Tense,Be-Verb Negatives,3,They ___(not be) hungry after lunch.,were not / weren't,They,Plural subject → were not.
 ```

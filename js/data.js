@@ -179,60 +179,60 @@ function entryCurrentSpecies(entry) {
    explain.hint    = 極短解釋（避免文法術語） */
 const QUESTION_BANK = [
   /* --- There is / There are (8) --- */
-  { id: "q01", topic: "There is / There are", sentence: "There ___ some dogs in the park.", answer: "are", explain: { keyword: "some dogs", hint: "有 some（多過一隻）→ 用 are" } },
-  { id: "q02", topic: "There is / There are", sentence: "There ___ a big tree in the garden.", answer: "is", explain: { keyword: "a big tree", hint: "得一樣嘢 → 用 is" } },
-  { id: "q03", topic: "There is / There are", sentence: "There ___ three cats on the wall.", answer: "are", explain: { keyword: "three cats", hint: "三隻＝多過一隻 → 用 are" } },
-  { id: "q04", topic: "There is / There are", sentence: "There ___ some milk in the cup.", answer: "is", explain: { keyword: "milk", hint: "milk 倒出嚟冇得數，當一樣嘢 → is" } },
-  { id: "q05", topic: "There is / There are", sentence: "There ___ many stars in the sky.", answer: "are", explain: { keyword: "many stars", hint: "many ＝好多粒 → 用 are" } },
-  { id: "q06", topic: "There is / There are", sentence: "There ___ a bird in the tree.", answer: "is", explain: { keyword: "a bird", hint: "a ＝一隻 → 用 is" } },
-  { id: "q07", topic: "There is / There are", sentence: "There ___ two apples on the table.", answer: "are", explain: { keyword: "two apples", hint: "two ＝兩個 → 用 are" } },
-  { id: "q08", topic: "There is / There are", sentence: "___ there any water in the bottle?", answer: "Is", accept: ["is"], explain: { keyword: "water", hint: "water 當一樣嘢 → 用 Is" } },
+  { id: "q01", topic: "There is / There are", sentence: "There ___ some dogs in the park.", answer: "are", explain: { keyword: "some dogs", hint: "some = more than one → are" } },
+  { id: "q02", topic: "There is / There are", sentence: "There ___ a big tree in the garden.", answer: "is", explain: { keyword: "a big tree", hint: "Only one thing → is" } },
+  { id: "q03", topic: "There is / There are", sentence: "There ___ three cats on the wall.", answer: "are", explain: { keyword: "three cats", hint: "Three = more than one → are" } },
+  { id: "q04", topic: "There is / There are", sentence: "There ___ some milk in the cup.", answer: "is", explain: { keyword: "milk", hint: "Milk is uncountable → is" } },
+  { id: "q05", topic: "There is / There are", sentence: "There ___ many stars in the sky.", answer: "are", explain: { keyword: "many stars", hint: "many = a lot → are" } },
+  { id: "q06", topic: "There is / There are", sentence: "There ___ a bird in the tree.", answer: "is", explain: { keyword: "a bird", hint: "a = one → is" } },
+  { id: "q07", topic: "There is / There are", sentence: "There ___ two apples on the table.", answer: "are", explain: { keyword: "two apples", hint: "two = two → are" } },
+  { id: "q08", topic: "There is / There are", sentence: "___ there any water in the bottle?", answer: "Is", accept: ["is"], explain: { keyword: "water", hint: "water is uncountable → Is" } },
 
   /* --- a / an (5) --- */
-  { id: "q09", topic: "a / an", sentence: "I eat ___ apple every day.", answer: "an", explain: { keyword: "apple", hint: "a・e・i・o・u 開頭 → 用 an" } },
-  { id: "q10", topic: "a / an", sentence: "She has ___ red bag.", answer: "a", explain: { keyword: "red", hint: "red 係 r 開頭 → 用 a" } },
-  { id: "q11", topic: "a / an", sentence: "It is ___ old clock.", answer: "an", explain: { keyword: "old", hint: "o 開頭 → 用 an" } },
-  { id: "q12", topic: "a / an", sentence: "My dad drives ___ bus.", answer: "a", explain: { keyword: "bus", hint: "b 開頭 → 用 a" } },
-  { id: "q13", topic: "a / an", sentence: "I see ___ elephant at the zoo.", answer: "an", explain: { keyword: "elephant", hint: "e 開頭 → 用 an" } },
+  { id: "q09", topic: "a / an", sentence: "I eat ___ apple every day.", answer: "an", explain: { keyword: "apple", hint: "Starts with a, e, i, o, u → an" } },
+  { id: "q10", topic: "a / an", sentence: "She has ___ red bag.", answer: "a", explain: { keyword: "red", hint: "red starts with r → a" } },
+  { id: "q11", topic: "a / an", sentence: "It is ___ old clock.", answer: "an", explain: { keyword: "old", hint: "Starts with o → an" } },
+  { id: "q12", topic: "a / an", sentence: "My dad drives ___ bus.", answer: "a", explain: { keyword: "bus", hint: "Starts with b → a" } },
+  { id: "q13", topic: "a / an", sentence: "I see ___ elephant at the zoo.", answer: "an", explain: { keyword: "elephant", hint: "Starts with e → an" } },
 
   /* --- am / is / are (6) --- */
-  { id: "q14", topic: "am / is / are", sentence: "I ___ a happy boy.", answer: "am", explain: { keyword: "I", hint: "I 永遠配 am" } },
-  { id: "q15", topic: "am / is / are", sentence: "She ___ my sister.", answer: "is", explain: { keyword: "She", hint: "一個人（he / she / it）→ is" } },
-  { id: "q16", topic: "am / is / are", sentence: "They ___ my friends.", answer: "are", explain: { keyword: "They", hint: "多過一個人 → are" } },
-  { id: "q17", topic: "am / is / are", sentence: "We ___ in the classroom.", answer: "are", explain: { keyword: "We", hint: "We ＝我哋（多人）→ are" } },
-  { id: "q18", topic: "am / is / are", sentence: "The dogs ___ hungry.", answer: "are", explain: { keyword: "The dogs", hint: "dogs 係多隻 → are" } },
-  { id: "q19", topic: "am / is / are", sentence: "Tom ___ my best friend.", answer: "is", explain: { keyword: "Tom", hint: "一個名字 → is" } },
+  { id: "q14", topic: "am / is / are", sentence: "I ___ a happy boy.", answer: "am", explain: { keyword: "I", hint: "I always takes am" } },
+  { id: "q15", topic: "am / is / are", sentence: "She ___ my sister.", answer: "is", explain: { keyword: "She", hint: "One person (he / she / it) → is" } },
+  { id: "q16", topic: "am / is / are", sentence: "They ___ my friends.", answer: "are", explain: { keyword: "They", hint: "More than one person → are" } },
+  { id: "q17", topic: "am / is / are", sentence: "We ___ in the classroom.", answer: "are", explain: { keyword: "We", hint: "We = more than one → are" } },
+  { id: "q18", topic: "am / is / are", sentence: "The dogs ___ hungry.", answer: "are", explain: { keyword: "The dogs", hint: "dogs = plural → are" } },
+  { id: "q19", topic: "am / is / are", sentence: "Tom ___ my best friend.", answer: "is", explain: { keyword: "Tom", hint: "One person's name → is" } },
 
   /* --- have / has (4) --- */
-  { id: "q20", topic: "have / has", sentence: "I ___ two pencils.", answer: "have", explain: { keyword: "I", hint: "I 配 have" } },
-  { id: "q21", topic: "have / has", sentence: "He ___ a red car.", answer: "has", explain: { keyword: "He", hint: "一個人 → has" } },
-  { id: "q22", topic: "have / has", sentence: "The cats ___ long tails.", answer: "have", explain: { keyword: "The cats", hint: "多隻貓 → have" } },
-  { id: "q23", topic: "have / has", sentence: "My mum ___ a new phone.", answer: "has", explain: { keyword: "My mum", hint: "一個人 → has" } },
+  { id: "q20", topic: "have / has", sentence: "I ___ two pencils.", answer: "have", explain: { keyword: "I", hint: "I takes have" } },
+  { id: "q21", topic: "have / has", sentence: "He ___ a red car.", answer: "has", explain: { keyword: "He", hint: "One person → has" } },
+  { id: "q22", topic: "have / has", sentence: "The cats ___ long tails.", answer: "have", explain: { keyword: "The cats", hint: "Plural cats → have" } },
+  { id: "q23", topic: "have / has", sentence: "My mum ___ a new phone.", answer: "has", explain: { keyword: "My mum", hint: "One person → has" } },
 
   /* --- 單數 / 眾數 (4) --- */
-  { id: "q24", topic: "加 s", sentence: "Two ___ are running fast.", answer: "dogs", explain: { keyword: "Two", hint: "two 之後隻字要加 s" } },
-  { id: "q25", topic: "加 s", sentence: "I see five ___ on the farm.", answer: "cows", explain: { keyword: "five", hint: "five 之後隻字要加 s" } },
-  { id: "q26", topic: "加 s", sentence: "Look! The ___ are flying in the sky.", answer: "birds", explain: { keyword: "are flying", hint: "多隻雀 → birds 要加 s" } },
-  { id: "q27", topic: "加 s", sentence: "One ___ is sleeping on the sofa.", answer: "cat", explain: { keyword: "One", hint: "one ＝一隻 → 唔使加 s" } },
+  { id: "q24", topic: "Plural -s", sentence: "Two ___ are running fast.", answer: "dogs", explain: { keyword: "Two", hint: "After two, add -s" } },
+  { id: "q25", topic: "Plural -s", sentence: "I see five ___ on the farm.", answer: "cows", explain: { keyword: "five", hint: "After five, add -s" } },
+  { id: "q26", topic: "Plural -s", sentence: "Look! The ___ are flying in the sky.", answer: "birds", explain: { keyword: "are flying", hint: "More than one bird → birds" } },
+  { id: "q27", topic: "Plural -s", sentence: "One ___ is sleeping on the sofa.", answer: "cat", explain: { keyword: "One", hint: "one = singular → no -s" } },
 
   /* --- 位置字 (5) --- */
-  { id: "q28", topic: "位置字", sentence: "The ball is ___ the box. It is inside.", answer: "in", explain: { keyword: "inside", hint: "inside ＝入面 → 用 in" } },
-  { id: "q29", topic: "位置字", sentence: "The book is ___ the table. It is on top.", answer: "on", explain: { keyword: "on top", hint: "on top ＝上面 → 用 on" } },
-  { id: "q30", topic: "位置字", sentence: "The cat is ___ the chair. You cannot see it.", answer: "under", explain: { keyword: "cannot see it", hint: "睇唔到 ＝喺下面 → under" } },
-  { id: "q31", topic: "位置字", sentence: "We fly kites ___ the sky.", answer: "in", explain: { keyword: "the sky", hint: "喺天空入面 → in the sky" } },
-  { id: "q32", topic: "位置字", sentence: "School starts ___ eight o'clock.", answer: "at", explain: { keyword: "eight o'clock", hint: "講時間幾點 → 用 at" } },
+  { id: "q28", topic: "Prepositions", sentence: "The ball is ___ the box. It is inside.", answer: "in", explain: { keyword: "inside", hint: "inside = in" } },
+  { id: "q29", topic: "Prepositions", sentence: "The book is ___ the table. It is on top.", answer: "on", explain: { keyword: "on top", hint: "on top = on" } },
+  { id: "q30", topic: "Prepositions", sentence: "The cat is ___ the chair. You cannot see it.", answer: "under", explain: { keyword: "cannot see it", hint: "You cannot see it → under" } },
+  { id: "q31", topic: "Prepositions", sentence: "We fly kites ___ the sky.", answer: "in", explain: { keyword: "the sky", hint: "In the sky → in" } },
+  { id: "q32", topic: "Prepositions", sentence: "School starts ___ eight o'clock.", answer: "at", explain: { keyword: "eight o'clock", hint: "Clock time → at" } },
 
   /* --- This / That / These / Those (4) --- */
-  { id: "q33", topic: "This / That", sentence: "___ is my ball. It is here.", answer: "This", accept: ["this"], explain: { keyword: "here", hint: "一件嘢＋喺手邊 → This" } },
-  { id: "q34", topic: "This / That", sentence: "___ are my shoes over there.", answer: "Those", accept: ["those"], explain: { keyword: "over there", hint: "遠遠哋＋多件 → Those" } },
-  { id: "q35", topic: "This / That", sentence: "___ is my teacher over there.", answer: "That", accept: ["that"], explain: { keyword: "over there", hint: "遠遠哋＋一個 → That" } },
-  { id: "q36", topic: "This / That", sentence: "___ are my hands.", answer: "These", accept: ["these"], explain: { keyword: "are", hint: "有 are ＝多件嘢 → These" } },
+  { id: "q33", topic: "This / That", sentence: "___ is my ball. It is here.", answer: "This", accept: ["this"], explain: { keyword: "here", hint: "One thing nearby → This" } },
+  { id: "q34", topic: "This / That", sentence: "___ are my shoes over there.", answer: "Those", accept: ["those"], explain: { keyword: "over there", hint: "Far away + plural → Those" } },
+  { id: "q35", topic: "This / That", sentence: "___ is my teacher over there.", answer: "That", accept: ["that"], explain: { keyword: "over there", hint: "Far away + one → That" } },
+  { id: "q36", topic: "This / That", sentence: "___ are my hands.", answer: "These", accept: ["these"], explain: { keyword: "are", hint: "are = plural → These" } },
 
   /* --- 疑問詞 (4) --- */
-  { id: "q37", topic: "疑問詞", sentence: "___ is your name? My name is Isaac.", answer: "What", accept: ["what"], explain: { keyword: "name", hint: "問名（嘜嘢名）→ What" } },
-  { id: "q38", topic: "疑問詞", sentence: "___ is my school bag? It is under the chair.", answer: "Where", accept: ["where"], explain: { keyword: "under the chair", hint: "問地方（喺邊度）→ Where" } },
-  { id: "q39", topic: "疑問詞", sentence: "___ is that boy? He is my brother.", answer: "Who", accept: ["who"], explain: { keyword: "He is my brother", hint: "問人（邊個）→ Who" } },
-  { id: "q40", topic: "疑問詞", sentence: "___ do you get up? At seven o'clock.", answer: "When", accept: ["when"], explain: { keyword: "seven o'clock", hint: "問時間（幾點）→ When" } }
+  { id: "q37", topic: "Wh- Questions", sentence: "___ is your name? My name is Isaac.", answer: "What", accept: ["what"], explain: { keyword: "name", hint: "Asking a name → What" } },
+  { id: "q38", topic: "Wh- Questions", sentence: "___ is my school bag? It is under the chair.", answer: "Where", accept: ["where"], explain: { keyword: "under the chair", hint: "Asking a place → Where" } },
+  { id: "q39", topic: "Wh- Questions", sentence: "___ is that boy? He is my brother.", answer: "Who", accept: ["who"], explain: { keyword: "He is my brother", hint: "Asking about a person → Who" } },
+  { id: "q40", topic: "Wh- Questions", sentence: "___ do you get up? At seven o'clock.", answer: "When", accept: ["when"], explain: { keyword: "seven o'clock", hint: "Asking a time → When" } }
 ];
 
 /* ---------- 題目 helpers ---------- */
@@ -242,14 +242,14 @@ let SITE_QUESTIONS = [];
 
 /* 內建題庫冇課題／難度欄，用題型對應返 */
 const TOPIC_DEFAULTS = {
-  "There is / There are": { course: "基本句型", level: 1 },
-  "am / is / are":        { course: "基本句型", level: 1 },
-  "This / That":          { course: "基本句型", level: 2 },
-  "a / an":               { course: "冠詞與名詞", level: 1 },
-  "加 s":                  { course: "冠詞與名詞", level: 2 },
-  "have / has":           { course: "動詞與擁有", level: 1 },
-  "位置字":                { course: "位置與時間", level: 1 },
-  "疑問詞":                { course: "疑問詞", level: 2 }
+  "There is / There are": { course: "Basic Sentences", level: 1 },
+  "am / is / are":        { course: "Basic Sentences", level: 1 },
+  "This / That":          { course: "Basic Sentences", level: 2 },
+  "a / an":               { course: "Articles & Nouns", level: 1 },
+  "Plural -s":            { course: "Articles & Nouns", level: 2 },
+  "have / has":           { course: "Verbs & Possession", level: 1 },
+  "Prepositions":         { course: "Place & Time", level: 1 },
+  "Wh- Questions":        { course: "Question Words", level: 2 }
 };
 
 /* 題型選擇鍵：同名題型可以出現在唔同課題，所以用「課題＋題型」做 key */
@@ -275,7 +275,7 @@ function hashString(str) {
 /* 補齊課題／難度／編號（舊資料或內建題庫） */
 function normalizeQuestion(q) {
   const d = TOPIC_DEFAULTS[q.topic] || {};
-  if (!q.course) q.course = d.course || "未分類";
+  if (!q.course) q.course = d.course || "Uncategorized";
   if (!q.level) q.level = d.level || 1;
   /* 內建題目用自己嘅 q01…q40 做圖片編號（可加 image_file/q01.png） */
   if (!q.no) q.no = /^q\d+$/.test(q.id) ? q.id : "";
@@ -370,16 +370,18 @@ function drawQuestionSet(size, keys) {
 }
 
 /* ---------- CSV 匯入 ----------
-   新格式（7 欄）：課題,題型,難度,句子,答案,關鍵詞,提示
-   舊格式（5 欄）：題型,句子,答案,關鍵詞,提示（課題＝未分類、難度＝1）
-   - 課題：大分類（例如「過去式」）；同一個課題下面可以有多個題型
+   新格式（8 欄）：編號,課題,題型,難度,句子,答案,關鍵詞,提示
+   舊格式（7 欄）：課題,題型,難度,句子,答案,關鍵詞,提示
+   舊格式（5 欄）：題型,句子,答案,關鍵詞,提示（課題＝Uncategorized、難度＝1）
+   - 課題：大分類；同一個課題下面可以有多個題型
    - 題型：課題入面嘅小分類；同名歸入同一題型
    - 難度：1、2、3、4…（答題時顯示同等數量嘅星星）
    - 句子：必須有 ___ （三個底線）做空位
    - 答案：正確答案；多個可接受答案用 | 或 / 分隔（例：were not / weren't）
+     留空＝零冠詞（答題時要留空提交）
    - 關鍵詞（可留空）：句子內要 highlight 嘅詞語，多個用 / 分隔
    - 提示（可留空）：答錯時顯示嘅短解釋
-   第一行如果係標題（第一格係「課題」或「題型」）會自動略過 */
+   第一行如果係標題（第一格係「編號」「課題」或「題型」）會自動略過 */
 
 function parseCSV(text) {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);   // 去除 UTF-8 BOM
@@ -474,14 +476,18 @@ function questionsFromCSV(text) {
       [course, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
     } else {
       [topic, sentence, answerRaw, keyword, hint] = c;
-      course = "未分類";
+      course = "Uncategorized";
       levelRaw = "1";
     }
 
-    if (!course || !topic || !sentence || !answerRaw || !sentence.includes("___")) { skipped++; return; }
+    if (!course || !topic || !sentence || !sentence.includes("___")) { skipped++; return; }
 
-    const answers = answerRaw.split(/[|/]/).map(s => s.trim()).filter(Boolean);
-    if (answers.length === 0) { skipped++; return; }
+    /* 「X」代表零冠詞，同留空答案等價 */
+    if (hasNo && /^x$/i.test(String(answerRaw || "").trim())) answerRaw = "";
+
+    /* 8 欄格式准許答案留空（例如零冠詞題：正確做法係唔填） */
+    const answers = String(answerRaw || "").split(/[|/]/).map(s => s.trim()).filter(Boolean);
+    if (answers.length === 0 && !hasNo) { skipped++; return; }
 
     const level = Math.min(9, Math.max(1, parseInt(levelRaw, 10) || 1));
 
@@ -492,7 +498,7 @@ function questionsFromCSV(text) {
       topic,
       level,
       sentence,
-      answer: answers[0],
+      answer: answers[0] || "",
       accept: answers.slice(1),
       custom: true,
       explain: { keyword: keyword || "", hint: hint || "" }

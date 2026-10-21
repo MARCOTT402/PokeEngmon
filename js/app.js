@@ -256,18 +256,18 @@ const App = {
             <pre>編號,課題,題型,難度,句子,答案,關鍵詞,提示</pre>
             <ul>
               <li><b>編號</b>（可留空）：五位數，例如 <code>00001</code>；會自動對應 <code>image_file/00001.png</code> 做題目圖片</li>
-              <li><b>課題</b>：大分類（例如 <code>過去式</code>）；同一課題下面可以有多個題型</li>
-              <li><b>題型</b>：課題入面嘅小分類（例如 <code>動詞過去式</code>）；同名會歸入同一題型</li>
+              <li><b>課題</b>：大分類（例如 <code>Articles</code>）；同一課題下面可以有多個題型</li>
+              <li><b>題型</b>：課題入面嘅小分類（例如 <code>Articles: Basics</code>）；同名會歸入同一題型</li>
               <li><b>難度</b>：數字 <code>1</code>、<code>2</code>、<code>3</code>、<code>4</code>…（答題時顯示同等數量嘅 ★）</li>
               <li><b>句子</b>：必須有 <code>___</code>（三個底線）做空位</li>
-              <li><b>答案</b>：正確答案；多個可接受答案用 <code>|</code> 或 <code>/</code> 分隔（如 <code>were not / weren't</code>）</li>
+              <li><b>答案</b>：正確答案；多個可接受答案用 <code>|</code> 或 <code>/</code> 分隔（如 <code>were not / weren't</code>）；<b>可以留空</b>（代表零冠詞，答題時要留空再提交）</li>
               <li><b>關鍵詞</b>（可留空）：句子內要著色嘅詞語，多個用 <code>/</code> 分隔（箭咀會由每個詞指去空位）</li>
-              <li><b>提示</b>（可留空）：答錯時顯示嘅短解釋</li>
+              <li><b>提示</b>（可留空）：答錯時顯示嘅短解釋（建議用英文）</li>
             </ul>
             <p><b>例子：</b></p>
             <pre>編號,課題,題型,難度,句子,答案,關鍵詞,提示
-00001,過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went
-00002,基本句型,am / is / are,1,She ___ my sister.,is,She,一個人 → is</pre>
+00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
+00002,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school</pre>
             <p class="csv-note">⚠ 第一行如果係標題行（第一格寫「編號」或「課題」）會自動略過。內容有逗號請用雙引號包住。<br>題目圖片放在 <code>image_file/</code>，檔名等於編號（<code>00001.png</code>；亦接受 jpg／jpeg／webp／gif）。冇圖片就唔會顯示。</p>
           </div>
         </details>
