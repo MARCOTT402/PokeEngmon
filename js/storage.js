@@ -59,25 +59,23 @@ function uidGen() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-/* 新獲得 Pokemon（抽獎結果）。重複 → 轉為糖果＋EV，回傳 {entry, isDupe} */
-function obtainPokemon(chainKey) {
+/* 新獲得 Pokemon（抽獎結果）。
+   重複 → 得到 1 點自由分配 EV；稀有抽先會額外送 1 粒糖果。
+   回傳 {entry, isDupe, evGain, candyGain} */
+function obtainPokemon(chainKey, mode) {
   const st = loadState();
   const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
   const existing = st.entries.find(e => e.chainKey === chainKey);
   if (existing) {
     ensureEntryPokemonData(existing);
     existing.dupes = (existing.dupes || 0) + 1;
-    existing.candies = (existing.candies || 0) + 1;
+    existing.evPoints = (existing.evPoints || 0) + 1;
+    const candyGain = mode === "rare" ? 1 : 0;
+    existing.candies = (existing.candies || 0) + candyGain;
     existing.stars = Math.min(5, 1 + Math.floor(existing.dupes / 5));
-    /* 重複抽到 → 每項能力 +1 EV（受 252／總和 510 上限） */
-    STAT_KEYS.forEach(k => {
-      if ((existing.evs[k] || 0) < MAX_EV && evTotal(existing.evs) < MAX_EV_TOTAL) {
-        existing.evs[k] = (existing.evs[k] || 0) + 1;
-      }
-    });
     st.activeUid = existing.uid;
     saveState();
-    return { entry: existing, isDupe: true };
+    return { entry: existing, isDupe: true, evGain: 1, candyGain };
   }
   const dexId = chain.stages[0][0];
   const entry = {
@@ -86,8 +84,9 @@ function obtainPokemon(chainKey) {
     stage: 1,
     exp: 0,
     level: 1,
-    ivs: emptyIvs(),
+    ivs: randomIvs(),
     evs: emptyEvs(),
+    evPoints: 0,
     nature: randomNature(),
     moves: initialMoves(dexId),
     candies: 0,
@@ -100,6 +99,19 @@ function obtainPokemon(chainKey) {
   st.activeUid = entry.uid;
   saveState();
   return { entry, isDupe: false };
+}
+
+/* 用 1 點自由 EV 加落某項能力（每項上限 252、總和上限 510） */
+function addEvPoint(entry, statKey) {
+  ensureEntryPokemonData(entry);
+  if (!STAT_KEYS.includes(statKey)) return false;
+  if ((entry.evPoints || 0) <= 0) return false;
+  if ((entry.evs[statKey] || 0) >= MAX_EV) return false;
+  if (evTotal(entry.evs) >= MAX_EV_TOTAL) return false;
+  entry.evs[statKey] = (entry.evs[statKey] || 0) + 1;
+  entry.evPoints -= 1;
+  saveState();
+  return true;
 }
 
 /* 加 EXP（照 PokéAPI 經驗表升級）→ 可能學招式／進化

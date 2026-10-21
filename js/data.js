@@ -20,16 +20,18 @@ const GAME_CONFIG = {
 
 /* ---------- 稀有度 ---------- */
 const RARITY = {
-  normal: { label: "普通",     ballClass: "ball-red",    color: "#ef5350", bg: "#ffebee" },
-  rare:   { label: "稀有",     ballClass: "ball-blue",   color: "#42a5f5", bg: "#e3f2fd" },
-  epic:   { label: "較高稀有", ballClass: "ball-yellow", color: "#b8860b", bg: "#fff8e1" },
-  legend: { label: "傳說",     ballClass: "ball-purple", color: "#ab47bc", bg: "#f3e5f5" }
+  normal: { label: "Common",    ballClass: "ball-red",    color: "#ef5350", bg: "#ffebee" },
+  rare:   { label: "Rare",      ballClass: "ball-blue",   color: "#42a5f5", bg: "#e3f2fd" },
+  epic:   { label: "Epic",      ballClass: "ball-yellow", color: "#b8860b", bg: "#fff8e1" },
+  legend: { label: "Legendary", ballClass: "ball-purple", color: "#ab47bc", bg: "#f3e5f5" }
 };
 
-/* ---------- 圖片來源（PokeAPI 免費素材） ---------- */
+/* ---------- 圖片來源（PokeAPI 免費素材 + 本地動態 GIF） ---------- */
 const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 function spriteURL(id)  { return `${SPRITE_BASE}/${id}.png`; }
 function artworkURL(id) { return `${SPRITE_BASE}/other/official-artwork/${id}.png`; }
+/* 1-151 嘅動態像素 GIF 已經預先下載到 assets/animated/ */
+function animatedURL(id) { return `assets/animated/${id}.gif`; }
 
 /* ---------- 進化鏈（1-151 全圖鑑）----------
    stages: [圖鑑號, 英文名, 中文名]（直線進化）
@@ -40,92 +42,92 @@ function artworkURL(id) { return `${SPRITE_BASE}/other/official-artwork/${id}.pn
    只有 stage 1（初始形態）可以被抽中；2、3 階必須靠進化獲得 */
 const EVOLUTION_CHAINS = [
   /* --- 普通池（normal pull）--- */
-  { key: "bulbasaur",  baseRarity: "normal", stages: [[1, "Bulbasaur", "妙蛙種子"], [2, "Ivysaur", "妙蛙草"], [3, "Venusaur", "妙蛙花"]] },
-  { key: "charmander", baseRarity: "normal", stages: [[4, "Charmander", "小火龍"], [5, "Charmeleon", "火恐龍"], [6, "Charizard", "噴火龍"]] },
-  { key: "squirtle",   baseRarity: "normal", stages: [[7, "Squirtle", "傑尼龜"], [8, "Wartortle", "卡咪龜"], [9, "Blastoise", "水箭龜"]] },
-  { key: "caterpie",   baseRarity: "normal", stages: [[10, "Caterpie", "綠毛蟲"], [11, "Metapod", "鐵甲蛹"], [12, "Butterfree", "巴大蝶"]] },
-  { key: "weedle",     baseRarity: "normal", stages: [[13, "Weedle", "獨角蟲"], [14, "Kakuna", "鐵殼蛹"], [15, "Beedrill", "大針蜂"]] },
-  { key: "pidgey",     baseRarity: "normal", stages: [[16, "Pidgey", "波波"], [17, "Pidgeotto", "比比鳥"], [18, "Pidgeot", "大比鳥"]] },
-  { key: "rattata",    baseRarity: "normal", stages: [[19, "Rattata", "小拉達"], [20, "Raticate", "拉達"]] },
-  { key: "spearow",    baseRarity: "normal", stages: [[21, "Spearow", "烈雀"], [22, "Fearow", "大嘴雀"]] },
-  { key: "ekans",      baseRarity: "normal", stages: [[23, "Ekans", "阿柏蛇"], [24, "Arbok", "阿柏怪"]] },
-  { key: "sandshrew",  baseRarity: "normal", stages: [[27, "Sandshrew", "穿山鼠"], [28, "Sandslash", "穿山王"]] },
-  { key: "nidoranf",   baseRarity: "normal", stages: [[29, "Nidoran♀", "尼多蘭"], [30, "Nidorina", "尼多娜"], [31, "Nidoqueen", "尼多后"]] },
-  { key: "nidoranm",   baseRarity: "normal", stages: [[32, "Nidoran♂", "尼多朗"], [33, "Nidorino", "尼多力諾"], [34, "Nidoking", "尼多王"]] },
-  { key: "jigglypuff", baseRarity: "normal", stages: [[39, "Jigglypuff", "胖丁"], [40, "Wigglytuff", "胖可丁"]] },
-  { key: "zubat",      baseRarity: "normal", stages: [[41, "Zubat", "超音蝠"], [42, "Golbat", "大嘴蝠"]] },
-  { key: "oddish",     baseRarity: "normal", stages: [[43, "Oddish", "走路草"], [44, "Gloom", "臭臭花"], [45, "Vileplume", "霸王花"]] },
-  { key: "paras",      baseRarity: "normal", stages: [[46, "Paras", "派拉斯"], [47, "Parasect", "派拉斯特"]] },
-  { key: "venonat",    baseRarity: "normal", stages: [[48, "Venonat", "毛球"], [49, "Venomoth", "摩魯蛾"]] },
-  { key: "diglett",    baseRarity: "normal", stages: [[50, "Diglett", "地鼠"], [51, "Dugtrio", "三地鼠"]] },
-  { key: "meowth",     baseRarity: "normal", stages: [[52, "Meowth", "喵喵"], [53, "Persian", "貓老大"]] },
-  { key: "psyduck",    baseRarity: "normal", stages: [[54, "Psyduck", "可達鴨"], [55, "Golduck", "哥達鴨"]] },
-  { key: "mankey",     baseRarity: "normal", stages: [[56, "Mankey", "猴怪"], [57, "Primeape", "火爆猴"]] },
-  { key: "poliwag",    baseRarity: "normal", stages: [[60, "Poliwag", "蚊香蝌蚪"], [61, "Poliwhirl", "蚊香君"], [62, "Poliwrath", "蚊香泳士"]] },
-  { key: "machop",     baseRarity: "normal", stages: [[66, "Machop", "腕力"], [67, "Machoke", "豪力"], [68, "Machamp", "怪力"]] },
-  { key: "bellsprout", baseRarity: "normal", stages: [[69, "Bellsprout", "喇叭芽"], [70, "Weepinbell", "口呆花"], [71, "Victreebel", "大食花"]] },
-  { key: "tentacool",  baseRarity: "normal", stages: [[72, "Tentacool", "瑪瑙水母"], [73, "Tentacruel", "毒刺水母"]] },
-  { key: "geodude",    baseRarity: "normal", stages: [[74, "Geodude", "小拳石"], [75, "Graveler", "隆隆石"], [76, "Golem", "隆隆岩"]] },
-  { key: "slowpoke",   baseRarity: "normal", stages: [[79, "Slowpoke", "呆呆獸"], [80, "Slowbro", "呆殼獸"]] },
-  { key: "magnemite",  baseRarity: "normal", stages: [[81, "Magnemite", "小磁怪"], [82, "Magneton", "三合一磁怪"]] },
-  { key: "doduo",      baseRarity: "normal", stages: [[84, "Doduo", "嘟嘟"], [85, "Dodrio", "嘟嘟利"]] },
-  { key: "seel",       baseRarity: "normal", stages: [[86, "Seel", "小海獅"], [87, "Dewgong", "白海獅"]] },
-  { key: "grimer",     baseRarity: "normal", stages: [[88, "Grimer", "臭泥"], [89, "Muk", "臭臭泥"]] },
-  { key: "shellder",   baseRarity: "normal", stages: [[90, "Shellder", "大舌貝"], [91, "Cloyster", "刺甲貝"]] },
-  { key: "drowzee",    baseRarity: "normal", stages: [[96, "Drowzee", "催眠貘"], [97, "Hypno", "引夢貘人"]] },
-  { key: "krabby",     baseRarity: "normal", stages: [[98, "Krabby", "大鉗蟹"], [99, "Kingler", "巨鉗蟹"]] },
-  { key: "voltorb",    baseRarity: "normal", stages: [[100, "Voltorb", "霹靂電球"], [101, "Electrode", "頑皮雷彈"]] },
-  { key: "exeggcute",  baseRarity: "normal", stages: [[102, "Exeggcute", "蛋蛋"], [103, "Exeggutor", "椰蛋樹"]] },
-  { key: "cubone",     baseRarity: "normal", stages: [[104, "Cubone", "卡拉卡拉"], [105, "Marowak", "嘎啦嘎啦"]] },
-  { key: "koffing",    baseRarity: "normal", stages: [[109, "Koffing", "瓦斯彈"], [110, "Weezing", "雙彈瓦斯"]] },
-  { key: "horsea",     baseRarity: "normal", stages: [[116, "Horsea", "墨海馬"], [117, "Seadra", "海刺龍"]] },
-  { key: "goldeen",    baseRarity: "normal", stages: [[118, "Goldeen", "角金魚"], [119, "Seaking", "金魚王"]] },
-  { key: "staryu",     baseRarity: "normal", stages: [[120, "Staryu", "海星星"], [121, "Starmie", "寶石海星"]] },
-  { key: "magikarp",   baseRarity: "normal", stages: [[129, "Magikarp", "鯉魚王"], [130, "Gyarados", "暴鯉龍"]] },
+  { key: "bulbasaur",  baseRarity: "normal", stages: [[1, "Bulbasaur"], [2, "Ivysaur"], [3, "Venusaur"]] },
+  { key: "charmander", baseRarity: "normal", stages: [[4, "Charmander"], [5, "Charmeleon"], [6, "Charizard"]] },
+  { key: "squirtle",   baseRarity: "normal", stages: [[7, "Squirtle"], [8, "Wartortle"], [9, "Blastoise"]] },
+  { key: "caterpie",   baseRarity: "normal", stages: [[10, "Caterpie"], [11, "Metapod"], [12, "Butterfree"]] },
+  { key: "weedle",     baseRarity: "normal", stages: [[13, "Weedle"], [14, "Kakuna"], [15, "Beedrill"]] },
+  { key: "pidgey",     baseRarity: "normal", stages: [[16, "Pidgey"], [17, "Pidgeotto"], [18, "Pidgeot"]] },
+  { key: "rattata",    baseRarity: "normal", stages: [[19, "Rattata"], [20, "Raticate"]] },
+  { key: "spearow",    baseRarity: "normal", stages: [[21, "Spearow"], [22, "Fearow"]] },
+  { key: "ekans",      baseRarity: "normal", stages: [[23, "Ekans"], [24, "Arbok"]] },
+  { key: "sandshrew",  baseRarity: "normal", stages: [[27, "Sandshrew"], [28, "Sandslash"]] },
+  { key: "nidoranf",   baseRarity: "normal", stages: [[29, "Nidoran♀"], [30, "Nidorina"], [31, "Nidoqueen"]] },
+  { key: "nidoranm",   baseRarity: "normal", stages: [[32, "Nidoran♂"], [33, "Nidorino"], [34, "Nidoking"]] },
+  { key: "jigglypuff", baseRarity: "normal", stages: [[39, "Jigglypuff"], [40, "Wigglytuff"]] },
+  { key: "zubat",      baseRarity: "normal", stages: [[41, "Zubat"], [42, "Golbat"]] },
+  { key: "oddish",     baseRarity: "normal", stages: [[43, "Oddish"], [44, "Gloom"], [45, "Vileplume"]] },
+  { key: "paras",      baseRarity: "normal", stages: [[46, "Paras"], [47, "Parasect"]] },
+  { key: "venonat",    baseRarity: "normal", stages: [[48, "Venonat"], [49, "Venomoth"]] },
+  { key: "diglett",    baseRarity: "normal", stages: [[50, "Diglett"], [51, "Dugtrio"]] },
+  { key: "meowth",     baseRarity: "normal", stages: [[52, "Meowth"], [53, "Persian"]] },
+  { key: "psyduck",    baseRarity: "normal", stages: [[54, "Psyduck"], [55, "Golduck"]] },
+  { key: "mankey",     baseRarity: "normal", stages: [[56, "Mankey"], [57, "Primeape"]] },
+  { key: "poliwag",    baseRarity: "normal", stages: [[60, "Poliwag"], [61, "Poliwhirl"], [62, "Poliwrath"]] },
+  { key: "machop",     baseRarity: "normal", stages: [[66, "Machop"], [67, "Machoke"], [68, "Machamp"]] },
+  { key: "bellsprout", baseRarity: "normal", stages: [[69, "Bellsprout"], [70, "Weepinbell"], [71, "Victreebel"]] },
+  { key: "tentacool",  baseRarity: "normal", stages: [[72, "Tentacool"], [73, "Tentacruel"]] },
+  { key: "geodude",    baseRarity: "normal", stages: [[74, "Geodude"], [75, "Graveler"], [76, "Golem"]] },
+  { key: "slowpoke",   baseRarity: "normal", stages: [[79, "Slowpoke"], [80, "Slowbro"]] },
+  { key: "magnemite",  baseRarity: "normal", stages: [[81, "Magnemite"], [82, "Magneton"]] },
+  { key: "doduo",      baseRarity: "normal", stages: [[84, "Doduo"], [85, "Dodrio"]] },
+  { key: "seel",       baseRarity: "normal", stages: [[86, "Seel"], [87, "Dewgong"]] },
+  { key: "grimer",     baseRarity: "normal", stages: [[88, "Grimer"], [89, "Muk"]] },
+  { key: "shellder",   baseRarity: "normal", stages: [[90, "Shellder"], [91, "Cloyster"]] },
+  { key: "drowzee",    baseRarity: "normal", stages: [[96, "Drowzee"], [97, "Hypno"]] },
+  { key: "krabby",     baseRarity: "normal", stages: [[98, "Krabby"], [99, "Kingler"]] },
+  { key: "voltorb",    baseRarity: "normal", stages: [[100, "Voltorb"], [101, "Electrode"]] },
+  { key: "exeggcute",  baseRarity: "normal", stages: [[102, "Exeggcute"], [103, "Exeggutor"]] },
+  { key: "cubone",     baseRarity: "normal", stages: [[104, "Cubone"], [105, "Marowak"]] },
+  { key: "koffing",    baseRarity: "normal", stages: [[109, "Koffing"], [110, "Weezing"]] },
+  { key: "horsea",     baseRarity: "normal", stages: [[116, "Horsea"], [117, "Seadra"]] },
+  { key: "goldeen",    baseRarity: "normal", stages: [[118, "Goldeen"], [119, "Seaking"]] },
+  { key: "staryu",     baseRarity: "normal", stages: [[120, "Staryu"], [121, "Starmie"]] },
+  { key: "magikarp",   baseRarity: "normal", stages: [[129, "Magikarp"], [130, "Gyarados"]] },
 
   /* --- 稀有池（💎 鑽石抽先抽到）--- */
-  { key: "pikachu",    baseRarity: "rare", stages: [[25, "Pikachu", "皮卡丘"], [26, "Raichu", "雷丘"]] },
-  { key: "clefairy",   baseRarity: "rare", stages: [[35, "Clefairy", "皮皮"], [36, "Clefable", "皮可西"]] },
-  { key: "vulpix",     baseRarity: "rare", stages: [[37, "Vulpix", "六尾"], [38, "Ninetales", "九尾"]] },
-  { key: "growlithe",  baseRarity: "rare", stages: [[58, "Growlithe", "卡蒂狗"], [59, "Arcanine", "風速狗"]] },
-  { key: "abra",       baseRarity: "rare", stages: [[63, "Abra", "凱西"], [64, "Kadabra", "勇基拉"], [65, "Alakazam", "胡地"]] },
-  { key: "ponyta",     baseRarity: "rare", stages: [[77, "Ponyta", "小火馬"], [78, "Rapidash", "烈焰馬"]] },
-  { key: "farfetchd",  baseRarity: "rare", stages: [[83, "Farfetch'd", "大蔥鴨"]] },
-  { key: "gastly",     baseRarity: "rare", stages: [[92, "Gastly", "鬼斯"], [93, "Haunter", "鬼斯通"], [94, "Gengar", "耿鬼"]] },
-  { key: "onix",       baseRarity: "rare", stages: [[95, "Onix", "大岩蛇"]] },
-  { key: "hitmonlee",  baseRarity: "rare", stages: [[106, "Hitmonlee", "飛腿郎"]] },
-  { key: "hitmonchan", baseRarity: "rare", stages: [[107, "Hitmonchan", "快拳郎"]] },
-  { key: "lickitung",  baseRarity: "rare", stages: [[108, "Lickitung", "大舌頭"]] },
-  { key: "rhyhorn",    baseRarity: "rare", stages: [[111, "Rhyhorn", "獨角犀牛"], [112, "Rhydon", "鑽角犀獸"]] },
-  { key: "chansey",    baseRarity: "rare", stages: [[113, "Chansey", "吉利蛋"]] },
-  { key: "tangela",    baseRarity: "rare", stages: [[114, "Tangela", "蔓藤怪"]] },
-  { key: "kangaskhan", baseRarity: "rare", stages: [[115, "Kangaskhan", "袋獸"]] },
-  { key: "mrmime",     baseRarity: "rare", stages: [[122, "Mr. Mime", "魔牆人偶"]] },
-  { key: "scyther",    baseRarity: "rare", stages: [[123, "Scyther", "飛天螳螂"]] },
-  { key: "jynx",       baseRarity: "rare", stages: [[124, "Jynx", "迷唇姐"]] },
-  { key: "electabuzz", baseRarity: "rare", stages: [[125, "Electabuzz", "電擊獸"]] },
-  { key: "magmar",     baseRarity: "rare", stages: [[126, "Magmar", "鴨嘴火獸"]] },
-  { key: "pinsir",     baseRarity: "rare", stages: [[127, "Pinsir", "凱羅斯"]] },
-  { key: "tauros",     baseRarity: "rare", stages: [[128, "Tauros", "肯泰羅"]] },
-  { key: "ditto",      baseRarity: "rare", stages: [[132, "Ditto", "百變怪"]] },
-  { key: "eevee",      baseRarity: "rare", stages: [[133, "Eevee", "伊貝"]],
-    branches: [[[134, "Vaporeon", "水伊貝"], [135, "Jolteon", "雷伊貝"], [136, "Flareon", "火伊貝"]]] },
-  { key: "porygon",    baseRarity: "rare", stages: [[137, "Porygon", "多邊獸"]] },
+  { key: "pikachu",    baseRarity: "rare", stages: [[25, "Pikachu"], [26, "Raichu"]] },
+  { key: "clefairy",   baseRarity: "rare", stages: [[35, "Clefairy"], [36, "Clefable"]] },
+  { key: "vulpix",     baseRarity: "rare", stages: [[37, "Vulpix"], [38, "Ninetales"]] },
+  { key: "growlithe",  baseRarity: "rare", stages: [[58, "Growlithe"], [59, "Arcanine"]] },
+  { key: "abra",       baseRarity: "rare", stages: [[63, "Abra"], [64, "Kadabra"], [65, "Alakazam"]] },
+  { key: "ponyta",     baseRarity: "rare", stages: [[77, "Ponyta"], [78, "Rapidash"]] },
+  { key: "farfetchd",  baseRarity: "rare", stages: [[83, "Farfetch'd"]] },
+  { key: "gastly",     baseRarity: "rare", stages: [[92, "Gastly"], [93, "Haunter"], [94, "Gengar"]] },
+  { key: "onix",       baseRarity: "rare", stages: [[95, "Onix"]] },
+  { key: "hitmonlee",  baseRarity: "rare", stages: [[106, "Hitmonlee"]] },
+  { key: "hitmonchan", baseRarity: "rare", stages: [[107, "Hitmonchan"]] },
+  { key: "lickitung",  baseRarity: "rare", stages: [[108, "Lickitung"]] },
+  { key: "rhyhorn",    baseRarity: "rare", stages: [[111, "Rhyhorn"], [112, "Rhydon"]] },
+  { key: "chansey",    baseRarity: "rare", stages: [[113, "Chansey"]] },
+  { key: "tangela",    baseRarity: "rare", stages: [[114, "Tangela"]] },
+  { key: "kangaskhan", baseRarity: "rare", stages: [[115, "Kangaskhan"]] },
+  { key: "mrmime",     baseRarity: "rare", stages: [[122, "Mr. Mime"]] },
+  { key: "scyther",    baseRarity: "rare", stages: [[123, "Scyther"]] },
+  { key: "jynx",       baseRarity: "rare", stages: [[124, "Jynx"]] },
+  { key: "electabuzz", baseRarity: "rare", stages: [[125, "Electabuzz"]] },
+  { key: "magmar",     baseRarity: "rare", stages: [[126, "Magmar"]] },
+  { key: "pinsir",     baseRarity: "rare", stages: [[127, "Pinsir"]] },
+  { key: "tauros",     baseRarity: "rare", stages: [[128, "Tauros"]] },
+  { key: "ditto",      baseRarity: "rare", stages: [[132, "Ditto"]] },
+  { key: "eevee",      baseRarity: "rare", stages: [[133, "Eevee"]],
+    branches: [[[134, "Vaporeon"], [135, "Jolteon"], [136, "Flareon"]]] },
+  { key: "porygon",    baseRarity: "rare", stages: [[137, "Porygon"]] },
 
   /* --- 較高稀有（💎 鑽石抽先抽到）--- */
-  { key: "omanyte",    baseRarity: "epic", stages: [[138, "Omanyte", "菊石獸"], [139, "Omastar", "多刺菊石獸"]] },
-  { key: "kabuto",     baseRarity: "epic", stages: [[140, "Kabuto", "化石盔"], [141, "Kabutops", "鐮刀盔"]] },
-  { key: "aerodactyl", baseRarity: "epic", stages: [[142, "Aerodactyl", "化石翼龍"]] },
-  { key: "lapras",     baseRarity: "epic", stages: [[131, "Lapras", "拉普拉斯"]] },
-  { key: "snorlax",    baseRarity: "epic", stages: [[143, "Snorlax", "卡比獸"]] },
-  { key: "dratini",    baseRarity: "epic", stages: [[147, "Dratini", "迷你龍"], [148, "Dragonair", "哈克龍"], [149, "Dragonite", "快龍"]] },
+  { key: "omanyte",    baseRarity: "epic", stages: [[138, "Omanyte"], [139, "Omastar"]] },
+  { key: "kabuto",     baseRarity: "epic", stages: [[140, "Kabuto"], [141, "Kabutops"]] },
+  { key: "aerodactyl", baseRarity: "epic", stages: [[142, "Aerodactyl"]] },
+  { key: "lapras",     baseRarity: "epic", stages: [[131, "Lapras"]] },
+  { key: "snorlax",    baseRarity: "epic", stages: [[143, "Snorlax"]] },
+  { key: "dratini",    baseRarity: "epic", stages: [[147, "Dratini"], [148, "Dragonair"], [149, "Dragonite"]] },
 
   /* --- 傳說（💎 鑽石抽先抽到）--- */
-  { key: "articuno",   baseRarity: "legend", stages: [[144, "Articuno", "急凍鳥"]] },
-  { key: "zapdos",     baseRarity: "legend", stages: [[145, "Zapdos", "閃電鳥"]] },
-  { key: "moltres",    baseRarity: "legend", stages: [[146, "Moltres", "火焰鳥"]] },
-  { key: "mewtwo",     baseRarity: "legend", stages: [[150, "Mewtwo", "超夢"]] },
-  { key: "mew",        baseRarity: "legend", stages: [[151, "Mew", "夢幻"]] }
+  { key: "articuno",   baseRarity: "legend", stages: [[144, "Articuno"]] },
+  { key: "zapdos",     baseRarity: "legend", stages: [[145, "Zapdos"]] },
+  { key: "moltres",    baseRarity: "legend", stages: [[146, "Moltres"]] },
+  { key: "mewtwo",     baseRarity: "legend", stages: [[150, "Mewtwo"]] },
+  { key: "mew",        baseRarity: "legend", stages: [[151, "Mew"]] }
 ];
 
 /* ---------- 展開所有物種（圖鑑用） ---------- */
@@ -135,7 +137,7 @@ const PULLABLE = {};         // rarity -> [chainKey,...]  只有 stage 1 會被�
 EVOLUTION_CHAINS.forEach(chain => {
   chain.stages.forEach((st, i) => {
     SPECIES[st[0]] = {
-      dexId: st[0], name: st[1], zh: st[2],
+      dexId: st[0], name: st[1],
       chainKey: chain.key, stageIndex: i, stage: i + 1,
       rarity: chain.baseRarity, branch: false
     };
@@ -143,7 +145,7 @@ EVOLUTION_CHAINS.forEach(chain => {
   (chain.branches || []).forEach((opts, bi) => {
     opts.forEach(st => {
       SPECIES[st[0]] = {
-        dexId: st[0], name: st[1], zh: st[2],
+        dexId: st[0], name: st[1],
         chainKey: chain.key, stageIndex: chain.stages.length + bi, stage: chain.stages.length + bi + 1,
         rarity: chain.baseRarity, branch: true
       };

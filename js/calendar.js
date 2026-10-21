@@ -13,12 +13,14 @@ const Calendar = {
   },
 
   render() {
+    const MONTHS = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"];
     document.getElementById("cal-month-label").textContent =
-      `${this.year}年${this.month + 1}月`;
+      `${MONTHS[this.month]} ${this.year}`;
 
-    /* 星期表頭 */
+    /* Weekday header */
     document.getElementById("cal-weekdays").innerHTML =
-      ["日", "一", "二", "三", "四", "五", "六"].map(d => `<span>${d}</span>`).join("");
+      ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => `<span>${d}</span>`).join("");
 
     /* 日期格 */
     const grid = document.getElementById("cal-grid");
@@ -35,17 +37,17 @@ const Calendar = {
       const cell = document.createElement("button");
       cell.className = `cal-cell lv${level}` + (key === todayKey ? " today" : "");
       cell.innerHTML = `<span class="cal-day">${d}</span>` +
-        (level > 0 ? `<span class="cal-count">${loadState().records[key].length}組</span>` : "");
+        (level > 0 ? `<span class="cal-count">${loadState().records[key].length} sets</span>` : "");
       if (level > 0) cell.onclick = () => this.showDay(key);
       grid.appendChild(cell);
     }
 
     /* 圖例 */
     document.getElementById("cal-legend").innerHTML = `
-      <span><i class="lv-dot lv0"></i>冇練習</span>
-      <span><i class="lv-dot lv1"></i>1–2組</span>
-      <span><i class="lv-dot lv2"></i>3–4組</span>
-      <span><i class="lv-dot lv3"></i>5組或以上</span>`;
+      <span><i class="lv-dot lv0"></i>No practice</span>
+      <span><i class="lv-dot lv1"></i>1–2 sets</span>
+      <span><i class="lv-dot lv2"></i>3–4 sets</span>
+      <span><i class="lv-dot lv3"></i>5+ sets</span>`;
   },
 
   prev() {
@@ -70,16 +72,16 @@ const Calendar = {
     const totalQ = sets.reduce((s, r) => s + r.total, 0);
 
     const setBlocks = sets.map((r, idx) => {
-      const time = new Date(r.ts).toLocaleTimeString("zh-HK", { hour: "2-digit", minute: "2-digit" });
+      const time = new Date(r.ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
       const mm = Math.floor(r.duration / 60), ss = r.duration % 60;
       const wrongs = r.results.filter(x => !x.correct);
       const wrongHTML = wrongs.length === 0
-        ? `<div class="day-allright">全部答對，勁！🌟</div>`
+        ? `<div class="day-allright">All correct — nice! 🌟</div>`
         : `<div class="day-wrongs" id="day-wrongs-${idx}"></div>`;
       return `
         <div class="day-set">
           <div class="day-set-head">
-            <b>第 ${idx + 1} 組</b>
+            <b>Set ${idx + 1}</b>
             <span>${time}</span>
             <span class="${r.score === r.total ? "score-perfect" : ""}">${r.score}/${r.total}</span>
             <span>⏱ ${mm}:${String(ss).padStart(2, "0")}</span>
@@ -90,8 +92,8 @@ const Calendar = {
 
     App.showModal(`
       <div class="day-detail">
-        <h3>${key.replace(/-/g, "/")} 練習紀錄</h3>
-        <div class="day-summary">完成 ${sets.length} 組 ・ 總分 ${totalScore}/${totalQ}</div>
+        <h3>${key.replace(/-/g, "/")} Practice record</h3>
+        <div class="day-summary">${sets.length} sets done ・ Total score ${totalScore}/${totalQ}</div>
         ${setBlocks}
       </div>
     `);

@@ -15,7 +15,7 @@ const Quiz = {
   start(topics) {
     this.set = drawQuestionSet(GAME_CONFIG.SET_SIZE, topics);
     if (this.set.length === 0) {
-      App.toast("暫時冇題目，轉頭再嚟！");
+      App.toast("No questions available yet — try again later!");
       return;
     }
     this.idx = 0;
@@ -46,7 +46,7 @@ const Quiz = {
     /* 答題畫面唔顯示課題／題型，只顯示難度星星 */
     const level = Math.max(1, q.level || 1);
     document.getElementById("quiz-topic").innerHTML =
-      `<span class="quiz-level" aria-label="難度 ${level}">${"★".repeat(level)}</span>`;
+      `<span class="quiz-level" aria-label="Level ${level}">${"★".repeat(level)}</span>`;
 
     /* 題目圖片（image_file/<編號>.png）；冇圖片就收起個窗 */
     this._renderImage(q);
@@ -109,10 +109,10 @@ const Quiz = {
 
     const fb = document.getElementById("quiz-feedback");
     if (correct) {
-      fb.textContent = ["好嘢！", "答對了！", "勁呀！", "Excellent!"][Math.floor(Math.random() * 4)];
+      fb.textContent = ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)];
       fb.className = "quiz-feedback good";
     } else {
-      fb.textContent = q.answer ? `答案係「${q.answer}」` : "答案係「（留空）」";
+      fb.textContent = q.answer ? `The answer is "${q.answer}"` : `The answer is "(blank)"`;
       fb.className = "quiz-feedback bad";
     }
 

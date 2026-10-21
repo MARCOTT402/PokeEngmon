@@ -32,8 +32,8 @@ const Explain = {
     const answerLine = document.createElement("div");
     answerLine.className = "explain-answer-line";
     answerLine.innerHTML =
-      (chosen ? `<span class="explain-wrong">你答咗：${escapeHTML(chosen)}</span>` : "") +
-      `<span class="explain-right">答案：${escapeHTML(q.answer)}</span>`;
+      (chosen ? `<span class="explain-wrong">You answered: ${escapeHTML(chosen)}</span>` : "") +
+      `<span class="explain-right">Answer: ${escapeHTML(q.answer) || "(blank)"}</span>`;
     card.appendChild(answerLine);
 
     /* --- 短解釋（冇提示就唔顯示） --- */

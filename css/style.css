@@ -81,7 +81,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
   border: 3px solid #ffe082;
 }
-.hero-sprite { width: 92px; height: 92px; object-fit: contain; }
+.hero-sprite { width: 92px; height: 92px; object-fit: contain; image-rendering: pixelated; }
 .hero-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .hero-name { font-size: 1.15rem; font-weight: 800; }
 .hero-stage { font-size: .9rem; color: #7a8299; display: flex; align-items: center; gap: 6px; }
@@ -521,7 +521,57 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   background: #ffb300; color: #fff; font-weight: 900; font-family: inherit; cursor: pointer;
 }
 .dex-candy button:disabled { background: #ddd; color: #999; cursor: default; }
+.dex-candy-tip { font-size: .72rem; font-weight: 700; color: #9a7b1f; margin-top: 4px; }
+.dex-no { color: #9aa5b1; font-weight: 800; font-size: .9rem; }
+.dex-sub { color: #5b6478; font-weight: 700; font-size: .82rem; text-align: center; }
+.dex-empty { font-size: .85rem; color: #9aa5b1; font-weight: 700; }
+
+/* ---------- Move cards (type icon + class icon + power/PP) ---------- */
+.move-card {
+  display: flex; flex-direction: column; gap: 4px;
+  background: #fff;
+  background: color-mix(in srgb, var(--type-color, #888) 12%, #fff);
+  border: 2px solid #e6ebf5; border-left: 8px solid var(--type-color, #888);
+  border-radius: 12px; padding: 8px 10px; margin-top: 6px; text-align: left;
+}
+.move-card-head { display: flex; align-items: center; gap: 8px; }
+.move-type-icon { width: 26px; height: 26px; object-fit: contain; flex: none; }
+.move-card-name { flex: 1; font-size: 1rem; font-weight: 900; color: var(--ink); }
+.move-class { width: 22px; height: 22px; flex: none; display: inline-flex; }
+.move-class svg { width: 100%; height: 100%; }
+.move-card-meta {
+  display: flex; flex-wrap: wrap; gap: 3px 10px;
+  font-size: .75rem; font-weight: 700; color: #5b6478;
+}
+.move-card-meta b { color: var(--ink); }
+.move-prio {
+  background: #fff3cd; color: #8a6d00; border-radius: 999px; padding: 0 7px;
+}
+.move-card-desc { font-size: .72rem; line-height: 1.4; color: #7a8299; }
+
+/* ---------- EV training ---------- */
+.dex-ev {
+  width: 100%; margin-top: 10px; background: #eef3ff;
+  border: 2px solid #cfddf8; border-radius: 12px; padding: 10px;
+}
+.dex-ev-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; font-size: .9rem; }
+.dex-ev-head b { color: #2f6fce; font-size: 1.1rem; }
+.dex-ev-total { font-size: .75rem; color: #5b6478; }
+.dex-ev-tip { font-size: .72rem; color: #5b6478; margin-top: 2px; }
+.ev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.ev-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border: 2px solid #cfddf8; background: #fff; border-radius: 10px;
+  padding: 5px 2px; font-family: inherit; font-size: .7rem;
+  font-weight: 800; color: #4a5468; cursor: pointer;
+}
+.ev-btn b { font-size: 1rem; color: #2f6fce; }
+.ev-btn i { font-style: normal; font-size: .62rem; color: #2e7d32; }
+.ev-btn:active { transform: scale(.95); }
+.ev-btn:disabled { opacity: .45; cursor: default; }
+
 .move-box { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.move-box .move-card { width: 100%; }
 .move-title { font-weight: 900; color: #2f6fce; }
 .move-name { font-size: 1.3rem; font-weight: 900; }
 .move-sub { font-size: .85rem; color: #7a8299; font-weight: 700; }

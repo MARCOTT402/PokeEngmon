@@ -1,9 +1,9 @@
 /* ============================================================
-   PokeEngmon - 圖鑑（Pokedex）
-   擁有 → 有圖有名；未擁有 → 灰色剪影
+   PokeEngmon - Pokedex
+   Owned -> full art & data; not owned -> grey silhouette
    ============================================================ */
 
-/* PokeAPI 叫聲（ogg）；iOS 唔支援 ogg 時改用 Showdown 嘅 mp3 後備 */
+/* PokeAPI cries (ogg); iOS falls back to Showdown mp3 */
 const CRY_LATEST = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
 const CRY_FALLBACK = "https://play.pokemonshowdown.com/audio/cries";
 
@@ -11,6 +11,11 @@ function crySlug(name) {
   return String(name).toLowerCase()
     .replace(/♀/g, "f").replace(/♂/g, "m")
     .replace(/[^a-z0-9]/g, "");
+}
+
+function capitalizeWord(slug) {
+  const s = String(slug || "");
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 const Pokedex = {
@@ -25,7 +30,7 @@ const Pokedex = {
     st.entries.forEach(e => e.ownedSpecies.forEach(id => owned.add(id)));
 
     document.getElementById("dex-progress").innerHTML =
-      `收集進度 <b>${owned.size}</b> / ${TOTAL_SPECIES}`;
+      `Collected <b>${owned.size}</b> / ${TOTAL_SPECIES}`;
     document.getElementById("home-dex-progress").textContent = `${owned.size}/${TOTAL_SPECIES}`;
 
     const grid = document.getElementById("pokedex-grid");
@@ -38,31 +43,31 @@ const Pokedex = {
       const rz = RARITY[sp.rarity];
       cell.innerHTML = `
         <img src="${spriteURL(sp.dexId)}" alt="${isOwned ? sp.name : "??"}" loading="lazy">
-        <span class="dex-name">${isOwned ? sp.name : "？？？"}</span>
+        <span class="dex-name">${isOwned ? sp.name : "???"}</span>
         ${isOwned ? `<span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>` : ""}
       `;
       if (isOwned) {
         cell.onclick = () => this.showDetail(sp.dexId);
-        /* 撳圖案 → 播叫聲；撳卡片其他地方 → 睇詳情 */
+        /* Tap the sprite for its cry; tap elsewhere for details */
         const img = cell.querySelector("img");
-        img.title = "點一下聽叫聲";
+        img.title = "Tap to hear its cry";
         img.onclick = (e) => { e.stopPropagation(); this.playCry(sp.dexId); };
       }
       grid.appendChild(cell);
     });
   },
 
-  /* 已擁有 → 大圖 + 資料 Modal */
-  showDetail(dexId) {
+  /* Owned -> big art + data modal */
+  showDetail(dexId, keepScroll) {
     const sp = SPECIES[dexId];
     const st = loadState();
     const chain = EVOLUTION_CHAINS.find(c => c.key === sp.chainKey);
     const entry = st.entries.find(e => e.chainKey === sp.chainKey);
     const rz = RARITY[sp.rarity];
 
-    /* 進化階段顯示（線性 + 伊貝分支） */
+    /* Evolution chain (linear + Eevee branches) */
     const nodes = [];
-    chain.stages.forEach((s, i) => {
+    chain.stages.forEach((s) => {
       const got = entry && entry.ownedSpecies.includes(s[0]);
       nodes.push(`<div class="evo-node ${got ? "got" : ""}">
                 <img src="${spriteURL(s[0])}" alt="${s[1]}">
@@ -81,7 +86,7 @@ const Pokedex = {
     });
     const stageDots = nodes.join(`<span class="evo-arrow">→</span>`);
 
-    /* 等級／能力值／招式／糖果 */
+    /* Level / stats / moves / EV / candy */
     let extraHTML = "";
     if (entry) {
       ensureEntryPokemonData(entry);
@@ -93,63 +98,92 @@ const Pokedex = {
       const stats = calcStats(dexId, level, entry.ivs, entry.evs, entry.nature);
       const statCells = STAT_KEYS.map(k =>
         `<div class="dex-stat">${STAT_LABELS[k]}<b>${stats ? stats[k] : "-"}</b></div>`).join("");
-      const moveChips = (entry.moves || []).length
-        ? entry.moves.map(m => `<span class="dex-move">${moveLabel(m)}</span>`).join("")
-        : `<span class="dex-move">未有招式</span>`;
+      const cards = (entry.moves || []).length
+        ? entry.moves.map(m => moveCardHTML(m)).join("")
+        : `<div class="dex-empty">No moves yet</div>`;
+      const canAddEv = (k) => (entry.evPoints || 0) > 0
+        && (entry.evs[k] || 0) < MAX_EV
+        && evTotal(entry.evs) < MAX_EV_TOTAL;
+      const evButtons = STAT_KEYS.map(k => `
+        <button class="ev-btn" data-stat="${k}" ${canAddEv(k) ? "" : "disabled"}>
+          <span>${STAT_LABELS[k]}</span><b>${entry.evs[k] || 0}</b><i>+1</i>
+        </button>`).join("");
+
       extraHTML = `
-        <div class="dex-detail-zh">Lv.<span class="dex-level">${level}</span> / 99
+        <div class="dex-level-line">Lv.<span class="dex-level">${level}</span> / ${MAX_LEVEL}
           ・ <span class="dex-stars">${"★".repeat(entry.stars || 1)}</span></div>
         <div class="expbar"><i style="width:${pct}%"></i></div>
-        <div class="hero-exp-text">${level >= MAX_LEVEL ? "Lv.99 MAX" : `EXP ${into} / ${span}（下一級）`}</div>
-        <div class="dex-detail-zh">性格：${moveLabel(entry.nature)} ・ IV 31 ・ EV ${evTotal(entry.evs)} / ${MAX_EV_TOTAL}</div>
+        <div class="hero-exp-text">${level >= MAX_LEVEL ? "Lv.MAX" : `EXP ${into} / ${span} to next Lv.`}</div>
+        <div class="dex-sub">Nature: <b>${capitalizeWord(entry.nature)}</b> ・ IV ${ivTotal(entry.ivs)} / ${MAX_IV * 6} ・ EV ${evTotal(entry.evs)} / ${MAX_EV_TOTAL}</div>
         <div class="dex-stats">${statCells}</div>
-        <div class="dex-moves">
-          <div class="dex-moves-title">招式（${(entry.moves || []).length}/4）</div>
-          ${moveChips}
+
+        <div class="dex-ev">
+          <div class="dex-ev-head">
+            <span>EV Points <b class="ev-points">${entry.evPoints || 0}</b></span>
+            <span class="dex-ev-total">EV ${evTotal(entry.evs)} / ${MAX_EV_TOTAL}</span>
+          </div>
+          <div class="dex-ev-tip">Duplicate pulls give 1 EV point. Tap a stat to add +1.</div>
+          <div class="ev-grid">${evButtons}</div>
         </div>
+
+        <div class="dex-moves">
+          <div class="dex-moves-title">Moves (${(entry.moves || []).length}/4)</div>
+          ${cards}
+        </div>
+
         <div class="dex-candy">
-          🍬 糖果 × ${entry.candies} ・ 重複抽到 ${entry.dupes} 次
-          <br>
+          🍬 Candy × <b>${entry.candies}</b> ・ Duplicates: <b>${entry.dupes}</b>
+          <div class="dex-candy-tip">Candy comes from rare 💎 pulls only.</div>
           <button id="btn-feed-candy" ${entry.candies > 0 && level < MAX_LEVEL ? "" : "disabled"}>
-            餵 1 粒 → 升 1 級
+            Feed 1 candy → +1 level
           </button>
         </div>`;
     }
 
+    const scrollTop = keepScroll ? (document.querySelector(".modal-card") || {}).scrollTop : 0;
     App.showModal(`
       <div class="dex-detail">
         <span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-        <img class="dex-art" id="dex-art" src="${artworkURL(dexId)}" alt="${sp.name}" title="點一下聽叫聲"
+        <img class="dex-art" id="dex-art" src="${artworkURL(dexId)}" alt="${sp.name}" title="Tap to hear its cry"
              onerror="this.onerror=null;this.src='${spriteURL(dexId)}';this.classList.add('pixel')">
         <div class="dex-detail-name">${sp.name}</div>
-        <div class="dex-detail-zh">${sp.zh} ・ No.${String(dexId).padStart(3, "0")}</div>
-        <div class="dex-stage-label">進化狀態：第 ${sp.stage} 階</div>
+        <div class="dex-no">No.${String(dexId).padStart(3, "0")}</div>
+        <div class="dex-stage-label">Evolution stage ${sp.stage}</div>
         <div class="evo-chain">${stageDots}</div>
         ${extraHTML}
       </div>
     `);
+    if (keepScroll) document.querySelector(".modal-card").scrollTop = scrollTop;
+
     const art = document.getElementById("dex-art");
     if (art) art.onclick = () => this.playCry(dexId);
     const feed = document.getElementById("btn-feed-candy");
     if (feed) feed.onclick = () => this.feedCandy(entry);
+    document.querySelectorAll("#modal-root .ev-btn").forEach(btn => {
+      btn.onclick = () => {
+        if (!addEvPoint(entry, btn.dataset.stat)) return;
+        this.showDetail(dexId, true);
+        App.renderHome();
+      };
+    });
   },
 
-  /* 餵糖果 → 升一級（會觸發學招式／進化） */
+  /* Feed candy -> +1 level (may learn a move / evolve) */
   feedCandy(entry) {
     if (!entry || entry.candies <= 0) return;
     const res = useEntryCandy(entry, 1);
-    this.closeModal();
+    App.closeModal();
     this.render();
     App.renderHome();
-    if (res.levelsGained === 0) { App.toast("已經 Lv.99 喇！"); return; }
-    App.toast(`升到 Lv.${entry.level}！糖果剩 ${entry.candies}`);
+    if (res.levelsGained === 0) { App.toast("Already Lv.MAX!"); return; }
+    App.toast(`Level up! Now Lv.${entry.level} ・ Candy left ${entry.candies}`);
     if (res.evolvedTo) setTimeout(() => App.showEvolveModal(res.evolvedTo), 300);
     if (res.learned.length) {
       setTimeout(() => App.queueMoveLearn(entry, res.learned), res.evolvedTo ? 1300 : 400);
     }
   },
 
-  /* 播叫聲：PokeAPI ogg；唔支援／載入失敗就用 mp3 後備 */
+  /* Play cry: PokeAPI ogg; fall back to mp3 */
   playCry(dexId) {
     const sp = SPECIES[dexId];
     if (!sp) return;

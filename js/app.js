@@ -38,61 +38,63 @@ const App = {
       const rz = RARITY[chain.baseRarity];
       const level = entry.level || 1;
       const stars = "★".repeat(entry.stars || 1);
-      sprite.src = spriteURL(cur[0]);
+      /* Animated pixel GIF from local assets; falls back to the static sprite */
+      sprite.onerror = () => { sprite.onerror = null; sprite.src = spriteURL(cur[0]); };
+      sprite.src = animatedURL(cur[0]);
       sprite.style.visibility = "visible";
-      nameEl.textContent = `${cur[1]}（${cur[2]}）`;
+      nameEl.textContent = cur[1];
       stageEl.innerHTML = `<span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span> Lv.${level} <span class="hero-stars">${stars}</span>`;
       if (level >= MAX_LEVEL) {
         bar.style.width = "100%";
-        expText.textContent = `Lv.99 MAX ・ 已完成進化 🎉`;
+        expText.textContent = `Lv.MAX ・ Fully evolved 🎉`;
       } else {
         const base = expAtLevel(cur[0], level);
         const span = levelSpan(cur[0], level);
         const into = Math.max(0, entry.exp - base);
         bar.style.width = Math.min(100, (into / span) * 100) + "%";
-        expText.textContent = `Lv. ${level} ・ EXP ${into} / ${span}（下一級）`;
+        expText.textContent = `Lv. ${level} ・ EXP ${into} / ${span} to next Lv.`;
       }
     } else {
       sprite.style.visibility = "hidden";
-      nameEl.textContent = "未有 Pokemon";
+      nameEl.textContent = "No Pokémon yet";
       stageEl.textContent = "";
       bar.style.width = "0%";
-      expText.textContent = "完成題目 → 抽 Pokemon！";
+      expText.textContent = "Answer questions → pull a Pokémon!";
     }
 
     /* 點圖片換拍檔（只可換已抽到嘅） */
     const nOwned = st.entries.length;
     sprite.classList.toggle("clickable", nOwned >= 2);
-    labelEl.textContent = nOwned >= 2 ? "我嘅拍檔（點圖片可換）" : "我嘅拍檔";
+    labelEl.textContent = nOwned >= 2 ? "My Partner (tap to switch)" : "My Partner";
     sprite.onclick = () => {
       if (nOwned >= 2) this.openPartnerPicker();
-      else if (nOwned === 1) this.toast("暫時只有一隻拍檔，抽到第二隻先可以換！");
+      else if (nOwned === 1) this.toast("Only one partner so far — pull a second one to switch!");
     };
 
-    /* 統計 */
+    /* Stats */
     const acc = st.totalQuestions > 0 ? Math.round((st.totalCorrect / st.totalQuestions) * 100) : 0;
     document.getElementById("home-stats").innerHTML = `
-      <span>完成 <b>${st.totalSets}</b> 組</span>
-      <span>正確率 <b>${acc}%</b></span>
-      <span>連續練習 <b>${calcStreak()}</b> 日</span>
-      <button id="btn-reset" class="reset-link">歸零重來</button>`;
+      <span>Sets done <b>${st.totalSets}</b></span>
+      <span>Accuracy <b>${acc}%</b></span>
+      <span>Day streak <b>${calcStreak()}</b></span>
+      <button id="btn-reset" class="reset-link">Reset progress</button>`;
     document.getElementById("btn-reset").onclick = () => this._confirmReset();
   },
 
   _confirmReset() {
     this.showModal(`
       <div class="confirm-box">
-        <p>確定要將所有紀錄同圖鑑<b>歸零</b>？<br><small>（匯入嘅自訂題目都會一齊刪除）</small></p>
+        <p>Reset <b>all progress</b> and the Pokédex?<br><small>(Imported custom questions will also be deleted)</small></p>
         <div class="confirm-row">
-          <button id="cf-yes" class="btn-big btn-primary">確定歸零</button>
-          <button id="cf-no" class="btn-big btn-plain">取消</button>
+          <button id="cf-yes" class="btn-big btn-primary">Yes, reset everything</button>
+          <button id="cf-no" class="btn-big btn-plain">Cancel</button>
         </div>
       </div>`, true);
     document.getElementById("cf-yes").onclick = () => {
       resetState();
       this.closeModal();
       this.renderHome();
-      this.toast("已歸零，重新開始！");
+      this.toast("All reset — starting fresh!");
     };
     document.getElementById("cf-no").onclick = () => this.closeModal();
   },
@@ -109,16 +111,16 @@ const App = {
       return `
         <button class="dex-cell owned ${active ? "current" : ""}" data-uid="${entry.uid}">
           <img src="${spriteURL(cur[0])}" alt="${cur[1]}">
-          <span class="dex-name">${cur[1]}（${cur[2]}）</span>
+          <span class="dex-name">${cur[1]}</span>
           <span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-          <span class="p-stage">Lv.${entry.level} ・ ${"★".repeat(entry.stars || 1)}${active ? " ・ 現用" : ""}</span>
+          <span class="p-stage">Lv.${entry.level} ・ ${"★".repeat(entry.stars || 1)}${active ? " ・ Active" : ""}</span>
         </button>`;
     }).join("");
 
     this.showModal(`
       <div class="partner-box">
-        <h3 class="partner-title">🔄 換拍檔</h3>
-        <p class="partner-sub">點選一隻已抽到嘅 Pokemon 做拍檔</p>
+        <h3 class="partner-title">🔄 Switch Partner</h3>
+        <p class="partner-sub">Tap a Pokémon you own to make it your partner</p>
         <div class="partner-list">${rows}</div>
       </div>`, true);
 
@@ -133,7 +135,7 @@ const App = {
         this.closeModal();
         this.renderHome();
         const cur = entryCurrentSpecies(target);
-        this.toast(`拍檔已換成 ${cur[1]}！`);
+        this.toast(`Partner changed to ${cur[1]}!`);
       };
     });
   },
@@ -171,7 +173,7 @@ const App = {
       head.innerHTML = `
         <span class="course-check" role="checkbox" aria-checked="${all}">${all ? "☑" : sel > 0 ? "◩" : "☐"}</span>
         <span class="course-name">${escapeHTML(course)}</span>
-        <span class="course-count">${sel}/${keys.length} 題型 · ${count} 題</span>
+        <span class="course-count">${sel}/${keys.length} topics · ${count} questions</span>
         <span class="course-arrow">${open ? "▾" : "▸"}</span>`;
       head.querySelector(".course-check").onclick = (e) => {
         e.stopPropagation();
@@ -195,11 +197,11 @@ const App = {
         mini.className = "setup-mini-row course-mini-row";
         const bAll = document.createElement("button");
         bAll.className = "btn-mini";
-        bAll.textContent = "全選此課題";
+        bAll.textContent = "Select all in this course";
         bAll.onclick = () => { keys.forEach(k => this.selectedTopics.add(k)); this.renderSetup(); };
         const bNone = document.createElement("button");
         bNone.className = "btn-mini";
-        bNone.textContent = "全唔選";
+        bNone.textContent = "Clear all";
         bNone.onclick = () => { keys.forEach(k => this.selectedTopics.delete(k)); this.renderSetup(); };
         mini.appendChild(bAll);
         mini.appendChild(bNone);
@@ -209,7 +211,7 @@ const App = {
           const on = this.selectedTopics.has(key);
           const b = document.createElement("button");
           b.className = "topic-chip" + (on ? " on" : "");
-          b.innerHTML = `<span class="topic-name">${escapeHTML(topic)}</span><span class="topic-count">${n} 題</span>`;
+          b.innerHTML = `<span class="topic-name">${escapeHTML(topic)}</span><span class="topic-count">${n} questions</span>`;
           b.onclick = () => {
             if (on) this.selectedTopics.delete(key);
             else this.selectedTopics.add(key);
@@ -229,18 +231,18 @@ const App = {
     const startBtn = document.getElementById("btn-setup-start");
     startBtn.disabled = selCount === 0 || qCount === 0;
     startBtn.textContent = selCount === 0
-      ? "請最少揀一個題型"
+      ? "Pick at least one topic"
       : qCount === 0
-        ? "暫時冇題目，轉頭再嚟"
-        : `▶ 開始做題（${Math.min(GAME_CONFIG.SET_SIZE, qCount)} 題）`;
+        ? "No questions available yet"
+        : `▶ Start (${Math.min(GAME_CONFIG.SET_SIZE, qCount)} questions)`;
 
-    /* 題目來源數量 */
+    /* Question source counts */
     const st = loadState();
     const siteN = SITE_QUESTIONS.length;
     const customN = (st.customQuestions || []).length;
     const parts = [];
-    if (siteN > 0) parts.push(`網站題庫 ${siteN} 題`);
-    if (customN > 0) parts.push(`額外匯入 ${customN} 題`);
+    if (siteN > 0) parts.push(`Site questions: ${siteN}`);
+    if (customN > 0) parts.push(`Imported: ${customN}`);
     document.getElementById("custom-q-count").textContent = parts.join(" ・ ");
   },
 
@@ -248,40 +250,40 @@ const App = {
   openImport() {
     this.showModal(`
       <div class="import-box">
-        <h3>📥 匯入 CSV 題目</h3>
+        <h3>📥 Import CSV Questions</h3>
         <details class="csv-guide">
-          <summary>📖 CSV 格式指引（撳開睇）</summary>
+          <summary>📖 CSV format guide (tap to open)</summary>
           <div class="csv-guide-body">
-            <p><b>每行一題，8 欄，用逗號分隔：</b></p>
-            <pre>編號,課題,題型,難度,句子,答案,關鍵詞,提示</pre>
+            <p><b>One question per line, 8 columns, comma separated:</b></p>
+            <pre>No,Course,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
             <ul>
-              <li><b>編號</b>（可留空）：五位數，例如 <code>00001</code>；會自動對應 <code>image_file/00001.png</code> 做題目圖片</li>
-              <li><b>課題</b>：大分類（例如 <code>Articles</code>）；同一課題下面可以有多個題型</li>
-              <li><b>題型</b>：課題入面嘅小分類（例如 <code>Articles: Basics</code>）；同名會歸入同一題型</li>
-              <li><b>難度</b>：數字 <code>1</code>、<code>2</code>、<code>3</code>、<code>4</code>…（答題時顯示同等數量嘅 ★）</li>
-              <li><b>句子</b>：必須有 <code>___</code>（三個底線）做空位</li>
-              <li><b>答案</b>：正確答案；多個可接受答案用 <code>|</code> 或 <code>/</code> 分隔（如 <code>were not / weren't</code>）；<b>可以留空</b>（代表零冠詞，答題時要留空再提交）</li>
-              <li><b>關鍵詞</b>（可留空）：句子內要著色嘅詞語，多個用 <code>/</code> 分隔（箭咀會由每個詞指去空位）</li>
-              <li><b>提示</b>（可留空）：答錯時顯示嘅短解釋（建議用英文）</li>
+              <li><b>No</b> (optional): five digits, e.g. <code>00001</code>; also matches <code>image_file/00001.png</code> as the question image</li>
+              <li><b>Course</b>: the big group (e.g. <code>Articles</code>); a course can hold many topics</li>
+              <li><b>Topic</b>: the small group inside the course (e.g. <code>Articles: Basics</code>); same name = same topic</li>
+              <li><b>Level</b>: number <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>… (shows that many ★ when answering)</li>
+              <li><b>Sentence</b>: must contain <code>___</code> (three underscores) as the blank</li>
+              <li><b>Answer</b>: the correct answer; several accepted answers can be separated with <code>|</code> or <code>/</code> (e.g. <code>were not / weren't</code>); <b>may be blank</b> (zero article)</li>
+              <li><b>Keywords</b> (optional): words to highlight in the sentence, separated with <code>/</code> (one arrow from each word to the blank)</li>
+              <li><b>Hint</b> (optional): short explanation shown after a wrong answer</li>
             </ul>
-            <p><b>例子：</b></p>
-            <pre>編號,課題,題型,難度,句子,答案,關鍵詞,提示
+            <p><b>Example:</b></p>
+            <pre>No,Course,Topic,Level,Sentence,Answer,Keywords,Hint
 00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
 00002,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school</pre>
-            <p class="csv-note">⚠ 第一行如果係標題行（第一格寫「編號」或「課題」）會自動略過。內容有逗號請用雙引號包住。<br>題目圖片放在 <code>image_file/</code>，檔名等於編號（<code>00001.png</code>；亦接受 jpg／jpeg／webp／gif）。冇圖片就唔會顯示。</p>
+            <p class="csv-note">⚠ A header row (first cell "No" or "Course") is skipped automatically. Wrap any value containing commas in double quotes.<br>Question images live in <code>image_file/</code> named after the number (<code>00001.png</code>; jpg/jpeg/webp/gif also accepted). No image = nothing shown.</p>
           </div>
         </details>
 
-        <label class="import-label">方法一：揀 CSV 檔案</label>
+        <label class="import-label">Option 1: choose a CSV file</label>
         <input type="file" id="csv-file" accept=".csv,text/csv,text/plain" class="import-file">
 
-        <label class="import-label">方法二：直接貼上內容</label>
-        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="編號,課題,題型,難度,句子,答案,關鍵詞,提示&#10;00001,過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went"></textarea>
+        <label class="import-label">Option 2: paste the content</label>
+        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="No,Course,Topic,Level,Sentence,Answer,Keywords,Hint&#10;00001,Past Tense,Verb Past,1,Yesterday I ___(go) to the park.,went,Yesterday,go becomes went"></textarea>
 
         <div class="confirm-row">
-          <button id="btn-do-import" class="btn-big btn-primary">匯入</button>
-          <button id="btn-clear-custom" class="btn-big btn-plain">🗑 清除全部自訂題目</button>
-          <button id="btn-import-cancel" class="btn-big btn-plain">取消</button>
+          <button id="btn-do-import" class="btn-big btn-primary">Import</button>
+          <button id="btn-clear-custom" class="btn-big btn-plain">🗑 Delete all imported questions</button>
+          <button id="btn-import-cancel" class="btn-big btn-plain">Cancel</button>
         </div>
       </div>`, true);
 
@@ -293,7 +295,7 @@ const App = {
       saveState();
       this.closeModal();
       this.renderSetup();
-      this.toast("已清除額外匯入嘅題目（網站題庫唔受影響）");
+      this.toast("Imported questions deleted (site questions are kept)");
     };
   },
 
@@ -304,19 +306,19 @@ const App = {
     if (file) {
       const reader = new FileReader();
       reader.onload = () => this._importText(reader.result);
-      reader.onerror = () => this.toast("讀檔失敗，請再試一次");
+      reader.onerror = () => this.toast("Could not read the file — please try again");
       reader.readAsText(file, "UTF-8");
     } else if (pasted.trim()) {
       this._importText(pasted);
     } else {
-      this.toast("請揀檔案或貼上 CSV 內容");
+      this.toast("Choose a file or paste CSV content");
     }
   },
 
   _importText(text) {
     const { questions, skipped } = questionsFromCSV(text);
     if (questions.length === 0) {
-      this.toast(skipped > 0 ? `冇有效題目（${skipped} 行格式唔啱）` : "冇有效題目");
+      this.toast(skipped > 0 ? `No valid questions (${skipped} bad rows)` : "No valid questions");
       return;
     }
     const st = loadState();
@@ -335,10 +337,10 @@ const App = {
     this.selectedTopics = new Set(this._allTopicKeys());   // 新題型自動選上
     this.renderSetup();
     if (added === 0) {
-      this.toast("啲題目之前已經匯入咗，冇重複加入");
+      this.toast("Those questions were already imported — nothing added");
     } else {
       const dup = questions.length - added;
-      this.toast(`成功匯入 ${added} 題${dup > 0 ? `（${dup} 題重複略過）` : ""}${skipped > 0 ? `，${skipped} 行格式唔啱略過` : ""}！`);
+      this.toast(`Imported ${added} questions${dup > 0 ? ` (${dup} duplicates skipped)` : ""}${skipped > 0 ? `, ${skipped} bad rows skipped` : ""}!`);
     }
   },
 
@@ -379,7 +381,7 @@ const App = {
     if (levelRes) {
       if (levelRes.levelsGained > 0) {
         const whose = entryCurrentSpecies(entry)[1];
-        this.toast(`${whose} 升到 Lv.${entry.level}！`);
+        this.toast(`${whose} reached Lv.${entry.level}!`);
       }
       if (levelRes.evolvedTo) setTimeout(() => this.showEvolveModal(levelRes.evolvedTo), 600);
       if (levelRes.learned.length) {
@@ -391,22 +393,22 @@ const App = {
   _renderSettlement(data, rewards) {
     const perfect = data.score === data.total;
     document.getElementById("settle-title").textContent =
-      perfect ? "Perfect！全對呀！🎉" : "做完喇！";
+      perfect ? "Perfect! All correct! 🎉" : "Set complete!";
 
     const mm = Math.floor(data.duration / 60), ss = data.duration % 60;
     document.getElementById("settle-score").innerHTML = `
       <div class="settle-score-big ${perfect ? "perfect" : ""}">${data.score}<small>/${data.total}</small></div>
-      <div class="settle-time">⏱ 用咗 ${mm}:${String(ss).padStart(2, "0")}</div>`;
+      <div class="settle-time">⏱ Took ${mm}:${String(ss).padStart(2, "0")}</div>`;
 
     document.getElementById("settle-rewards").innerHTML = `
-      <div class="reward-chip">🎫 普通抽 +${rewards.ticket}</div>
-      ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 鑽石 +${rewards.diamonds}</div>` : ""}
+      <div class="reward-chip">🎫 Normal pulls +${rewards.ticket}</div>
+      ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
       <div class="reward-chip">⭐ EXP +${rewards.exp}</div>`;
 
     const st = loadState();
     const rareBtn = document.getElementById("btn-pull-rare");
     rareBtn.style.display = st.diamonds >= GAME_CONFIG.RARE_PULL_COST ? "" : "none";
-    rareBtn.textContent = `💎 用 ${GAME_CONFIG.RARE_PULL_COST} 鑽石抽稀有（有 ${st.diamonds}）`;
+    rareBtn.textContent = `💎 Rare pull — ${GAME_CONFIG.RARE_PULL_COST} diamonds (you have ${st.diamonds})`;
   },
 
   /* ---------- 錯題回顧 ---------- */
@@ -417,7 +419,7 @@ const App = {
     const wrongs = results.filter(r => !r.correct);
 
     if (results.length > 0 && wrongs.length === 0) {
-      list.innerHTML = `<div class="review-none">今次全對，冇錯題！🌟</div>`;
+      list.innerHTML = `<div class="review-none">All correct this time — no mistakes! 🌟</div>`;
     } else {
       wrongs.forEach(w => {
         const q = findQuestion(w.qid);
@@ -452,16 +454,16 @@ const App = {
 
     const full = known.length >= 4;
     const options = full
-      ? known.map((m, i) => `<button class="btn-big btn-plain move-choice" data-i="${i}">換走 ${moveLabel(m)}</button>`).join("")
-      : `<button id="move-learn-yes" class="btn-big btn-primary">學習 ${label}</button>`;
+      ? known.map((m, i) => `<button class="btn-big btn-plain move-choice" data-i="${i}">Replace ${moveLabel(m)}</button>`).join("")
+      : `<button id="move-learn-yes" class="btn-big btn-primary">Learn ${label}</button>`;
 
     this.showModal(`
       <div class="move-box">
-        <div class="move-title">✨ 新招式！</div>
-        <div class="move-name">${label}</div>
-        <div class="move-sub">${cur[1]} Lv.${q.level}${full ? " ・ 已滿 4 招，揀一招替換" : ""}</div>
+        <div class="move-title">✨ New move!</div>
+        ${moveCardHTML(q.move)}
+        <div class="move-sub">${cur[1]} Lv.${q.level}${full ? " ・ 4 moves already — pick one to replace" : ""}</div>
         <div class="move-list">${options}</div>
-        <button id="move-learn-no" class="btn-big btn-plain">今次唔學</button>
+        <button id="move-learn-no" class="btn-big btn-plain">Not this time</button>
       </div>`, true);
 
     const next = () => { this.closeModal(); this._showNextMoveLearn(); };
@@ -485,18 +487,18 @@ const App = {
   showEvolveModal(species) {
     const chain = EVOLUTION_CHAINS.find(c => c.key === species.chainKey);
     const entry = loadState().entries.find(e => e.chainKey === species.chainKey);
-    const stage = [species.dexId, species.name, species.zh];
+    const stage = [species.dexId, species.name];
     const prevStage = species.stage > 1 && entry
       ? (species.stage - 1 <= chain.stages.length ? chain.stages[species.stage - 2] : chain.stages[chain.stages.length - 1])
       : null;
     this.showModal(`
       <div class="evolve-box">
-        <div class="evolve-title">✨ 進化了！✨</div>
+        <div class="evolve-title">✨ It evolved! ✨</div>
         ${prevStage ? `<div class="evolve-from">${prevStage[1]} →</div>` : ""}
         <img class="evolve-art" src="${artworkURL(stage[0])}" alt="${stage[1]}"
              onerror="this.onerror=null;this.src='${spriteURL(stage[0])}'">
-        <div class="evolve-name">${stage[1]}（${stage[2]}）</div>
-        <button id="evolve-ok" class="btn-big btn-primary">好嘢！</button>
+        <div class="evolve-name">${stage[1]}</div>
+        <button id="evolve-ok" class="btn-big btn-primary">Awesome!</button>
       </div>`, true);
     document.getElementById("evolve-ok").onclick = () => {
       this.closeModal();
@@ -537,7 +539,7 @@ const App = {
     document.getElementById("btn-top-diamond").onclick = () => {
       const st = loadState();
       if (st.diamonds < GAME_CONFIG.RARE_PULL_COST) {
-        this.toast(`鑽石唔夠，需要 💎${GAME_CONFIG.RARE_PULL_COST}`);
+        this.toast(`Not enough diamonds — need 💎${GAME_CONFIG.RARE_PULL_COST}`);
         return;
       }
       Gacha.open("rare");
@@ -545,7 +547,7 @@ const App = {
     document.getElementById("btn-top-pull").onclick = () => {
       const st = loadState();
       if (st.normalPulls < 1) {
-        this.toast("冇普通抽次數，去做題賺啦！");
+        this.toast("No normal pulls left — earn some by practising!");
         return;
       }
       Gacha.open("normal");

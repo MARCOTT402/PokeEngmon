@@ -1,13 +1,13 @@
 {
-  "name": "PokeEngmon - Isaac 英文練習",
+  "name": "PokeEngmon - English Practice",
   "short_name": "PokeEngmon",
-  "description": "完成英文題目，抽 Pokemon，集齊圖鑑！",
+  "description": "Answer English questions, pull Pokémon and complete the Pokédex!",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#eaf4ff",
   "theme_color": "#ffcb05",
-  "lang": "zh-Hant",
+  "lang": "en",
   "icons": [
     {
       "src": "icons/icon-192.png",

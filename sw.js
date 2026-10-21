@@ -1,10 +1,12 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v13";
+const CACHE_NAME = "pokeengmon-v14";
+const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
   "./index.html",
   "./questions.csv",
   "./data/pokemon-151.json",
+  "./data/moves.json",
   "./css/style.css",
   "./js/data.js",
   "./js/pokemon.js",
@@ -17,7 +19,8 @@ const ASSETS = [
   "./js/app.js",
   "./manifest.json",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  ...TYPE_ICONS.map(t => `./assets/types/${t}.png`)
 ];
 
 self.addEventListener("install", (e) => {
@@ -35,12 +38,13 @@ self.addEventListener("activate", (e) => {
 });
 
 /* App 檔案（同源）：網絡優先，離線先用快取 → 更新即時生效
-   Pokemon 圖片（外部 CDN）：快取優先，慳流量 */
+   assets/（屬性 Icon、動態 GIF）同 Pokemon 圖片（外部 CDN）：快取優先，慳流量 */
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const sameOrigin = e.request.url.startsWith(self.location.origin);
+  const isAsset = sameOrigin && e.request.url.includes("/assets/");
 
-  if (sameOrigin) {
+  if (sameOrigin && !isAsset) {
     e.respondWith(
       fetch(e.request).then(res => {
         if (res && res.ok) {

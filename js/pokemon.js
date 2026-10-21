@@ -4,6 +4,7 @@
    ============================================================ */
 
 let POKEMON_DEX = null;
+let MOVES = null;
 
 const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 const STAT_LABELS = { hp: "HP", atk: "Atk", def: "Def", spa: "SpA", spd: "SpD", spe: "Spe" };
@@ -12,17 +13,103 @@ const MAX_IV = 31;
 const MAX_EV = 252;
 const MAX_EV_TOTAL = 510;
 
+/* ---------- Types ---------- */
+const TYPE_COLORS = {
+  normal: "#A8A77A", fire: "#EE8130", water: "#6390F0", electric: "#F7D02C",
+  grass: "#7AC74C", ice: "#96D9D6", fighting: "#C22E28", poison: "#A33EA1",
+  ground: "#E2BF65", flying: "#A98FF3", psychic: "#F95587", bug: "#A6B91A",
+  rock: "#B6A136", ghost: "#735797", dragon: "#6F35FC", dark: "#705746",
+  steel: "#B7B7CE", fairy: "#D685AD"
+};
+
+const TYPE_LABELS = {
+  normal: "Normal", fire: "Fire", water: "Water", electric: "Electric",
+  grass: "Grass", ice: "Ice", fighting: "Fighting", poison: "Poison",
+  ground: "Ground", flying: "Flying", psychic: "Psychic", bug: "Bug",
+  rock: "Rock", ghost: "Ghost", dragon: "Dragon", dark: "Dark",
+  steel: "Steel", fairy: "Fairy"
+};
+
+const DAMAGE_CLASS_INFO = {
+  physical: {
+    label: "Physical",
+    color: "#c0392b",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.2 20.1l2.6-2.6-1.7-1.7-2.6 2.6a1.2 1.2 0 000 1.7 1.2 1.2 0 001.7 0z" fill="currentColor"/><path d="M8.2 17.9l-2.1-2.1L16.5 5.4l3.5-1.5-1.5 3.5L8.2 17.9z" fill="currentColor"/><path d="M17.7 3l3.3 3.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
+  },
+  special: {
+    label: "Special",
+    color: "#2f6fce",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.3 6 6 2.4-6 2.4-2.3 6-2.3-6-6-2.4 6-2.4z" fill="currentColor"/><circle cx="19" cy="4" r="1.6" fill="currentColor"/><circle cx="5" cy="19" r="1.6" fill="currentColor"/></svg>`
+  },
+  status: {
+    label: "Status",
+    color: "#6b7280",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.4" fill="currentColor"/><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="3 3.4"/></svg>`
+  }
+};
+
 async function loadPokemonDex() {
   if (POKEMON_DEX) return POKEMON_DEX;
   try {
-    const res = await fetch("data/pokemon-151.json");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    POKEMON_DEX = await res.json();
+    const [dexRes, moveRes] = await Promise.all([
+      fetch("data/pokemon-151.json"),
+      fetch("data/moves.json")
+    ]);
+    if (!dexRes.ok) throw new Error(`HTTP ${dexRes.status}`);
+    POKEMON_DEX = await dexRes.json();
+    if (moveRes.ok) MOVES = (await moveRes.json()).moves || {};
   } catch (e) {
     console.warn("Pokemon data load failed", e);
     POKEMON_DEX = null;
   }
   return POKEMON_DEX;
+}
+
+/* 招式資料（本地 moves.json，離線可用） */
+function moveInfo(slug) {
+  const m = MOVES && MOVES[slug];
+  if (m) return m;
+  return {
+    name: moveLabel(slug), power: null, accuracy: null, pp: null, priority: 0,
+    type: "normal", damage_class: "status", target: "selected-pokemon",
+    effect_chance: null, desc: ""
+  };
+}
+
+function typeIconURL(type) {
+  return `assets/types/${TYPE_COLORS[type] ? type : "normal"}.png`;
+}
+function typeColor(type) {
+  return TYPE_COLORS[type] || TYPE_COLORS.normal;
+}
+function typeLabel(type) {
+  return TYPE_LABELS[type] || "Normal";
+}
+function damageClassInfo(cls) {
+  return DAMAGE_CLASS_INFO[cls] || DAMAGE_CLASS_INFO.status;
+}
+
+/* 招式卡：屬性 Icon + 招式名 + 傷害分類 Icon + 威力／PP */
+function moveCardHTML(slug, opts) {
+  const m = moveInfo(slug);
+  const cls = damageClassInfo(m.damage_class);
+  const prio = m.priority
+    ? `<span class="move-prio">${m.priority > 0 ? "+" : ""}${m.priority} PRI</span>`
+    : "";
+  return `<div class="move-card" style="--type-color:${typeColor(m.type)}">
+    <div class="move-card-head">
+      <img class="move-type-icon" src="${typeIconURL(m.type)}" alt="${typeLabel(m.type)}" title="${typeLabel(m.type)}">
+      <span class="move-card-name">${escapeHTML(m.name)}</span>
+      <span class="move-class" style="color:${cls.color}" title="${cls.label}">${cls.icon}</span>
+    </div>
+    <div class="move-card-meta">
+      <span>Power <b>${m.power == null ? "—" : m.power}</b></span>
+      <span>PP <b>${m.pp == null ? "—" : m.pp}</b></span>
+      ${m.accuracy == null ? "" : `<span>Acc <b>${m.accuracy}</b></span>`}
+      ${prio}
+    </div>
+    ${opts && opts.hideDesc ? "" : `<div class="move-card-desc">${escapeHTML(m.desc)}</div>`}
+  </div>`;
 }
 
 function dexOf(dexId) {
@@ -68,8 +155,19 @@ function levelSpan(dexId, level) {
 /* ---------- 能力值公式 ---------- */
 function emptyIvs() {
   const o = {};
-  STAT_KEYS.forEach(k => { o[k] = MAX_IV; });   // 預設滿個體 31
+  STAT_KEYS.forEach(k => { o[k] = MAX_IV; });
   return o;
+}
+
+/* 新抽到嘅 Pokemon：每項 IV 隨機 0-31 */
+function randomIvs() {
+  const o = {};
+  STAT_KEYS.forEach(k => { o[k] = Math.floor(Math.random() * (MAX_IV + 1)); });
+  return o;
+}
+
+function ivTotal(ivs) {
+  return STAT_KEYS.reduce((n, k) => n + (Number(ivs && ivs[k]) || 0), 0);
 }
 
 function emptyEvs() {
@@ -125,6 +223,7 @@ function statsForEntry(entry) {
 
 /* ---------- 招式 ---------- */
 function moveLabel(slug) {
+  if (MOVES && MOVES[slug]) return MOVES[slug].name;
   return String(slug).split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
@@ -173,6 +272,7 @@ function ensureEntryPokemonData(entry) {
     changed = true;
   }
   if (typeof entry.candies !== "number") { entry.candies = 0; changed = true; }
+  if (typeof entry.evPoints !== "number") { entry.evPoints = 0; changed = true; }
   if (typeof entry.dupes !== "number") { entry.dupes = 0; changed = true; }
   if (typeof entry.stars !== "number") {
     entry.stars = Math.min(5, 1 + Math.floor(entry.dupes / 5));

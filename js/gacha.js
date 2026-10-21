@@ -12,7 +12,7 @@ const Gacha = {
     this.busy = false;
     App.showView("view-gacha");
     document.getElementById("gacha-title").textContent =
-      mode === "rare" ? "💎 稀有抽" : "🎯 普通抽";
+      mode === "rare" ? "💎 Rare Pull" : "🎯 Normal Pull";
     this._resetStage();
     this._refreshControls();
   },
@@ -36,13 +36,13 @@ const Gacha = {
     if (this._canPull()) {
       btn.disabled = false;
       btn.textContent = this.mode === "normal"
-        ? `投入硬幣，開始抽！（剩 ${st.normalPulls} 次）`
-        : `投入硬幣，開始抽！（💎 ${st.diamonds}）`;
+        ? `Insert coin to pull! (${st.normalPulls} left)`
+        : `Insert coin to pull! (💎 ${st.diamonds})`;
     } else {
       btn.disabled = true;
       btn.textContent = this.mode === "normal"
-        ? "冇普通抽次數，去做題賺啦！"
-        : `鑽石唔夠（需要 💎${GAME_CONFIG.RARE_PULL_COST}）`;
+        ? "No normal pulls left — earn some by practising!"
+        : `Not enough diamonds (need 💎${GAME_CONFIG.RARE_PULL_COST})`;
     }
   },
 
@@ -116,7 +116,7 @@ const Gacha = {
     flash.classList.remove("on");
     stage.classList.remove("stage-flash");
 
-    const { entry, isDupe } = obtainPokemon(chainKey);
+    const { entry, isDupe, candyGain } = obtainPokemon(chainKey, this.mode);
 
     /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
     const st = loadState();
@@ -148,13 +148,14 @@ const Gacha = {
              onerror="this.onerror=null;this.src='${artworkURL(cur[0])}'">
       </div>
       <div class="gacha-name">${cur[1]} <small>Lv.${entry.level}</small></div>
-      <div class="gacha-zh">${cur[2]}</div>
       <span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-      ${isDupe ? `<div class="gacha-dupe">已經有呢隻！🍬 糖果 +1 ・ 每項 EV +1</div>` : `<div class="gacha-new">NEW！</div>`}
+      ${isDupe
+        ? `<div class="gacha-dupe">You already have it! EV point +1${candyGain ? " ・ 🍬 Candy +1" : ""}</div>`
+        : `<div class="gacha-new">NEW!</div>`}
     `;
 
     document.getElementById("btn-do-pull").disabled = true;
-    document.getElementById("btn-do-pull").textContent = "抽完喇！";
+    document.getElementById("btn-do-pull").textContent = "Pull complete!";
 
     /* 首次入帳經驗引起嘅進化 */
     if (firstExpEvolve) {
