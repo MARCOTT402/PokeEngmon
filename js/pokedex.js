@@ -3,15 +3,9 @@
    Owned -> full art & data; not owned -> grey silhouette
    ============================================================ */
 
-/* PokeAPI cries (ogg); iOS falls back to Showdown mp3 */
-const CRY_LATEST = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
-const CRY_FALLBACK = "https://play.pokemonshowdown.com/audio/cries";
-
-function crySlug(name) {
-  return String(name).toLowerCase()
-    .replace(/♀/g, "f").replace(/♂/g, "m")
-    .replace(/[^a-z0-9]/g, "");
-}
+/* Local cries: mp3 downloaded for 1-151 (assets/cries/{dexId}.mp3) */
+const CRY_LOCAL = "assets/cries";
+function cryURL(dexId) { return `${CRY_LOCAL}/${dexId}.mp3`; }
 
 function capitalizeWord(slug) {
   const s = String(slug || "");
@@ -183,36 +177,94 @@ const Pokedex = {
     }
   },
 
-  /* Unlock audio inside a user gesture (mobile autoplay policy),
-     so the cry can still play a few seconds later when the ball opens */
+  /* 喺用戶點擊時解鎖 Web Audio（手機自動播放限制），
+     令幾秒後開球時仍然可以播放叫聲 */
   unlockAudio() {
     try {
-      const a = this._audio || (this._audio = new Audio());
-      if (a.dataset.unlocked) return;
-      a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
-      a.play().then(() => {
-        a.dataset.unlocked = "1";
-        a.pause();
-      }).catch(() => {});
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC && !this._ctx) this._ctx = new AC();
+      if (!this._ctx) return;
+      if (this._ctx.state === "suspended") this._ctx.resume();
+      /* 喺手勢內播一個無聲 buffer，確保 iOS 真正啟動 AudioContext */
+      if (!this._ctxStarted) {
+        const b = this._ctx.createBuffer(1, 1, 22050);
+        const s = this._ctx.createBufferSource();
+        s.buffer = b;
+        s.connect(this._ctx.destination);
+        s.start(0);
+        this._ctxStarted = true;
+      }
     } catch (e) { /* ignore */ }
   },
 
-  /* Play cry: PokeAPI ogg; fall back to mp3 */
-  playCry(dexId) {
-    const sp = SPECIES[dexId];
-    if (!sp) return;
-    const a = this._audio || (this._audio = new Audio());
-    a.dataset.fallback = "0";
-    a.onerror = () => this._fallbackCry(sp.name, a);
-    a.volume = 0.75;
-    a.src = `${CRY_LATEST}/${dexId}.ogg`;
-    a.play().catch(() => this._fallbackCry(sp.name, a));
+  /* 預先下載＋解碼（抽獎動畫期間做，開球時即叫） */
+  prepareCry(dexId) {
+    const key = String(dexId);
+    if (this._cryCache[key]) return Promise.resolve(this._cryCache[key]);
+    if (this._cryPending[key]) return this._cryPending[key];
+    const ctx = this._ctx;
+    if (!ctx) return Promise.resolve(null);
+    const job = fetch(cryURL(dexId))
+      .then(res => (res.ok ? res.arrayBuffer() : null))
+      .then(buf => {
+        if (!buf) return null;
+        return new Promise((resolve) => {
+          const done = data => resolve(data || null);
+          try {
+            const p = ctx.decodeAudioData(buf, done, () => resolve(null));
+            if (p && p.then) p.then(done, () => resolve(null));
+          } catch (e) { resolve(null); }
+        });
+      })
+      .then(audio => {
+        if (audio) this._cryCache[key] = audio;
+        delete this._cryPending[key];
+        return audio;
+      })
+      .catch(() => {
+        delete this._cryPending[key];
+        return null;
+      });
+    this._cryPending[key] = job;
+    return job;
   },
 
-  _fallbackCry(name, a) {
-    if (a.dataset.fallback === "1") return;
-    a.dataset.fallback = "1";
-    a.src = `${CRY_FALLBACK}/${crySlug(name)}.mp3`;
+  /* 播叫聲：Web Audio（已解鎖）優先，失敗先用 HTMLAudio */
+  playCry(dexId) {
+    if (!SPECIES[dexId]) return;
+    if (!this._ctx) this.unlockAudio();
+    const key = String(dexId);
+    if (this._ctx) {
+      if (this._ctx.state === "suspended") this._ctx.resume();
+      if (this._cryCache[key]) { this._playBuffer(this._cryCache[key]); return; }
+      this.prepareCry(dexId).then(buf => {
+        if (buf) this._playBuffer(buf);
+        else this._playHTML(dexId);
+      });
+      return;
+    }
+    this._playHTML(dexId);
+  },
+
+  _playBuffer(buffer) {
+    try {
+      const src = this._ctx.createBufferSource();
+      const gain = this._ctx.createGain();
+      gain.gain.value = 0.8;
+      src.buffer = buffer;
+      src.connect(gain);
+      gain.connect(this._ctx.destination);
+      src.start(0);
+    } catch (e) { /* ignore */ }
+  },
+
+  _playHTML(dexId) {
+    const a = this._audio || (this._audio = new Audio());
+    a.volume = 0.75;
+    a.src = cryURL(dexId);
     a.play().catch(() => {});
   }
 };
+
+Pokedex._cryCache = {};
+Pokedex._cryPending = {};

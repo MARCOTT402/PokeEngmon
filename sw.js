@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v15";
+const CACHE_NAME = "pokeengmon-v16";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -20,7 +20,8 @@ const ASSETS = [
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  ...TYPE_ICONS.map(t => `./assets/types/${t}.png`)
+  ...TYPE_ICONS.map(t => `./assets/types/${t}.png`),
+  ...Array.from({ length: 151 }, (_, i) => `./assets/cries/${i + 1}.mp3`)
 ];
 
 self.addEventListener("install", (e) => {

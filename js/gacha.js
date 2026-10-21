@@ -75,6 +75,12 @@ const Gacha = {
     const rarity = this.rollRarity(this.mode);
     const chainKey = this.pickChain(rarity);
 
+    /* 新 Pokemon：喺動畫期間預先載入叫聲，開球時即刻叫 */
+    const preview = EVOLUTION_CHAINS.find(c => c.key === chainKey);
+    if (preview && !st.entries.some(e => e.chainKey === chainKey)) {
+      Pokedex.prepareCry(preview.stages[0][0]);
+    }
+
     this._resetStage();
     this._refreshControls();
     const stage = document.getElementById("gacha-stage");
