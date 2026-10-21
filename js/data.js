@@ -228,7 +228,7 @@ const QUESTION_BANK = [
   { id: "q36", topic: "This / That", sentence: "___ are my hands.", answer: "These", accept: ["these"], explain: { keyword: "are", hint: "are = plural → These" } },
 
   /* --- 疑問詞 (4) --- */
-  { id: "q37", topic: "Wh- Questions", sentence: "___ is your name? My name is Isaac.", answer: "What", accept: ["what"], explain: { keyword: "name", hint: "Asking a name → What" } },
+  { id: "q37", topic: "Wh- Questions", sentence: "___ is your name? My name is Sam.", answer: "What", accept: ["what"], explain: { keyword: "name", hint: "Asking a name → What" } },
   { id: "q38", topic: "Wh- Questions", sentence: "___ is my school bag? It is under the chair.", answer: "Where", accept: ["where"], explain: { keyword: "under the chair", hint: "Asking a place → Where" } },
   { id: "q39", topic: "Wh- Questions", sentence: "___ is that boy? He is my brother.", answer: "Who", accept: ["who"], explain: { keyword: "He is my brother", hint: "Asking about a person → Who" } },
   { id: "q40", topic: "Wh- Questions", sentence: "___ do you get up? At seven o'clock.", answer: "When", accept: ["when"], explain: { keyword: "seven o'clock", hint: "Asking a time → When" } }

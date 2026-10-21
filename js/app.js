@@ -657,9 +657,18 @@ const App = {
     this.renderHome();
     this.showView("view-home");
 
-    /* Service Worker（PWA 離線） */
+    /* Service Worker（PWA 離線）＋新版本自動套用 */
     if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloading = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!hadController || reloading) return;
+        reloading = true;
+        location.reload();
+      });
+      navigator.serviceWorker.register("sw.js")
+        .then(reg => reg.update().catch(() => {}))
+        .catch(() => {});
     }
   }
 };
