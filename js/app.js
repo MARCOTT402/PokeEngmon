@@ -467,6 +467,23 @@ const App = {
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
+    /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
+    document.getElementById("btn-top-diamond").onclick = () => {
+      const st = loadState();
+      if (st.diamonds < GAME_CONFIG.RARE_PULL_COST) {
+        this.toast(`鑽石唔夠，需要 💎${GAME_CONFIG.RARE_PULL_COST}`);
+        return;
+      }
+      Gacha.open("rare");
+    };
+    document.getElementById("btn-top-pull").onclick = () => {
+      const st = loadState();
+      if (st.normalPulls < 1) {
+        this.toast("冇普通抽次數，去做題賺啦！");
+        return;
+      }
+      Gacha.open("normal");
+    };
     document.getElementById("btn-pull-normal").onclick = () => Gacha.open("normal");
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();

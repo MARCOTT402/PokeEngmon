@@ -57,6 +57,8 @@ body {
 }
 .chip-diamond { border-color: #7ec8ff; background: #eaf6ff; }
 .chip-ticket { border-color: #ffd54f; background: #fff8e1; }
+.chip-btn { font-family: inherit; cursor: pointer; transition: transform .12s ease; }
+.chip-btn:active { transform: scale(.94); }
 
 .rarity-chip {
   display: inline-block; padding: 4px 14px; border-radius: 999px;
