@@ -18,7 +18,7 @@ const App = {
   /* ---------- 主畫面 ---------- */
   renderHome() {
     const st = loadState();
-    document.getElementById("topbar-name").textContent = st.playerName;
+    document.getElementById("topbar-name").innerHTML = `${escapeHTML(st.playerName)} <span class="name-edit">✎</span>`;
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
     document.getElementById("topbar-pulls").textContent = st.normalPulls;
 
@@ -506,6 +506,39 @@ const App = {
     };
   },
 
+  /* ---------- 改訓練員名 ---------- */
+  openRename() {
+    const st = loadState();
+    this.showModal(`
+      <div class="rename-box">
+        <h3 class="rename-title">Trainer Name</h3>
+        <p class="rename-sub">Type a name for your trainer.</p>
+        <input id="rename-input" class="rename-input" type="text" maxlength="24"
+               autocomplete="off" autocapitalize="words" spellcheck="false"
+               value="${escapeHTML(st.playerName)}">
+        <div class="confirm-row">
+          <button id="rename-save" class="btn-big btn-primary">Save</button>
+          <button id="rename-cancel" class="btn-big btn-plain">Cancel</button>
+        </div>
+      </div>`);
+    const input = document.getElementById("rename-input");
+    input.focus();
+    input.select();
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("rename-save").click();
+    });
+    document.getElementById("rename-save").onclick = () => {
+      const name = input.value.trim().slice(0, 24) || "The PokéEngmon Trainer";
+      st.playerName = name;
+      st.nameCustomized = true;
+      saveState();
+      this.closeModal();
+      this.renderHome();
+      this.toast(`Trainer name saved: ${name}`);
+    };
+    document.getElementById("rename-cancel").onclick = () => this.closeModal();
+  },
+
   /* ---------- 版權 / 免責聲明 ---------- */
   openDisclaimer() {
     this.showModal(`
@@ -557,6 +590,7 @@ const App = {
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
     document.getElementById("btn-disclaimer").onclick = () => this.openDisclaimer();
+    document.getElementById("topbar-name").onclick = () => this.openRename();
     /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
     document.getElementById("btn-top-diamond").onclick = () => {
       const st = loadState();

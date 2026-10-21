@@ -7,7 +7,8 @@ const STORAGE_KEY = "pokeengmon_state_v1";
 /* 預設狀態 */
 function defaultState() {
   return {
-    playerName: "Isaac",
+    playerName: "The PokéEngmon Trainer",
+    nameCustomized: false,   // 用戶自己改過名就唔會被預設名覆蓋
     diamonds: 0,
     normalPulls: 0,          // 普通抽次數
     totalSets: 0,            // 累積完成組數
@@ -183,6 +184,11 @@ function useEntryCandy(entry, count) {
 function migrateEntries() {
   const st = loadState();
   let changed = false;
+  /* 舊存檔嘅預設名「Isaac」→ 新預設名（用戶自訂過就唔動） */
+  if (!st.nameCustomized && st.playerName === "Isaac") {
+    st.playerName = "The PokéEngmon Trainer";
+    changed = true;
+  }
   st.entries.forEach(e => {
     if (ensureEntryPokemonData(e)) changed = true;
   });
