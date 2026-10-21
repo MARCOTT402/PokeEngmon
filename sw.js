@@ -1,8 +1,9 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v3";
+const CACHE_NAME = "pokeengmon-v4";
 const ASSETS = [
   "./",
   "./index.html",
+  "./questions.csv",
   "./css/style.css",
   "./js/data.js",
   "./js/storage.js",

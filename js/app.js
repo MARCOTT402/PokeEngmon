@@ -171,11 +171,14 @@ const App = {
       ? "請最少揀一個題型"
       : `▶ 開始做題（${Math.min(GAME_CONFIG.SET_SIZE, qCount)} 題）`;
 
-    /* 自訂題目數量 */
+    /* 題目來源數量 */
     const st = loadState();
-    const n = (st.customQuestions || []).length;
-    document.getElementById("custom-q-count").textContent =
-      n > 0 ? `已匯入 ${n} 題自訂題目` : "";
+    const siteN = SITE_QUESTIONS.length;
+    const customN = (st.customQuestions || []).length;
+    const parts = [];
+    if (siteN > 0) parts.push(`網站題庫 ${siteN} 題`);
+    if (customN > 0) parts.push(`額外匯入 ${customN} 題`);
+    document.getElementById("custom-q-count").textContent = parts.join(" ・ ");
   },
 
   /* ---------- CSV 匯入（含指引） ---------- */
@@ -224,7 +227,7 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
       saveState();
       this.closeModal();
       this.renderSetup();
-      this.toast("已清除全部自訂題目");
+      this.toast("已清除額外匯入嘅題目（網站題庫唔受影響）");
     };
   },
 
@@ -251,8 +254,8 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
       return;
     }
     const st = loadState();
-    /* 防重複：同題型＋同句子＋同答案已存在就跳過（重新匯入唔會令題目加倍） */
-    const seen = new Set((st.customQuestions || []).map(q => `${q.topic}\u0001${q.sentence}\u0001${q.answer}`));
+    /* 防重複：對照全部題目（內建＋網站＋已匯入），同題型＋同句子＋同答案就跳過 */
+    const seen = new Set(getAllQuestions().map(questionKey));
     let added = 0;
     questions.forEach(q => {
       const key = `${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
@@ -393,7 +396,7 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
   },
 
   /* ---------- 初始化 ---------- */
-  init() {
+  async init() {
     /* 按鈕 */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
@@ -439,6 +442,9 @@ am / is / are,She ___ my sister.,is,She,一個人 → is
     /* 原本 showReview 需要知道來源 */
     const _origShowReview = this.showReview.bind(this);
     this.showReview = (from) => { this._reviewFrom = from || null; _origShowReview(); };
+
+    /* 載入網站題庫（questions.csv）後先畫主畫面 */
+    await loadSiteQuestions();
 
     this.renderHome();
     this.showView("view-home");

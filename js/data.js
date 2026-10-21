@@ -237,10 +237,50 @@ const QUESTION_BANK = [
 
 /* ---------- 題目 helpers ---------- */
 
-/* 全部題目＝內建題庫 + 家長匯入嘅自訂題目 */
+/* 網站題目（根目錄 questions.csv，開網站時自動載入） */
+let SITE_QUESTIONS = [];
+
+/* 題目唯一鍵：同題型＋同句子＋同答案＝同一題 */
+function questionKey(q) {
+  return `${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
+}
+
+/* 短字串 hash：令網站題目每次載入都有同一個 id（舊紀錄先對得返） */
+function hashString(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/* 載入網站題庫。失敗（例如用 file:// 開）就靜靜用返內建題庫 */
+async function loadSiteQuestions() {
+  try {
+    const res = await fetch("questions.csv", { cache: "no-cache" });
+    if (!res.ok) return 0;
+    const { questions } = questionsFromCSV(await res.text());
+    questions.forEach(q => {
+      q.id = "s" + hashString(questionKey(q));
+      q.custom = false;
+    });
+    SITE_QUESTIONS = questions;
+    return questions.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/* 全部題目＝內建題庫 + 網站題庫 + 家長匯入嘅自訂題目（自動去重） */
 function getAllQuestions() {
   const st = typeof loadState === "function" ? loadState() : { customQuestions: [] };
-  return QUESTION_BANK.concat(st.customQuestions || []);
+  const seen = new Set();
+  const out = [];
+  [QUESTION_BANK, SITE_QUESTIONS, st.customQuestions || []].forEach(list => {
+    list.forEach(q => {
+      const k = questionKey(q);
+      if (!seen.has(k)) { seen.add(k); out.push(q); }
+    });
+  });
+  return out;
 }
 
 /* 用 qid 搵題目（錯題回顧 / 日曆用） */
