@@ -272,11 +272,13 @@ function hashString(str) {
   return h.toString(36);
 }
 
-/* 補齊課題／難度（舊資料或內建題庫） */
+/* 補齊課題／難度／編號（舊資料或內建題庫） */
 function normalizeQuestion(q) {
   const d = TOPIC_DEFAULTS[q.topic] || {};
   if (!q.course) q.course = d.course || "未分類";
   if (!q.level) q.level = d.level || 1;
+  /* 內建題目用自己嘅 q01…q40 做圖片編號（可加 image_file/q01.png） */
+  if (!q.no) q.no = /^q\d+$/.test(q.id) ? q.id : "";
   return q;
 }
 
@@ -389,6 +391,42 @@ function parseCSV(text) {
   return rows;
 }
 
+/* 題目圖片：image_file/00001.png（亦支援 jpg / jpeg / webp / gif）
+   唔可以列出資料夾，所以逐個副檔名試載入；結果記住，唔會重複試 */
+const IMAGE_DIR = "image_file";
+const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif"];
+const _imageCache = new Map();   // 編號 → 圖片路徑（搵唔到＝null）
+
+function probeImage(url) {
+  return new Promise(resolve => {
+    const im = new Image();
+    im.onload = () => resolve(url);
+    im.onerror = () => resolve(null);
+    im.src = url;
+  });
+}
+
+/* 回傳圖片路徑；冇圖片回傳 null */
+function findQuestionImage(no) {
+  if (!no) return Promise.resolve(null);
+  if (_imageCache.has(no)) return Promise.resolve(_imageCache.get(no));
+  let chain = Promise.resolve(null);
+  IMAGE_EXTS.forEach(ext => {
+    chain = chain.then(found => found || probeImage(`${IMAGE_DIR}/${no}.${ext}`));
+  });
+  return chain.then(url => {
+    _imageCache.set(no, url);
+    return url;
+  });
+}
+
+/* 編號統一補零成 5 位（1 → 00001） */
+function normalizeNo(raw) {
+  const s = String(raw || "").trim();
+  if (/^\d+$/.test(s)) return s.padStart(5, "0");
+  return s;
+}
+
 /* 將 CSV 文字轉為題目物件。回傳 { questions, skipped } */
 function questionsFromCSV(text) {
   const rows = parseCSV(text);
@@ -397,17 +435,23 @@ function questionsFromCSV(text) {
   const stamp = Date.now().toString(36);
   if (rows.length === 0) return { questions, skipped };
 
-  /* 判斷新舊格式：第一行有 7 欄，或者第一格寫「課題／課程」 */
+  /* 判斷格式：
+     8 欄（第一格「編號」）＝ 有題目編號，可對應 image_file/<編號>.png
+     7 欄（第一格「課題」）＝ 冇編號
+     5 欄 ＝ 舊格式（題型,句子,答案,關鍵詞,提示） */
   const firstRow = rows[0].map(s => s.trim());
-  const isNew = firstRow.length >= 7 || /^(課題|課程|course)$/i.test(firstRow[0] || "");
+  const hasNo = firstRow.length >= 8 || /^(編號|id|no)$/i.test(firstRow[0] || "");
+  const isNew = hasNo || firstRow.length >= 7 || /^(課題|課程|course)$/i.test(firstRow[0] || "");
 
   rows.forEach((cols, idx) => {
     const c = cols.map(s => s.trim());
-    /* 略過標題行（第一格啱啱好係「課題」或「題型」先當標題） */
-    if (idx === 0 && /^(課題|課程|題型|course|topic)$/i.test(c[0] || "")) return;
+    /* 略過標題行（第一格啱啱好係「編號」「課題」或「題型」先當標題） */
+    if (idx === 0 && /^(編號|id|no|課題|課程|題型|course|topic)$/i.test(c[0] || "")) return;
 
-    let course, topic, levelRaw, sentence, answerRaw, keyword, hint;
-    if (isNew) {
+    let no = "", course, topic, levelRaw, sentence, answerRaw, keyword, hint;
+    if (hasNo) {
+      [no, course, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+    } else if (isNew) {
       [course, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
     } else {
       [topic, sentence, answerRaw, keyword, hint] = c;
@@ -424,6 +468,7 @@ function questionsFromCSV(text) {
 
     questions.push({
       id: `c${stamp}-${questions.length}`,
+      no: normalizeNo(no),
       course,
       topic,
       level,

@@ -249,9 +249,10 @@ const App = {
         <details class="csv-guide">
           <summary>📖 CSV 格式指引（撳開睇）</summary>
           <div class="csv-guide-body">
-            <p><b>每行一題，7 欄，用逗號分隔：</b></p>
-            <pre>課題,題型,難度,句子,答案,關鍵詞,提示</pre>
+            <p><b>每行一題，8 欄，用逗號分隔：</b></p>
+            <pre>編號,課題,題型,難度,句子,答案,關鍵詞,提示</pre>
             <ul>
+              <li><b>編號</b>（可留空）：五位數，例如 <code>00001</code>；會自動對應 <code>image_file/00001.png</code> 做題目圖片</li>
               <li><b>課題</b>：大分類（例如 <code>過去式</code>）；同一課題下面可以有多個題型</li>
               <li><b>題型</b>：課題入面嘅小分類（例如 <code>動詞過去式</code>）；同名會歸入同一題型</li>
               <li><b>難度</b>：數字 <code>1</code>、<code>2</code>、<code>3</code>、<code>4</code>…（答題時顯示同等數量嘅 ★）</li>
@@ -261,10 +262,10 @@ const App = {
               <li><b>提示</b>（可留空）：答錯時顯示嘅短解釋</li>
             </ul>
             <p><b>例子：</b></p>
-            <pre>課題,題型,難度,句子,答案,關鍵詞,提示
-過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went
-基本句型,am / is / are,1,She ___ my sister.,is,She,一個人 → is</pre>
-            <p class="csv-note">⚠ 第一行如果係標題行（第一格寫「課題」）會自動略過。內容有逗號請用雙引號包住。<br>舊版 5 欄格式（題型,句子,答案,關鍵詞,提示）都仍然匯入得，會當成「未分類」、難度 1。</p>
+            <pre>編號,課題,題型,難度,句子,答案,關鍵詞,提示
+00001,過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went
+00002,基本句型,am / is / are,1,She ___ my sister.,is,She,一個人 → is</pre>
+            <p class="csv-note">⚠ 第一行如果係標題行（第一格寫「編號」或「課題」）會自動略過。內容有逗號請用雙引號包住。<br>題目圖片放在 <code>image_file/</code>，檔名等於編號（<code>00001.png</code>；亦接受 jpg／jpeg／webp／gif）。冇圖片就唔會顯示。</p>
           </div>
         </details>
 
@@ -272,7 +273,7 @@ const App = {
         <input type="file" id="csv-file" accept=".csv,text/csv,text/plain" class="import-file">
 
         <label class="import-label">方法二：直接貼上內容</label>
-        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="課題,題型,難度,句子,答案,關鍵詞,提示&#10;過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went"></textarea>
+        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="編號,課題,題型,難度,句子,答案,關鍵詞,提示&#10;00001,過去式,動詞過去式,1,Yesterday I ___(go) to the park.,went,Yesterday,go 嘅過去式係 went"></textarea>
 
         <div class="confirm-row">
           <button id="btn-do-import" class="btn-big btn-primary">匯入</button>

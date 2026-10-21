@@ -48,6 +48,9 @@ const Quiz = {
     document.getElementById("quiz-topic").innerHTML =
       `<span class="quiz-level" aria-label="難度 ${level}">${"★".repeat(level)}</span>`;
 
+    /* 題目圖片（image_file/<編號>.png）；冇圖片就收起個窗 */
+    this._renderImage(q);
+
     /* 句子（空位藍色） */
     document.getElementById("quiz-sentence").innerHTML =
       escapeHTML(q.sentence).replace(/___/, `<span class="quiz-blank">&nbsp;___&nbsp;</span>`);
@@ -65,6 +68,21 @@ const Quiz = {
 
     /* 自動聚焦（手提裝置會彈鍵盤） */
     setTimeout(() => input.focus(), 300);
+  },
+
+  /* 顯示題目圖片：搵到先開個固定大細嘅窗，搵唔到就收起 */
+  _renderImage(q) {
+    const box = document.getElementById("quiz-image-box");
+    const img = document.getElementById("quiz-image");
+    const token = (this._imgToken = (this._imgToken || 0) + 1);
+    box.classList.remove("show");
+    img.removeAttribute("src");
+    if (!q.no) return;
+    findQuestionImage(q.no).then(url => {
+      if (!url || token !== this._imgToken) return;   // 已經轉咗題就唔好再顯示
+      img.src = url;
+      box.classList.add("show");
+    });
   },
 
   /* 比對答案：trim + 不分大小寫；accept 列表都接受 */
