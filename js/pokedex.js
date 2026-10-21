@@ -3,6 +3,16 @@
    擁有 → 有圖有名；未擁有 → 灰色剪影
    ============================================================ */
 
+/* PokeAPI 叫聲（ogg）；iOS 唔支援 ogg 時改用 Showdown 嘅 mp3 後備 */
+const CRY_LATEST = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
+const CRY_FALLBACK = "https://play.pokemonshowdown.com/audio/cries";
+
+function crySlug(name) {
+  return String(name).toLowerCase()
+    .replace(/♀/g, "f").replace(/♂/g, "m")
+    .replace(/[^a-z0-9]/g, "");
+}
+
 const Pokedex = {
   open() {
     App.showView("view-pokedex");
@@ -31,7 +41,13 @@ const Pokedex = {
         <span class="dex-name">${isOwned ? sp.name : "？？？"}</span>
         ${isOwned ? `<span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>` : ""}
       `;
-      if (isOwned) cell.onclick = () => this.showDetail(sp.dexId);
+      if (isOwned) {
+        cell.onclick = () => this.showDetail(sp.dexId);
+        /* 撳圖案 → 播叫聲；撳卡片其他地方 → 睇詳情 */
+        const img = cell.querySelector("img");
+        img.title = "點一下聽叫聲";
+        img.onclick = (e) => { e.stopPropagation(); this.playCry(sp.dexId); };
+      }
       grid.appendChild(cell);
     });
   },
@@ -86,7 +102,7 @@ const Pokedex = {
     App.showModal(`
       <div class="dex-detail">
         <span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-        <img class="dex-art" src="${artworkURL(dexId)}" alt="${sp.name}"
+        <img class="dex-art" id="dex-art" src="${artworkURL(dexId)}" alt="${sp.name}" title="點一下聽叫聲"
              onerror="this.onerror=null;this.src='${spriteURL(dexId)}';this.classList.add('pixel')">
         <div class="dex-detail-name">${sp.name}</div>
         <div class="dex-detail-zh">${sp.zh} ・ No.${String(dexId).padStart(3, "0")}</div>
@@ -95,5 +111,26 @@ const Pokedex = {
         ${expHTML}
       </div>
     `);
+    const art = document.getElementById("dex-art");
+    if (art) art.onclick = () => this.playCry(dexId);
+  },
+
+  /* 播叫聲：PokeAPI ogg；唔支援／載入失敗就用 mp3 後備 */
+  playCry(dexId) {
+    const sp = SPECIES[dexId];
+    if (!sp) return;
+    const a = this._audio || (this._audio = new Audio());
+    a.dataset.fallback = "0";
+    a.onerror = () => this._fallbackCry(sp.name, a);
+    a.volume = 0.75;
+    a.src = `${CRY_LATEST}/${dexId}.ogg`;
+    a.play().catch(() => this._fallbackCry(sp.name, a));
+  },
+
+  _fallbackCry(name, a) {
+    if (a.dataset.fallback === "1") return;
+    a.dataset.fallback = "1";
+    a.src = `${CRY_FALLBACK}/${crySlug(name)}.mp3`;
+    a.play().catch(() => {});
   }
 };

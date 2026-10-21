@@ -462,7 +462,9 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   cursor: pointer; box-shadow: 0 2px 6px rgba(35,60,120,.08); font-family: inherit;
 }
 .dex-cell.owned { border-color: #ffd54f; }
-.dex-cell img { width: 68px; height: 68px; object-fit: contain; }
+.dex-cell img { width: 68px; height: 68px; object-fit: contain; transition: transform .12s ease; }
+.dex-cell.owned img { cursor: pointer; }
+.dex-cell.owned img:active { transform: scale(.88); }
 .dex-cell:not(.owned) img { filter: brightness(0); opacity: .28; }
 .dex-cell:not(.owned) { cursor: default; }
 .dex-name { font-size: .78rem; font-weight: 800; color: #4a5468; }
@@ -470,7 +472,8 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-rarity { font-size: .68rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
 
 .dex-detail { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.dex-art { width: 190px; height: 190px; object-fit: contain; }
+.dex-art { width: 190px; height: 190px; object-fit: contain; cursor: pointer; }
+.dex-art:active { transform: scale(.94); }
 .dex-art.pixel { width: 132px; height: 132px; image-rendering: pixelated; }
 .dex-detail-name { font-size: 1.5rem; font-weight: 900; }
 .dex-detail-zh { color: #7a8299; font-weight: 700; }
