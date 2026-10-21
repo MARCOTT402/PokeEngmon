@@ -47,6 +47,13 @@ function resetState() {
   saveState();
 }
 
+/* 由備份 JSON 還原（覆蓋目前進度） */
+function importState(data) {
+  _state = Object.assign(defaultState(), data);
+  saveState();
+  return _state;
+}
+
 /* ---------- 日期 key（本地時區） ---------- */
 function dateKey(ts) {
   const d = ts ? new Date(ts) : new Date();

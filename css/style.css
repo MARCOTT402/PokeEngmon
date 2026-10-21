@@ -70,12 +70,25 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 /* ============================================================
    主畫面
    ============================================================ */
-.topbar { display: flex; justify-content: space-between; align-items: center; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .topbar-name {
   font-size: clamp(.95rem, 4.2vw, 1.25rem); font-weight: 800; line-height: 1.15;
   max-width: 52%; cursor: pointer;
 }
 .name-edit { font-size: .72em; color: #9aa5b1; }
+
+.icon-btn {
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid #e2e7ef; border-radius: 50%;
+  font-size: 1.05rem; cursor: pointer; padding: 0; font-family: inherit;
+  transition: transform .12s ease;
+}
+.icon-btn:active { transform: scale(.92); }
+
+.settings-box { text-align: center; }
+.settings-title { margin: 0 0 6px; }
+.settings-sub { margin: 0 0 14px; color: #7a8299; font-size: .9rem; font-weight: 700; line-height: 1.45; }
+.settings-note { display: block; margin: 10px 0 0; color: #9aa5b1; font-size: .78rem; line-height: 1.4; }
 
 .rename-box { text-align: center; }
 .rename-title { margin: 0 0 6px; }
