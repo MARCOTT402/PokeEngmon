@@ -1,11 +1,13 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v12";
+const CACHE_NAME = "pokeengmon-v13";
 const ASSETS = [
   "./",
   "./index.html",
   "./questions.csv",
+  "./data/pokemon-151.json",
   "./css/style.css",
   "./js/data.js",
+  "./js/pokemon.js",
   "./js/storage.js",
   "./js/explain.js",
   "./js/quiz.js",

@@ -32,26 +32,25 @@ const App = {
     const expText = document.getElementById("hero-exp-text");
 
     if (entry) {
+      ensureEntryPokemonData(entry);
       const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
       const cur = entryCurrentSpecies(entry);
-      const maxStage = chainMaxStage(chain);
       const rz = RARITY[chain.baseRarity];
+      const level = entry.level || 1;
+      const stars = "★".repeat(entry.stars || 1);
       sprite.src = spriteURL(cur[0]);
       sprite.style.visibility = "visible";
       nameEl.textContent = `${cur[1]}（${cur[2]}）`;
-      stageEl.innerHTML = `<span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span> 第 ${entry.stage} 階`;
-      if (entry.stage < maxStage) {
-        const threshold = GAME_CONFIG.EVO_EXP[entry.stage - 1];
-        const prev = entry.stage >= 2 ? GAME_CONFIG.EVO_EXP[entry.stage - 2] : 0;
-        const pct = Math.min(100, ((entry.exp - prev) / (threshold - prev)) * 100);
-        bar.style.width = pct + "%";
-        expText.textContent = `EXP ${entry.exp} / ${threshold}（下次進化）`;
-      } else if (maxStage === 1) {
+      stageEl.innerHTML = `<span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span> Lv.${level} <span class="hero-stars">${stars}</span>`;
+      if (level >= MAX_LEVEL) {
         bar.style.width = "100%";
-        expText.textContent = `EXP ${entry.exp} ・ 呢隻唔會進化`;
+        expText.textContent = `Lv.99 MAX ・ 已完成進化 🎉`;
       } else {
-        bar.style.width = "100%";
-        expText.textContent = `EXP ${entry.exp} ・ 已完成進化 🎉`;
+        const base = expAtLevel(cur[0], level);
+        const span = levelSpan(cur[0], level);
+        const into = Math.max(0, entry.exp - base);
+        bar.style.width = Math.min(100, (into / span) * 100) + "%";
+        expText.textContent = `Lv. ${level} ・ EXP ${into} / ${span}（下一級）`;
       }
     } else {
       sprite.style.visibility = "hidden";
@@ -102,6 +101,7 @@ const App = {
   openPartnerPicker() {
     const st = loadState();
     const rows = st.entries.map(entry => {
+      ensureEntryPokemonData(entry);
       const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
       const cur = entryCurrentSpecies(entry);
       const rz = RARITY[chain.baseRarity];
@@ -111,7 +111,7 @@ const App = {
           <img src="${spriteURL(cur[0])}" alt="${cur[1]}">
           <span class="dex-name">${cur[1]}（${cur[2]}）</span>
           <span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-          <span class="p-stage">第 ${entry.stage} 階${active ? " ・ 現用" : ""}</span>
+          <span class="p-stage">Lv.${entry.level} ・ ${"★".repeat(entry.stars || 1)}${active ? " ・ 現用" : ""}</span>
         </button>`;
     }).join("");
 
@@ -346,14 +346,19 @@ const App = {
   onSetComplete(data) {
     const st = loadState();
 
-    /* 獎勵計算 */
-    const rewards = { ticket: 1, diamonds: 0, exp: GAME_CONFIG.EXP_BASE };
-    if (data.score === data.total) {
-      rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
-      rewards.exp += GAME_CONFIG.EXP_PERFECT_BONUS;
-    } else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) {
-      rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
+    /* 獎勵計算：經驗值按 PokéAPI 該等級所需經驗比例發放 */
+    const entry = getActiveEntry();
+    const perfect = data.score === data.total;
+    let expGain = GAME_CONFIG.EXP_BASE;
+    if (entry) {
+      ensureEntryPokemonData(entry);
+      const dexId = entryCurrentSpecies(entry)[0];
+      const span = levelSpan(dexId, entry.level || 1);
+      expGain = Math.max(10, Math.round(span * (perfect ? 0.12 : 0.09)));
     }
+    const rewards = { ticket: 1, diamonds: 0, exp: expGain };
+    if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
+    else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
 
     st.normalPulls += rewards.ticket;
     st.diamonds += rewards.diamonds;
@@ -361,11 +366,9 @@ const App = {
     this.lastRecord = data;
 
     /* 經驗值入帳：有拍檔 → 直接加；冇 → 儲起等第一抽 */
-    let evolvedTo = null;
-    const entry = getActiveEntry();
+    let levelRes = null;
     if (entry) {
-      const res = addEntryExp(entry, rewards.exp);
-      evolvedTo = res.evolvedTo;
+      levelRes = addEntryExp(entry, rewards.exp);
     } else {
       st.pendingExp = (st.pendingExp || 0) + rewards.exp;
     }
@@ -373,7 +376,16 @@ const App = {
 
     this._renderSettlement(data, rewards);
     this.showView("view-settlement");
-    if (evolvedTo) setTimeout(() => this.showEvolveModal(evolvedTo), 600);
+    if (levelRes) {
+      if (levelRes.levelsGained > 0) {
+        const whose = entryCurrentSpecies(entry)[1];
+        this.toast(`${whose} 升到 Lv.${entry.level}！`);
+      }
+      if (levelRes.evolvedTo) setTimeout(() => this.showEvolveModal(levelRes.evolvedTo), 600);
+      if (levelRes.learned.length) {
+        setTimeout(() => this.queueMoveLearn(entry, levelRes.learned), levelRes.evolvedTo ? 1500 : 600);
+      }
+    }
   },
 
   _renderSettlement(data, rewards) {
@@ -413,6 +425,60 @@ const App = {
       });
     }
     this.showView("view-review");
+  },
+
+  /* ---------- 升級學招式（最多 4 招） ---------- */
+  queueMoveLearn(entry, moves) {
+    this._moveEntry = entry;
+    this._moveQueue = (moves || []).filter(m => !(entry.moves || []).includes(m.move));
+    this._showNextMoveLearn();
+  },
+
+  _showNextMoveLearn() {
+    const q = (this._moveQueue || []).shift();
+    if (!q) {
+      this._moveQueue = [];
+      this._moveEntry = null;
+      this.closeModal();
+      this.renderHome();
+      return;
+    }
+    const entry = this._moveEntry;
+    if (!entry || !POKEMON_DEX) { this._moveQueue = []; return; }
+    const cur = entryCurrentSpecies(entry);
+    const label = moveLabel(q.move);
+    const known = entry.moves || [];
+    if (known.includes(q.move)) { this._showNextMoveLearn(); return; }
+
+    const full = known.length >= 4;
+    const options = full
+      ? known.map((m, i) => `<button class="btn-big btn-plain move-choice" data-i="${i}">換走 ${moveLabel(m)}</button>`).join("")
+      : `<button id="move-learn-yes" class="btn-big btn-primary">學習 ${label}</button>`;
+
+    this.showModal(`
+      <div class="move-box">
+        <div class="move-title">✨ 新招式！</div>
+        <div class="move-name">${label}</div>
+        <div class="move-sub">${cur[1]} Lv.${q.level}${full ? " ・ 已滿 4 招，揀一招替換" : ""}</div>
+        <div class="move-list">${options}</div>
+        <button id="move-learn-no" class="btn-big btn-plain">今次唔學</button>
+      </div>`, true);
+
+    const next = () => { this.closeModal(); this._showNextMoveLearn(); };
+    document.getElementById("move-learn-no").onclick = next;
+    const yes = document.getElementById("move-learn-yes");
+    if (yes) yes.onclick = () => {
+      entry.moves.push(q.move);
+      saveState();
+      next();
+    };
+    document.querySelectorAll("#modal-root .move-choice").forEach(btn => {
+      btn.onclick = () => {
+        entry.moves[Number(btn.dataset.i)] = q.move;
+        saveState();
+        next();
+      };
+    });
   },
 
   /* ---------- 進化 Modal（簡單淡入切換） ---------- */
@@ -526,8 +592,9 @@ const App = {
     const _origShowReview = this.showReview.bind(this);
     this.showReview = (from) => { this._reviewFrom = from || null; _origShowReview(); };
 
-    /* 載入網站題庫（questions.csv）後先畫主畫面 */
-    await loadSiteQuestions();
+    /* 載入網站題庫（questions.csv）＋本地 PokéAPI 資料，先畫主畫面 */
+    await Promise.all([loadSiteQuestions(), loadPokemonDex()]);
+    migrateEntries();
 
     this.renderHome();
     this.showView("view-home");

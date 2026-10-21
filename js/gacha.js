@@ -124,6 +124,10 @@ const Gacha = {
     if (st.pendingExp > 0) {
       const res = addEntryExp(entry, st.pendingExp);
       st.pendingExp = 0;
+      /* 新入手時自動補招（有空位先學，最多 4 招） */
+      (res.learned || []).forEach(m => {
+        if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+      });
       saveState();
       firstExpEvolve = res.evolvedTo;
     }
@@ -143,10 +147,10 @@ const Gacha = {
         <img src="${spriteURL(cur[0])}" alt="${cur[1]}"
              onerror="this.onerror=null;this.src='${artworkURL(cur[0])}'">
       </div>
-      <div class="gacha-name">${cur[1]}</div>
+      <div class="gacha-name">${cur[1]} <small>Lv.${entry.level}</small></div>
       <div class="gacha-zh">${cur[2]}</div>
       <span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-      ${isDupe ? `<div class="gacha-dupe">已經有呢隻！強化 +${GAME_CONFIG.DUPE_EXP} EXP</div>` : `<div class="gacha-new">NEW！</div>`}
+      ${isDupe ? `<div class="gacha-dupe">已經有呢隻！🍬 糖果 +1 ・ 每項 EV +1</div>` : `<div class="gacha-new">NEW！</div>`}
     `;
 
     document.getElementById("btn-do-pull").disabled = true;

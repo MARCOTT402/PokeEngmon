@@ -81,22 +81,39 @@ const Pokedex = {
     });
     const stageDots = nodes.join(`<span class="evo-arrow">→</span>`);
 
-    /* 經驗條 */
-    let expHTML = "";
+    /* 等級／能力值／招式／糖果 */
+    let extraHTML = "";
     if (entry) {
-      const maxStage = chainMaxStage(chain);
-      if (entry.stage < maxStage) {
-        const threshold = GAME_CONFIG.EVO_EXP[entry.stage - 1];
-        const prev = entry.stage >= 2 ? GAME_CONFIG.EVO_EXP[entry.stage - 2] : 0;
-        const pct = Math.min(100, ((entry.exp - prev) / (threshold - prev)) * 100);
-        expHTML = `
-          <div class="expbar"><i style="width:${pct}%"></i></div>
-          <div class="hero-exp-text">EXP ${entry.exp} / ${threshold}（下次進化）</div>`;
-      } else if (maxStage === 1) {
-        expHTML = `<div class="hero-exp-text">EXP ${entry.exp} ・ 呢隻唔會進化</div>`;
-      } else {
-        expHTML = `<div class="hero-exp-text">EXP ${entry.exp} ・ 已完成進化 🎉</div>`;
-      }
+      ensureEntryPokemonData(entry);
+      const level = entry.level || 1;
+      const base = expAtLevel(dexId, level);
+      const span = levelSpan(dexId, level);
+      const into = Math.max(0, entry.exp - base);
+      const pct = level >= MAX_LEVEL ? 100 : Math.min(100, (into / span) * 100);
+      const stats = calcStats(dexId, level, entry.ivs, entry.evs, entry.nature);
+      const statCells = STAT_KEYS.map(k =>
+        `<div class="dex-stat">${STAT_LABELS[k]}<b>${stats ? stats[k] : "-"}</b></div>`).join("");
+      const moveChips = (entry.moves || []).length
+        ? entry.moves.map(m => `<span class="dex-move">${moveLabel(m)}</span>`).join("")
+        : `<span class="dex-move">未有招式</span>`;
+      extraHTML = `
+        <div class="dex-detail-zh">Lv.<span class="dex-level">${level}</span> / 99
+          ・ <span class="dex-stars">${"★".repeat(entry.stars || 1)}</span></div>
+        <div class="expbar"><i style="width:${pct}%"></i></div>
+        <div class="hero-exp-text">${level >= MAX_LEVEL ? "Lv.99 MAX" : `EXP ${into} / ${span}（下一級）`}</div>
+        <div class="dex-detail-zh">性格：${moveLabel(entry.nature)} ・ IV 31 ・ EV ${evTotal(entry.evs)} / ${MAX_EV_TOTAL}</div>
+        <div class="dex-stats">${statCells}</div>
+        <div class="dex-moves">
+          <div class="dex-moves-title">招式（${(entry.moves || []).length}/4）</div>
+          ${moveChips}
+        </div>
+        <div class="dex-candy">
+          🍬 糖果 × ${entry.candies} ・ 重複抽到 ${entry.dupes} 次
+          <br>
+          <button id="btn-feed-candy" ${entry.candies > 0 && level < MAX_LEVEL ? "" : "disabled"}>
+            餵 1 粒 → 升 1 級
+          </button>
+        </div>`;
     }
 
     App.showModal(`
@@ -108,11 +125,28 @@ const Pokedex = {
         <div class="dex-detail-zh">${sp.zh} ・ No.${String(dexId).padStart(3, "0")}</div>
         <div class="dex-stage-label">進化狀態：第 ${sp.stage} 階</div>
         <div class="evo-chain">${stageDots}</div>
-        ${expHTML}
+        ${extraHTML}
       </div>
     `);
     const art = document.getElementById("dex-art");
     if (art) art.onclick = () => this.playCry(dexId);
+    const feed = document.getElementById("btn-feed-candy");
+    if (feed) feed.onclick = () => this.feedCandy(entry);
+  },
+
+  /* 餵糖果 → 升一級（會觸發學招式／進化） */
+  feedCandy(entry) {
+    if (!entry || entry.candies <= 0) return;
+    const res = useEntryCandy(entry, 1);
+    this.closeModal();
+    this.render();
+    App.renderHome();
+    if (res.levelsGained === 0) { App.toast("已經 Lv.99 喇！"); return; }
+    App.toast(`升到 Lv.${entry.level}！糖果剩 ${entry.candies}`);
+    if (res.evolvedTo) setTimeout(() => App.showEvolveModal(res.evolvedTo), 300);
+    if (res.learned.length) {
+      setTimeout(() => App.queueMoveLearn(entry, res.learned), res.evolvedTo ? 1300 : 400);
+    }
   },
 
   /* 播叫聲：PokeAPI ogg；唔支援／載入失敗就用 mp3 後備 */

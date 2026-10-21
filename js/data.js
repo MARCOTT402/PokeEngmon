@@ -6,14 +6,11 @@
 /* ---------- 遊戲配置 ---------- */
 const GAME_CONFIG = {
   SET_SIZE: 10,                 // 每組題數
-  EXP_BASE: 12,                 // 完成一組基礎經驗
-  EXP_PERFECT_BONUS: 5,         // 全對額外經驗
-  EVO_EXP: [50, 120],           // 累積經驗門檻：第1次進化 / 第2次進化
+  EXP_BASE: 12,                 // 未有拍檔時嘅基礎經驗
   RARE_PULL_COST: 3,            // 稀有抽所需鑽石
   PERFECT_DIAMOND: 2,           // 全對鑽石
   GOOD_DIAMOND: 1,              // 高正確率鑽石
   GOOD_THRESHOLD: 8,            // 高正確率門檻（>=8/10）
-  DUPE_EXP: 20,                 // 抽到重複 → 轉為該隻經驗值
   /* 普通抽只會出 normal；稀有抽（鑽石）只會出 rare / epic / legend */
   PULL_ODDS: {
     normal: { normal: 1.0 },

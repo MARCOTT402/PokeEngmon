@@ -492,6 +492,41 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .evo-arrow { color: #9aa5b1; font-weight: 900; }
 .dex-detail .expbar { width: 100%; margin-top: 8px; }
 
+/* 等級／星級／招式學習 */
+.hero-stars { color: #ffb300; font-size: .85rem; letter-spacing: 1px; }
+.dex-level { font-weight: 900; color: #2f6fce; }
+.dex-stars { color: #ffb300; letter-spacing: 1px; }
+.dex-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  width: 100%; margin-top: 8px;
+}
+.dex-stat {
+  background: #f6f8fc; border-radius: 10px; padding: 6px 4px;
+  text-align: center; font-size: .78rem; font-weight: 800; color: #4a5468;
+}
+.dex-stat b { display: block; color: #2f6fce; font-size: 1rem; }
+.dex-moves { width: 100%; margin-top: 8px; }
+.dex-moves-title { font-weight: 800; font-size: .85rem; color: #4a5468; margin-bottom: 4px; }
+.dex-move {
+  display: inline-block; background: #eef3ff; border: 1px solid #cfddf8;
+  border-radius: 999px; padding: 3px 10px; margin: 2px; font-size: .78rem; font-weight: 800;
+}
+.dex-candy {
+  width: 100%; margin-top: 8px; background: #fff8e1; border: 2px solid #ffd54f;
+  border-radius: 12px; padding: 8px 10px; font-size: .85rem; font-weight: 800; color: #7a5b00;
+  text-align: center;
+}
+.dex-candy button {
+  margin-top: 6px; border: 0; border-radius: 999px; padding: 6px 14px;
+  background: #ffb300; color: #fff; font-weight: 900; font-family: inherit; cursor: pointer;
+}
+.dex-candy button:disabled { background: #ddd; color: #999; cursor: default; }
+.move-box { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.move-title { font-weight: 900; color: #2f6fce; }
+.move-name { font-size: 1.3rem; font-weight: 900; }
+.move-sub { font-size: .85rem; color: #7a8299; font-weight: 700; }
+.move-list { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; }
+
 /* ============================================================
    日曆
    ============================================================ */

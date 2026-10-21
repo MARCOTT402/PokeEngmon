@@ -59,23 +59,41 @@ function uidGen() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-/* 新獲得 Pokemon（抽獎結果）。重複 → 加 EXP，回傳 {entry, isDupe} */
+/* 新獲得 Pokemon（抽獎結果）。重複 → 轉為糖果＋EV，回傳 {entry, isDupe} */
 function obtainPokemon(chainKey) {
   const st = loadState();
   const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
   const existing = st.entries.find(e => e.chainKey === chainKey);
   if (existing) {
-    existing.exp += GAME_CONFIG.DUPE_EXP;
+    ensureEntryPokemonData(existing);
+    existing.dupes = (existing.dupes || 0) + 1;
+    existing.candies = (existing.candies || 0) + 1;
+    existing.stars = Math.min(5, 1 + Math.floor(existing.dupes / 5));
+    /* 重複抽到 → 每項能力 +1 EV（受 252／總和 510 上限） */
+    STAT_KEYS.forEach(k => {
+      if ((existing.evs[k] || 0) < MAX_EV && evTotal(existing.evs) < MAX_EV_TOTAL) {
+        existing.evs[k] = (existing.evs[k] || 0) + 1;
+      }
+    });
     st.activeUid = existing.uid;
     saveState();
     return { entry: existing, isDupe: true };
   }
+  const dexId = chain.stages[0][0];
   const entry = {
     uid: uidGen(),
     chainKey: chainKey,
     stage: 1,
     exp: 0,
-    ownedSpecies: [chain.stages[0][0]],
+    level: 1,
+    ivs: emptyIvs(),
+    evs: emptyEvs(),
+    nature: randomNature(),
+    moves: initialMoves(dexId),
+    candies: 0,
+    dupes: 0,
+    stars: 1,
+    ownedSpecies: [dexId],
     obtainedAt: Date.now()
   };
   st.entries.push(entry);
@@ -84,33 +102,79 @@ function obtainPokemon(chainKey) {
   return { entry, isDupe: false };
 }
 
-/* 加 EXP；如過門檻會進化（伊貝會隨機揀分支）。回傳 {evolvedTo: species|null, entry} */
+/* 加 EXP（照 PokéAPI 經驗表升級）→ 可能學招式／進化
+   回傳 {levelsGained, learned:[{level,move}], evolvedTo, entry} */
 function addEntryExp(entry, amount) {
   const st = loadState();
+  ensureEntryPokemonData(entry);
   const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
   const maxStage = chainMaxStage(chain);
-  entry.exp += amount;
+  const dexId = entryCurrentSpecies(entry)[0];
+  const oldLevel = entry.level;
+
+  entry.exp = (entry.exp || 0) + amount;
+  let lv = levelFromExp(dexId, entry.exp);
+  if (lv > MAX_LEVEL) lv = MAX_LEVEL;
+  entry.level = Math.max(entry.level, lv);
+
+  const learned = entry.level > oldLevel
+    ? movesBetween(dexId, oldLevel, entry.level, entry.moves)
+    : [];
+
   let evolvedTo = null;
   while (entry.stage < maxStage) {
-    const threshold = GAME_CONFIG.EVO_EXP[entry.stage - 1];  // stage1→50, stage2→120
-    if (entry.exp >= threshold) {
-      let nextStageArr;
-      if (entry.stage < chain.stages.length) {
-        nextStageArr = chain.stages[entry.stage];            // 線性進化
-      } else {
-        const bi = entry.stage - chain.stages.length;        // 分支進化（伊貝）
-        const opts = chain.branches[bi];
-        entry.branch = Math.floor(Math.random() * opts.length);
-        nextStageArr = opts[entry.branch];
-      }
-      entry.stage += 1;
-      const dexId = nextStageArr[0];
-      if (!entry.ownedSpecies.includes(dexId)) entry.ownedSpecies.push(dexId);
-      evolvedTo = SPECIES[dexId];
-    } else break;
+    let nextStageArr;
+    if (entry.stage < chain.stages.length) {
+      nextStageArr = chain.stages[entry.stage];              // 線性進化
+    } else {
+      const bi = entry.stage - chain.stages.length;          // 分支進化（伊貝）
+      const opts = chain.branches[bi];
+      if (entry.branch == null) entry.branch = Math.floor(Math.random() * opts.length);
+      nextStageArr = opts[entry.branch];
+    }
+    const fromDex = entryCurrentSpecies(entry)[0];
+    const evo = ((dexOf(fromDex) || {}).evolvesTo || []).find(x => x.id === nextStageArr[0]);
+    const needLevel = (evo && evo.minLevel) || 30;           // 道具／親密度進化 → 30 級
+    if (entry.level < needLevel) break;
+
+    entry.stage += 1;
+    const newDex = nextStageArr[0];
+    if (!entry.ownedSpecies.includes(newDex)) entry.ownedSpecies.push(newDex);
+    evolvedTo = SPECIES[newDex];
   }
   saveState();
-  return { evolvedTo, entry };
+  return { levelsGained: entry.level - oldLevel, learned, evolvedTo, entry };
+}
+
+/* 餵糖果：每粒糖加「升一級所需經驗」，最多餵到 Lv.99
+   回傳同 addEntryExp 一樣 */
+function useEntryCandy(entry, count) {
+  ensureEntryPokemonData(entry);
+  let used = 0;
+  let result = { levelsGained: 0, learned: [], evolvedTo: null, entry };
+  const n = Math.min(count || 1, entry.candies || 0);
+  for (let i = 0; i < n && entry.level < MAX_LEVEL; i++) {
+    const dexId = entryCurrentSpecies(entry)[0];
+    const res = addEntryExp(entry, levelSpan(dexId, entry.level));
+    entry.candies -= 1;
+    used += 1;
+    result.levelsGained += res.levelsGained;
+    result.learned.push(...res.learned);
+    if (res.evolvedTo) result.evolvedTo = res.evolvedTo;
+  }
+  saveState();
+  result.used = used;
+  return result;
+}
+
+/* 舊存檔升級：補齊等級／IV／EV／性格／招式／糖果 */
+function migrateEntries() {
+  const st = loadState();
+  let changed = false;
+  st.entries.forEach(e => {
+    if (ensureEntryPokemonData(e)) changed = true;
+  });
+  if (changed) saveState();
 }
 
 function getEntry(uid) {
