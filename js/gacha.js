@@ -66,6 +66,7 @@ const Gacha = {
   pull() {
     if (this.busy || !this._canPull()) return;
     this.busy = true;
+    Pokedex.unlockAudio();   // 喺用戶點擊時解鎖音效（手機自動播放限制）
     const st = loadState();
     if (this.mode === "normal") st.normalPulls -= 1;
     else st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
@@ -156,6 +157,11 @@ const Gacha = {
 
     document.getElementById("btn-do-pull").disabled = true;
     document.getElementById("btn-do-pull").textContent = "Pull complete!";
+
+    /* 新 Pokemon 登場時叫一聲（重複抽到唔叫） */
+    if (!isDupe) {
+      setTimeout(() => Pokedex.playCry(cur[0]), 350);
+    }
 
     /* 首次入帳經驗引起嘅進化 */
     if (firstExpEvolve) {

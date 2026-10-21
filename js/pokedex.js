@@ -183,6 +183,20 @@ const Pokedex = {
     }
   },
 
+  /* Unlock audio inside a user gesture (mobile autoplay policy),
+     so the cry can still play a few seconds later when the ball opens */
+  unlockAudio() {
+    try {
+      const a = this._audio || (this._audio = new Audio());
+      if (a.dataset.unlocked) return;
+      a.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+      a.play().then(() => {
+        a.dataset.unlocked = "1";
+        a.pause();
+      }).catch(() => {});
+    } catch (e) { /* ignore */ }
+  },
+
   /* Play cry: PokeAPI ogg; fall back to mp3 */
   playCry(dexId) {
     const sp = SPECIES[dexId];
