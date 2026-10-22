@@ -1341,6 +1341,7 @@ class PokemonCaptureScene {
     this.audio.impact();
     this._haptic(45);
     this._flash(0.35);
+    this.stopBGM();  /* BGM cuts off the moment the Poké Ball hits */
     this._spawnBurst(0xc9b185, 42, BUSH_POS, 2.4, 0.07, -2.6, 1.1, false);
     this._leafBurst(30);
     if (this.trail) {
@@ -1452,7 +1453,6 @@ class PokemonCaptureScene {
         this._prompt("…");
         this._glow(0);
         this.bloom.strength = 0.38;
-        this.stopBGM();  /* BGM ends right after 3rd shake */
       }, null, 3.95)
       .to({}, { duration: 0.75 }, 4.0)
       .call(() => {
