@@ -263,6 +263,8 @@ class CaptureAudio {
   startBGM() {
     this._ensureBGM();
     if (!this.bgm) return;
+    /* Already playing → don't restart from the top */
+    if (!this.bgm.paused) return;
     try {
       this.bgm.volume = 0.55;
       this.bgm.currentTime = 0;
@@ -1262,8 +1264,12 @@ class PokemonCaptureScene {
   tap() {
     if (this.state !== STATE.IDLE) return;
     this.audio.ensure();
-    /* Retry BGM on first user tap if it was blocked */
-    if (this.taps === 0) this.startBGM();
+    if (this.taps === 0) {
+      /* If autoplay was blocked, start BGM now (user gesture unlocks it) */
+      this.startBGM();
+      /* Duck BGM on the very first tap so charge SFX take focus */
+      this.duckBGM(0.16, 400);
+    }
     this.taps += 1;
     this.audio.tap(this.taps);
     this._haptic(10 + this.taps * 8);
@@ -1296,7 +1302,6 @@ class PokemonCaptureScene {
     this._haptic([25, 45, 25]);
     this._glow(1);
     this._flash(0.55);
-    this.duckBGM(0.18, 700);  /* BGM quiets down as the ball charges */
 
     /* Short hit-stop before the throw */
     setTimeout(() => {
