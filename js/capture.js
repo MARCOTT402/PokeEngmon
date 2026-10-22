@@ -252,6 +252,11 @@ class CaptureAudio {
     this.ensure();
     if (!this.ctx) return;
     if (this._bgmTimer) return;  /* already running */
+    /* Make sure AudioContext is actually running */
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume().catch(() => {});
+    }
+    console.log("[bgm] loopStart ctx.state=", this.ctx.state);
 
     const BEAT = 0.125;
     /* Frequency table — note name → Hz */
@@ -416,9 +421,11 @@ class PokemonCaptureScene {
 
   /* ---------- WARNING / Warp overlays ---------- */
   _showWarning(dexId, name) {
-    if (!this.warningEl) return;
+    if (!this.warningEl) { console.warn("[capture] warningEl not found!"); return; }
+    console.log("[capture] adding .show to warningEl, classes:", this.warningEl.classList.toString());
     this.warningEl.classList.remove("hide");
     this.warningEl.classList.add("show");
+    console.log("[capture] warningEl display:", getComputedStyle(this.warningEl).display);
   }
   _hideWarning() {
     if (!this.warningEl) return new Promise(r => r());
@@ -432,7 +439,8 @@ class PokemonCaptureScene {
     });
   }
   _startWarp() {
-    if (!this.warpEl) return;
+    if (!this.warpEl) { console.warn("[capture] warpEl not found!"); return; }
+    console.log("[capture] startWarp");
     this.warpEl.classList.add("go");
     setTimeout(() => {
       this.warpEl.classList.remove("go");
@@ -451,17 +459,15 @@ class PokemonCaptureScene {
     this._resetScene();
 
     /* Show WARNING overlay before any 3D work — keeps it crisp on mobile */
+    console.log("[capture] showWarning:", !!this.warningEl);
     this._showWarning(dexId, name);
 
     /* Prime audio (user already tapped submit) */
     this.audio.ensure();
 
     /* Kick off BGM as early as possible */
-    this._ensureBGM();
-    if (this.bgm) {
-      try { this.bgm.currentTime = 0; this.bgm.play(); }
-      catch (e) { /* autoplay blocked — will retry later */ }
-    }
+    console.log("[capture] startBGM");
+    this.startBGM();
 
     /* Prepare the Pokémon image */
     this.monEl.onerror = () => {
@@ -472,6 +478,7 @@ class PokemonCaptureScene {
     this.monEl.src = window.animatedURL ? window.animatedURL(dexId) : `assets/animated/${dexId}.gif`;
 
     /* Start 3D loop in parallel (it's heavy, we want it running during the warning) */
+    console.log("[capture] ensureThree");
     this._ensureThree();
     this._startLoop();
 
@@ -480,10 +487,13 @@ class PokemonCaptureScene {
     /* Schedule warning → warp → encounter */
     setTimeout(async () => {
       try {
+        console.log("[capture] hideWarning");
         await this._hideWarning();
+        console.log("[capture] startWarp");
         this._startWarp();
-      } catch (e) { /* ignore */ }
+      } catch (e) { console.warn("[capture] transition err:", e); }
       /* Now run the real encounter timeline */
+      console.log("[capture] _runEncounter");
       this._runEncounter();
     }, 1400);
 
