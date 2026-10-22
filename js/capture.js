@@ -1302,8 +1302,9 @@ class PokemonCaptureScene {
     if (this.taps === 0) {
       /* If autoplay was blocked, start BGM now (user gesture unlocks it) */
       this.startBGM();
-      /* Duck BGM on the very first tap so charge SFX take focus */
-      this.duckBGM(0.16, 400);
+      /* Duck BGM on the very first tap so charge SFX take focus —
+         0.32 keeps it clearly audible so the throw-time fadeout is perceptible */
+      this.duckBGM(0.32, 400);
     }
     this.taps += 1;
     this.audio.tap(this.taps);
