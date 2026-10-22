@@ -1121,3 +1121,38 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   #app { max-width: 560px; }
   .quiz-sentence { font-size: 1.7rem; }
 }
+
+/* ============ Entry gate (audio unlock) ============ */
+.hidden { display: none !important; }
+.entry-gate {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 10, 18, 0.92);
+  backdrop-filter: blur(6px);
+  animation: entryGateIn 0.35s ease;
+}
+.entry-gate.closing { animation: entryGateOut 0.3s ease forwards; }
+@keyframes entryGateIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes entryGateOut { from { opacity: 1; } to { opacity: 0; } }
+.entry-gate-card {
+  text-align: center; padding: 36px 28px;
+  max-width: 340px; width: calc(100% - 48px);
+  background: linear-gradient(160deg, #1b2138, #10142a);
+  border: 2px solid #ffd45e; border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 24px rgba(255,212,94,0.18) inset;
+}
+.entry-gate-icon { font-size: 44px; margin-bottom: 14px; animation: entryPulse 1.2s ease-in-out infinite; }
+@keyframes entryPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.entry-gate-title {
+  color: #ffd45e; font-weight: 800; font-size: 17px; line-height: 1.5;
+  letter-spacing: 1px; margin-bottom: 24px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.entry-gate-btn {
+  font-size: 20px; font-weight: 900; letter-spacing: 2px;
+  color: #1a1206; background: linear-gradient(180deg, #ffe27a, #f5b81d);
+  border: none; border-radius: 999px; padding: 14px 56px;
+  cursor: pointer; box-shadow: 0 5px 0 #b8860b, 0 8px 18px rgba(0,0,0,0.4);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.entry-gate-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #b8860b, 0 3px 8px rgba(0,0,0,0.4); }

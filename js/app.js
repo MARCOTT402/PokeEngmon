@@ -813,25 +813,32 @@ const App = {
     this.renderHome();
     this.showView("view-home");
 
-    /* 全域 BGM（Nuvema Town）：
-       1) 開頁即試播 —— 已安裝 PWA / 高互動用戶有機會直接成功
-       2) 失敗（autoplay 限制）→ 任何首個互動即刻補播 */
-    const startGlobalAudio = () => {
-      ["pointerdown", "touchstart", "keydown", "click"].forEach(ev =>
-        document.removeEventListener(ev, startGlobalAudio));
+    /* 全域 BGM（Nuvema Town）+ Entry Gate：
+       1) 開頁即試播 —— PWA / 高互動用戶可直接出聲，唔彈窗
+       2) Autoplay 被擋 → 彈 entry gate，撳 YES!（合法手勢）解鎖 + 播 BGM */
+    const entryGate = document.getElementById("entry-gate");
+    const unlockAudio = () => {
       if (window.CaptureScene && CaptureScene.audio) {
         CaptureScene.audio.ensure();
         CaptureScene.audio.bgmPrime();       /* 預先解鎖 + decode 戰鬥 BGM */
         CaptureScene.audio.startTownBGM();
       }
     };
-    /* 開頁即試（冇手勢時 AudioContext 會 suspended，startTownBGM 會等 buffer 好；
-       真正出聲靠下面 gesture 補播） */
-    if (window.CaptureScene && CaptureScene.audio) {
-      CaptureScene.audio.startTownBGM();
+    unlockAudio();  /* 開頁即試（可能被 suspend） */
+    const audioCtx = window.CaptureScene && CaptureScene.audio ? CaptureScene.audio.ctx : null;
+    if (audioCtx && audioCtx.state === "running") {
+      entryGate.classList.add("hidden");     /* 已獲授權，唔使彈窗 */
+    } else {
+      entryGate.classList.remove("hidden");
+      const closeGate = () => {
+        unlockAudio();
+        entryGate.classList.add("closing");
+        setTimeout(() => entryGate.classList.add("hidden"), 320);
+      };
+      document.getElementById("btn-entry-yes").addEventListener("click", closeGate);
+      /* 掂卡片外都當 YES */
+      entryGate.addEventListener("click", (e) => { if (e.target === entryGate) closeGate(); });
     }
-    ["pointerdown", "touchstart", "keydown", "click"].forEach(ev =>
-      document.addEventListener(ev, startGlobalAudio));
 
     /* Service Worker（PWA 離線）＋新版本自動套用 */
     if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
