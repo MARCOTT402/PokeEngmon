@@ -367,6 +367,7 @@ class PokemonCaptureScene {
     if (this.tl) { this.tl.kill(); this.tl = null; }
     if (this.shakeTl) { this.shakeTl.kill(); this.shakeTl = null; }
     if (this.finishTimer) { clearTimeout(this.finishTimer); this.finishTimer = null; }
+    if (this._escapeTimers) { this._escapeTimers.forEach(t => clearTimeout(t)); this._escapeTimers = null; }
     if (this.ready && gsap) {
       gsap.killTweensOf([
         this.ball.position, this.ball.rotation, this.ball.scale,
@@ -393,6 +394,7 @@ class PokemonCaptureScene {
     this.ball.scale.setScalar(0.55);
     this.ball.rotation.set(0, 0, 0);
     this.ball.visible = true;
+    if (this.monAnchor) this.monAnchor.position.set(0, 1.25, -7.85);
 
     this.cameraRig.position.copy(CAM_START);
     this.camera.fov = 55;
@@ -1418,17 +1420,20 @@ class PokemonCaptureScene {
       .to(this.ball.rotation, { z: -1.2, duration: 0.1, ease: "power2.inOut" }, 0.28)
       .to(this.ball.scale, { x: 1.8, y: 1.8, z: 1.8, duration: 0.18, ease: "power2.out" }, 0.28)
       .to(this.ball.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 0.1, ease: "power2.in" }, 0.44)
-      .to(this.ball.visible, { value: false, duration: 0 }, 0.54);
+      .call(() => { this.ball.visible = false; }, null, 0.54);
+
+    this._escapeTimers = [];
+    const _setET = (fn, ms) => this._escapeTimers.push(setTimeout(fn, ms));
 
     /* Particles from broken ball */
-    setTimeout(() => {
+    _setET(() => {
       this._spawnBurst(0xff3b2f, 38, this.ball.position.clone(), 2.2, 0.09, -1.8, 1.2, true);
       this._spawnBurst(0xffffff, 22, this.ball.position.clone(), 1.6, 0.06, -1.4, 0.9, true);
       this._glow(1.2);
     }, 450);
 
     /* Pokémon bursts out angry, then runs off */
-    setTimeout(() => {
+    _setET(() => {
       this.monEl.classList.add("is-red", "is-visible");
       this.monEl.classList.add("is-angry");
       this.monFx.scale = 0.3;
@@ -1462,7 +1467,7 @@ class PokemonCaptureScene {
     }, 500);
 
     /* Run off to the right */
-    setTimeout(() => {
+    _setET(() => {
       gsap.to(this.monAnchor.position, {
         x: 5.5,
         y: 1.25,
@@ -1487,7 +1492,7 @@ class PokemonCaptureScene {
     this._captureResult = { caught: false, dexId: this.dexId, name: this.monName };
     this._resultInfo = {};
 
-    setTimeout(() => {
+    _setET(() => {
       if (this.resultTitle) this.resultTitle.textContent = "Oh no!";
       this.resultImg.onerror = () => {
         this.resultImg.onerror = null;
