@@ -71,6 +71,9 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
    主畫面
    ============================================================ */
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+/* Normal pull feature temporarily hidden (rare pull + quiz capture stay) */
+#btn-top-pull, #btn-pull-normal { display: none !important; }
 .topbar-name {
   font-size: clamp(.95rem, 4.2vw, 1.25rem); font-weight: 800; line-height: 1.15;
   max-width: 52%; cursor: pointer;

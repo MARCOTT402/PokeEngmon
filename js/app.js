@@ -483,7 +483,7 @@ const App = {
     /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!" */
     if (cap && window.CaptureScene && CaptureScene.audio) {
       const jingleUrl = cap.caught ? "assets/bgm/obtained-pokemon.mp3" : "assets/bgm/obtained-berry.mp3";
-      CaptureScene.audio.playOnce(jingleUrl, 1.0);
+      CaptureScene.audio.playOnce(jingleUrl, 0.6);
     }
 
     const st = loadState();
