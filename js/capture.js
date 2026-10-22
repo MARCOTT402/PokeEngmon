@@ -1337,6 +1337,8 @@ class PokemonCaptureScene {
     this._haptic([25, 45, 25]);
     this._glow(1);
     this._flash(0.55);
+    /* From the throw, BGM fades LINEARLY to silence — reaching 0 exactly at the 3rd shake (~6.2s) */
+    this.duckBGM(0, 6200);
 
     /* Short hit-stop before the throw */
     setTimeout(() => {
@@ -1402,7 +1404,6 @@ class PokemonCaptureScene {
     this.audio.impact();
     this._haptic(45);
     this._flash(0.35);
-    this.stopBGM(1500);  /* BGM fades away through hit + absorb */
     this._spawnBurst(0xc9b185, 42, BUSH_POS, 2.4, 0.07, -2.6, 1.1, false);
     this._leafBurst(30);
     if (this.trail) {
@@ -1514,6 +1515,7 @@ class PokemonCaptureScene {
         this._prompt("…");
         this._glow(0);
         this.bloom.strength = 0.38;
+        this.stopBGM(200);  /* volume already ~0 here — just pause + rewind */
       }, null, 3.95)
       .to({}, { duration: 0.75 }, 4.0)
       .call(() => {
