@@ -417,7 +417,7 @@ class PokemonCaptureScene {
 
   /* ---------- public: play one encounter ---------- */
   play({ dexId, name, onCaught, onComplete }) {
-    this.audio.ensure();
+    try { this.audio.ensure(); } catch (e) { /* audio never kills the scene */ }
     this.dexId = dexId;
     this.monName = name;
     this.onCaught = onCaught;
@@ -427,13 +427,10 @@ class PokemonCaptureScene {
     this._resetScene();
 
     /* Show WARNING overlay before any 3D work — keeps it crisp on mobile */
-    this._showWarning(dexId, name);
+    try { this._showWarning(dexId, name); } catch (e) { /* ignore */ }
 
-    /* Prime audio (user already tapped submit) */
-    this.audio.ensure();
-
-    /* Kick off BGM as early as possible */
-    this.startBGM();
+    /* Kick off BGM as early as possible — failure must not abort the encounter */
+    try { this.startBGM(); } catch (e) { console.warn("[capture] BGM failed:", e); }
 
     /* Prepare the Pokémon image */
     this.monEl.onerror = () => {

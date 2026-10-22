@@ -381,7 +381,7 @@ const App = {
             }
           });
         } catch (e) {
-          console.warn("[capture] scene failed:", e);
+          console.warn("[capture] scene failed — skipping to settlement:", e);
         }
         /* Escape path: scene resolved with caught:false, onCaught never fired */
         if (capResult && capResult.caught === false) {
