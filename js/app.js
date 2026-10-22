@@ -407,11 +407,11 @@ const App = {
       const span = levelSpan(dexId, entry.level || 1);
       expGain = Math.max(10, Math.round(span * (perfect ? 0.12 : 0.09)));
     }
-    const rewards = { ticket: 1, diamonds: 0, exp: expGain };
+    const rewards = { ticket: 0, diamonds: 0, exp: expGain };
     if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
     else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
 
-    st.normalPulls += rewards.ticket;
+    /* Normal pull tickets no longer awarded (feature hidden) */
     st.diamonds += rewards.diamonds;
     addPracticeRecord(data);
     this.lastRecord = data;
@@ -476,7 +476,6 @@ const App = {
     }
 
     document.getElementById("settle-rewards").innerHTML = capHTML + `
-      <div class="reward-chip">🎫 Normal pulls +${rewards.ticket}</div>
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
       <div class="reward-chip">⭐ EXP +${rewards.exp}</div>`;
 
