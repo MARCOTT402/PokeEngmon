@@ -51,8 +51,12 @@ const STATE = {
 
 /* Quiz-finish capture success rate (20% escape chance) */
 let CAUGHT_RATE = 0.8;
-/* Allow dev override via console: e.g. window.__setCatchRate(0) for forced escape */
-window.__setCatchRate = (v) => { CAUGHT_RATE = Math.max(0, Math.min(1, v)); console.log("[capture] CAUGHT_RATE =", CAUGHT_RATE); };
+/* Dev helper — guarded behind localhost so it never leaks to production */
+const _DEV_HOSTS = new Set(["localhost", "127.0.0.1"]);
+const _IS_DEV = _DEV_HOSTS.has(location.hostname);
+if (_IS_DEV) {
+  window.__setCatchRate = (v) => { CAUGHT_RATE = Math.max(0, Math.min(1, v)); console.log("[capture] CAUGHT_RATE =", CAUGHT_RATE); };
+}
 
 /* ------------------------------------------------------------
    Synthesised audio (no extra files): rustle, taps, charge,
@@ -245,100 +249,41 @@ class CaptureAudio {
     }, 250);
   }
 
-  /* ---------- Game Boy chiptune BGM: Battle! (Wild Pokémon) ---------- */
-  /* A simple 8-bar looped melody via Web Audio square waves. Zero-file dep. */
-  /*   tempo: 1 beat = 0.125s (~120 BPM Game Boy feel)                     */
-  bgmLoopStart() {
-    this.ensure();
-    if (!this.ctx) return;
-    if (this._bgmTimer) return;  /* already running */
-    /* Make sure AudioContext is actually running */
-    if (this.ctx.state === "suspended") {
-      this.ctx.resume().catch(() => {});
-    }
-
-    const BEAT = 0.125;
-    /* Frequency table — note name → Hz */
-    const N = { C4:261.63, D4:293.66, E4:329.63, F4:349.23, Fs4:369.99, G4:392.00,
-                A4:440.00, B4:493.88,
-                C5:523.25, D5:587.33, E5:659.25, F5:698.46, Fs5:739.99, G5:783.99,
-                A5:880.00, B5:987.77 };
-    /* 8-bar melody — original Gen 1 Battle! (Wild Pokémon) motif */
-    const MELODY = [
-      /* bar 1 */ ["E5",1],["E5",1],["G5",1],["E5",1],["C5",1],["D5",1],["C5",2],
-      /* bar 2 */ ["E5",1],["E5",1],["G5",1],["E5",1],["C5",1],["D5",1],["G5",2],
-      /* bar 3 */ ["A5",1],["A5",1],["G5",1],["Fs5",1],["G5",1],["Fs5",1],["E5",1],["E5",1],
-      /* bar 4 */ ["D5",1],["C5",1],["B4",2],["C5",1],["D5",1],["E5",2],
-      /* bar 5 (repeat) */ ["E5",1],["E5",1],["G5",1],["E5",1],["C5",1],["D5",1],["C5",2],
-      /* bar 6 */ ["E5",1],["E5",1],["G5",1],["E5",1],["C5",1],["D5",1],["G5",2],
-      /* bar 7 (variation) */ ["A5",1],["A5",1],["G5",1],["F5",1],["E5",1],["D5",1],["C5",1],["B4",1],
-      /* bar 8 */ ["C5",1],["D5",1],["E5",2],["B4",2]
-    ];
-    /* Simple bass accompaniment (square wave 1 octave lower, on beat 1+3) */
-    const BASS = [
-      /* bar 1 */ ["C4",2],["G4",2],
-      /* bar 2 */ ["C4",2],["G4",2],
-      /* bar 3 */ ["F4",2],["G4",2],
-      /* bar 4 */ ["C4",2],["G4",2],
-      /* bar 5 */ ["C4",2],["G4",2],
-      /* bar 6 */ ["C4",2],["G4",2],
-      /* bar 7 */ ["F4",2],["G4",2],
-      /* bar 8 */ ["C4",2],["G4",2]
-    ];
-
-    let step = 0, bassStep = 0;
-    let tAcc = 0;
-    this._bgmMaster = this.ctx.createGain();
-    this._bgmMaster.gain.value = 0.13;  /* gentle */
-    this._bgmMaster.connect(this.master);
-
-    const _playNote = (freq, type, dur, gain) => {
-      if (!this.ctx) return;
-      const ctx = this.ctx;
-      const t = ctx.currentTime;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = type; o.frequency.value = freq;
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(gain, t + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur * BEAT * 0.95);
-      o.connect(g).connect(this._bgmMaster);
-      o.start(t); o.stop(t + dur * BEAT + 0.05);
-    };
-
-    /* Note — handle 0 as rest */
-    const melodyLoop = () => {
-      if (!this._bgmTimer) return;
-      const [note, dur] = MELODY[step % MELODY.length];
-      const f = N[note];
-      if (f) _playNote(f, "square", dur, 0.65);
-      step++;
-      /* schedule bass on beat-boundary steps — bassStep when we're on a downbeat */
-      const totalBeats = MELODY.slice(0, step).reduce((s, n) => s + n[1], 0);
-      if (totalBeats % 4 === 0 && bassStep < BASS.length) {
-        const [bNote, bDur] = BASS[bassStep % BASS.length];
-        const bf = N[bNote];
-        if (bf) _playNote(bf / 2, "square", bDur, 0.35);  /* bass = 1 octave lower */
-        bassStep++;
+  /* ---------- BGM: Battle! (Wild Pokémon) — Gen 1 original ---------- */
+  _ensureBGM() {
+    if (this.bgm) return;
+    try {
+      this.bgm = new Audio("assets/bgm/wild-battle.mp3");
+      this.bgm.loop = true;
+      this.bgm.volume = 0.55;
+      this.bgm.preload = "auto";
+      this.bgm.addEventListener("error", () => { /* ignore — chiptune fallback */ }, { once: true });
+    } catch (e) { this.bgm = null; }
+  }
+  startBGM() {
+    this._ensureBGM();
+    if (!this.bgm) return;
+    try { this.bgm.currentTime = 0; this.bgm.play().catch(() => {}); } catch (e) {}
+  }
+  stopBGM() {
+    if (!this.bgm || this._bgmFading) return;
+    this._bgmFading = true;
+    const vol = this.bgm.volume;
+    let steps = 10;
+    const step = () => {
+      steps--;
+      if (!this.bgm) { this._bgmFading = false; return; }
+      this.bgm.volume = (vol * steps) / 10;
+      if (steps > 0) setTimeout(step, 55);
+      else {
+        try { this.bgm.pause(); this.bgm.currentTime = 0; } catch (e) {}
+        this.bgm.volume = vol;
+        this._bgmFading = false;
       }
-      this._bgmTimer = setTimeout(melodyLoop, dur * BEAT * 1000);
     };
-    melodyLoop();
+    step();
   }
-  bgmLoopStop() {
-    if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
-    if (this._bgmMaster) {
-      try { this._bgmMaster.gain.cancelScheduledValues(this.ctx.currentTime); } catch (e) {}
-      try { this._bgmMaster.gain.setValueAtTime(this._bgmMaster.gain.value, this.ctx.currentTime); } catch (e) {}
-      try { this._bgmMaster.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.25); } catch (e) {}
-      const g = this._bgmMaster;
-      setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 300);
-      this._bgmMaster = null;
-    }
-  }
-  bgmLoopSetVolume(v) {
-    if (this._bgmMaster) this._bgmMaster.gain.value = Math.max(0, Math.min(1, v));
-  }
+  bgmPrime() { this._ensureBGM(); if (this.bgm) try { this.bgm.load(); } catch (e) {} }
 
   jingle() {
     this.ensure();
@@ -380,6 +325,10 @@ class PokemonCaptureScene {
     this.ready = false;
     this.width = 1;
     this.height = 1;
+
+    /* BGM player */
+    this.bgm = null;
+    this._bgmFading = false;
 
     this.lookTarget = LOOK_START.clone();
     this.monFx = { scale: 1, opacity: 0 };
@@ -485,7 +434,7 @@ class PokemonCaptureScene {
       } catch (e) { /* ignore */ }
       /* Now run the real encounter timeline */
       this._runEncounter();
-    }, 1400);
+    }, 2600);
 
     return this._donePromise;
   }
@@ -1689,36 +1638,38 @@ window.PokemonCaptureScene = PokemonCaptureScene;
 window.CaptureScene = new PokemonCaptureScene();
 
 /* ------ dev shortcut: type __testCapture() in console to skip straight to capture ------ */
-window.__testCapture = function(opts = {}) {
-  const scene = window.CaptureScene;
-  if (!scene || !scene.isSupported()) {
-    console.warn("WebGL not supported — can't run capture scene.");
-    return;
-  }
-  const force = opts.force;          // 0 = always escape, 1 = always catch, undefined = normal 80%
-  let chainKey = null;
-  try { chainKey = Gacha.pickChain(Gacha.rollRarity("normal")); } catch (e) { /* ignore */ }
-  const chains = (typeof EVOLUTION_CHAINS !== "undefined") ? EVOLUTION_CHAINS : [];
-  let chain = chains.find(c => c.key === chainKey);
-  if (!chain) chain = chains[0];
-  if (!chain) { console.warn("EVOLUTION_CHAINS not loaded."); return; }
-  const [dexId, name] = chain.stages[0];
-
-  if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) {
-    window.__setCatchRate(force);
-  }
-
-  App && App.showView && App.showView("view-capture");
-  scene.primeAudio();
-  scene.play({
-    dexId, name,
-    onCaught: () => {
-      let isDupe = false;
-      try { if (typeof obtainPokemon === "function") isDupe = obtainPokemon(chainKey, "normal").isDupe; } catch (e) {}
-      return { isDupe, dexId, name };
+if (_IS_DEV) {
+  window.__testCapture = function(opts = {}) {
+    const scene = window.CaptureScene;
+    if (!scene || !scene.isSupported()) {
+      console.warn("WebGL not supported — can't run capture scene.");
+      return;
     }
-  }).then(r => {
-    if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) window.__setCatchRate(0.8);
-    console.log("[testCapture] result:", r);
-  });
-};
+    const force = opts.force;          // 0 = always escape, 1 = always catch, undefined = normal 80%
+    let chainKey = null;
+    try { chainKey = Gacha.pickChain(Gacha.rollRarity("normal")); } catch (e) { /* ignore */ }
+    const chains = (typeof EVOLUTION_CHAINS !== "undefined") ? EVOLUTION_CHAINS : [];
+    let chain = chains.find(c => c.key === chainKey);
+    if (!chain) chain = chains[0];
+    if (!chain) { console.warn("EVOLUTION_CHAINS not loaded."); return; }
+    const [dexId, name] = chain.stages[0];
+
+    if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) {
+      window.__setCatchRate(force);
+    }
+
+    App && App.showView && App.showView("view-capture");
+    scene.primeAudio();
+    scene.play({
+      dexId, name,
+      onCaught: () => {
+        let isDupe = false;
+        try { if (typeof obtainPokemon === "function") isDupe = obtainPokemon(chainKey, "normal").isDupe; } catch (e) {}
+        return { isDupe, dexId, name };
+      }
+    }).then(r => {
+      if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) window.__setCatchRate(0.8);
+      console.log("[testCapture] result:", r);
+    });
+  };
+}
