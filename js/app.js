@@ -77,21 +77,33 @@ const App = {
     document.getElementById("home-stats").innerHTML = `
       <span>Sets done <b>${st.totalSets}</b></span>
       <span>Accuracy <b>${acc}%</b></span>
-      <span>Day streak <b>${calcStreak()}</b></span>
-      <button id="btn-reset" class="reset-link">Reset progress</button>`;
-    document.getElementById("btn-reset").onclick = () => this._confirmReset();
+      <span>Day streak <b>${calcStreak()}</b></span>`;
   },
 
+  /* ---------- 重設進度（Settings 內，要輸入訓練員名先撳得） ---------- */
   _confirmReset() {
+    const st = loadState();
+    const playerName = st.playerName || "The PokéEngmon Trainer";
     this.showModal(`
       <div class="confirm-box">
         <p>Reset <b>all progress</b> and the Pokédex?<br><small>(Imported custom questions will also be deleted)</small></p>
+        <p class="reset-type-hint">Type your trainer name <b>${playerName}</b> to confirm:</p>
+        <input id="reset-name-input" class="quiz-answer-input" type="text"
+               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="${playerName}">
         <div class="confirm-row">
-          <button id="cf-yes" class="btn-big btn-primary">Yes, reset everything</button>
+          <button id="cf-yes" class="btn-big btn-primary btn-danger" disabled>Delete everything</button>
           <button id="cf-no" class="btn-big btn-plain">Cancel</button>
         </div>
       </div>`, true);
-    document.getElementById("cf-yes").onclick = () => {
+    const input = document.getElementById("reset-name-input");
+    const yesBtn = document.getElementById("cf-yes");
+    input.oninput = () => {
+      yesBtn.disabled = input.value.trim().toLowerCase() !== playerName.trim().toLowerCase();
+    };
+    input.onkeydown = (e) => { if (e.key === "Enter" && !yesBtn.disabled) yesBtn.click(); };
+    setTimeout(() => input.focus(), 50);
+    yesBtn.onclick = () => {
       resetState();
       this.closeModal();
       this.renderHome();
@@ -601,6 +613,7 @@ const App = {
         <input id="import-file" type="file" accept=".json,application/json" hidden>
         <small class="settings-note">Backup file: pokeengmon-save-YYYY-MM-DD.json</small>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
+        <button id="btn-reset-progress" class="btn-big btn-danger">🗑 Reset Progress</button>
         <button id="btn-settings-close" class="btn-big btn-plain">Close</button>
       </div>`);
     const fileInput = document.getElementById("import-file");
@@ -608,6 +621,7 @@ const App = {
     document.getElementById("btn-import-save").onclick = () => fileInput.click();
     fileInput.onchange = () => this.handleImportFile(fileInput.files[0]);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
+    document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
     document.getElementById("btn-settings-close").onclick = () => this.closeModal();
   },
 

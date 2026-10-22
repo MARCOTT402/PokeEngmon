@@ -1171,3 +1171,10 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .hub-bar .btn-big { flex: 1; margin: 0; }
 @media (min-width: 768px) { .hub-bar { max-width: 560px; } }
+
+/* ============ Reset progress (danger) ============ */
+.btn-danger { background: linear-gradient(180deg, #e74c3c, #c0392b) !important; color: #fff !important; }
+.btn-danger:disabled { background: #5a3a38 !important; color: #b99 !important; opacity: 0.6; cursor: not-allowed; }
+.reset-type-hint { font-size: 0.9rem; color: #ccc; margin: 12px 0 8px; }
+.reset-type-hint b { color: #ffd45e; }
+.confirm-box #reset-name-input { width: 100%; box-sizing: border-box; margin-bottom: 14px; }
