@@ -1,5 +1,5 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v46";
+const CACHE_NAME = "pokeengmon-v47";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -37,6 +37,7 @@ const ASSETS = [
   "./icons/icon-512.png",
   "./assets/bgm/wild-battle.mp3",
   "./assets/bgm/obtained-pokemon.mp3",
+  "./assets/bgm/obtained-berry.mp3",
   ...TYPE_ICONS.map(t => `./assets/types/${t}.png`),
   ...Array.from({ length: 151 }, (_, i) => `./assets/cries/${i + 1}.mp3`)
 ];

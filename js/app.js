@@ -480,9 +480,10 @@ const App = {
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
       <div class="reward-chip">⭐ EXP +${rewards.exp}</div>`;
 
-    /* Successful capture → play "Obtained a Pokémon!" jingle on settlement */
-    if (cap && cap.caught && window.CaptureScene && CaptureScene.audio) {
-      CaptureScene.audio.playOnce("assets/bgm/obtained-pokemon.mp3", 1.0);
+    /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!" */
+    if (cap && window.CaptureScene && CaptureScene.audio) {
+      const jingleUrl = cap.caught ? "assets/bgm/obtained-pokemon.mp3" : "assets/bgm/obtained-berry.mp3";
+      CaptureScene.audio.playOnce(jingleUrl, 1.0);
     }
 
     const st = loadState();
