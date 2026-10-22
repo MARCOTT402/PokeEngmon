@@ -293,20 +293,38 @@ class CaptureAudio {
     }
     this._elStart();
   }
-  /* Smoothly ramp BGM volume to `target` over `ms` — real linear fade via GainNode. */
+  /* Smoothly ramp BGM volume to `target` over `ms`.
+     iOS WebKit chokes on LONG automation ramps — a 6s linearRamp on a GainNode
+     corrupts the context's scheduling timeline and silences ALL later SFX.
+     So: short ramps (<=1.5s) stay native; long fades use JS steps instead. */
   duckBGM(target, ms = 600) {
     if (this._bgmGain && this.ctx) {
-      const t = this.ctx.currentTime;
+      if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
       const g = this._bgmGain.gain;
-      g.cancelScheduledValues(t);
-      g.setValueAtTime(g.value, t);
-      g.linearRampToValueAtTime(Math.max(0, target), t + ms / 1000);
+      if (ms <= 1500) {
+        const t = this.ctx.currentTime;
+        g.cancelScheduledValues(t);
+        g.setValueAtTime(g.value, t);
+        g.linearRampToValueAtTime(Math.max(0, target), t + ms / 1000);
+        return;
+      }
+      const from = g.value;
+      const steps = Math.max(1, Math.round(ms / 100));
+      let i = 0;
+      this._bgmFadeTimer = setInterval(() => {
+        i++;
+        if (!this._bgmGain) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; return; }
+        const k = Math.min(1, i / steps);
+        try { g.value = Math.max(0, from + (target - from) * k); } catch (e) {}
+        if (k >= 1) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
+      }, 100);
       return;
     }
     this._elDuck(target, ms);
   }
   /* Fade BGM out over `fadeMs` then stop + rewind. */
   stopBGM(fadeMs = 550) {
+    if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
     if (this._bgmSrc && this.ctx) {
       const src = this._bgmSrc;
       const g = this._bgmGain;
@@ -475,7 +493,7 @@ class PokemonCaptureScene {
   }
 
   /* ---------- BGM: Battle! (Wild Pokémon) — Gen 1 original MP3 ---------- */
-  _ensureBGM() { this.audio._ensureBGM(); }
+  _ensureBGM() { this.audio._ensureEl(); }
   startBGM() { this.audio.ensure(); this.audio.startBGM(); }
   stopBGM(fadeMs) { this.audio.stopBGM(fadeMs); }
   duckBGM(v, fadeMs) { this.audio.duckBGM(v, fadeMs); }
