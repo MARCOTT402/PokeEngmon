@@ -314,26 +314,33 @@ class CaptureAudio {
     /* Only unlock once — repeated muted play() on every submit leaks audible blips */
     if (this._bgmPrimed) return;
     this._bgmPrimed = true;
-    /* Mobile autoplay unlock: muted play→pause inside the user gesture,
-       so later startBGM() calls (after async gaps) are allowed. */
+    /* Mobile autoplay unlock: MUTED play→pause inside the user gesture.
+       `muted` is synchronous (unlike volume on some browsers), so zero audible leak. */
     try {
-      this.bgm.volume = 0;
+      this.bgm.muted = true;
       const p = this.bgm.play();
       if (p && p.then) {
         p.then(() => {
           try {
             this.bgm.pause();
             this.bgm.currentTime = 0;
+            this.bgm.muted = false;
             this.bgm.volume = 0.55;
           } catch (e) {}
         }).catch(() => {
-          try { this.bgm.volume = 0.55; } catch (e) {}
+          try { this.bgm.muted = false; this.bgm.volume = 0.55; } catch (e) {}
         });
       } else {
-        this.bgm.volume = 0.55;
+        /* Legacy sync play() — pause immediately */
+        try {
+          this.bgm.pause();
+          this.bgm.currentTime = 0;
+          this.bgm.muted = false;
+          this.bgm.volume = 0.55;
+        } catch (e) {}
       }
     } catch (e) {
-      try { this.bgm.volume = 0.55; } catch (e2) {}
+      try { this.bgm.muted = false; this.bgm.volume = 0.55; } catch (e2) {}
     }
   }
 
