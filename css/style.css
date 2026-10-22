@@ -778,9 +778,11 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 body.capture-mode { overflow: hidden; background: #07110d; }
 
 #view-capture {
-  position: fixed; inset: 0; z-index: 80; padding: 0; gap: 0;
-  width: 100vw; height: 100dvh; min-height: 0; overflow: hidden;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 80; padding: 0; gap: 0;
+  width: 100%; max-width: 520px; margin: 0 auto;
+  height: 100dvh; min-height: 0; overflow: hidden;
   background: #07110d; touch-action: none; overscroll-behavior: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 0 60px rgba(0,0,0,.8);
 }
 #view-capture.active { display: block; animation: capture-in .45s ease both; }
 @keyframes capture-in { from { opacity: 0; } to { opacity: 1; } }
