@@ -249,30 +249,106 @@ class CaptureAudio {
     }, 250);
   }
 
-  /* ---------- BGM: Battle! (Wild Pokémon) — Gen 1 original ---------- */
-  _ensureBGM() {
+  /* ---------- BGM: Battle! (Wild Pokémon) — Gen 1 original ----------
+     iOS Safari/Chrome IGNORE <audio>.volume (read-only), so the BGM is
+     played through Web Audio (BufferSource → GainNode → destination)
+     where gain ramps work everywhere. <audio> element kept as fallback. */
+  _loadBGMBuffer() {
+    this.ensure();
+    if (!this.ctx || this._bgmBuf || this._bgmBufLoading) return;
+    this._bgmBufLoading = true;
+    fetch("assets/bgm/wild-battle.mp3")
+      .then(r => r.arrayBuffer())
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(buf => { this._bgmBuf = buf; })
+      .catch(() => { /* will fall back to <audio> element */ })
+      .finally(() => { this._bgmBufLoading = false; });
+  }
+  startBGM() {
+    this.ensure();
+    if (this._bgmSrc) return;  /* already playing */
+    if (this.ctx && this._bgmBuf) {
+      try {
+        const g = this.ctx.createGain();
+        g.gain.value = 0.55;
+        g.connect(this.ctx.destination);  /* bypass master — gain values match old element volumes */
+        const src = this.ctx.createBufferSource();
+        src.buffer = this._bgmBuf;
+        src.loop = true;
+        src.connect(g);
+        src.start(0);
+        this._bgmGain = g;
+        this._bgmSrc = src;
+      } catch (e) { /* ignore */ }
+      return;
+    }
+    if (this.ctx && !this._bgmBuf) {
+      /* buffer still decoding — retry once shortly */
+      this._loadBGMBuffer();
+      if (!this._bgmRetry) {
+        this._bgmRetry = true;
+        setTimeout(() => { this._bgmRetry = false; if (!this._bgmSrc) this.startBGM(); }, 900);
+      }
+      return;
+    }
+    this._elStart();
+  }
+  /* Smoothly ramp BGM volume to `target` over `ms` — real linear fade via GainNode. */
+  duckBGM(target, ms = 600) {
+    if (this._bgmGain && this.ctx) {
+      const t = this.ctx.currentTime;
+      const g = this._bgmGain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(Math.max(0, target), t + ms / 1000);
+      return;
+    }
+    this._elDuck(target, ms);
+  }
+  /* Fade BGM out over `fadeMs` then stop + rewind. */
+  stopBGM(fadeMs = 550) {
+    if (this._bgmSrc && this.ctx) {
+      const src = this._bgmSrc;
+      const g = this._bgmGain;
+      this._bgmSrc = null;
+      this._bgmGain = null;
+      const t = this.ctx.currentTime;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0, t + fadeMs / 1000);
+      setTimeout(() => {
+        try { src.stop(); } catch (e) {}
+        try { src.disconnect(); g.disconnect(); } catch (e) {}
+      }, fadeMs + 100);
+      return;
+    }
+    this._elStop(fadeMs);
+  }
+  bgmPrime() {
+    /* Called inside the quiz-submit user gesture: unlock AudioContext + start decode */
+    this.ensure();
+    this._loadBGMBuffer();
+    /* Element fallback unlock — only needed if Web Audio unavailable */
+    if (this.ctx) return;
+    this._elPrime();
+  }
+
+  /* ----- <audio> element fallback (only when Web Audio unavailable) ----- */
+  _ensureEl() {
     if (this.bgm) return;
     try {
       this.bgm = new Audio("assets/bgm/wild-battle.mp3");
       this.bgm.loop = true;
       this.bgm.volume = 0.55;
       this.bgm.preload = "auto";
-      this.bgm.addEventListener("error", () => { /* ignore — chiptune fallback */ }, { once: true });
     } catch (e) { this.bgm = null; }
   }
-  startBGM() {
-    this._ensureBGM();
-    if (!this.bgm) return;
-    /* Already playing → don't restart from the top */
-    if (!this.bgm.paused) return;
-    try {
-      this.bgm.volume = 0.55;
-      this.bgm.currentTime = 0;
-      this.bgm.play().catch(() => {});
-    } catch (e) {}
+  _elStart() {
+    this._ensureEl();
+    if (!this.bgm || !this.bgm.paused) return;
+    try { this.bgm.currentTime = 0; this.bgm.play().catch(() => {}); } catch (e) {}
   }
-  /* Smoothly ramp BGM volume to `target` over `ms` (default 600ms). */
-  duckBGM(target, ms = 600) {
+  _elDuck(target, ms) {
     if (!this.bgm) return;
     if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
     const from = this.bgm.volume;
@@ -282,12 +358,11 @@ class CaptureAudio {
       i++;
       if (!this.bgm) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; return; }
       const k = Math.min(1, i / steps);
-      this.bgm.volume = from + (target - from) * k;
+      try { this.bgm.volume = from + (target - from) * k; } catch (e) {}
       if (k >= 1) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
     }, 50);
   }
-  /* Fade BGM out over `fadeMs` (default 550ms) then pause + rewind. */
-  stopBGM(fadeMs = 550) {
+  _elStop(fadeMs) {
     if (!this.bgm || this._bgmFading) return;
     this._bgmFading = true;
     if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
@@ -297,51 +372,30 @@ class CaptureAudio {
     const step = () => {
       i++;
       if (!this.bgm) { this._bgmFading = false; return; }
-      this.bgm.volume = vol * Math.max(0, 1 - i / steps);
+      try { this.bgm.volume = vol * Math.max(0, 1 - i / steps); } catch (e) {}
       if (i < steps) setTimeout(step, 55);
       else {
-        try { this.bgm.pause(); this.bgm.currentTime = 0; } catch (e) {}
-        this.bgm.volume = 0.55;
+        try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.volume = 0.55; } catch (e) {}
         this._bgmFading = false;
       }
     };
     step();
   }
-  bgmPrime() {
-    this._ensureBGM();
-    if (!this.bgm) return;
-    try { this.bgm.load(); } catch (e) {}
-    /* Only unlock once — repeated muted play() on every submit leaks audible blips */
-    if (this._bgmPrimed) return;
+  _elPrime() {
+    this._ensureEl();
+    if (!this.bgm || this._bgmPrimed) return;
     this._bgmPrimed = true;
-    /* Mobile autoplay unlock: MUTED play→pause inside the user gesture.
-       `muted` is synchronous (unlike volume on some browsers), so zero audible leak. */
     try {
       this.bgm.muted = true;
       const p = this.bgm.play();
       if (p && p.then) {
         p.then(() => {
-          try {
-            this.bgm.pause();
-            this.bgm.currentTime = 0;
-            this.bgm.muted = false;
-            this.bgm.volume = 0.55;
-          } catch (e) {}
-        }).catch(() => {
-          try { this.bgm.muted = false; this.bgm.volume = 0.55; } catch (e) {}
-        });
+          try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.muted = false; } catch (e) {}
+        }).catch(() => { try { this.bgm.muted = false; } catch (e) {} });
       } else {
-        /* Legacy sync play() — pause immediately */
-        try {
-          this.bgm.pause();
-          this.bgm.currentTime = 0;
-          this.bgm.muted = false;
-          this.bgm.volume = 0.55;
-        } catch (e) {}
+        try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.muted = false; } catch (e) {}
       }
-    } catch (e) {
-      try { this.bgm.muted = false; this.bgm.volume = 0.55; } catch (e2) {}
-    }
+    } catch (e) { try { this.bgm.muted = false; } catch (e2) {} }
   }
 
   jingle() {
