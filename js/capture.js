@@ -311,6 +311,9 @@ class CaptureAudio {
     this._ensureBGM();
     if (!this.bgm) return;
     try { this.bgm.load(); } catch (e) {}
+    /* Only unlock once — repeated muted play() on every submit leaks audible blips */
+    if (this._bgmPrimed) return;
+    this._bgmPrimed = true;
     /* Mobile autoplay unlock: muted play→pause inside the user gesture,
        so later startBGM() calls (after async gaps) are allowed. */
     try {
