@@ -484,6 +484,10 @@ const App = {
       const jingleUrl = cap.caught ? "assets/bgm/obtained-pokemon.mp3" : "assets/bgm/obtained-berry.mp3";
       CaptureScene.audio.playOnce(jingleUrl, 0.6);
     }
+    /* 捕捉完結：jingle 播完後恢復全域 BGM */
+    if (window.CaptureScene && CaptureScene.audio) {
+      setTimeout(() => CaptureScene.audio.startTownBGM(), 3200);
+    }
 
     const st = loadState();
     const rareBtn = document.getElementById("btn-pull-rare");
@@ -808,6 +812,17 @@ const App = {
 
     this.renderHome();
     this.showView("view-home");
+
+    /* 全域 BGM（Nuvema Town）：首個用家手勢解鎖音頻後開始循環 */
+    const startGlobalAudio = () => {
+      document.removeEventListener("pointerdown", startGlobalAudio);
+      if (window.CaptureScene && CaptureScene.audio) {
+        CaptureScene.audio.ensure();
+        CaptureScene.audio.bgmPrime();       /* 預先解鎖 + decode 戰鬥 BGM */
+        CaptureScene.audio.startTownBGM();
+      }
+    };
+    document.addEventListener("pointerdown", startGlobalAudio);
 
     /* Service Worker（PWA 離線）＋新版本自動套用 */
     if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {

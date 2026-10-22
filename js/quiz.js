@@ -107,6 +107,12 @@ const Quiz = {
     document.getElementById("btn-quiz-submit").disabled = true;
     input.classList.add(correct ? "correct" : "wrong");
 
+    /* 對錯音效 */
+    if (window.CaptureScene && CaptureScene.audio) {
+      if (correct) CaptureScene.audio.correct();
+      else CaptureScene.audio.wrong();
+    }
+
     const fb = document.getElementById("quiz-feedback");
     if (correct) {
       fb.textContent = ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)];

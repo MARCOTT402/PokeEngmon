@@ -266,6 +266,7 @@ class CaptureAudio {
   }
   startBGM() {
     this.ensure();
+    this.stopTownBGM(400);  /* battle takes over the soundscape */
     if (this._bgmSrc) return;  /* already playing */
     if (this.ctx && this._bgmBuf) {
       try {
@@ -414,6 +415,67 @@ class CaptureAudio {
         try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.muted = false; } catch (e) {}
       }
     } catch (e) { try { this.bgm.muted = false; } catch (e2) {} }
+  }
+
+  /* ---------- Quiz answer SFX ---------- */
+  correct() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(880, { type: "triangle", dur: 0.14, gain: 0.2 });
+    this._tone(1318, { type: "sine", dur: 0.22, gain: 0.16, at: 0.07 });
+  }
+  wrong() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(160, { type: "sawtooth", dur: 0.32, gain: 0.16, slideTo: 90 });
+    this._tone(110, { type: "square", dur: 0.3, gain: 0.08, at: 0.02 });
+  }
+
+  /* ---------- Town BGM: Nuvema Town — global background loop ---------- */
+  _loadTownBuffer() {
+    this.ensure();
+    if (!this.ctx || this._townBuf || this._townBufLoading) return;
+    this._townBufLoading = true;
+    fetch("assets/bgm/nuvema-town.mp3")
+      .then(r => r.arrayBuffer())
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(buf => { this._townBuf = buf; if (this._townPending) { this._townPending = false; this.startTownBGM(); } })
+      .catch(() => {})
+      .finally(() => { this._townBufLoading = false; });
+  }
+  startTownBGM() {
+    this.ensure();
+    if (!this.ctx || this._townSrc) return;
+    if (!this._townBuf) { this._townPending = true; this._loadTownBuffer(); return; }
+    try {
+      const g = this.ctx.createGain();
+      g.gain.value = 0.4;
+      g.connect(this.ctx.destination);
+      const src = this.ctx.createBufferSource();
+      src.buffer = this._townBuf;
+      src.loop = true;
+      src.connect(g);
+      src.start(0);
+      this._townGain = g;
+      this._townSrc = src;
+    } catch (e) {}
+  }
+  stopTownBGM(fadeMs = 400) {
+    if (!this._townSrc || !this.ctx) return;
+    const src = this._townSrc;
+    const g = this._townGain;
+    this._townSrc = null;
+    this._townGain = null;
+    try {
+      const t = this.ctx.currentTime;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0, t + fadeMs / 1000);
+    } catch (e) {}
+    setTimeout(() => {
+      try { src.stop(); } catch (e) {}
+      try { src.disconnect(); g.disconnect(); } catch (e) {}
+    }, fadeMs + 100);
   }
 
   /* One-shot MP3 player (e.g. "Obtained a Pokémon!" jingle on settlement).
