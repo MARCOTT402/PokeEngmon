@@ -275,6 +275,8 @@ class PokemonCaptureScene {
     this.resultName = document.getElementById("capture-result-name");
     this.resultSub = document.getElementById("capture-result-sub");
     this.continueBtn = document.getElementById("capture-continue");
+    this.warningEl = document.getElementById("capture-warning");
+    this.warpEl = document.getElementById("capture-warp");
 
     this.audio = new CaptureAudio();
     this.state = STATE.IDLE;
@@ -283,6 +285,10 @@ class PokemonCaptureScene {
     this.ready = false;
     this.width = 1;
     this.height = 1;
+
+    /* BGM: Battle! (Wild Pokémon) */
+    this.bgm = null;
+    this._bgmFading = false;
 
     this.lookTarget = LOOK_START.clone();
     this.monFx = { scale: 1, opacity: 0 };
@@ -315,6 +321,75 @@ class PokemonCaptureScene {
     this.audio.ensure();
   }
 
+  /* ---------- BGM: Battle! (Wild Pokémon) ---------- */
+  _ensureBGM() {
+    if (this.bgm) return;
+    try {
+      this.bgm = new Audio("assets/bgm/wild-battle.mp3");
+      this.bgm.loop = true;
+      this.bgm.volume = 0.55;
+      this.bgm.preload = "auto";
+      this.bgm.addEventListener("error", () => { /* ignore */ }, { once: true });
+    } catch (e) { this.bgm = null; }
+  }
+  startBGM() {
+    this._ensureBGM();
+    if (!this.bgm) return;
+    try {
+      this.bgm.currentTime = 0;
+      this.bgm.play().catch(() => { /* will retry on next user tap */ });
+    } catch (e) { /* ignore */ }
+  }
+  stopBGM() {
+    if (!this.bgm) return;
+    if (this._bgmFading) return;
+    this._bgmFading = true;
+    const vol = this.bgm.volume;
+    let steps = 8;
+    const step = () => {
+      steps--;
+      if (!this.bgm) { this._bgmFading = false; return; }
+      this.bgm.volume = (vol * steps) / 8;
+      if (steps > 0) setTimeout(step, 60);
+      else {
+        try { this.bgm.pause(); this.bgm.currentTime = 0; } catch (e) {}
+        this.bgm.volume = vol;
+        this._bgmFading = false;
+      }
+    };
+    step();
+  }
+  /* Public: app calls this when quiz fades (or any user tap that unlocks audio) */
+  bgmPrime() {
+    this._ensureBGM();
+    if (this.bgm) try { this.bgm.load(); } catch (e) {}
+  }
+
+  /* ---------- WARNING / Warp overlays ---------- */
+  _showWarning(dexId, name) {
+    if (!this.warningEl) return;
+    this.warningEl.classList.remove("hide");
+    this.warningEl.classList.add("show");
+  }
+  _hideWarning() {
+    if (!this.warningEl) return new Promise(r => r());
+    return new Promise(resolve => {
+      this.warningEl.classList.remove("show");
+      this.warningEl.classList.add("hide");
+      setTimeout(() => {
+        this.warningEl.classList.remove("hide");
+        resolve();
+      }, 560);
+    });
+  }
+  _startWarp() {
+    if (!this.warpEl) return;
+    this.warpEl.classList.add("go");
+    setTimeout(() => {
+      this.warpEl.classList.remove("go");
+    }, 950);
+  }
+
   /* ---------- public: play one encounter ---------- */
   play({ dexId, name, onCaught, onComplete }) {
     this.audio.ensure();
@@ -326,6 +401,20 @@ class PokemonCaptureScene {
     this._resultInfo = null;
     this._resetScene();
 
+    /* Show WARNING overlay before any 3D work — keeps it crisp on mobile */
+    this._showWarning(dexId, name);
+
+    /* Prime audio (user already tapped submit) */
+    this.audio.ensure();
+
+    /* Kick off BGM as early as possible */
+    this._ensureBGM();
+    if (this.bgm) {
+      try { this.bgm.currentTime = 0; this.bgm.play(); }
+      catch (e) { /* autoplay blocked — will retry later */ }
+    }
+
+    /* Prepare the Pokémon image */
     this.monEl.onerror = () => {
       this.monEl.onerror = null;
       const fallback = window.spriteURL ? window.spriteURL(dexId) : `assets/animated/${dexId}.gif`;
@@ -333,13 +422,28 @@ class PokemonCaptureScene {
     };
     this.monEl.src = window.animatedURL ? window.animatedURL(dexId) : `assets/animated/${dexId}.gif`;
 
+    /* Start 3D loop in parallel (it's heavy, we want it running during the warning) */
     this._ensureThree();
     this._startLoop();
 
+    this._donePromise = new Promise(resolve => { this._resolve = resolve; });
+
+    /* Schedule warning → warp → encounter */
+    setTimeout(async () => {
+      try {
+        await this._hideWarning();
+        this._startWarp();
+      } catch (e) { /* ignore */ }
+      /* Now run the real encounter timeline */
+      this._runEncounter();
+    }, 1400);
+
+    return this._donePromise;
+  }
+
+  _runEncounter() {
     this._setState(STATE.ENCOUNTER);
     this._prompt("Something is rustling in the grass…");
-
-    this._donePromise = new Promise(resolve => { this._resolve = resolve; });
 
     this.tl = gsap.timeline();
     this.tl
@@ -1140,6 +1244,8 @@ class PokemonCaptureScene {
   tap() {
     if (this.state !== STATE.IDLE) return;
     this.audio.ensure();
+    /* Retry BGM on first user tap if it was blocked */
+    if (this.taps === 0) this.startBGM();
     this.taps += 1;
     this.audio.tap(this.taps);
     this._haptic(10 + this.taps * 8);
@@ -1348,6 +1454,7 @@ class PokemonCaptureScene {
         this._prompt("…");
         this._glow(0);
         this.bloom.strength = 0.38;
+        this.stopBGM();  /* BGM ends right after 3rd shake */
       }, null, 3.95)
       .to({}, { duration: 0.75 }, 4.0)
       .call(() => {

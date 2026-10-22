@@ -19,7 +19,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/style.css?v=27">
+  <link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
   <div id="app">
@@ -188,6 +188,34 @@
 
     <!-- ============ 3D 捕捉場景 ============ -->
     <section id="view-capture" class="view capture-view" aria-label="Pokémon capture">
+      <!-- WARNING encounter screen (Evangelion style) -->
+      <div id="capture-warning" class="capture-warning" aria-hidden="true">
+        <div class="cw-bg">
+          <div class="cw-stripes"></div>
+          <div class="cw-grid"></div>
+        </div>
+        <div class="cw-banner-top">
+          <span>WARNING</span><span>WARNING</span><span>WARNING</span><span>WARNING</span>
+        </div>
+        <div class="cw-banner-bot">
+          <span>WARNING</span><span>WARNING</span><span>WARNING</span><span>WARNING</span>
+        </div>
+        <div class="cw-body">
+          <span class="cw-subtitle">Wild Pokémon Encountered!</span>
+          <span class="cw-title">WILD POKÉMON<br>ENCOUNTERED!</span>
+        </div>
+        <div class="cw-banner-side cw-side-l">WARNING</div>
+        <div class="cw-banner-side cw-side-r">WARNING</div>
+      </div>
+
+      <!-- Spiral warp transition overlay -->
+      <div id="capture-warp" class="capture-warp" aria-hidden="true">
+        <div class="cwarp-layer cwarp-l1"></div>
+        <div class="cwarp-layer cwarp-l2"></div>
+        <div class="cwarp-layer cwarp-l3"></div>
+        <div class="cwarp-iris"></div>
+      </div>
+
       <div id="capture-host" class="capture-host"></div>
       <img id="capture-mon" class="capture-mon" alt="">
       <div class="capture-vignette" aria-hidden="true"></div>
@@ -213,16 +241,16 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="js/data.js?v=27"></script>
-  <script src="js/pokemon.js?v=27"></script>
-  <script src="js/storage.js?v=27"></script>
-  <script src="js/explain.js?v=27"></script>
-  <script src="js/quiz.js?v=27"></script>
-  <script src="js/gacha.js?v=27"></script>
-  <script src="js/pokedex.js?v=27"></script>
-  <script src="js/calendar.js?v=27"></script>
-  <script src="js/app.js?v=27"></script>
-  <script src="vendor/gsap/gsap.min.js?v=27"></script>
-  <script type="module" src="js/capture.js?v=27"></script>
+  <script src="js/data.js?v=28"></script>
+  <script src="js/pokemon.js?v=28"></script>
+  <script src="js/storage.js?v=28"></script>
+  <script src="js/explain.js?v=28"></script>
+  <script src="js/quiz.js?v=28"></script>
+  <script src="js/gacha.js?v=28"></script>
+  <script src="js/pokedex.js?v=28"></script>
+  <script src="js/calendar.js?v=28"></script>
+  <script src="js/app.js?v=28"></script>
+  <script src="vendor/gsap/gsap.min.js?v=28"></script>
+  <script type="module" src="js/capture.js?v=28"></script>
 </body>
 </html>

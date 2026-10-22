@@ -785,6 +785,183 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 #view-capture.active { display: block; animation: capture-in .45s ease both; }
 @keyframes capture-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* ============================================================
+   WARNING encounter screen (Evangelion style)
+   ============================================================ */
+.capture-warning {
+  position: absolute; inset: 0; z-index: 20; display: none;
+  background: #0b0202; pointer-events: none; overflow: hidden;
+}
+.capture-warning.show { display: block; animation: cw-in .35s steps(2) both; }
+.capture-warning.hide { animation: cw-out .55s ease both forwards; }
+@keyframes cw-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cw-out { from { opacity: 1; filter: blur(0); } to { opacity: 0; filter: blur(18px); } }
+
+.cw-bg { position: absolute; inset: 0; }
+/* Diagonal warning stripes (like EVA) */
+.cw-stripes {
+  position: absolute; inset: -20%;
+  background: repeating-linear-gradient(
+    45deg,
+    #b01414 0 48px,
+    #000 48px 96px
+  );
+  opacity: .85;
+  animation: cw-stripes 1.2s linear infinite;
+}
+@keyframes cw-stripes {
+  from { transform: translate(-5%, -5%); }
+  to   { transform: translate(0%, 0%); }
+}
+/* Hexagonal grid overlay */
+.cw-grid {
+  position: absolute; inset: 0;
+  background-color: #0b0202;
+  background-image:
+    linear-gradient(60deg, rgba(255,255,255,.06) 25%, transparent 25%),
+    linear-gradient(-60deg, rgba(255,255,255,.06) 25%, transparent 25%),
+    linear-gradient(60deg, transparent 75%, rgba(255,255,255,.06) 75%),
+    linear-gradient(-60deg, transparent 75%, rgba(255,255,255,.06) 75%);
+  background-size: 44px 76px;
+  background-position: 0 0, 22px 38px, 22px 38px, 0 0;
+  mix-blend-mode: multiply;
+  opacity: .65;
+}
+
+/* Top / bottom WARNING banners */
+.cw-banner-top, .cw-banner-bot {
+  position: absolute; left: 0; right: 0;
+  display: flex; gap: 24px; padding: 8px 12px;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900; font-size: clamp(.85rem, 3vw, 1.2rem);
+  letter-spacing: .12em;
+  background: #d91414; color: #fff;
+  text-shadow: 0 0 6px rgba(0,0,0,.55);
+  overflow: hidden; white-space: nowrap;
+}
+.cw-banner-top { top: 0; transform: skewY(-6deg); }
+.cw-banner-bot { bottom: 0; transform: skewY(6deg); }
+.cw-banner-top span, .cw-banner-bot span {
+  display: inline-block; animation: cw-banner-slide 4s linear infinite;
+}
+@keyframes cw-banner-slide {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+
+/* Side vertical WARNING labels */
+.cw-banner-side {
+  position: absolute; top: 50%; transform: translateY(-50%) rotate(90deg);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900; letter-spacing: .25em;
+  font-size: clamp(.7rem, 2.2vw, 1rem);
+  background: #d91414; color: #fff; padding: 4px 18px;
+  white-space: nowrap;
+}
+.cw-side-l { left: -26px; transform: translateY(-50%) rotate(-90deg); }
+.cw-side-r { right: -26px; transform: translateY(-50%) rotate(90deg); }
+
+/* Central body (hexagon frame + text) */
+.cw-body {
+  position: absolute; inset: 0;
+  display: grid; place-items: center; text-align: center;
+  padding: 12% 6%;
+}
+.cw-body::before, .cw-body::after {
+  content: ""; position: absolute;
+  width: min(90vw, 560px); height: min(58vw, 360px);
+  border: 3px solid #fff;
+  clip-path: polygon(
+    25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%
+  );
+  animation: cw-hex 1.2s ease-in-out infinite alternate;
+}
+.cw-body::before { border-color: #fff; opacity: .7; transform: scale(1.04); }
+.cw-body::after  { border-color: #ff2c2c; opacity: 1; }
+@keyframes cw-hex {
+  from { transform: scale(.98); }
+  to   { transform: scale(1.06); }
+}
+
+.cw-subtitle {
+  position: relative; z-index: 1;
+  display: block; margin-bottom: 14px;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(.75rem, 2.4vw, 1rem);
+  font-weight: 700; letter-spacing: .22em;
+  color: #ffd7d7; text-transform: uppercase;
+  animation: cw-subflash .5s ease-out;
+}
+@keyframes cw-subflash {
+  0%, 100% { opacity: .4; }
+  50% { opacity: 1; }
+}
+.cw-title {
+  position: relative; z-index: 1;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 6.5vw, 3rem);
+  line-height: 1.05;
+  color: #fff;
+  text-shadow:
+    0 0 12px rgba(255,60,60,.9),
+    0 0 28px rgba(255,60,60,.7),
+    2px 2px 0 #5c0000;
+  animation: cw-text-pulse .5s ease-out;
+}
+@keyframes cw-text-pulse {
+  from { transform: scale(.8); filter: blur(6px); opacity: 0; }
+  to   { transform: scale(1);   filter: blur(0);  opacity: 1; }
+}
+
+/* ============================================================
+   Spiral warp transition
+   ============================================================ */
+.capture-warp {
+  position: absolute; inset: 0; z-index: 25; pointer-events: none;
+  display: none; background: #000;
+}
+.capture-warp.go {
+  display: block;
+  animation: cwarp-in .9s cubic-bezier(.2,.02,.2,1) both;
+}
+@keyframes cwarp-in {
+  0%   { opacity: 0; clip-path: circle(100% at 50% 50%); }
+  25%  { opacity: 1; clip-path: circle(100% at 50% 50%); }
+  100% { opacity: 1; clip-path: circle(0%   at 50% 50%); }
+}
+.cwarp-layer {
+  position: absolute; inset: -60%;
+  background:
+    conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg 10deg,
+      rgba(255,255,255,.7) 10deg 14deg,
+      transparent 14deg 34deg,
+      rgba(255,255,255,.5) 34deg 38deg,
+      transparent 38deg 60deg
+    );
+  mix-blend-mode: screen;
+  animation: cwarp-spin 1.2s cubic-bezier(.2,.02,.2,1);
+}
+.cwarp-l2 { animation-duration: 1.4s; animation-direction: reverse; opacity: .85; }
+.cwarp-l3 { animation-duration: 1.6s; opacity: .5; }
+@keyframes cwarp-spin {
+  from { transform: rotate(0deg) scale(1.8); }
+  to   { transform: rotate(-720deg) scale(.1); }
+}
+.cwarp-iris {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 50%,
+    transparent 12%,
+    rgba(0,0,0,.6) 24%,
+    #000 60%);
+  animation: cwarp-iris .9s cubic-bezier(.2,.02,.2,1);
+}
+@keyframes cwarp-iris {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(3); opacity: 1; }
+}
+
 .capture-host { position: absolute; inset: 0; }
 .capture-host canvas { display: block; width: 100% !important; height: 100% !important; }
 
