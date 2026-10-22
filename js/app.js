@@ -696,12 +696,16 @@ const App = {
       <div class="disclaimer-box">
         <h3>Copyright &amp; Disclaimer</h3>
         <p>This website is an unofficial, non-commercial educational and reward tool. It is <b>NOT</b> affiliated with, endorsed, sponsored, or approved by Nintendo, Game Freak, Creatures Inc., or The Pokémon Company.</p>
-        <p>Pokémon and Pokémon character names, images, sprites, cries, and related game assets are trademarks of © Nintendo, Creatures Inc., and GAME FREAK inc. All rights belong to their respective owners.</p>
+        <p>Pokémon and Pokémon character names, images, sprites, cries, music, and related game assets are trademarks of © Nintendo, Creatures Inc., and GAME FREAK inc. All rights belong to their respective owners.</p>
         <p>All assets are used only for non-commercial educational, learning-reward, and motivational purposes.</p>
 
         <h4>Data &amp; Image Credits</h4>
         <p>Pokémon base stats, moves, evolution data, sprites, and type icons are provided by <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>.</p>
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
+
+        <h4>Music &amp; Sound Credits</h4>
+        <p>Background music (<i>Nuvema Town</i>, from Pokémon Black/White) and battle/jingle tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
+        <p>Soundtrack resources referenced from <a href="https://downloads.khinsider.com" target="_blank" rel="noopener">KHInsider Video Game Music</a> (unofficial fan archive).</p>
 
         <h4>In-Game Items</h4>
         <p>All diamonds, pull tickets, candies, cards, and Pokémon in this app are virtual learning rewards. They have no real-world value and cannot be exchanged for money or physical goods. There is no real-money trading.</p>
