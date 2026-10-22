@@ -74,7 +74,7 @@ const Quiz = {
   },
 
   /* 記憶光芒：SRS 複習題（stage 0.5/1/2/7/14/30 到期）先會發光
-     拍檔提醒：「[Pokémon] remembers this X ago!」答對呢類題 EXP ×1.5 */
+     彩色呼吸光芒 + 拍檔小頭像 + 文字提醒；答對呢類題 EXP ×1.5 */
   _renderMemoryLight(q) {
     const rec = srsRecord(q);
     this._curMemory = rec && rec.stage > 0 ? rec.stage : 0;
@@ -83,10 +83,16 @@ const Quiz = {
     if (this._curMemory > 0) {
       const labels = { 0.5: "20 minutes", 1: "1 day", 2: "2 days", 7: "7 days", 14: "14 days", 30: "30 days" };
       const entry = getActiveEntry();
-      const name = entry ? entryCurrentSpecies(entry)[1] : null;
-      memEl.innerHTML = name
-        ? `✨ <b>${escapeHTML(name)}</b> remembers this ${labels[this._curMemory] || "some time"} ago!<br><small>Time to refresh your brain! (Bonus XP ×1.5)</small>`
-        : `✨ Time to refresh your brain!<br><small>Bonus XP ×1.5 for this one!</small>`;
+      let spriteHTML = "";
+      let textHTML;
+      if (entry) {
+        const dexId = entryCurrentSpecies(entry)[0];
+        spriteHTML = `<img class="quiz-memory-sprite" src="${animatedURL(dexId)}" alt="partner" onerror="this.onerror=null;this.src='${artworkURL(dexId)}'">`;
+        textHTML = `<b>${escapeHTML(entryCurrentSpecies(entry)[1])}</b> remembers this ${labels[this._curMemory] || "some time"} ago!<br><small>Time to refresh your brain! (Bonus XP ×1.5)</small>`;
+      } else {
+        textHTML = `✨ Time to refresh your brain!<br><small>Bonus XP ×1.5 for this one!</small>`;
+      }
+      memEl.innerHTML = spriteHTML + `<div class="quiz-memory-text">${textHTML}</div>`;
       memEl.classList.add("show");
       card.classList.add("memory-glow");
     } else {
