@@ -416,6 +416,36 @@ class CaptureAudio {
     } catch (e) { try { this.bgm.muted = false; } catch (e2) {} }
   }
 
+  /* One-shot MP3 player (e.g. "Obtained a Pokémon!" jingle on settlement).
+     Web Audio path so volume control works on iOS. Buffer cached per url. */
+  playOnce(url, volume = 1.0) {
+    this.ensure();
+    if (!this.ctx) return;
+    if (!this._oneShotBufs) this._oneShotBufs = {};
+    const cached = this._oneShotBufs[url];
+    const start = (buf) => {
+      try {
+        const g = this.ctx.createGain();
+        g.gain.value = volume;
+        g.connect(this.ctx.destination);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(0);
+        src.onended = () => { try { src.disconnect(); g.disconnect(); } catch (e) {} };
+      } catch (e) {}
+    };
+    if (cached && cached.buf) { start(cached.buf); return; }
+    if (cached && cached.loading) { cached.waiters.push(start); return; }
+    const rec = { buf: null, loading: true, waiters: [start] };
+    this._oneShotBufs[url] = rec;
+    fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(buf => { rec.buf = buf; rec.loading = false; rec.waiters.forEach(fn => { try { fn(buf); } catch (e) {} }); rec.waiters = []; })
+      .catch(() => { rec.loading = false; rec.waiters = []; });
+  }
+
   jingle() {
     this.ensure();
     if (!this.ctx) return;

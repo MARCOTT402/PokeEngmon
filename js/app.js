@@ -480,6 +480,11 @@ const App = {
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
       <div class="reward-chip">⭐ EXP +${rewards.exp}</div>`;
 
+    /* Successful capture → play "Obtained a Pokémon!" jingle on settlement */
+    if (cap && cap.caught && window.CaptureScene && CaptureScene.audio) {
+      CaptureScene.audio.playOnce("assets/bgm/obtained-pokemon.mp3", 1.0);
+    }
+
     const st = loadState();
     const rareBtn = document.getElementById("btn-pull-rare");
     rareBtn.style.display = st.diamonds >= GAME_CONFIG.RARE_PULL_COST ? "" : "none";
