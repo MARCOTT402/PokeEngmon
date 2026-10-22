@@ -1253,7 +1253,7 @@ class PokemonCaptureScene {
       onUpdate: () => this.camera.updateProjectionMatrix()
     });
     gsap.to(this.bokeh.uniforms.focus, { value: 2.2, duration: 0.95, ease: "power2.inOut" });
-    gsap.to(this.bokeh.uniforms, { aperture: 0.0032, duration: 0.95 });
+    gsap.to(this.bokeh.uniforms.aperture, { value: 0.0032, duration: 0.95 });
     gsap.to(this.bloom, { strength: 0.95, duration: 0.5 });
 
     /* ball settles into the grass with a small bounce */
@@ -1542,9 +1542,10 @@ window.__testCapture = function(opts = {}) {
   const force = opts.force;          // 0 = always escape, 1 = always catch, undefined = normal 80%
   let chainKey = null;
   try { chainKey = Gacha.pickChain(Gacha.rollRarity("normal")); } catch (e) { /* ignore */ }
-  if (!chainKey) chainKey = (window.EVOLUTION_CHAINS && window.EVOLUTION_CHAINS[0] && window.EVOLUTION_CHAINS[0].key) || "bulbasaur";
-  const chain = (window.EVOLUTION_CHAINS || []).find(c => c.key === chainKey);
-  if (!chain) { console.warn("Chain not found:", chainKey); return; }
+  const chains = (typeof EVOLUTION_CHAINS !== "undefined") ? EVOLUTION_CHAINS : [];
+  let chain = chains.find(c => c.key === chainKey);
+  if (!chain) chain = chains[0];
+  if (!chain) { console.warn("EVOLUTION_CHAINS not loaded."); return; }
   const [dexId, name] = chain.stages[0];
 
   if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) {
