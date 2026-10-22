@@ -600,12 +600,14 @@ const App = {
         <button id="btn-import-save" class="btn-big btn-secondary">⬆️ Import Save</button>
         <input id="import-file" type="file" accept=".json,application/json" hidden>
         <small class="settings-note">Backup file: pokeengmon-save-YYYY-MM-DD.json</small>
+        <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
         <button id="btn-settings-close" class="btn-big btn-plain">Close</button>
       </div>`);
     const fileInput = document.getElementById("import-file");
     document.getElementById("btn-export-save").onclick = () => this.exportSave();
     document.getElementById("btn-import-save").onclick = () => fileInput.click();
     fileInput.onchange = () => this.handleImportFile(fileInput.files[0]);
+    document.getElementById("btn-import-csv2").onclick = () => this.openImport();
     document.getElementById("btn-settings-close").onclick = () => this.closeModal();
   },
 
@@ -783,7 +785,6 @@ const App = {
       this.selectedTopics = new Set();
       this.renderSetup();
     };
-    document.getElementById("btn-import-csv").onclick = () => this.openImport();
     document.getElementById("btn-setup-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
 
     /* 做題：鍵盤輸入提交 */
