@@ -263,21 +263,43 @@ class CaptureAudio {
   startBGM() {
     this._ensureBGM();
     if (!this.bgm) return;
-    try { this.bgm.currentTime = 0; this.bgm.play().catch(() => {}); } catch (e) {}
+    try {
+      this.bgm.volume = 0.55;
+      this.bgm.currentTime = 0;
+      this.bgm.play().catch(() => {});
+    } catch (e) {}
   }
-  stopBGM() {
+  /* Smoothly ramp BGM volume to `target` over `ms` (default 600ms). */
+  duckBGM(target, ms = 600) {
+    if (!this.bgm) return;
+    if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
+    const from = this.bgm.volume;
+    const steps = Math.max(1, Math.round(ms / 50));
+    let i = 0;
+    this._bgmFadeTimer = setInterval(() => {
+      i++;
+      if (!this.bgm) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; return; }
+      const k = Math.min(1, i / steps);
+      this.bgm.volume = from + (target - from) * k;
+      if (k >= 1) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
+    }, 50);
+  }
+  /* Fade BGM out over `fadeMs` (default 550ms) then pause + rewind. */
+  stopBGM(fadeMs = 550) {
     if (!this.bgm || this._bgmFading) return;
     this._bgmFading = true;
+    if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
     const vol = this.bgm.volume;
-    let steps = 10;
+    const steps = Math.max(1, Math.round(fadeMs / 55));
+    let i = 0;
     const step = () => {
-      steps--;
+      i++;
       if (!this.bgm) { this._bgmFading = false; return; }
-      this.bgm.volume = (vol * steps) / 10;
-      if (steps > 0) setTimeout(step, 55);
+      this.bgm.volume = vol * Math.max(0, 1 - i / steps);
+      if (i < steps) setTimeout(step, 55);
       else {
         try { this.bgm.pause(); this.bgm.currentTime = 0; } catch (e) {}
-        this.bgm.volume = vol;
+        this.bgm.volume = 0.55;
         this._bgmFading = false;
       }
     };
@@ -361,11 +383,12 @@ class PokemonCaptureScene {
     this.audio.ensure();
   }
 
-  /* ---------- BGM: Battle! (Wild Pokémon) — chiptune via Web Audio ---------- */
-  _ensureBGM() { /* no-op — the chiptune synth is self-contained */ }
-  startBGM() { this.audio.ensure(); this.audio.bgmLoopStart(); }
-  stopBGM()  { this.audio.bgmLoopStop(); }
-  bgmPrime() { this.audio.ensure(); }
+  /* ---------- BGM: Battle! (Wild Pokémon) — Gen 1 original MP3 ---------- */
+  _ensureBGM() { this.audio._ensureBGM(); }
+  startBGM() { this.audio.ensure(); this.audio.startBGM(); }
+  stopBGM(fadeMs) { this.audio.stopBGM(fadeMs); }
+  duckBGM(v, fadeMs) { this.audio.duckBGM(v, fadeMs); }
+  bgmPrime() { this.audio.ensure(); this.audio.bgmPrime(); }
 
   /* ---------- WARNING / Warp overlays ---------- */
   _showWarning(dexId, name) {
@@ -1276,6 +1299,7 @@ class PokemonCaptureScene {
     this._haptic([25, 45, 25]);
     this._glow(1);
     this._flash(0.55);
+    this.duckBGM(0.18, 700);  /* BGM quiets down as the ball charges */
 
     /* Short hit-stop before the throw */
     setTimeout(() => {
@@ -1341,7 +1365,7 @@ class PokemonCaptureScene {
     this.audio.impact();
     this._haptic(45);
     this._flash(0.35);
-    this.stopBGM();  /* BGM cuts off the moment the Poké Ball hits */
+    this.stopBGM(1500);  /* BGM fades away through hit + absorb */
     this._spawnBurst(0xc9b185, 42, BUSH_POS, 2.4, 0.07, -2.6, 1.1, false);
     this._leafBurst(30);
     if (this.trail) {
