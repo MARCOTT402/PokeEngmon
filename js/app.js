@@ -813,16 +813,25 @@ const App = {
     this.renderHome();
     this.showView("view-home");
 
-    /* 全域 BGM（Nuvema Town）：首個用家手勢解鎖音頻後開始循環 */
+    /* 全域 BGM（Nuvema Town）：
+       1) 開頁即試播 —— 已安裝 PWA / 高互動用戶有機會直接成功
+       2) 失敗（autoplay 限制）→ 任何首個互動即刻補播 */
     const startGlobalAudio = () => {
-      document.removeEventListener("pointerdown", startGlobalAudio);
+      ["pointerdown", "touchstart", "keydown", "click"].forEach(ev =>
+        document.removeEventListener(ev, startGlobalAudio));
       if (window.CaptureScene && CaptureScene.audio) {
         CaptureScene.audio.ensure();
         CaptureScene.audio.bgmPrime();       /* 預先解鎖 + decode 戰鬥 BGM */
         CaptureScene.audio.startTownBGM();
       }
     };
-    document.addEventListener("pointerdown", startGlobalAudio);
+    /* 開頁即試（冇手勢時 AudioContext 會 suspended，startTownBGM 會等 buffer 好；
+       真正出聲靠下面 gesture 補播） */
+    if (window.CaptureScene && CaptureScene.audio) {
+      CaptureScene.audio.startTownBGM();
+    }
+    ["pointerdown", "touchstart", "keydown", "click"].forEach(ev =>
+      document.addEventListener(ev, startGlobalAudio));
 
     /* Service Worker（PWA 離線）＋新版本自動套用 */
     if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
