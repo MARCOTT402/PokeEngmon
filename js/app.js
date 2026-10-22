@@ -779,12 +779,12 @@ const App = {
 
     /* 做題：鍵盤輸入提交 */
     document.getElementById("btn-quiz-submit").onclick = () => {
-      if (window.CaptureScene) window.CaptureScene.primeAudio();
+      if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
       Quiz.submit();
     };
     document.getElementById("quiz-answer").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
-        if (window.CaptureScene) window.CaptureScene.primeAudio();
+        if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
         Quiz.submit();
       }
     });

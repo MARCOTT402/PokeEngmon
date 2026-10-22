@@ -307,7 +307,32 @@ class CaptureAudio {
     };
     step();
   }
-  bgmPrime() { this._ensureBGM(); if (this.bgm) try { this.bgm.load(); } catch (e) {} }
+  bgmPrime() {
+    this._ensureBGM();
+    if (!this.bgm) return;
+    try { this.bgm.load(); } catch (e) {}
+    /* Mobile autoplay unlock: muted play→pause inside the user gesture,
+       so later startBGM() calls (after async gaps) are allowed. */
+    try {
+      this.bgm.volume = 0;
+      const p = this.bgm.play();
+      if (p && p.then) {
+        p.then(() => {
+          try {
+            this.bgm.pause();
+            this.bgm.currentTime = 0;
+            this.bgm.volume = 0.55;
+          } catch (e) {}
+        }).catch(() => {
+          try { this.bgm.volume = 0.55; } catch (e) {}
+        });
+      } else {
+        this.bgm.volume = 0.55;
+      }
+    } catch (e) {
+      try { this.bgm.volume = 0.55; } catch (e2) {}
+    }
+  }
 
   jingle() {
     this.ensure();
