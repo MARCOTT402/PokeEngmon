@@ -19,7 +19,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/style.css?v=57">
+  <link rel="stylesheet" href="css/style.css?v=58">
 </head>
 <body>
   <div id="app">
@@ -104,10 +104,11 @@
       </div>
       <div class="progressbar"><i id="quiz-bar"></i></div>
       <div class="quiz-topic" id="quiz-topic"></div>
+      <div class="quiz-memory" id="quiz-memory"></div>
       <div class="quiz-image-box" id="quiz-image-box">
         <img id="quiz-image" class="quiz-image" alt="Question image">
       </div>
-      <div class="quiz-card">
+      <div class="quiz-card" id="quiz-card">
         <div class="quiz-sentence" id="quiz-sentence"></div>
       </div>
       <div class="quiz-answer-box">
@@ -117,6 +118,29 @@
         <button id="btn-quiz-submit" class="btn-big btn-primary">Submit ✔</button>
       </div>
       <div class="quiz-feedback" id="quiz-feedback"></div>
+    </section>
+
+    <!-- ============ Power Up Zone（回合尾改錯：三階腳架） ============ -->
+    <section id="view-powerup" class="view">
+      <h2 class="powerup-title">⚡ Power Up Zone</h2>
+      <p class="powerup-sub">Fix every mistake to finish this round!</p>
+      <div class="quiz-top">
+        <span class="quiz-progress" id="powerup-progress">1 / 1</span>
+        <span class="powerup-badge">🔋 Correct them all!</span>
+      </div>
+      <div class="progressbar"><i id="powerup-bar"></i></div>
+      <div class="quiz-card">
+        <div class="quiz-sentence" id="powerup-sentence"></div>
+      </div>
+      <div class="powerup-hint" id="powerup-hint"></div>
+      <div class="quiz-answer-box">
+        <input id="powerup-answer" class="quiz-answer-input" type="text"
+               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="Type your answer…">
+        <button id="btn-powerup-submit" class="btn-big btn-primary">Submit ✔</button>
+      </div>
+      <div class="quiz-feedback" id="powerup-feedback"></div>
+      <div id="powerup-explain" class="powerup-explain"></div>
     </section>
 
     <!-- ============ 結算 ============ -->
@@ -258,16 +282,17 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="js/data.js?v=57"></script>
-  <script src="js/pokemon.js?v=57"></script>
-  <script src="js/storage.js?v=57"></script>
-  <script src="js/explain.js?v=57"></script>
-  <script src="js/quiz.js?v=57"></script>
-  <script src="js/gacha.js?v=57"></script>
-  <script src="js/pokedex.js?v=57"></script>
-  <script src="js/calendar.js?v=57"></script>
-  <script src="js/app.js?v=57"></script>
-  <script src="vendor/gsap/gsap.min.js?v=57"></script>
-  <script type="module" src="js/capture.js?v=57"></script>
+  <script src="js/data.js?v=58"></script>
+  <script src="js/pokemon.js?v=58"></script>
+  <script src="js/storage.js?v=58"></script>
+  <script src="js/explain.js?v=58"></script>
+  <script src="js/quiz.js?v=58"></script>
+  <script src="js/powerup.js?v=58"></script>
+  <script src="js/gacha.js?v=58"></script>
+  <script src="js/pokedex.js?v=58"></script>
+  <script src="js/calendar.js?v=58"></script>
+  <script src="js/app.js?v=58"></script>
+  <script src="vendor/gsap/gsap.min.js?v=58"></script>
+  <script type="module" src="js/capture.js?v=58"></script>
 </body>
 </html>

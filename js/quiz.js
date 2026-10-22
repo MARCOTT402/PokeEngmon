@@ -48,6 +48,9 @@ const Quiz = {
     document.getElementById("quiz-topic").innerHTML =
       `<span class="quiz-level" aria-label="Level ${level}">${"★".repeat(level)}</span>`;
 
+    /* 記憶光芒：呢題係記憶曲線到期嘅複習題（stage > 0）→ 金色光芒 + 拍檔提醒 */
+    this._renderMemoryLight(q);
+
     /* 題目圖片（image_file/<編號>.png）；冇圖片就收起個窗 */
     this._renderImage(q);
 
@@ -68,6 +71,28 @@ const Quiz = {
 
     /* 自動聚焦（手提裝置會彈鍵盤） */
     setTimeout(() => input.focus(), 300);
+  },
+
+  /* 記憶光芒：SRS 複習題（stage 0.5/1/2/7/14/30 到期）先會發光
+     拍檔提醒：「[Pokémon] remembers this X ago!」答對呢類題 EXP ×1.5 */
+  _renderMemoryLight(q) {
+    const rec = srsRecord(q);
+    this._curMemory = rec && rec.stage > 0 ? rec.stage : 0;
+    const memEl = document.getElementById("quiz-memory");
+    const card = document.getElementById("quiz-card");
+    if (this._curMemory > 0) {
+      const labels = { 0.5: "20 minutes", 1: "1 day", 2: "2 days", 7: "7 days", 14: "14 days", 30: "30 days" };
+      const entry = getActiveEntry();
+      const name = entry ? entryCurrentSpecies(entry)[1] : null;
+      memEl.innerHTML = name
+        ? `✨ <b>${escapeHTML(name)}</b> remembers this ${labels[this._curMemory] || "some time"} ago!<br><small>Time to refresh your brain! (Bonus XP ×1.5)</small>`
+        : `✨ Time to refresh your brain!<br><small>Bonus XP ×1.5 for this one!</small>`;
+      memEl.classList.add("show");
+      card.classList.add("memory-glow");
+    } else {
+      memEl.classList.remove("show");
+      card.classList.remove("memory-glow");
+    }
   },
 
   /* 顯示題目圖片：搵到先開個固定大細嘅窗，搵唔到就收起 */
@@ -100,8 +125,10 @@ const Quiz = {
     this.locked = true;
     const q = this.set[this.idx];
     const correct = this._isCorrect(q, text);
-    this.results.push({ qid: q.id, chosen: text.trim(), correct, topic: q.topic });
-    updateSrs(q, correct);   // 記憶曲線（隱藏）
+    this.results.push({ qid: q.id, chosen: text.trim(), correct, topic: q.topic, memory: this._curMemory > 0 });
+    /* 記憶曲線（隱藏）：答對即時升級；答錯唔即刻清零 —
+       延後到回合尾 Power Up Zone 全部改錯完成後先統一重置 stage_0 */
+    if (correct) updateSrs(q, true);
 
     input.disabled = true;
     document.getElementById("btn-quiz-submit").disabled = true;
@@ -139,7 +166,7 @@ const Quiz = {
       duration,
       score,
       total: this.set.length,
-      results: this.results.map(r => ({ qid: r.qid, chosen: r.chosen, correct: r.correct }))
+      results: this.results.map(r => ({ qid: r.qid, chosen: r.chosen, correct: r.correct, memory: !!r.memory }))
     });
   }
 };

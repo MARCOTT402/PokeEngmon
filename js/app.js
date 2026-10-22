@@ -357,7 +357,7 @@ const App = {
     }
   },
 
-  /* ---------- 完成一組 → 捕捉場景 → 結算 ---------- */
+  /* ---------- 完成一組 → （有錯題先入 Power Up Zone）→ 捕捉場景 → 結算 ---------- */
   async onQuizFinished(data) {
     this.lastCapture = null;
 
@@ -366,6 +366,21 @@ const App = {
     await new Promise(r => setTimeout(r, 320));
     quizView.classList.remove("is-fading");
 
+    /* 回合尾錯題清算：有錯題 → 先入 ⚡ Power Up Zone 重做至全對，
+       全部改啱後先清零錯題 SRS stage，再跳入 WARNING 捕捉頁 */
+    const wrongs = data.results
+      .filter(r => !r.correct)
+      .map(r => ({ q: findQuestion(r.qid), chosen: r.chosen }))
+      .filter(x => x.q);
+    if (wrongs.length > 0) {
+      PowerUp.start(wrongs, () => this._captureThenSettle(data));
+      return;
+    }
+    await this._captureThenSettle(data);
+  },
+
+  /* 捕捉場景（WARNING）→ 結算 */
+  async _captureThenSettle(data) {
     const scene = window.CaptureScene;
     if (scene && scene.isSupported()) {
       let chainKey = null;
@@ -419,7 +434,13 @@ const App = {
       const span = levelSpan(dexId, entry.level || 1);
       expGain = Math.max(10, Math.round(span * (perfect ? 0.12 : 0.09)));
     }
-    const rewards = { ticket: 0, diamonds: 0, exp: expGain };
+    /* 記憶光芒 Bonus XP：答對「抗忘記題目」（記憶曲線到期題）該題 EXP ×1.5
+       即每題基本份額之外，再多半份 */
+    const memoryCorrect = data.results.filter(r => r.correct && r.memory).length;
+    const memoryBonus = memoryCorrect > 0
+      ? Math.round((expGain / data.total) * 0.5 * memoryCorrect)
+      : 0;
+    const rewards = { ticket: 0, diamonds: 0, exp: expGain + memoryBonus, memoryBonus };
     if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;                    /* 10/10 → 3 */
     else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;  /* 8–9 → 2 */
     else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;    /* 7 → 1 */
@@ -490,7 +511,7 @@ const App = {
 
     document.getElementById("settle-rewards").innerHTML = capHTML + `
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
-      <div class="reward-chip">⭐ EXP +${rewards.exp}</div>`;
+      <div class="reward-chip">⭐ EXP +${rewards.exp}${rewards.memoryBonus > 0 ? ` <small>(+${rewards.memoryBonus} memory bonus ✨)</small>` : ""}</div>`;
 
     /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!" */
     if (cap && window.CaptureScene && CaptureScene.audio) {
@@ -816,6 +837,12 @@ const App = {
         if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
         Quiz.submit();
       }
+    });
+
+    /* Power Up Zone：回合尾改錯提交 */
+    document.getElementById("btn-powerup-submit").onclick = () => PowerUp.submit();
+    document.getElementById("powerup-answer").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") PowerUp.submit();
     });
 
     /* 日曆 */

@@ -377,6 +377,44 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .quiz-feedback.bad { color: #c62828; }
 
 /* ============================================================
+   記憶光芒（Partner Light）：記憶曲線到期題目嘅金色提醒
+   ============================================================ */
+.quiz-memory {
+  display: none; text-align: center; font-weight: 800; font-size: 1.02rem;
+  color: #8d6e00; background: linear-gradient(135deg, #fff8e1, #ffecb3);
+  border: 2px solid #ffd54f; border-radius: 14px; padding: 10px 14px;
+  box-shadow: 0 0 14px rgba(255, 213, 79, .55);
+  animation: memory-banner-pulse 1.8s ease-in-out infinite;
+}
+.quiz-memory.show { display: block; }
+.quiz-memory small { color: #a08400; font-weight: 700; }
+.quiz-card.memory-glow {
+  border-color: #ffd54f;
+  animation: memory-card-glow 1.8s ease-in-out infinite;
+}
+@keyframes memory-card-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 213, 79, .45), 0 0 0 3px rgba(255, 213, 79, .22); }
+  50%      { box-shadow: 0 0 28px rgba(255, 193, 7, .85), 0 0 0 5px rgba(255, 213, 79, .4); }
+}
+@keyframes memory-banner-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 213, 79, .4); }
+  50%      { box-shadow: 0 0 22px rgba(255, 193, 7, .75); }
+}
+
+/* ============================================================
+   ⚡ Power Up Zone（回合尾改錯）
+   ============================================================ */
+.powerup-title { text-align: center; font-size: 1.6rem; margin-top: 10px; }
+.powerup-sub { text-align: center; color: #7a8299; font-weight: 700; margin-top: -8px; }
+.powerup-badge { font-weight: 800; color: #f59e0b; font-size: 1.02rem; }
+.powerup-hint {
+  display: none; text-align: center; font-weight: 700; line-height: 1.7;
+  background: #fff8e1; border: 2px dashed #ffd54f; border-radius: 14px; padding: 10px 14px;
+}
+.powerup-hint.show { display: block; animation: pop .3s; }
+.powerup-explain:empty { display: none; }
+
+/* ============================================================
    結算
    ============================================================ */
 .settle-title { text-align: center; font-size: 1.5rem; margin-top: 10px; }
