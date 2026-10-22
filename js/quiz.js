@@ -128,7 +128,7 @@ const Quiz = {
     document.getElementById("quiz-bar").style.width = "100%";
     const score = this.results.filter(r => r.correct).length;
     const duration = this._elapsedSec();
-    App.onSetComplete({
+    App.onQuizFinished({
       ts: Date.now(),
       duration,
       score,

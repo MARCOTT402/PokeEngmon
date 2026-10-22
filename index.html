@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -11,7 +11,15 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" href="icons/icon-192.png">
   <title>The PokéEngmon Trainer | PokeEngmon</title>
-  <link rel="stylesheet" href="css/style.css?v=24">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css?v=26">
 </head>
 <body>
   <div id="app">
@@ -178,19 +186,43 @@
       <button id="btn-cal-back" class="btn-big btn-secondary">Back to Home</button>
     </section>
 
+    <!-- ============ 3D 捕捉場景 ============ -->
+    <section id="view-capture" class="view capture-view" aria-label="Pokémon capture">
+      <div id="capture-host" class="capture-host"></div>
+      <img id="capture-mon" class="capture-mon" alt="">
+      <div class="capture-vignette" aria-hidden="true"></div>
+      <div id="capture-flash" class="capture-flash" aria-hidden="true"></div>
+      <div class="capture-hud">
+        <div id="capture-prompt" class="capture-prompt"></div>
+        <div id="capture-taps" class="capture-taps" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <div id="capture-result" class="capture-result">
+        <div class="capture-result-card">
+          <div class="capture-result-rays" aria-hidden="true"></div>
+          <img id="capture-result-img" class="capture-result-img" alt="">
+          <div class="capture-result-title">Gotcha!</div>
+          <div id="capture-result-name" class="capture-result-name"></div>
+          <div id="capture-result-sub" class="capture-result-sub"></div>
+          <button id="capture-continue" class="btn-big btn-primary">Continue</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Modal / Toast -->
     <div id="modal-root"></div>
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="js/data.js?v=24"></script>
-  <script src="js/pokemon.js?v=24"></script>
-  <script src="js/storage.js?v=24"></script>
-  <script src="js/explain.js?v=24"></script>
-  <script src="js/quiz.js?v=24"></script>
-  <script src="js/gacha.js?v=24"></script>
-  <script src="js/pokedex.js?v=24"></script>
-  <script src="js/calendar.js?v=24"></script>
-  <script src="js/app.js?v=24"></script>
+  <script src="js/data.js?v=26"></script>
+  <script src="js/pokemon.js?v=26"></script>
+  <script src="js/storage.js?v=26"></script>
+  <script src="js/explain.js?v=26"></script>
+  <script src="js/quiz.js?v=26"></script>
+  <script src="js/gacha.js?v=26"></script>
+  <script src="js/pokedex.js?v=26"></script>
+  <script src="js/calendar.js?v=26"></script>
+  <script src="js/app.js?v=26"></script>
+  <script src="vendor/gsap/gsap.min.js?v=26"></script>
+  <script type="module" src="js/capture.js?v=26"></script>
 </body>
 </html>

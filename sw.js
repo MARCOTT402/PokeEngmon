@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v24";
+const CACHE_NAME = "pokeengmon-v26";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -17,6 +17,21 @@ const ASSETS = [
   "./js/pokedex.js",
   "./js/calendar.js",
   "./js/app.js",
+  "./js/capture.js",
+  "./vendor/gsap/gsap.min.js",
+  "./vendor/three/three.module.js",
+  "./vendor/three/addons/postprocessing/EffectComposer.js",
+  "./vendor/three/addons/postprocessing/RenderPass.js",
+  "./vendor/three/addons/postprocessing/ShaderPass.js",
+  "./vendor/three/addons/postprocessing/UnrealBloomPass.js",
+  "./vendor/three/addons/postprocessing/OutputPass.js",
+  "./vendor/three/addons/postprocessing/BokehPass.js",
+  "./vendor/three/addons/postprocessing/MaskPass.js",
+  "./vendor/three/addons/postprocessing/Pass.js",
+  "./vendor/three/addons/shaders/CopyShader.js",
+  "./vendor/three/addons/shaders/LuminosityHighPassShader.js",
+  "./vendor/three/addons/shaders/OutputShader.js",
+  "./vendor/three/addons/shaders/BokehShader.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

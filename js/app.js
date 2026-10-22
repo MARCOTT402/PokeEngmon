@@ -12,6 +12,7 @@ const App = {
   showView(id) {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
+    document.body.classList.toggle("capture-mode", id === "view-capture");
     window.scrollTo(0, 0);
   },
 
@@ -344,6 +345,54 @@ const App = {
     }
   },
 
+  /* ---------- 完成一組 → 捕捉場景 → 結算 ---------- */
+  async onQuizFinished(data) {
+    this.lastCapture = null;
+
+    const quizView = document.getElementById("view-quiz");
+    quizView.classList.add("is-fading");
+    await new Promise(r => setTimeout(r, 320));
+    quizView.classList.remove("is-fading");
+
+    const scene = window.CaptureScene;
+    if (scene && scene.isSupported()) {
+      let chainKey = null;
+      try {
+        const rarity = Gacha.rollRarity("normal");
+        chainKey = Gacha.pickChain(rarity);
+      } catch (e) { chainKey = null; }
+
+      if (chainKey) {
+        const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
+        const [dexId, name] = chain.stages[0];
+        this.showView("view-capture");
+        scene.primeAudio();
+        let capResult = null;
+        try {
+          capResult = await scene.play({
+            dexId,
+            name,
+            onCaught: () => {
+              const res = obtainPokemon(chainKey, "normal");
+              const cur = entryCurrentSpecies(res.entry);
+              this.lastCapture = { dexId: cur[0], name: cur[1], isDupe: res.isDupe, caught: true };
+              this.renderHome();
+              return { isDupe: res.isDupe, dexId: cur[0], name: cur[1] };
+            }
+          });
+        } catch (e) {
+          console.warn("[capture] scene failed:", e);
+        }
+        /* Escape path: scene resolved with caught:false, onCaught never fired */
+        if (capResult && capResult.caught === false) {
+          this.lastCapture = { caught: false, dexId, name };
+        }
+      }
+    }
+
+    this.onSetComplete(data);
+  },
+
   /* ---------- 完成一組 → 結算 ---------- */
   onSetComplete(data) {
     const st = loadState();
@@ -400,7 +449,33 @@ const App = {
       <div class="settle-score-big ${perfect ? "perfect" : ""}">${data.score}<small>/${data.total}</small></div>
       <div class="settle-time">⏱ Took ${mm}:${String(ss).padStart(2, "0")}</div>`;
 
-    document.getElementById("settle-rewards").innerHTML = `
+    const cap = this.lastCapture;
+    let capHTML = "";
+    if (cap) {
+      if (cap.caught === false) {
+        capHTML = `
+      <div class="settle-capture is-escape">
+        <img src="${animatedURL(cap.dexId)}" alt="${cap.name}"
+             onerror="this.onerror=null;this.src='${artworkURL(cap.dexId)}'">
+        <div>
+          <b>${cap.name}</b>
+          <span>It broke free! Better luck next time.</span>
+        </div>
+      </div>`;
+      } else {
+        capHTML = `
+      <div class="settle-capture">
+        <img src="${animatedURL(cap.dexId)}" alt="${cap.name}"
+             onerror="this.onerror=null;this.src='${artworkURL(cap.dexId)}'">
+        <div>
+          <b>${cap.name}</b>
+          <span>${cap.isDupe ? "Duplicate capture — EV +1" : "New capture — added to your Pokédex"}</span>
+        </div>
+      </div>`;
+      }
+    }
+
+    document.getElementById("settle-rewards").innerHTML = capHTML + `
       <div class="reward-chip">🎫 Normal pulls +${rewards.ticket}</div>
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
       <div class="reward-chip">⭐ EXP +${rewards.exp}</div>`;
@@ -703,9 +778,15 @@ const App = {
     document.getElementById("btn-setup-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
 
     /* 做題：鍵盤輸入提交 */
-    document.getElementById("btn-quiz-submit").onclick = () => Quiz.submit();
+    document.getElementById("btn-quiz-submit").onclick = () => {
+      if (window.CaptureScene) window.CaptureScene.primeAudio();
+      Quiz.submit();
+    };
     document.getElementById("quiz-answer").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") Quiz.submit();
+      if (e.key === "Enter") {
+        if (window.CaptureScene) window.CaptureScene.primeAudio();
+        Quiz.submit();
+      }
     });
 
     /* 日曆 */
