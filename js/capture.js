@@ -50,7 +50,9 @@ const STATE = {
 };
 
 /* Quiz-finish capture success rate (20% escape chance) */
-const CAUGHT_RATE = 0.8;
+let CAUGHT_RATE = 0.8;
+/* Allow dev override via console: e.g. window.__setCatchRate(0) for forced escape */
+window.__setCatchRate = (v) => { CAUGHT_RATE = Math.max(0, Math.min(1, v)); console.log("[capture] CAUGHT_RATE =", CAUGHT_RATE); };
 
 /* ------------------------------------------------------------
    Synthesised audio (no extra files): rustle, taps, charge,
@@ -1529,3 +1531,37 @@ class PokemonCaptureScene {
 /* Expose to the classic scripts */
 window.PokemonCaptureScene = PokemonCaptureScene;
 window.CaptureScene = new PokemonCaptureScene();
+
+/* ------ dev shortcut: type __testCapture() in console to skip straight to capture ------ */
+window.__testCapture = function(opts = {}) {
+  const scene = window.CaptureScene;
+  if (!scene || !scene.isSupported()) {
+    console.warn("WebGL not supported — can't run capture scene.");
+    return;
+  }
+  const force = opts.force;          // 0 = always escape, 1 = always catch, undefined = normal 80%
+  let chainKey = null;
+  try { chainKey = Gacha.pickChain(Gacha.rollRarity("normal")); } catch (e) { /* ignore */ }
+  if (!chainKey) chainKey = (window.EVOLUTION_CHAINS && window.EVOLUTION_CHAINS[0] && window.EVOLUTION_CHAINS[0].key) || "bulbasaur";
+  const chain = (window.EVOLUTION_CHAINS || []).find(c => c.key === chainKey);
+  if (!chain) { console.warn("Chain not found:", chainKey); return; }
+  const [dexId, name] = chain.stages[0];
+
+  if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) {
+    window.__setCatchRate(force);
+  }
+
+  App && App.showView && App.showView("view-capture");
+  scene.primeAudio();
+  scene.play({
+    dexId, name,
+    onCaught: () => {
+      let isDupe = false;
+      try { if (typeof obtainPokemon === "function") isDupe = obtainPokemon(chainKey, "normal").isDupe; } catch (e) {}
+      return { isDupe, dexId, name };
+    }
+  }).then(r => {
+    if (typeof window.__setCatchRate === "function" && (force === 0 || force === 1)) window.__setCatchRate(0.8);
+    console.log("[testCapture] result:", r);
+  });
+};
