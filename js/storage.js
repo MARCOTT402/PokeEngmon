@@ -16,7 +16,7 @@ function defaultState() {
     totalQuestions: 0,
     bestStreak: 0,           // 連續練習日數
     entries: [],             // 擁有嘅 Pokemon { uid, chainKey, stage, exp, branch?, ownedSpecies:[dexId], obtainedAt }
-    activeUid: null,         // 最近獲得（練經驗目標）
+    activeUid: null,         // 目前拍檔（練經驗目標）
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
     customQuestions: [],      // 家長用 CSV 匯入嘅自訂題目
     srs: {}                   // 記憶曲線（隱藏）：題目 key → { stage, lastAt, dueAt }
@@ -81,7 +81,8 @@ function obtainPokemon(chainKey, mode) {
     const candyGain = mode === "rare" ? 1 : 0;
     existing.candies = (existing.candies || 0) + candyGain;
     existing.stars = Math.min(5, 1 + Math.floor(existing.dupes / 5));
-    st.activeUid = existing.uid;
+    /* 唔再自動切換拍檔；只係冇拍檔時先指派 */
+    if (!st.entries.some(e => e.uid === st.activeUid)) st.activeUid = existing.uid;
     saveState();
     return { entry: existing, isDupe: true, evGain: 1, candyGain };
   }
@@ -104,7 +105,8 @@ function obtainPokemon(chainKey, mode) {
     obtainedAt: Date.now()
   };
   st.entries.push(entry);
-  st.activeUid = entry.uid;
+  /* 唔再自動切換拍檔；只係冇拍檔時先指派（例如第一隻） */
+  if (!st.entries.some(e => e.uid === st.activeUid)) st.activeUid = entry.uid;
   saveState();
   return { entry, isDupe: false };
 }
@@ -208,7 +210,8 @@ function getEntry(uid) {
 
 function getActiveEntry() {
   const st = loadState();
-  return st.entries.find(e => e.uid === st.activeUid) || null;
+  /* 拍檔優先；activeUid 失效就退返第一隻，保證有嘢練 */
+  return st.entries.find(e => e.uid === st.activeUid) || st.entries[0] || null;
 }
 
 /* 已收集物種數（所有 entry 嘅 ownedSpecies 聯集） */
