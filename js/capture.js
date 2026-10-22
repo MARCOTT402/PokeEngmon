@@ -76,7 +76,7 @@ class CaptureAudio {
       if (!this.ctx) {
         this.ctx = new AC();
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.75;
+        this.master.gain.value = 1;
         this.master.connect(this.ctx.destination);
       }
       if (this.ctx.state === "suspended") this.ctx.resume();
