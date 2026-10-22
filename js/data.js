@@ -307,11 +307,14 @@ async function loadSiteQuestions() {
 }
 
 /* 載入圖片單字題庫（picture_words.csv）
-   欄位：Word,Level,Topic,Image,Accept,Source
-   - Word    : 正確串法（亦係語音檔名：assets/tts/w/<word>.mp3）
-   - Image   : 圖片相對路徑（例如 word_image/elephant.png）
-   - Accept  : 其他可接受串法，用 / 分隔（例如 color/colour）
-   - Source  : 圖片來源，供版權聲明列明（可留空） */
+   欄位：Word,Level,Course,Type,Category,Image,Accept,Source
+   - Word     : 正確串法（亦係語音檔名：assets/tts/w/<word>.mp3）
+   - Course   : 課題（例如 Dictation）
+   - Type     : 題型（例如 Noun）
+   - Category : 主題分組（例如 Animals / Food），用於錯題回顧顯示
+   - Image    : 圖片相對路徑（例如 word_image/elephant.png）
+   - Accept   : 其他可接受串法，用 / 分隔（例如 color/colour）
+   - Source   : 圖片來源，供版權聲明列明（可留空） */
 function wordsFromCSV(text) {
   const rows = parseCSV(text);
   const words = [];
@@ -319,15 +322,16 @@ function wordsFromCSV(text) {
   rows.forEach((cols, idx) => {
     const c = cols.map(s => s.trim());
     if (idx === 0 && /^(word|單字|单词)$/i.test(c[0] || "")) return;   // 略過標題行
-    const [wordRaw, levelRaw, topicRaw, imageRaw, acceptRaw, sourceRaw] = c;
+    const [wordRaw, levelRaw, courseRaw, typeRaw, catRaw, imageRaw, acceptRaw, sourceRaw] = c;
     const word = String(wordRaw || "").trim();
     if (!word || !/^[A-Za-z'\- ]+$/.test(word)) { skipped++; return; }
     words.push({
       type: "word",
       id: "w" + hashString(word.toLowerCase()),
       word,
-      course: "Picture Words",
-      topic: topicRaw || "Picture Words",
+      course: courseRaw || "Dictation",
+      topic: typeRaw || "Dictation",
+      category: catRaw || "",
       level: Math.min(9, Math.max(1, parseInt(levelRaw, 10) || 1)),
       sentence: "___",                              // 令舊有解釋／Power Up 渲染器可直接重用
       answer: word,
