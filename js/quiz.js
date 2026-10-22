@@ -11,9 +11,9 @@ const Quiz = {
   timerId: null,
   locked: false,
 
-  /* topics: 揀咗嘅題型（空陣列＝全部） */
+  /* topics: 揀咗嘅題型（空陣列＝全部）；圖片單字題會混合抽 */
   start(topics) {
-    this.set = drawQuestionSet(GAME_CONFIG.SET_SIZE, topics);
+    this.set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
     if (this.set.length === 0) {
       App.toast("No questions available yet — try again later!");
       return;
@@ -48,11 +48,27 @@ const Quiz = {
     document.getElementById("quiz-topic").innerHTML =
       `<span class="quiz-level" aria-label="Level ${level}">${"★".repeat(level)}</span>`;
 
-    /* 記憶光芒：呢題係記憶曲線到期嘅複習題（stage > 0）→ 金色光芒 + 拍檔提醒 */
+    /* 記憶光芒：呢題係記憶曲線到期嘅複習題（stage > 0）→ 彩色光芒 + 拍檔提醒 */
     this._renderMemoryLight(q);
 
     /* 題目圖片（image_file/<編號>.png）；冇圖片就收起個窗 */
     this._renderImage(q);
+
+    /* 圖片單字題：收起句子卡，改出「點圖聽聲」卡 */
+    const wordCard = document.getElementById("quiz-word-card");
+    if (q.type === "word") {
+      document.getElementById("quiz-card").style.display = "none";
+      document.getElementById("quiz-image-box").classList.remove("show");
+      wordCard.classList.add("show");
+      const img = document.getElementById("quiz-word-image");
+      img.onerror = () => { img.onerror = null; img.src = "icons/icon-192.png"; };
+      img.src = q.image;
+      document.getElementById("quiz-word-status").textContent = "🔊 Tap the picture to hear the word";
+      document.getElementById("quiz-word-status").className = "word-status";
+    } else {
+      document.getElementById("quiz-card").style.display = "";
+      wordCard.classList.remove("show");
+    }
 
     /* 句子（空位藍色） */
     document.getElementById("quiz-sentence").innerHTML =
@@ -95,9 +111,11 @@ const Quiz = {
       memEl.innerHTML = spriteHTML + `<div class="quiz-memory-text">${textHTML}</div>`;
       memEl.classList.add("show");
       card.classList.add("memory-glow");
+      document.getElementById("quiz-word-card").classList.add("memory-glow");
     } else {
       memEl.classList.remove("show");
       card.classList.remove("memory-glow");
+      document.getElementById("quiz-word-card").classList.remove("memory-glow");
     }
   },
 
@@ -116,12 +134,32 @@ const Quiz = {
     });
   },
 
-  /* 比對答案：trim + 不分大小寫；accept 列表都接受；答案留空＝要留空 */
+  /* 比對答案：trim + 不分大小寫；accept 列表都接受；答案留空＝要留空
+     圖片單字題比對 q.word */
   _isCorrect(q, text) {
-    const norm = s => String(s).trim().toLowerCase().replace(/\s+/g, " ");
+    const norm = s => String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " ");
     const mine = norm(text);
-    if (mine === norm(q.answer)) return true;
+    const target = q.type === "word" ? q.word : q.answer;
+    if (mine === norm(target)) return true;
     return (q.accept || []).some(a => norm(a) === mine);
+  },
+
+  /* 圖片單字題：點圖播聲（Web Audio，無限重播，重播會打斷上一段） */
+  playWordAudio() {
+    const q = this.set[this.idx];
+    if (!q || q.type !== "word") return;
+    const status = document.getElementById("quiz-word-status");
+    const audio = window.CaptureScene && CaptureScene.audio;
+    if (!audio) { status.textContent = "🔇 Audio unavailable"; return; }
+    audio.ensure();
+    const url = wordAudioURL(q.word);
+    status.textContent = "🔊 Playing… tap again to replay";
+    status.className = "word-status playing";
+    audio.playWord(url, () => {
+      /* 載入失敗（未生成語音）→ 明確提示，唔會靜靜當冇事 */
+      status.textContent = "🔇 No recording yet for \"" + q.word + "\"";
+      status.className = "word-status missing";
+    });
   },
 
   submit() {
@@ -151,7 +189,8 @@ const Quiz = {
       fb.textContent = ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)];
       fb.className = "quiz-feedback good";
     } else {
-      fb.textContent = q.answer ? `The answer is "${q.answer}"` : `The answer is "(blank)"`;
+      const right = q.type === "word" ? q.word : q.answer;
+      fb.textContent = right ? `The answer is "${right}"` : `The answer is "(blank)"`;
       fb.className = "quiz-feedback bad";
     }
 

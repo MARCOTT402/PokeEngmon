@@ -838,6 +838,11 @@ const App = {
         Quiz.submit();
       }
     });
+    /* 圖片單字題：點圖聽聲（可無限重播） */
+    document.getElementById("quiz-word-image-btn").onclick = () => {
+      if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
+      Quiz.playWordAudio();
+    };
 
     /* Power Up Zone：回合尾改錯提交 */
     document.getElementById("btn-powerup-submit").onclick = () => PowerUp.submit();
@@ -854,7 +859,7 @@ const App = {
     this.showReview = (from) => { this._reviewFrom = from || null; _origShowReview(); };
 
     /* 載入網站題庫（questions.csv）＋本地 PokéAPI 資料，先畫主畫面 */
-    await Promise.all([loadSiteQuestions(), loadPokemonDex()]);
+    await Promise.all([loadSiteQuestions(), loadPictureWords(), loadPokemonDex()]);
     migrateEntries();
 
     this.renderHome();

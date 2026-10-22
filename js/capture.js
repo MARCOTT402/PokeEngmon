@@ -508,6 +508,49 @@ class CaptureAudio {
       .catch(() => { rec.loading = false; rec.waiters = []; });
   }
 
+  /* 圖片單字題：無限重播，重播會先停上一段（避免疊聲）。
+     onFail 會喺檔案載入／解碼失敗時叫（例如語音檔仲未生成）。 */
+  playWord(url, onFail) {
+    this.ensure();
+    if (!this.ctx) { if (onFail) onFail(); return; }
+    if (!this._oneShotBufs) this._oneShotBufs = {};
+    const start = (buf) => {
+      try {
+        if (this._wordSrc) { try { this._wordSrc.stop(); } catch (e) {} this._wordSrc = null; }
+        const g = this.ctx.createGain();
+        g.gain.value = 1.0;
+        g.connect(this.ctx.destination);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(0);
+        this._wordSrc = src;
+        src.onended = () => {
+          try { src.disconnect(); g.disconnect(); } catch (e) {}
+          if (this._wordSrc === src) this._wordSrc = null;
+        };
+      } catch (e) { if (onFail) onFail(); }
+    };
+    const cached = this._oneShotBufs[url];
+    if (cached && cached.buf) { start(cached.buf); return; }
+    if (cached && cached.loading) { cached.waiters.push(start); return; }
+    const rec = { buf: null, loading: true, waiters: [start] };
+    this._oneShotBufs[url] = rec;
+    fetch(url)
+      .then(r => { if (!r.ok) throw new Error("missing"); return r.arrayBuffer(); })
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(buf => {
+        rec.buf = buf; rec.loading = false;
+        rec.waiters.forEach(fn => { try { fn(buf); } catch (e) {} });
+        rec.waiters = [];
+      })
+      .catch(() => {
+        rec.loading = false; rec.waiters = [];
+        delete this._oneShotBufs[url];       // 下次再試，唔好快取失敗結果
+        if (onFail) onFail();
+      });
+  }
+
   jingle() {
     this.ensure();
     if (!this.ctx) return;

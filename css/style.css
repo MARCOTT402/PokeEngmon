@@ -348,6 +348,55 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px;
 }
 
+/* 圖片單字題：點圖聽聲 → 默寫單字 */
+.word-card {
+  display: none; flex-direction: column; align-items: center; gap: 10px;
+}
+.word-card.show { display: flex; }
+.word-card.memory-glow .word-image-btn { animation: memory-card-glow 2.4s linear infinite; }
+.word-image-btn {
+  position: relative; width: 100%; max-width: 420px; padding: 0;
+  border: 3px solid var(--blue); border-radius: 18px; background: #fff;
+  overflow: hidden; cursor: pointer; box-shadow: var(--shadow);
+  transition: transform .12s ease;
+}
+.word-image-btn:active { transform: scale(.97); }
+.word-image {
+  display: block; width: 100%;
+  height: clamp(200px, 32dvh, 320px);
+  object-fit: cover;
+}
+.word-speaker {
+  position: absolute; right: 10px; bottom: 10px;
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  font-size: 1.35rem;
+  animation: word-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes word-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+.word-status { font-size: 1rem; font-weight: 800; color: #5b6478; text-align: center; }
+.word-status.playing { color: #2e7d32; }
+.word-status.missing { color: #c62828; }
+
+/* Power Up Zone 嘅圖片單字題 */
+.powerup-word-image {
+  display: block; width: 100%; max-width: 320px; margin: 0 auto;
+  height: clamp(150px, 24dvh, 220px); object-fit: cover;
+  border-radius: 14px; cursor: pointer;
+}
+.word-letters { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px; }
+.word-letter {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 30px; height: 38px; padding: 0 4px; border-radius: 8px;
+  background: #bbdefb; font-weight: 900; font-size: 1.2rem; color: #1e3f8c;
+}
+
 .quiz-card {
   background: var(--card); border-radius: var(--radius); padding: 26px 18px;
   box-shadow: var(--shadow); border: 3px solid #dce6f5;

@@ -241,6 +241,9 @@ const QUESTION_BANK = [
 /* 網站題目（根目錄 questions.csv，開網站時自動載入） */
 let SITE_QUESTIONS = [];
 
+/* 圖片單字題（根目錄 picture_words.csv）：點圖聽聲 → 默寫單字 */
+let PICTURE_WORDS = [];
+
 /* 內建題庫冇課題／難度欄，用題型對應返 */
 const TOPIC_DEFAULTS = {
   "There is / There are": { course: "Basic Sentences", level: 1 },
@@ -261,8 +264,10 @@ function questionTopicKey(q) {
   return topicKey(q.course, q.topic);
 }
 
-/* 題目唯一鍵：同題型＋同句子＋同答案＝同一題 */
+/* 題目唯一鍵：同題型＋同句子＋同答案＝同一題
+   圖片單字題用獨立前綴 w: 做 SRS key，唔會同句子題撞 */
 function questionKey(q) {
+  if (q && q.type === "word") return `w\u0001${String(q.word).toLowerCase()}`;
   return `${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
 }
 
@@ -301,6 +306,53 @@ async function loadSiteQuestions() {
   }
 }
 
+/* 載入圖片單字題庫（picture_words.csv）
+   欄位：Word,Level,Topic,Image,Accept,Source
+   - Word    : 正確串法（亦係語音檔名：assets/tts/w/<word>.mp3）
+   - Image   : 圖片相對路徑（例如 word_image/elephant.png）
+   - Accept  : 其他可接受串法，用 / 分隔（例如 color/colour）
+   - Source  : 圖片來源，供版權聲明列明（可留空） */
+function wordsFromCSV(text) {
+  const rows = parseCSV(text);
+  const words = [];
+  let skipped = 0;
+  rows.forEach((cols, idx) => {
+    const c = cols.map(s => s.trim());
+    if (idx === 0 && /^(word|單字|单词)$/i.test(c[0] || "")) return;   // 略過標題行
+    const [wordRaw, levelRaw, topicRaw, imageRaw, acceptRaw, sourceRaw] = c;
+    const word = String(wordRaw || "").trim();
+    if (!word || !/^[A-Za-z'\- ]+$/.test(word)) { skipped++; return; }
+    words.push({
+      type: "word",
+      id: "w" + hashString(word.toLowerCase()),
+      word,
+      course: "Picture Words",
+      topic: topicRaw || "Picture Words",
+      level: Math.min(9, Math.max(1, parseInt(levelRaw, 10) || 1)),
+      sentence: "___",                              // 令舊有解釋／Power Up 渲染器可直接重用
+      answer: word,
+      accept: String(acceptRaw || "").split(/[|/]/).map(s => s.trim()).filter(Boolean),
+      image: imageRaw || `word_image/${word.toLowerCase().replace(/\s+/g, "_")}.png`,
+      source: sourceRaw || "",
+      custom: false,
+      explain: { keyword: "", hint: "" }
+    });
+  });
+  return { words, skipped };
+}
+
+async function loadPictureWords() {
+  try {
+    const res = await fetch("picture_words.csv", { cache: "no-cache" });
+    if (!res.ok) return 0;
+    const { words } = wordsFromCSV(await res.text());
+    PICTURE_WORDS = words;
+    return words.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
 /* 全部題目＝內建題庫 + 網站題庫 + 家長匯入嘅自訂題目（自動去重） */
 function getAllQuestions() {
   const st = typeof loadState === "function" ? loadState() : { customQuestions: [] };
@@ -316,8 +368,10 @@ function getAllQuestions() {
   return out;
 }
 
-/* 用 qid 搵題目（錯題回顧 / 日曆用） */
+/* 用 qid 搵題目（錯題回顧 / Power Up Zone / 日曆用） */
 function findQuestion(qid) {
+  const w = PICTURE_WORDS.find(x => x.id === qid);
+  if (w) return w;
   return getAllQuestions().find(q => q.id === qid) || null;
 }
 
@@ -346,10 +400,20 @@ function availableQuestions(keys) {
   return pool.filter(q => srsDue(q, now));
 }
 
-/* 抽一組題目：記憶曲線 stage 越高越優先
-   （30 → 14 → 7 → 2 → 1 → 0.5 → 0），同 stage 內隨機；未夠鐘嘅題目唔會抽 */
-function drawQuestionSet(size, keys) {
-  const pool = availableQuestions(keys);
+/* 圖片單字題語音檔路徑：assets/tts/w/<word>.mp3（多字詞用 _ 連接） */
+function wordAudioURL(word) {
+  const key = String(word).toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_\-']/g, "");
+  return `assets/tts/w/${key}.mp3`;
+}
+
+/* 可作答圖片單字題（記憶曲線夠鐘） */
+function availablePictureWords(now) {
+  const t = now || Date.now();
+  return PICTURE_WORDS.filter(w => srsDue(w, t));
+}
+
+/* 按 SRS stage 由高到低排好（同 stage 內隨機洗牌） */
+function _orderedByStage(pool) {
   const byStage = new Map();
   pool.forEach(q => {
     const s = srsStage(q);
@@ -366,8 +430,34 @@ function drawQuestionSet(size, keys) {
     }
     ordered.push(...arr);
   });
+  return ordered;
+}
 
-  return ordered.slice(0, size);
+/* 抽一組句子題：記憶曲線 stage 越高越優先
+   （30 → 14 → 7 → 2 → 1 → 0.5 → 0），同 stage 內隨機；未夠鐘嘅題目唔會抽 */
+function drawQuestionSet(size, keys) {
+  return _orderedByStage(availableQuestions(keys)).slice(0, size);
+}
+
+/* 混合抽題（句子填空 + 圖片單字）：
+   每個位置先擲一次「句子 / 圖片」各 50%，再喺該類別內按 SRS stage 抽。
+   咁樣就算圖片題數量遠少過句子題，都保證每組有語音題出現。 */
+function drawMixedSet(size, keys) {
+  const sPool = _orderedByStage(availableQuestions(keys));
+  const wPool = _orderedByStage(availablePictureWords());
+  if (wPool.length === 0) return sPool.slice(0, size);
+  if (sPool.length === 0) return wPool.slice(0, size);
+
+  const out = [];
+  let si = 0, wi = 0;
+  for (let i = 0; i < size && (si < sPool.length || wi < wPool.length); i++) {
+    let useWord;
+    if (si >= sPool.length) useWord = true;
+    else if (wi >= wPool.length) useWord = false;
+    else useWord = Math.random() < 0.5;
+    out.push(useWord ? wPool[wi++] : sPool[si++]);
+  }
+  return out;
 }
 
 /* ---------- CSV 匯入 ----------
