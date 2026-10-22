@@ -8,9 +8,11 @@ const GAME_CONFIG = {
   SET_SIZE: 10,                 // 每組題數
   EXP_BASE: 12,                 // 未有拍檔時嘅基礎經驗
   RARE_PULL_COST: 3,            // 稀有抽所需鑽石
-  PERFECT_DIAMOND: 2,           // 全對鑽石
-  GOOD_DIAMOND: 1,              // 高正確率鑽石
-  GOOD_THRESHOLD: 8,            // 高正確率門檻（>=8/10）
+  PERFECT_DIAMOND: 3,           // 全對（10/10）鑽石
+  GREAT_DIAMOND: 2,             // 8–9 題對鑽石
+  GOOD_DIAMOND: 1,              // 7 題對鑽石
+  GREAT_THRESHOLD: 8,           // >=8/10
+  GOOD_THRESHOLD: 7,            // >=7/10
   /* 普通抽只會出 normal；稀有抽（鑽石）只會出 rare / epic / legend */
   PULL_ODDS: {
     normal: { normal: 1.0 },

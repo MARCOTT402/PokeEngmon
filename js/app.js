@@ -420,8 +420,9 @@ const App = {
       expGain = Math.max(10, Math.round(span * (perfect ? 0.12 : 0.09)));
     }
     const rewards = { ticket: 0, diamonds: 0, exp: expGain };
-    if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
-    else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
+    if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;                    /* 10/10 → 3 */
+    else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;  /* 8–9 → 2 */
+    else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;    /* 7 → 1 */
 
     /* Normal pull tickets no longer awarded (feature hidden) */
     st.diamonds += rewards.diamonds;
