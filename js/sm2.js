@@ -265,12 +265,23 @@ window.SM2 = (() => {
     } else {
       picked = dueCards.slice();
       const need = s - picked.length;
-      /* 先補未過期新卡，再補未過期舊卡 */
+      /* 先補未過期新卡（隨機） */
       notDueNew.sort(() => Math.random() - 0.5);
-      notDueOld.sort(() => Math.random() - 0.5);
       picked = picked.concat(notDueNew.slice(0, need));
       if (picked.length < s) {
-        picked = picked.concat(notDueOld.slice(0, s - picked.length));
+        /* 未到期舊卡只係最後手段：
+           1) 20 小時內啱啱複習過嘅卡唔抽（避免「啱做完又見到」）
+           2) 其餘按 next_review_at 升序——最快到期嘅先補
+           3) 真係乾塘先抽返最近做過嘅（同樣最快到期優先） */
+        const RECENT_MS = 20 * 60 * 60 * 1000;
+        const byDueAsc = (a, b) => a.card.next_review_at - b.card.next_review_at;
+        const isRecent = x => (now - (x.card.updated_at || 0)) < RECENT_MS;
+        const fresh = notDueOld.filter(x => !isRecent(x)).sort(byDueAsc);
+        const recent = notDueOld.filter(isRecent).sort(byDueAsc);
+        picked = picked.concat(fresh.slice(0, s - picked.length));
+        if (picked.length < s) {
+          picked = picked.concat(recent.slice(0, s - picked.length));
+        }
       }
     }
 
