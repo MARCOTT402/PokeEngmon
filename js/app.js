@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v85";
+const APP_VERSION = "v86";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -746,6 +746,7 @@ const App = {
           <div class="lh-actions">
             <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
           </div>
+          <p class="lh-note">Wrong account? Sign out, then use “Continue with Google” and pick a different account.</p>
         </div>`, false);
 
       document.getElementById("lh-signout").onclick = async () => {
@@ -1003,7 +1004,11 @@ const App = {
           try { await Sync.pull(); } catch (e) {}
         }
         this.renderHome();
-        this.toast("✅ Signed in! Your progress is cloud-synced.");
+        /* 顯示實際登入嘅 email，萬一 Google 選錯帳戶用戶可以即刻發現 */
+        const signedEmail = SupabaseAuth.currentUser()?.email;
+        this.toast(signedEmail
+          ? `✅ Signed in as ${signedEmail}`
+          : "✅ Signed in! Your progress is cloud-synced.");
       } catch (e) { console.warn("[OAuth] post-login failed:", e.message); }
     } else if (window.__oauthError) {
       /* OAuth 失敗 → 明確話俾用戶知，唔好靜靜地乜都冇發生 */

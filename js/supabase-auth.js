@@ -137,6 +137,10 @@ const SupabaseAuth = {
 
   /* ---------- Google OAuth（redirect 模式，零 popup） ---------- */
   async signInWithGoogle() {
+    /* 防禦性清除：redirect 前抹走任何舊 session，
+       避免 OAuth 失敗/取消時 restore 返上一個帳戶，顯示錯誤 email */
+    this._session = null;
+    localStorage.removeItem("pokeengmon_auth_session");
     const redirectUrl = this._cleanURL();
     const url = `${this.URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&response_type=token&scope=email+profile&prompt=select_account`;
     /* redirect 去 Supabase OAuth → 完成後 Supabase redirect 返嚟帶 hash fragment */

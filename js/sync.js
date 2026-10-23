@@ -50,7 +50,7 @@ window.Sync = (() => {
 
   function queueUpsert(card) {
     const ref = _accountRef();
-    if (!ref.isAuth) return;   /* 匿名：RLS 唔允許寫，直接唔好送（本地已保存） */
+    if (!ref.isAuth) { console.log("[Sync] queueUpsert skipped — not auth"); return; }
     _pendingCards.push({
       account_id: ref.account_id,
       card_id: card.card_id,
@@ -63,12 +63,13 @@ window.Sync = (() => {
       is_mastered: card.is_mastered,
       updated_at: card.updated_at
     });
+    console.log("[Sync] queueUpsert — card:", card.card_id, "pending:", _pendingCards.length);
     _scheduleFlush();
   }
 
   function queueHistory(rec) {
     const ref = _accountRef();
-    if (!ref.isAuth) return;   /* 匿名：同上 */
+    if (!ref.isAuth) { console.log("[Sync] queueHistory skipped — not auth"); return; }
     _pendingHistory.push({
       account_id: ref.account_id,
       card_id: rec.card_id,
@@ -78,6 +79,7 @@ window.Sync = (() => {
       levenshtein_distance: rec.levenshtein_distance,
       is_typo: rec.is_typo
     });
+    console.log("[Sync] queueHistory — card:", rec.card_id, "pending:", _pendingHistory.length);
     _scheduleFlush();
   }
 
@@ -93,15 +95,19 @@ window.Sync = (() => {
     const cards = _pendingCards.splice(0, _pendingCards.length);
     const hist  = _pendingHistory.splice(0, _pendingHistory.length);
 
+    console.log("[Sync] _flush — cards:", cards.length, "history:", hist.length);
+
     if (cards.length > 0) {
       try {
-        await _api("POST", "/user_cards", cards.map(c => ({
+        /* 用 on_conflict 做 upsert，避免重複 card 導致成批失敗 */
+        await _api("POST", "/user_cards?on_conflict=account_id,card_id", cards.map(c => ({
           ...c,
           interval_days: Number(c.interval_days),
           ease_factor: Number(c.ease_factor)
         })));
+        console.log("[Sync] ✅ flush cards ok:", cards.length);
       } catch (e) {
-        console.warn("[Sync] upsert cards failed (retry):", e.message);
+        console.warn("[Sync] ❌ flush cards failed (retry):", e.message);
         _pendingCards.unshift(...cards);
         _scheduleFlush();
       }
@@ -109,13 +115,21 @@ window.Sync = (() => {
     if (hist.length > 0) {
       try {
         await _api("POST", "/user_history", hist);
+        console.log("[Sync] ✅ flush history ok:", hist.length);
       } catch (e) {
-        console.warn("[Sync] insert history failed (retry):", e.message);
+        console.warn("[Sync] ❌ flush history failed (retry):", e.message);
         _pendingHistory.unshift(...hist);
         _scheduleFlush();
       }
     }
   }
+
+  /* 頁面卸載前 flush（避免 1 秒內轉頁遺失數據） */
+  window.addEventListener("beforeunload", () => {
+    if (_pendingCards.length > 0 || _pendingHistory.length > 0) {
+      _flush();
+    }
+  });
 
   /* ---------- Pull（App 啟動時 / 登入後）---------- */
   async function pull() {
