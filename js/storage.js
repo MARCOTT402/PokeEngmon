@@ -34,6 +34,20 @@ function loadState() {
   } catch (e) {
     _state = defaultState();
   }
+  /* Migration: 舊 entries 嘅 uid 唔係 valid UUID，要換成 UUID 先 push 到 Supabase */
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  let needSave = false;
+  if (Array.isArray(_state.entries)) {
+    _state.entries.forEach(e => {
+      if (e.uid && !uuidRe.test(e.uid)) {
+        const oldUid = e.uid;
+        e.uid = uidGen();
+        if (_state.activeUid === oldUid) _state.activeUid = e.uid;
+        needSave = true;
+      }
+    });
+  }
+  if (needSave) saveState();
   return _state;
 }
 
@@ -79,7 +93,13 @@ function dateKey(ts) {
 
 /* ---------- Pokemon 擁有記錄 ---------- */
 function uidGen() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  /* 用 crypto.randomUUID() 產生 valid UUID v4，符合 Supabase uuid column */
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  /* Fallback for old browsers */
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+  });
 }
 
 /* 新獲得 Pokemon（抽獎結果）。

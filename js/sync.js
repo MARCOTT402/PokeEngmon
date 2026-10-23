@@ -276,7 +276,7 @@ window.Sync = (() => {
           chain_key: e.chainKey,
           stage: e.stage ?? 1,
           exp: Number(e.exp ?? 0),
-          level: 1,
+          level: e.level ?? 1,
           ivs: e.ivs || {},
           evs: e.evs || {},
           ev_points: e.ev_points ?? 0,
@@ -301,18 +301,26 @@ window.Sync = (() => {
       const cards = (typeof SM2 !== "undefined" && SM2.listAll) ? SM2.listAll() : [];
       console.log("[Sync] pushing user_cards count:", cards.length);
       if (cards.length > 0) {
-        const rows = cards.map(c => ({
-          account_id: ref.account_id,
-          card_id: c.card_id,
-          card_type: c.card_type,
-          next_review_at: c.next_review_at,
-          interval_days: Number(c.interval_days),
-          ease_factor: Number(c.ease_factor),
-          repetition: c.repetition,
-          lapse_count: c.lapse_count,
-          is_mastered: c.is_mastered,
-          updated_at: c.updated_at
-        }));
+        /* Dedup by card_id（batch 入面唔可以有重複 PK） */
+        const seen = new Set();
+        const rows = cards
+          .filter(c => {
+            if (seen.has(c.card_id)) return false;
+            seen.add(c.card_id);
+            return true;
+          })
+          .map(c => ({
+            account_id: ref.account_id,
+            card_id: c.card_id,
+            card_type: c.card_type,
+            next_review_at: c.next_review_at,
+            interval_days: Number(c.interval_days),
+            ease_factor: Number(c.ease_factor),
+            repetition: c.repetition,
+            lapse_count: c.lapse_count,
+            is_mastered: c.is_mastered,
+            updated_at: c.updated_at
+          }));
         const cardsRes = await _api("POST", "/user_cards?on_conflict=account_id,card_id", rows);
         console.log("[Sync] ✅ user_cards upsert ok, rows:", cardsRes.length);
       }
