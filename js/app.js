@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v78";
+const APP_VERSION = "v79";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -665,16 +665,14 @@ const App = {
         <input id="import-file" type="file" accept=".json,application/json" hidden>
         <small class="settings-note">Backup file: pokeengmon-save-YYYY-MM-DD.json</small>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
-        <button id="btn-check-update" class="btn-big btn-secondary">🔄 Check for Updates</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
-        <small class="settings-note">App version: ${APP_VERSION}</small>
+        <small class="settings-note">App version: ${APP_VERSION} (auto-updates)</small>
       </div>`);
     const fileInput = document.getElementById("import-file");
     document.getElementById("btn-export-save").onclick = () => this.exportSave();
     document.getElementById("btn-import-save").onclick = () => fileInput.click();
     fileInput.onchange = () => this.handleImportFile(fileInput.files[0]);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
-    document.getElementById("btn-check-update").onclick = () => this.checkForUpdates();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
   },
 
@@ -1108,61 +1106,15 @@ const App = {
     if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
       const hadController = !!navigator.serviceWorker.controller;
       let reloading = false;
+      /* 新 SW 接管時自動 reload → 用戶永遠玩最新版，唔需要手動確認 */
       navigator.serviceWorker.addEventListener("controllerchange", () => {
         if (!hadController || reloading) return;
         reloading = true;
         location.reload();
       });
 
-      /* 儲存 registration 供 checkForUpdates 用 */
-      let swReg = null;
-
-      /* 顯示更新彈窗（畫面中央，用戶一睇就見到） */
-      const promptUpdate = (reg) => {
-        let modal = document.getElementById("update-modal");
-        if (!modal) {
-          modal = document.createElement("div");
-          modal.id = "update-modal";
-          modal.className = "update-modal hidden";
-          document.body.appendChild(modal);
-        }
-        if (modal.classList.contains("hidden")) {
-          modal.innerHTML = `
-            <div class="update-modal-box">
-              <div class="update-modal-icon">🔄</div>
-              <div class="update-modal-title">New version ready!</div>
-              <div class="update-modal-desc">A new update is available. Tap below to refresh and get the latest features.</div>
-              <button id="update-modal-btn">UPDATE NOW</button>
-            </div>`;
-          modal.classList.remove("hidden");
-          document.getElementById("update-modal-btn").onclick = () => {
-            if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-          };
-        }
-      };
-
-      /* 新 SW 安裝完成後會 postMessage 通知（比 updatefound 更可靠） */
-      navigator.serviceWorker.addEventListener("message", (e) => {
-        if (e.data && e.data.type === "SW_UPDATE_READY" && swReg) {
-          promptUpdate(swReg);
-        }
-      });
-
       navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
         .then(reg => {
-          swReg = reg;
-          /* 一開始已有 waiting SW（舊版冇更新到）→ 立即提示 */
-          if (reg.waiting) promptUpdate(reg);
-          /* 偵測新安裝緊嘅 SW，裝好就提示 */
-          reg.addEventListener("updatefound", () => {
-            const nw = reg.installing;
-            if (!nw) return;
-            nw.addEventListener("statechange", () => {
-              if (nw.state === "installed" && navigator.serviceWorker.controller) {
-                promptUpdate(reg);
-              }
-            });
-          });
           /* 每次載入同返回頁面都檢查更新 */
           reg.update().catch(() => {});
           document.addEventListener("visibilitychange", () => {
@@ -1172,41 +1124,6 @@ const App = {
         .catch(() => {});
     }
   },
-
-  /* 手動檢查更新：觸發 SW update，有 waiting 就顯示更新彈窗 */
-  checkForUpdates() {
-    if (!("serviceWorker" in navigator)) { this.toast("Service Worker not supported"); return; }
-    navigator.serviceWorker.getRegistration().then(reg => {
-      if (!reg) { this.toast("No service worker registered"); return; }
-      reg.update().then(() => {
-        if (reg.waiting) {
-          /* 顯示畫面中央更新彈窗 */
-          let modal = document.getElementById("update-modal");
-          if (!modal) {
-            modal = document.createElement("div");
-            modal.id = "update-modal";
-            modal.className = "update-modal hidden";
-            document.body.appendChild(modal);
-          }
-          if (modal.classList.contains("hidden")) {
-            modal.innerHTML = `
-              <div class="update-modal-box">
-                <div class="update-modal-icon">🔄</div>
-                <div class="update-modal-title">New version ready!</div>
-                <div class="update-modal-desc">A new update is available. Tap below to refresh and get the latest features.</div>
-                <button id="update-modal-btn">UPDATE NOW</button>
-              </div>`;
-            modal.classList.remove("hidden");
-            document.getElementById("update-modal-btn").onclick = () => {
-              if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-            };
-          }
-        } else {
-          this.toast("You're on the latest version!");
-        }
-      }).catch(() => this.toast("Update check failed"));
-    });
-  }
 };
 
 document.addEventListener("DOMContentLoaded", () => App.init());

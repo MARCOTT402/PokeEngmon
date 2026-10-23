@@ -1,5 +1,5 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v78";
+const CACHE_NAME = "pokeengmon-v79";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -51,8 +51,6 @@ const ASSETS = [
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(async c => {
-      /* 容錯式 pre-cache：逐個 fetch+cache.put，某個 asset 404 唔會拖累整個 install
-         （supabase-config.local.js 等 gitignore 檔案可能唔存在於伺服器） */
       await Promise.allSettled(
         ASSETS.map(u =>
           fetch(new Request(u, { cache: "reload" }))
@@ -60,22 +58,14 @@ self.addEventListener("install", (e) => {
             .catch(() => {})
         )
       );
-      /* 唔自動 skipWaiting：等用戶點 UPDATE 先接管，確保更新橫幅有機會顯示 */
+      /* 自動 skipWaiting：新 SW 即刻接管，用戶永遠玩最新版 */
+      self.skipWaiting();
     })
   );
 });
 
-/* 收到前端「立即更新」指令時，強制新 SW 接管 */
-self.addEventListener("message", (e) => {
-  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
-});
-
-/* 新安裝嘅 SW 進入 waiting 狀態時，通知所有頁面顯示更新橫幅 */
-self.addEventListener("install", () => {
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => client.postMessage({ type: "SW_UPDATE_READY" }));
-  });
-});
+/* 新安裝嘅 SW 自動 skipWaiting（見上方 install listener），
+   接管後前端 controllerchange 會自動 reload → 用戶永遠玩最新版 */
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
