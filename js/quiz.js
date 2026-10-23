@@ -89,32 +89,32 @@ const Quiz = {
     setTimeout(() => input.focus(), 300);
   },
 
-  /* 記憶光芒：SRS 複習題（stage 0.5/1/2/7/14/30 到期）先會發光
-     彩色呼吸光芒 + 拍檔小頭像 + 文字提醒；答對呢類題 EXP ×1.5 */
+  /* 記憶光芒：SM-2 卡片 rep>0 且未畢業 → 彩色光芒 + 拍檔提醒 + Bonus XP
+     同時記錄本題開始時間（供 computeQ response_ms 用）*/
   _renderMemoryLight(q) {
-    const rec = srsRecord(q);
-    this._curMemory = rec && rec.stage > 0 ? rec.stage : 0;
+    const card = SM2.getOrCreateCard(q);
+    this._curCard = card;
+    this._curQuestionStart = Date.now();
     const memEl = document.getElementById("quiz-memory");
-    const card = document.getElementById("quiz-card");
-    if (this._curMemory > 0) {
-      const labels = { 0.5: "20 minutes", 1: "1 day", 2: "2 days", 7: "7 days", 14: "14 days", 30: "30 days" };
+    const cardEl = document.getElementById("quiz-card");
+    if (card.repetition > 0 && !card.is_mastered) {
       const entry = getActiveEntry();
       let spriteHTML = "";
       let textHTML;
       if (entry) {
         const dexId = entryCurrentSpecies(entry)[0];
         spriteHTML = `<img class="quiz-memory-sprite" src="${animatedURL(dexId)}" alt="partner" onerror="this.onerror=null;this.src='${artworkURL(dexId)}'">`;
-        textHTML = `<b>${escapeHTML(entryCurrentSpecies(entry)[1])}</b> remembers this ${labels[this._curMemory] || "some time"} ago!<br><small>Time to refresh your brain! (Bonus XP ×1.5)</small>`;
+        textHTML = `<b>${escapeHTML(entryCurrentSpecies(entry)[1])}</b> remembers this ${card.interval_days} day${card.interval_days !== 1 ? "s" : ""} ago!<br><small>Bonus XP ×1.5 · Keep it strong!</small>`;
       } else {
         textHTML = `✨ Time to refresh your brain!<br><small>Bonus XP ×1.5 for this one!</small>`;
       }
       memEl.innerHTML = spriteHTML + `<div class="quiz-memory-text">${textHTML}</div>`;
       memEl.classList.add("show");
-      card.classList.add("memory-glow");
+      cardEl.classList.add("memory-glow");
       document.getElementById("quiz-word-card").classList.add("memory-glow");
     } else {
       memEl.classList.remove("show");
-      card.classList.remove("memory-glow");
+      cardEl.classList.remove("memory-glow");
       document.getElementById("quiz-word-card").classList.remove("memory-glow");
     }
   },
@@ -168,11 +168,43 @@ const Quiz = {
     const text = input.value;
     this.locked = true;
     const q = this.set[this.idx];
-    const correct = this._isCorrect(q, text);
-    this.results.push({ qid: q.id, chosen: text.trim(), correct, topic: q.topic, memory: this._curMemory > 0 });
-    /* 記憶曲線（隱藏）：答對即時升級；答錯唔即刻清零 —
-       延後到回合尾 Power Up Zone 全部改錯完成後先統一重置 stage_0 */
-    if (correct) updateSrs(q, true);
+    const target = q.type === "word" ? q.word : q.answer;
+    const response_ms = Date.now() - (this._curQuestionStart || Date.now());
+
+    /* SM-2 完整評分（Levenshtein + 過早提交保護 + 動態時間期望 + Q 值）*/
+    const judge = SM2.computeQ(text || "", target || "", response_ms);
+    /* 答對：q >= 3（q=3 答得慢但仍算答對；SM-2 原版設計）*/
+    const correct = judge.q >= 3;
+
+    /* 更新 SM-2 卡片 + 寫 history */
+    const card = SM2.getOrCreateCard(q);
+    const judgeForCard = { ...judge };
+    judgeForCard.reason = judge.reason;   /* 保留供 computeEF 用 */
+    const updatedCard = SM2.updateCard(card, judge.q, response_ms);
+    /* 用 judge.reason 更新 EF（computeEF 根據 reason 決定保護）*/
+    updatedCard.ease_factor = SM2.computeEF(card.ease_factor, judge.reason);
+    SM2.upsertCard(updatedCard);
+
+    SM2.appendHistory({
+      device_id: (loadState && loadState().device_id) || "unknown",
+      card_id: card.card_id,
+      ts: Date.now(),
+      q_score: judge.q,
+      response_ms,
+      levenshtein_distance: judge.dist,
+      is_typo: judge.reason === "soft_fail_typo"
+    });
+
+    /* 保留舊 results 結構（供 PowerUpZone + settlement 用），加 SM-2 資料 */
+    this.results.push({
+      qid: q.id,
+      chosen: text.trim(),
+      correct,
+      topic: q.topic,
+      memory: card.repetition > 0 && !card.is_mastered,
+      /* 額外資料 */
+      _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target }
+    });
 
     input.disabled = true;
     document.getElementById("btn-quiz-submit").disabled = true;
@@ -188,9 +220,14 @@ const Quiz = {
     if (correct) {
       fb.textContent = ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)];
       fb.className = "quiz-feedback good";
+    } else if (judge.reason === "premature_submit") {
+      fb.textContent = "You stopped halfway — go back and finish the whole word.";
+      fb.className = "quiz-feedback bad";
+    } else if (judge.reason === "soft_fail_typo") {
+      fb.textContent = `Almost! One tiny typo — fix it in the Power Up Zone.`;
+      fb.className = "quiz-feedback warn";
     } else {
-      const right = q.type === "word" ? q.word : q.answer;
-      fb.textContent = right ? `The answer is "${right}"` : `The answer is "(blank)"`;
+      fb.textContent = target ? `The answer is "${target}"` : `The answer is "(blank)"`;
       fb.className = "quiz-feedback bad";
     }
 
@@ -198,7 +235,7 @@ const Quiz = {
       this.idx++;
       if (this.idx < this.set.length) this._renderQuestion();
       else this.finish();
-    }, correct ? 900 : 2000);   // 答錯停耐少少，等佢睇清楚答案
+    }, correct ? 900 : 2200);
   },
 
   finish() {

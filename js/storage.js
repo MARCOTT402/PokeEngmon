@@ -7,6 +7,7 @@ const STORAGE_KEY = "pokeengmon_state_v1";
 /* 預設狀態 */
 function defaultState() {
   return {
+    device_id: "",           // 匿名裝置 ID（首次啟動生成 UUID，供 Supabase 同步用）
     playerName: "The PokéEngmon Trainer",
     nameCustomized: false,   // 用戶自己改過名就唔會被預設名覆蓋
     diamonds: 0,
@@ -18,8 +19,8 @@ function defaultState() {
     entries: [],             // 擁有嘅 Pokemon { uid, chainKey, stage, exp, branch?, ownedSpecies:[dexId], obtainedAt }
     activeUid: null,         // 目前拍檔（練經驗目標）
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
-    customQuestions: [],      // 家長用 CSV 匯入嘅自訂題目
-    srs: {}                   // 記憶曲線（隱藏）：題目 key → { stage, lastAt, dueAt }
+    customQuestions: []      // 家長用 CSV 匯入嘅自訂題目
+    /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
 }
 
@@ -222,45 +223,27 @@ function collectedCount() {
   return set.size;
 }
 
-/* ---------- 記憶曲線（間隔重複，隱藏功能） ----------
-   stage 0 → 0.5 → 1 → 2 → 7 → 14 → 30
-   答對升一級，答錯一律返 stage 0；stage 30 答對維持 30
-   各階段最少要相隔指定分鐘先可以再答 */
-const SRS_STAGES = [0, 0.5, 1, 2, 7, 14, 30];
-const SRS_INTERVAL_MIN = { 0: 0, 0.5: 20, 1: 1440, 2: 2880, 7: 10080, 14: 20160, 30: 43200 };
+/* ---------- 舊 SRS（已遷移至 js/sm2.js）----------
+   舊 stage-ladder 邏輯（SRS_STAGES / SRS_INTERVAL_MIN / srsRecord / srsStage /
+   srsDue / updateSrs / questionKey）已完全被 SM-2 取代。
+   呼叫方請改用 SM2.computeQ / SM2.upsertCard / SM2.buildSession。
+*/
 
-function srsRecord(q) {
-  return loadState().srs[questionKey(q)] || null;
-}
-
-function srsStage(q) {
-  const r = srsRecord(q);
-  return r && typeof r.stage === "number" ? r.stage : 0;
-}
-
-/* 夠鐘未？未做過 = 即時可以答 */
-function srsDue(q, now) {
-  const r = srsRecord(q);
-  return !r || r.dueAt <= (now || Date.now());
-}
-
-/* 答題後更新階段 */
-function updateSrs(q, correct, now) {
+/* ---------- device_id 生成（首次啟動）---------- */
+function ensureDeviceId() {
   const st = loadState();
-  const key = questionKey(q);
-  const rec = st.srs[key] || { stage: 0 };
-  const t = now || Date.now();
-  let next = 0;
-  if (correct) {
-    const i = SRS_STAGES.indexOf(rec.stage);
-    next = SRS_STAGES[Math.min(i + 1, SRS_STAGES.length - 1)];
+  if (!st.device_id) {
+    st.device_id = (
+      (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+            const r = (Math.random() * 16) | 0;
+            return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+          })
+    );
+    saveState();
   }
-  st.srs[key] = {
-    stage: next,
-    lastAt: t,
-    dueAt: t + (SRS_INTERVAL_MIN[next] || 0) * 60000
-  };
-  saveState();
+  return st.device_id;
 }
 
 /* ---------- 練習記錄 ---------- */

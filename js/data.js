@@ -357,12 +357,12 @@ async function loadPictureWords() {
   }
 }
 
-/* 全部題目＝內建題庫 + 網站題庫 + 家長匯入嘅自訂題目（自動去重） */
+/* 全部題目＝內建題庫 + 網站題庫 + 家長匯入嘅自訂題目 + 圖片單字題（自動去重） */
 function getAllQuestions() {
   const st = typeof loadState === "function" ? loadState() : { customQuestions: [] };
   const seen = new Set();
   const out = [];
-  [QUESTION_BANK, SITE_QUESTIONS, st.customQuestions || []].forEach(list => {
+  [QUESTION_BANK, SITE_QUESTIONS, st.customQuestions || [], PICTURE_WORDS].forEach(list => {
     list.forEach(q => {
       q = normalizeQuestion(q);
       const k = questionKey(q);
@@ -393,75 +393,14 @@ function getCourses() {
   });
 }
 
-/* 可作答題目：已揀題型，而且記憶曲線夠鐘（未做過＝即時可答） */
-function availableQuestions(keys) {
-  let pool = getAllQuestions();
-  if (keys && keys.length > 0) {
-    const allow = new Set(keys);
-    pool = pool.filter(q => allow.has(questionTopicKey(q)));
-  }
-  const now = Date.now();
-  return pool.filter(q => srsDue(q, now));
-}
+/* （舊 stage-ladder SRS 函數已移除：availableQuestions / availablePictureWords /
+   _orderedByStage / drawQuestionSet / drawMixedSet。
+   Session pool 組裝改由 SM2.buildSession 執行，見 js/sm2.js。）*/
 
-/* 圖片單字題語音檔路徑：assets/tts/w/<word>.mp3（多字詞用 _ 連接） */
-function wordAudioURL(word) {
-  const key = String(word).toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_\-']/g, "");
-  return `assets/tts/w/${key}.mp3`;
-}
-
-/* 可作答圖片單字題（記憶曲線夠鐘） */
-function availablePictureWords(now) {
-  const t = now || Date.now();
-  return PICTURE_WORDS.filter(w => srsDue(w, t));
-}
-
-/* 按 SRS stage 由高到低排好（同 stage 內隨機洗牌） */
-function _orderedByStage(pool) {
-  const byStage = new Map();
-  pool.forEach(q => {
-    const s = srsStage(q);
-    if (!byStage.has(s)) byStage.set(s, []);
-    byStage.get(s).push(q);
-  });
-
-  const ordered = [];
-  [...byStage.keys()].sort((a, b) => b - a).forEach(s => {
-    const arr = byStage.get(s);
-    for (let i = arr.length - 1; i > 0; i--) {   // Fisher-Yates 洗牌
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    ordered.push(...arr);
-  });
-  return ordered;
-}
-
-/* 抽一組句子題：記憶曲線 stage 越高越優先
-   （30 → 14 → 7 → 2 → 1 → 0.5 → 0），同 stage 內隨機；未夠鐘嘅題目唔會抽 */
-function drawQuestionSet(size, keys) {
-  return _orderedByStage(availableQuestions(keys)).slice(0, size);
-}
-
-/* 混合抽題（句子填空 + 圖片單字）：
-   每個位置先擲一次「句子 / 圖片」各 50%，再喺該類別內按 SRS stage 抽。
-   咁樣就算圖片題數量遠少過句子題，都保證每組有語音題出現。 */
+/* 抽 10 題 Session — 薄 wrapper，內部由 SM2.buildSession 做完整 Due 優先 + Fisher-Yates 隨機 */
 function drawMixedSet(size, keys) {
-  const sPool = _orderedByStage(availableQuestions(keys));
-  const wPool = _orderedByStage(availablePictureWords());
-  if (wPool.length === 0) return sPool.slice(0, size);
-  if (sPool.length === 0) return wPool.slice(0, size);
-
-  const out = [];
-  let si = 0, wi = 0;
-  for (let i = 0; i < size && (si < sPool.length || wi < wPool.length); i++) {
-    let useWord;
-    if (si >= sPool.length) useWord = true;
-    else if (wi >= wPool.length) useWord = false;
-    else useWord = Math.random() < 0.5;
-    out.push(useWord ? wPool[wi++] : sPool[si++]);
-  }
-  return out;
+  const topicSet = keys && keys.length > 0 ? new Set(keys) : null;
+  return SM2.buildSession(getAllQuestions(), topicSet, size);
 }
 
 /* ---------- CSV 匯入 ----------

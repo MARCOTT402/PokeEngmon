@@ -1,11 +1,12 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v61";
+const CACHE_NAME = "pokeengmon-v62";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
   "./index.html",
   "./questions.csv",
   "./picture_words.csv",
+  "./js/sm2.js",
   "./data/pokemon-151.json",
   "./data/moves.json",
   "./css/style.css",
