@@ -36,7 +36,7 @@ body {
 .btn-big {
   width: 100%; min-height: 60px; border: none; border-radius: var(--radius);
   font-size: 1.2rem; font-weight: 700; cursor: pointer; color: var(--ink);
-  box-shadow: var(--shadow); transition: transform .12s ease, filter .12s ease;
+  box-shadow: var(--shadow); transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1), filter .12s ease;
   font-family: inherit;
 }
 .btn-big:active { transform: scale(.97); }
@@ -48,7 +48,7 @@ body {
 .btn-nav {
   width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--blue);
   background: #fff; color: var(--blue); font-size: 1.4rem; font-weight: 700; cursor: pointer;
-  transition: transform .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .chip {
@@ -58,7 +58,7 @@ body {
 }
 .chip-diamond { border-color: #7ec8ff; background: #eaf6ff; }
 .chip-ticket { border-color: #ffd54f; background: #fff8e1; }
-.chip-btn { font-family: inherit; cursor: pointer; transition: transform .12s ease; }
+.chip-btn { font-family: inherit; cursor: pointer; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1); }
 .chip-btn:active { transform: scale(.94); }
 
 .rarity-chip {
@@ -85,7 +85,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   background: #fff; border: 2px solid #e2e7ef; border-radius: 50%;
   font-size: 1.05rem; cursor: pointer; padding: 0; font-family: inherit;
-  transition: transform .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .icon-btn:active { transform: scale(.92); }
 
@@ -156,7 +156,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   padding: 0 12px; border-radius: 9px; border: 2px solid #9fbf8a;
   background: linear-gradient(180deg, #f7fbf2, #eef6e6); color: #2f4a1f;
   font-family: inherit; font-size: .98rem; font-weight: 800; text-align: left;
-  cursor: pointer; box-shadow: 0 2px 0 #cfdcc2; transition: transform .12s ease;
+  cursor: pointer; box-shadow: 0 2px 0 #cfdcc2; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .pd-menu-btn:active { transform: scale(.97); }
 .pd-menu-start {
@@ -210,7 +210,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .hero-exp-text { font-size: .85rem; color: #7a8299; }
 
 /* 換拍檔 */
-.hero-sprite.clickable { cursor: pointer; transition: transform .2s ease; }
+.hero-sprite.clickable { cursor: pointer; transition: transform .2s cubic-bezier(0.25, 1, 0.5, 1); }
 .hero-sprite.clickable:active { transform: scale(1.12) rotate(-4deg); }
 .partner-title { text-align: center; font-size: 1.2rem; }
 .partner-sub { text-align: center; color: #7a8299; font-size: .9rem; margin-top: 4px; }
@@ -260,7 +260,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .btn-mini {
   border: 2px solid var(--blue); background: #fff; color: var(--blue);
   border-radius: 999px; padding: 6px 16px; font-weight: 800; font-size: .85rem;
-  cursor: pointer; font-family: inherit; transition: transform .12s ease;
+  cursor: pointer; font-family: inherit; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .topic-list { display: flex; flex-direction: column; gap: 10px; }
 .topic-chip {
@@ -268,7 +268,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   background: #fff; border: 3px solid #dbe2ee; border-radius: 14px;
   padding: 14px 16px; cursor: pointer; font-family: inherit;
   font-size: 1.05rem; font-weight: 800; color: var(--ink);
-  transition: border-color .15s, background .15s, transform .12s ease;
+  transition: border-color .15s, background .15s, transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .topic-chip.on { border-color: var(--blue); background: #eef3ff; }
 .topic-chip.on .topic-name::before { content: "☑ "; color: var(--blue); }
@@ -333,7 +333,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   border: 2.5px solid #d5dae3; background: #fff; color: #5b6478;
   font-size: 1.2rem; font-weight: 800; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: transform .12s ease, border-color .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1), border-color .12s ease;
 }
 .quiz-exit-btn:active { transform: scale(.9); border-color: #b6bdd0; }
 .quiz-exit-spacer { width: 44px; flex: none; }
@@ -379,7 +379,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   position: relative; width: 100%; max-width: 420px; padding: 0;
   border: 3px solid var(--blue); border-radius: 18px; background: #fff;
   overflow: hidden; cursor: pointer; box-shadow: var(--shadow);
-  transition: transform .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .word-image-btn:active { transform: scale(.97); }
 .word-image {
@@ -733,10 +733,10 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   background: var(--card); border: 2px solid #e2e7ef; border-radius: 14px;
   padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
   cursor: pointer; box-shadow: 0 2px 6px rgba(35,60,120,.08); font-family: inherit;
-  transition: transform .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .dex-cell.owned { border-color: #ffd54f; }
-.dex-cell img { width: 68px; height: 68px; object-fit: contain; transition: transform .12s ease; }
+.dex-cell img { width: 68px; height: 68px; object-fit: contain; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1); }
 .dex-cell.owned img { cursor: pointer; }
 .dex-cell.owned img:active { transform: scale(.88); }
 .dex-cell:not(.owned) img { filter: brightness(0); opacity: .28; }
@@ -746,7 +746,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-rarity { font-size: .68rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
 
 .dex-detail { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.dex-art { width: 190px; height: 190px; object-fit: contain; cursor: pointer; transition: transform .12s ease; }
+.dex-art { width: 190px; height: 190px; object-fit: contain; cursor: pointer; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1); }
 .dex-art:active { transform: scale(.94); }
 .dex-art.pixel { width: 132px; height: 132px; image-rendering: pixelated; }
 .dex-detail-name { font-size: 1.5rem; font-weight: 900; }
@@ -793,7 +793,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-candy button {
   margin-top: 6px; border: 0; border-radius: 999px; padding: 6px 14px;
   background: #ffb300; color: #fff; font-weight: 900; font-family: inherit; cursor: pointer;
-  transition: transform .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .dex-candy button:disabled { background: #ddd; color: #999; cursor: default; }
 .dex-candy-tip { font-size: .72rem; font-weight: 700; color: #9a7b1f; margin-top: 4px; }
@@ -863,7 +863,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background: #eef0f5;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; cursor: default; font-family: inherit; color: var(--ink);
-  transition: transform .12s ease;
+  transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .cal-cell.today { border-color: var(--red); }
 .cal-cell .cal-day { font-weight: 800; font-size: .95rem; }
@@ -1305,7 +1305,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   color: #1a1206; background: linear-gradient(180deg, #ffe27a, #f5b81d);
   border: none; border-radius: 999px; padding: 14px 56px;
   cursor: pointer; box-shadow: 0 5px 0 #b8860b, 0 8px 18px rgba(0,0,0,0.4);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.08s ease;
 }
 .entry-gate-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #b8860b, 0 3px 8px rgba(0,0,0,0.4); }
 
@@ -1520,5 +1520,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 尊重系統減少動態設定 */
 @media (prefers-reduced-motion: reduce) {
-  * { transition-duration: .01ms !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
