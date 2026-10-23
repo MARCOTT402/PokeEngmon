@@ -138,7 +138,7 @@ const SupabaseAuth = {
   /* ---------- Google OAuth（redirect 模式，零 popup） ---------- */
   async signInWithGoogle() {
     const redirectUrl = this._cleanURL();
-    const url = `${this.URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&response_type=token&scope=email+profile`;
+    const url = `${this.URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&response_type=token&scope=email+profile&prompt=select_account`;
     /* redirect 去 Supabase OAuth → 完成後 Supabase redirect 返嚟帶 hash fragment */
     window.location.href = url;
     /* 下面嘅代碼永遠唔會執行（redirect 會中斷），但留住俾 await 語義 */
