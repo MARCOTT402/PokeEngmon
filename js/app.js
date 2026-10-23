@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v80";
+const APP_VERSION = "v81";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -731,6 +731,7 @@ const App = {
   },
 
   openLoginHub() {
+    const st = loadState();
     const user = window.SupabaseAuth ? SupabaseAuth.currentUser() : null;
     const deviceId = ensureDeviceId();
 
