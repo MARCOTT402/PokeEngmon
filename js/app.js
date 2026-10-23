@@ -3,6 +3,8 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
+const APP_VERSION = "v75";
+
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
   pendingEvolve: null,
@@ -81,6 +83,8 @@ const App = {
       <span>Sets done <b>${st.totalSets}</b></span>
       <span>Accuracy <b>${acc}%</b></span>
       <span>Day streak <b>${calcStreak()}</b></span>`;
+    const verEl = document.getElementById("app-version");
+    if (verEl) verEl.textContent = APP_VERSION;
   },
 
   /* ---------- 重設進度（Settings 內，要輸入訓練員名先撳得） ---------- */
@@ -661,13 +665,16 @@ const App = {
         <input id="import-file" type="file" accept=".json,application/json" hidden>
         <small class="settings-note">Backup file: pokeengmon-save-YYYY-MM-DD.json</small>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
+        <button id="btn-check-update" class="btn-big btn-secondary">🔄 Check for Updates</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
+        <small class="settings-note">App version: ${APP_VERSION}</small>
       </div>`);
     const fileInput = document.getElementById("import-file");
     document.getElementById("btn-export-save").onclick = () => this.exportSave();
     document.getElementById("btn-import-save").onclick = () => fileInput.click();
     fileInput.onchange = () => this.handleImportFile(fileInput.files[0]);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
+    document.getElementById("btn-check-update").onclick = () => this.checkForUpdates();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
   },
 
@@ -1037,6 +1044,9 @@ const App = {
         location.reload();
       });
 
+      /* 儲存 registration 供 checkForUpdates 用 */
+      let swReg = null;
+
       const promptUpdate = (reg) => {
         const el = document.getElementById("sync-banner");
         if (!el) return;
@@ -1047,8 +1057,16 @@ const App = {
         };
       };
 
+      /* 新 SW 安裝完成後會 postMessage 通知（比 updatefound 更可靠） */
+      navigator.serviceWorker.addEventListener("message", (e) => {
+        if (e.data && e.data.type === "SW_UPDATE_READY" && swReg) {
+          promptUpdate(swReg);
+        }
+      });
+
       navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
         .then(reg => {
+          swReg = reg;
           /* 一開始已有 waiting SW（舊版冇更新到）→ 立即提示 */
           if (reg.waiting) promptUpdate(reg);
           /* 偵測新安裝緊嘅 SW，裝好就提示 */
@@ -1069,6 +1087,30 @@ const App = {
         })
         .catch(() => {});
     }
+  },
+
+  /* 手動檢查更新：觸發 SW update，有 waiting 就顯示 UPDATE 橫幅 */
+  checkForUpdates() {
+    if (!("serviceWorker" in navigator)) { this.toast("Service Worker not supported"); return; }
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) { this.toast("No service worker registered"); return; }
+      reg.update().then(() => {
+        if (reg.waiting) {
+          this.toast("New version found — close this banner and tap UPDATE");
+          /* 直接顯示更新橫幅 */
+          const el = document.getElementById("sync-banner");
+          if (el) {
+            el.className = "sync-banner";
+            el.innerHTML = `<span>🔄 New version ready!</span><button id="sync-banner-x">UPDATE</button>`;
+            document.getElementById("sync-banner-x").onclick = () => {
+              if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+            };
+          }
+        } else {
+          this.toast("You're on the latest version!");
+        }
+      }).catch(() => this.toast("Update check failed"));
+    });
   }
 };
 

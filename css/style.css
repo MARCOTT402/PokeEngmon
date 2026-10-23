@@ -241,6 +241,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   text-decoration: underline; cursor: pointer; font-family: inherit; padding: 4px 6px;
 }
 .footer-note { margin: 2px 0 0; color: #7a8299; font-size: .68rem; line-height: 1.35; }
+.footer-version { margin: 2px 0 0; color: #9aa5b1; font-size: .68rem; font-weight: 800; letter-spacing: .05em; }
 
 .disclaimer-box { color: #4a5164; font-size: .9rem; line-height: 1.55; }
 .disclaimer-box h3 { margin: 0 0 10px; font-size: 1.2rem; color: var(--ink); }

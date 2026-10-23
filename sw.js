@@ -1,5 +1,5 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v73";
+const CACHE_NAME = "pokeengmon-v75";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -60,7 +60,7 @@ self.addEventListener("install", (e) => {
             .catch(() => {})
         )
       );
-      self.skipWaiting();
+      /* 唔自動 skipWaiting：等用戶點 UPDATE 先接管，確保更新橫幅有機會顯示 */
     })
   );
 });
@@ -68,6 +68,13 @@ self.addEventListener("install", (e) => {
 /* 收到前端「立即更新」指令時，強制新 SW 接管 */
 self.addEventListener("message", (e) => {
   if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+/* 新安裝嘅 SW 進入 waiting 狀態時，通知所有頁面顯示更新橫幅 */
+self.addEventListener("install", () => {
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => client.postMessage({ type: "SW_UPDATE_READY" }));
+  });
 });
 
 self.addEventListener("activate", (e) => {
