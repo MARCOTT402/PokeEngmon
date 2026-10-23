@@ -166,20 +166,29 @@ window.Sync = (() => {
       /* ---- 2. 還原 entries：寶可夢 ---- */
       if (Array.isArray(entries)) {
         const st = loadState();
-        st.entries = entries.map(e => ({
-          uid: e.id,
-          chainKey: e.chain_key,
-          stage: e.stage ?? 1,
-          exp: Number(e.exp ?? 0),
-          ownedSpecies: Array.isArray(e.owned_species) ? e.owned_species.map(Number) : [],
-          obtainedAt: e.obtained_at,
-          ivs: e.ivs || {},
-          evs: e.evs || {},
-          ev_points: e.ev_points ?? 0,
-          candies: e.candies ?? 0,
-          dupes: e.dupes ?? 0,
-          stars: e.stars ?? 1
-        }));
+        st.entries = entries.map(e => {
+          /* settle_capture RPC 會用 'dex_<id>' 做 chain_key，要轉返正確 chain key */
+          let chainKey = e.chain_key;
+          if (chainKey && chainKey.startsWith("dex_")) {
+            const dexId = parseInt(chainKey.slice(4), 10);
+            const sp = SPECIES[dexId];
+            if (sp) chainKey = sp.chainKey;
+          }
+          return {
+            uid: e.id,
+            chainKey: chainKey,
+            stage: e.stage ?? 1,
+            exp: Number(e.exp ?? 0),
+            ownedSpecies: Array.isArray(e.owned_species) ? e.owned_species.map(Number) : [],
+            obtainedAt: e.obtained_at,
+            ivs: e.ivs || {},
+            evs: e.evs || {},
+            ev_points: e.ev_points ?? 0,
+            candies: e.candies ?? 0,
+            dupes: e.dupes ?? 0,
+            stars: e.stars ?? 1
+          };
+        });
         /* activeUid：邊個 entry.active = true */
         const activeEntry = entries.find(e => e.active === true);
         st.activeUid = activeEntry ? activeEntry.id : (st.entries.length > 0 ? st.entries[0].uid : null);
