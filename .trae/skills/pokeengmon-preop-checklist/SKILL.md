@@ -77,3 +77,7 @@ After finishing ANY change in this repo:
 Note: this shell is Windows PowerShell 5 — `&&` is NOT supported. Chain commands with `;` instead.
 
 If the user reports "the site still shows the old version", check `git status`/`git log` first — most likely the change was never pushed.
+
+## Rule 7 — SM-2 sessions only pull DUE cards
+
+`buildSession` in `js/sm2.js` must only pick cards with `next_review_at <= now` (overdue first, brand-new cards fill the tail randomly). NEVER pad a set with not-yet-due cards — if a topic runs dry, the set is short and the user is told to pick other courses. Do not reintroduce any backfill of not-due cards (v94's 20-hour cooldown approach was superseded by v95's due-only rule).
