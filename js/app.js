@@ -422,7 +422,7 @@ const App = {
   },
 
   /* ---------- 完成一組 → 結算 ---------- */
-  onSetComplete(data) {
+  async onSetComplete(data) {
     const st = loadState();
 
     /* 獎勵計算：經驗值按 PokéAPI 該等級所需經驗比例發放 */
@@ -442,11 +442,19 @@ const App = {
       ? Math.round((expGain / data.total) * 0.5 * memoryCorrect)
       : 0;
     const rewards = { ticket: 0, diamonds: 0, exp: expGain + memoryBonus, memoryBonus };
-    if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;                    /* 10/10 → 3 */
-    else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;  /* 8–9 → 2 */
-    else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;    /* 7 → 1 */
+    /* Diamonds：防金手指走 RPC（登入時由 server 計算），未登入保留本地計算 */
+    let serverBonus = null;
+    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+      serverBonus = await SupabaseAuth.awardRoundDiamonds(data.score, data.total);
+    }
+    if (serverBonus !== null && serverBonus !== undefined) {
+      rewards.diamonds = serverBonus;
+    } else {
+      if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
+      else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;
+      else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
+    }
 
-    /* Normal pull tickets no longer awarded (feature hidden) */
     st.diamonds += rewards.diamonds;
     addPracticeRecord(data);
     this.lastRecord = data;
