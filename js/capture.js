@@ -229,6 +229,28 @@ class CaptureAudio {
     this._noiseHit({ freq: 700, q: 0.7, gain: 0.12, dur: 0.14, type: "lowpass" });
   }
 
+  /* 蛋縫漏光嘅張力低鳴 — 每搖一下頻率升高，愈嚟愈逼近爆點 */
+  leakHum(i) {
+    this.ensure();
+    if (!this.ctx) return;
+    const base = 110 + i * 40;
+    this._tone(base, { type: "sine", dur: 0.5, gain: 0.12, slideTo: 220 + i * 60 });
+    this._tone(base * 2, { type: "sine", dur: 0.4, gain: 0.06, at: 0.03, slideTo: (220 + i * 60) * 2 });
+    this._noiseHit({ freq: 900 + i * 400, q: 2, gain: 0.06, dur: 0.15, type: "bandpass" });
+  }
+
+  /* 確定演出升級嘅上升 chime — 金/彩虹爆點專用 */
+  upgradeSting(step) {
+    this.ensure();
+    if (!this.ctx) return;
+    const base = 880 + step * 220;
+    this._tone(base, { type: "triangle", dur: 0.14, gain: 0.12 });
+    this._tone(base * 1.5, { type: "triangle", dur: 0.14, gain: 0.11, at: 0.06 });
+    this._tone(base * 2, { type: "triangle", dur: 0.22, gain: 0.12, at: 0.12 });
+    this._tone(base * 2.5, { type: "sine", dur: 0.3, gain: 0.07, at: 0.15 });
+    this._noiseHit({ freq: 7200, q: 3, gain: 0.08, dur: 0.06, type: "highpass" });
+  }
+
   charge() {
     this.ensure();
     if (!this.ctx) return;

@@ -53,6 +53,9 @@ const Gacha = {
     const coin = document.getElementById("gacha-coin");
     if (coin) coin.remove();
     document.getElementById("view-gacha").classList.remove("playing");
+    const dim = document.getElementById("gacha-dim");
+    if (dim) dim.classList.remove("on");
+    this._setEyes(null);
     this._prompt("");
     this._showTaps(false);
     this.phase = "idle";
@@ -120,51 +123,104 @@ const Gacha = {
     return (window.CaptureScene && CaptureScene.audio) ? CaptureScene.audio : null;
   },
 
-  /* ---------- 抽獎主流程 ---------- */
-  async pull() {
+  /* P&D 暗転 overlay（lazy 建立，鋪滿成個 gacha view） */
+  _ensureDim() {
+    let dim = document.getElementById("gacha-dim");
+    if (!dim) {
+      dim = document.createElement("div");
+      dim.className = "gacha-dim";
+      dim.id = "gacha-dim";
+      document.getElementById("view-gacha").appendChild(dim);
+    }
+    return dim;
+  },
+
+  /* 機械快龍眼睛發光預告（跟住波球漏光色走） */
+  _setEyes(cls) {
+    document.querySelectorAll("#gacha-machine .dm-eye").forEach(e => {
+      e.classList.remove("leak-blue", "leak-gold", "leak-rainbow");
+      if (cls) e.classList.add(cls);
+    });
+  },
+
+  /* ---------- 抽獎主流程 ----------
+     v100：RPC 延遲解耦 —— 點掣即刻開入幣動畫，server 抽獎背景進行，
+     到波球跌出前先用 _resolveResult() 攞結果（hold 狀態頂住網絡延遲） */
+  pull() {
     if (this.busy || !this._canPull()) return;
     this.busy = true;
     Pokedex.unlockAudio();   // 喺用戶點擊時解鎖音效（手機自動播放限制）
     const audio = this._audio();
     if (audio) audio.ensure();
-    const st = loadState();
+
+    this._serverResult = null;
+    this._resultReady = false;
+    this._rarity = null;
+    this._chainKey = null;
 
     /* v99：登入時走 server 權威抽獎 —— gacha_pull RPC 原子扣鑽 +
        server 自己 roll rarity/chain + 拎寵，防止 client 改機率/必中神獸。
-       失敗或未登入 → 本地 path 照舊（下次 pull 會以 server 數據還原）。 */
-    this._serverResult = null;
+       失敗或未登入 → _resolveResult() 用本地 path 頂上。 */
     const authed = window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser();
-    if (authed) {
-      const r = await SupabaseAuth.gachaPull(st.pendingExp || 0);
-      if (r && r.entry) {
-        this._serverResult = r;
-        st.diamonds = r.balance;          // server 權威餘額（已扣 3 鑽）
-        saveState();
-        this._rarity = r.rarity;
-        this._chainKey = r.entry.chain_key;
-      }
-    }
-    if (!this._serverResult) {
-      st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
-      saveState();
-      this._rarity = this.rollRarity(this.mode);
-      this._chainKey = this.pickChain(this._rarity);
-    }
-
-    /* 新 Pokemon：喺動畫期間預先載入叫聲，開球時即刻叫 */
-    const preview = EVOLUTION_CHAINS.find(c => c.key === this._chainKey);
-    const isNewPull = this._serverResult
-      ? !this._serverResult.is_dupe
-      : !st.entries.some(e => e.chainKey === this._chainKey);
-    if (preview && isNewPull) {
-      Pokedex.prepareCry(preview.stages[0][0]);
-    }
+    const st = loadState();
+    this._rpcPromise = authed
+      ? SupabaseAuth.gachaPull(st.pendingExp || 0).catch(() => null)
+      : null;
 
     this._resetStage();
     this._refreshControls();
     document.getElementById("btn-do-pull").disabled = true;
 
     this._startCoinPhase();
+  },
+
+  /* 本地 fallback 抽獎（離線 / RPC 失敗 / 未登入） */
+  _applyLocalRoll() {
+    const st = loadState();
+    st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
+    saveState();
+    this._rarity = this.rollRarity(this.mode);
+    this._chainKey = this.pickChain(this._rarity);
+  },
+
+  /* 波球跌出前攞結果：server 未覆就入 hold 狀態（prompt "…"）等佢 */
+  async _resolveResult() {
+    const fid = this._flowId;
+    if (this._resultReady) return true;
+
+    let r = null;
+    if (this._rpcPromise) {
+      let settled = false;
+      this._rpcPromise.then(() => { settled = true; });
+      await Promise.resolve();          // 已解決嘅 promise 即刻落地
+      if (!settled) this._prompt("…");  // 未覆 → hold
+      r = await this._rpcPromise;
+      if (fid !== this._flowId) return false;
+      this._prompt("");
+    }
+
+    if (r && r.entry) {
+      const st = loadState();
+      this._serverResult = r;
+      st.diamonds = r.balance;          // server 權威餘額（已扣 3 鑽）
+      saveState();
+      this._rarity = r.rarity;
+      this._chainKey = r.entry.chain_key;
+    } else {
+      this._applyLocalRoll();
+    }
+    this._resultReady = true;
+
+    /* 新 Pokemon：喺動畫期間預先載入叫聲，開球時即刻叫 */
+    const stNow = loadState();
+    const preview = EVOLUTION_CHAINS.find(c => c.key === this._chainKey);
+    const isNewPull = this._serverResult
+      ? !this._serverResult.is_dupe
+      : !stNow.entries.some(e => e.chainKey === this._chainKey);
+    if (preview && isNewPull) {
+      Pokedex.prepareCry(preview.stages[0][0]);
+    }
+    return true;
   },
 
   /* 階段 1：巨大發光機身 + 比卡超金幣彈出，等用戶點 3 下 */
@@ -244,47 +300,91 @@ const Gacha = {
     setTimeout(() => { if (fid === this._flowId) this._dropBall(); }, 1200);
   },
 
-  /* 階段 4：巨大金屬球跌出 → 著地 → 搖 3 下（捕捉場景懸念節奏）→ 閃光開球 */
-  _dropBall() {
+  /* 階段 4（v100 P&D 式）：暗転聚光 → 波球跌出著地 → 搖 3 下漏光遞進
+     → 確定演出升級（epic 藍→金 / legend 金→彩虹，rare 無升級）
+     → 閃光 + 光柱爆開 → 結算 */
+  async _dropBall() {
     this.phase = "ball";
     const fid = this._flowId;
     const stage = document.getElementById("gacha-stage");
     stage.classList.remove("stage-rumble");
     stage.classList.add("stage-drop");
 
+    /* 攞抽獎結果（RPC 慢就 hold 住先） */
+    const ok = await this._resolveResult();
+    if (!ok || fid !== this._flowId) return;
+
+    const rarity = this._rarity;
+    const audio = this._audio();
     const dz = document.getElementById("gacha-dropzone");
+
+    /* 暗転：全版變暗，聚光燈對正波球 */
+    this._ensureDim().classList.add("on");
+
+    /* 出場色：legend 金開場，epic / rare 藍開場（確定演出規則） */
+    const startBall = rarity === "legend" ? "ball-yellow" : "ball-blue";
+    const startLeak = rarity === "legend" ? "leak-gold" : "leak-blue";
+
     const ball = document.createElement("div");
-    ball.className = `pokeball metal giant ${RARITY[this._rarity].ballClass}`;
+    ball.className = `pokeball metal giant ${startBall} ${startLeak}`;
     ball.innerHTML = `<div class="pb-top"></div><div class="pb-mid"></div><div class="pb-bottom"></div><div class="pb-btn"></div>`;
     dz.appendChild(ball);
 
-    const audio = this._audio();
-    /* 著地聲對正 ball-drop 動畫收尾（.95s） */
+    /* 著地聲對正 ball-drop 動畫收尾（.95s）+ 眼睛發光預告 */
     setTimeout(() => {
       if (fid !== this._flowId) return;
       if (audio) audio.ballLand();
       this._haptic(35);
+      this._setEyes(startLeak);
     }, 950);
 
-    /* 3 下搖晃懸念（捕捉場景同款節奏，聲調逐步降低） */
+    /* 3 下搖晃懸念：漏光 lk1→lk2→lk3 遞進 + 張力低鳴逐步升高 */
     [1400, 2050, 2700].forEach((t, i) => setTimeout(() => {
       if (fid !== this._flowId || !document.body.contains(ball)) return;
       ball.classList.remove("wob");
       void ball.offsetWidth;   // 重啟 CSS 動畫
-      ball.classList.add("wob");
-      if (audio) audio.wobble(i + 1);
+      ball.classList.add("wob", `lk${i + 1}`);
+      if (audio) { audio.wobble(i + 1); audio.leakHum(i + 1); }
       this._haptic(18);
     }, t));
 
+    /* 確定演出：第 3 搖同拍升級（rare 無升級） */
+    if (rarity !== "rare") {
+      setTimeout(() => {
+        if (fid !== this._flowId || !document.body.contains(ball)) return;
+        ball.classList.add("upgrade");
+        if (audio) audio.upgradeSting(rarity === "legend" ? 2 : 1);
+        this._haptic([30, 40, 30]);
+        setTimeout(() => {
+          if (fid !== this._flowId || !document.body.contains(ball)) return;
+          ball.classList.remove("upgrade", "leak-blue", "leak-gold", "ball-blue");
+          if (rarity === "epic") {
+            ball.classList.add("ball-yellow", "leak-gold");
+            this._setEyes("leak-gold");
+          } else {
+            ball.classList.add("leak-rainbow");
+            this._setEyes("leak-rainbow");
+          }
+        }, 220);
+      }, 2700);
+    }
+
+    /* 開球：暗転退場 + 閃光 + 光柱爆點 */
     setTimeout(() => {
       if (fid !== this._flowId) return;
+      this._ensureDim().classList.remove("on");
+      this._setEyes(null);
       stage.classList.add("stage-flash");
       const flash = document.getElementById("gacha-flash");
-      flash.classList.add("on", `flash-${this._rarity}`);
+      flash.classList.add("on", `flash-${rarity}`);
+      const burst = document.createElement("div");
+      burst.className = "gacha-burst on";
+      dz.appendChild(burst);
+      setTimeout(() => burst.remove(), 700);
       if (audio) audio.gotcha();
     }, 3300);
 
-    setTimeout(() => { if (fid === this._flowId) this._reveal(this._rarity, this._chainKey); }, 3700);
+    setTimeout(() => { if (fid === this._flowId) this._reveal(rarity, this._chainKey); }, 3700);
   },
 
   _reveal(rarity, chainKey) {

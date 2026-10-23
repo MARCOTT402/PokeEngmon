@@ -579,12 +579,89 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .gacha-odds-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .gacha-info-note { font-size: .82rem; font-weight: 700; color: #7a8299; text-align: center; }
 
-/* --- 機身 --- */
+/* --- 機械快龍機身 --- */
 .gacha-machine { position: relative; width: 230px; filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)); }
+
+/* 頭部（坐落 dome 頂） */
+.dm-head {
+  position: absolute; top: -52px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 76px; z-index: 2;
+  background: linear-gradient(160deg, #f8c06a 0%, #f0a04a 40%, #d97e2e 80%, #b86520 100%);
+  border-radius: 44px 44px 20px 20px;
+  border: 3px solid #b86520;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.4), inset 0 -3px 6px rgba(0,0,0,.2), 0 4px 8px rgba(0,0,0,.25);
+}
+/* 頭頂小角 */
+.dm-horn {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  width: 14px; height: 20px;
+  background: linear-gradient(180deg, #f8d898, #e0a040);
+  border-radius: 4px 4px 2px 2px;
+  border: 2px solid #b86520;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+/* 天線（頭頂長桿 + 頂端波） */
+.dm-antenna {
+  position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+  width: 3px; height: 36px; z-index: 1;
+  background: linear-gradient(180deg, #888, #aaa);
+  border-radius: 2px;
+}
+.dm-antenna::after {
+  content: ""; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe259, #f0b400);
+  border: 2px solid #b28700;
+  box-shadow: 0 0 8px rgba(255, 213, 79, .6);
+}
+/* 機械眼（面罩式，稀有度發光預告） */
+.dm-eye {
+  position: absolute; top: 24px; width: 18px; height: 12px;
+  background: #1a1a2e; border-radius: 4px;
+  border: 2px solid #333;
+  transition: box-shadow .4s ease;
+}
+.dm-eye.left  { left: 18px; }
+.dm-eye.right { right: 18px; }
+/* 稀有度發光（JS 控制 class） */
+.dm-eye.leak-blue   { box-shadow: 0 0 10px 3px rgba(66, 165, 245, .7), inset 0 0 4px rgba(66, 165, 245, .5); }
+.dm-eye.leak-gold   { box-shadow: 0 0 12px 4px rgba(255, 213, 79, .8), inset 0 0 5px rgba(255, 213, 79, .6); }
+.dm-eye.leak-rainbow {
+  box-shadow: 0 0 14px 5px rgba(255, 100, 200, .8);
+  animation: eye-rainbow 1.2s linear infinite;
+}
+@keyframes eye-rainbow {
+  0%   { box-shadow: 0 0 14px 5px rgba(255, 100, 100, .8); }
+  25%  { box-shadow: 0 0 14px 5px rgba(100, 255, 100, .8); }
+  50%  { box-shadow: 0 0 14px 5px rgba(100, 100, 255, .8); }
+  75%  { box-shadow: 0 0 14px 5px rgba(255, 100, 200, .8); }
+  100% { box-shadow: 0 0 14px 5px rgba(255, 100, 100, .8); }
+}
+/* 鼻吻 */
+.dm-snout {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: 48px; height: 20px;
+  background: #f5e0c0; border-radius: 12px;
+  border: 2px solid #d4a060;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.3);
+}
+/* 雙翼（機身兩側伸出） */
+.dm-wing {
+  position: absolute; top: 80px; width: 42px; height: 64px; z-index: 1;
+  background: linear-gradient(160deg, #7ab8a8, #4a8a7a 60%, #2a6a5a);
+  border-radius: 8px 40px 8px 40px;
+  border: 3px solid #3a7a6a;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.25), 0 4px 8px rgba(0,0,0,.2);
+}
+.dm-wing.left  { left: -20px; transform: rotate(-12deg); }
+.dm-wing.right { right: -20px; transform: rotate(12deg) scaleX(-1); }
+
+/* 玻璃罩（dome）微調以配合龍頭 */
 .gacha-dome {
   position: relative; height: 118px; border-radius: 118px 118px 10px 10px;
   background: linear-gradient(160deg, rgba(255,255,255,.92), rgba(215,235,255,.55) 60%, rgba(255,255,255,.75));
-  border: 6px solid var(--red); overflow: hidden;
+  border: 6px solid #d97e2e; overflow: hidden;
+  margin-top: 28px;   /* 預留空間俾龍頭 */
 }
 .mini-ball {
   position: absolute; width: 32px; height: 32px; border-radius: 50%;
@@ -599,11 +676,26 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .mini-ball:nth-child(4) { left: 148px; bottom: 20px; }
 .mini-ball:nth-child(5) { left: 92px; bottom: -12px; }
 
+/* 機身主體（橙色金屬 + 鉚釘） */
 .gacha-body {
-  background: linear-gradient(180deg, #f2545b, #d63c44);
+  background: linear-gradient(180deg, #f8c06a 0%, #e8954a 40%, #d97e2e 80%, #c06a20 100%);
   border-radius: 10px 10px 22px 22px; padding: 12px 18px 16px;
   display: flex; flex-direction: column; align-items: center; gap: 10px;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.35), inset 0 -3px 8px rgba(0,0,0,.15);
 }
+/* 鉚釘裝飾（左右各一排） */
+.gacha-body::before, .gacha-body::after {
+  content: ""; position: absolute; top: 10px; bottom: 10px; width: 10px;
+  background: repeating-linear-gradient(180deg,
+    transparent 0px, transparent 18px,
+    #b86520 18px, #b86520 22px,
+    transparent 22px, transparent 28px);
+  opacity: .5;
+}
+.gacha-body::before { left: 6px; }
+.gacha-body::after  { right: 6px; }
+
 .gacha-coin-slot {
   width: 26px; height: 7px; border-radius: 4px; background: #6e1216;
   box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
@@ -837,6 +929,30 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   88% { transform: scale(1.13) translateX(-2px) rotate(-.8deg); }
 }
 
+/* 震動時天線劇震 + 雙翼拍震 */
+.gacha-stage.stage-rumble .dm-antenna {
+  animation: antenna-jitter .12s linear infinite;
+}
+@keyframes antenna-jitter {
+  0%, 100% { transform: translateX(-50%) rotate(0); }
+  25% { transform: translateX(-50%) rotate(-8deg); }
+  75% { transform: translateX(-50%) rotate(8deg); }
+}
+.gacha-stage.stage-rumble .dm-wing.left {
+  animation: wing-flap-l .3s ease-in-out infinite;
+}
+.gacha-stage.stage-rumble .dm-wing.right {
+  animation: wing-flap-r .3s ease-in-out infinite;
+}
+@keyframes wing-flap-l {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(-28deg); }
+}
+@keyframes wing-flap-r {
+  0%, 100% { transform: rotate(12deg) scaleX(-1); }
+  50% { transform: rotate(28deg) scaleX(-1); }
+}
+
 /* --- 巨大金屬球 --- */
 .pokeball.giant { width: 140px; height: 140px; border-width: 5px; }
 .pokeball.giant .pb-btn { width: 40px; height: 40px; border-width: 6px; }
@@ -872,6 +988,72 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 @keyframes result-rise {
   0% { opacity: 0; transform: translateY(26px) scale(.92); }
   100% { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   P&D 式演出（v100）：暗転聚光燈 + 蛋縫漏光 + 確定演出升級 + 光柱
+   ============================================================ */
+
+/* --- 暗転 overlay：全版變暗，聚光燈挖空對正波球位置 --- */
+#view-gacha { position: relative; }
+.gacha-dim {
+  position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  opacity: 0; transition: opacity .55s ease;
+  background: radial-gradient(circle 118px at 50% 62%,
+    rgba(4, 6, 14, 0) 0 96px, rgba(4, 6, 14, .86) 132px);
+}
+.gacha-dim.on { opacity: 1; }
+/* 演出期間標題同頂欄一齊變暗，聚焦舞台 */
+#view-gacha.playing .gacha-title,
+#view-gacha.playing .gacha-topbar { opacity: .22; transition: opacity .5s ease; }
+/* 波球區高於暗転層，保持照亮 */
+.gacha-dropzone { position: relative; z-index: 6; }
+
+/* --- 蛋縫漏光：稀有度預告（lk1→lk3 每搖一下增強） --- */
+.pokeball { --leak: transparent; --leak-shadow: 0 0 0 0 transparent; transition: box-shadow .3s ease; }
+.pokeball.leak-blue    { --leak: #6ec6ff; }
+.pokeball.leak-gold    { --leak: #ffd54f; }
+.pokeball.leak-rainbow { --leak: #ffffff; }
+/* 中縫透光帶 */
+.pokeball .pb-mid {
+  position: absolute; top: 50%; left: 5%; right: 5%; height: 5px;
+  transform: translateY(-50%); z-index: 1; border-radius: 999px;
+  background: var(--leak); opacity: 0; transition: opacity .3s ease, box-shadow .3s ease;
+}
+.pokeball.lk1 .pb-mid { opacity: .55; box-shadow: 0 0 10px 2px var(--leak); }
+.pokeball.lk2 .pb-mid { opacity: .8;  box-shadow: 0 0 18px 5px var(--leak); }
+.pokeball.lk3 .pb-mid { opacity: 1;   box-shadow: 0 0 28px 9px var(--leak); }
+/* 球體外圍光暈（metal 基礎影 + 漏光影，lk 級數遞進） */
+.pokeball.metal { box-shadow: 0 12px 24px rgba(0, 0, 0, .38), 0 0 28px rgba(255, 255, 255, .3), var(--leak-shadow); }
+.pokeball.lk1 { --leak-shadow: 0 0 16px 3px var(--leak); }
+.pokeball.lk2 { --leak-shadow: 0 0 30px 8px var(--leak); }
+.pokeball.lk3 { --leak-shadow: 0 0 46px 14px var(--leak); }
+/* 彩虹漏光：中縫彩虹流動 + 白熾外暈 */
+.pokeball.leak-rainbow .pb-mid {
+  background: conic-gradient(from 0deg,
+    #ff5b5b, #ffb300, #ffee58, #69f0ae, #40c4ff, #b388ff, #ff5b5b);
+  animation: leak-rainbow-spin 1.1s linear infinite;
+}
+@keyframes leak-rainbow-spin {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* --- 確定演出升級閃光：淨動 filter，避免同 .wob 嘅 transform 衝突 --- */
+.pokeball.upgrade { filter: brightness(2.6) saturate(1.25); transition: filter .1s ease; }
+
+/* --- 開球光柱爆點 --- */
+.gacha-burst {
+  position: absolute; left: 50%; bottom: 8px; width: 96px; height: 0;
+  transform: translateX(-50%); z-index: 6; pointer-events: none; opacity: 0;
+  background: linear-gradient(to top, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 88%);
+  border-radius: 48px;
+}
+.gacha-burst.on { animation: burst-shoot .6s cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes burst-shoot {
+  0% { opacity: 0; height: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; height: 105vh; }
 }
 
 /* ============================================================
