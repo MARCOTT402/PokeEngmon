@@ -50,21 +50,23 @@ The sync queue flush (`_flush()` in `js/sync.js`) must POST user_cards to `/user
 - `SPECIES[dexId].chainKey` maps a Pokédex ID to its chain key.
 - The `settle_capture` RPC historically wrote `chain_key = 'dex_' || dex_id`. **Do NOT do this** — it produces entries whose `chain_key` doesn't match any frontend chain, causing render crashes.
 - `pull()` in `js/sync.js` converts legacy `dex_<id>` chain keys to proper chain keys via `SPECIES[parseInt(chainKey.slice(4))].chainKey`.
-- `settle_capture` should only write to `user_captures` (logging). Let `Sync.pushState()` handle `user_entries`.
+- `settle_capture` only writes to `user_captures` (logging). Since v99, `user_entries` changes go through RPCs (`obtain_capture` / `gacha_pull` / `add_entry_exp` / `use_entry_candy` / `alloc_ev`) — direct upsert is blocked by column-level grants.
 
-## Rule 5 — Always `Sync.pushState()` after state-changing actions
+## Rule 5 — Sensitive state changes go through RPCs, not pushState
 
-Local state changes that affect diamonds, entries, exp, or level MUST trigger `Sync.pushState()`, otherwise `pull()` on next page load will overwrite them with stale cloud data.
+Since v99, `Sync.pushState()` only pushes non-sensitive data (trainer_name; SM-2 cards/history go via the background queue). Diamonds, entries, exp, IVs/EVs, and candies are server-authoritative — direct writes are blocked by column-level grants, and `pull()` overwrites local values with cloud data on next load.
 
-Currently wired to:
-- Gacha reveal (`js/gacha.js` `_reveal()`)
-- Quiz completion (`js/app.js` `onSetComplete()`)
-- Capture success (`js/app.js` `onCaught`)
-- New-account migration (`js/app.js` post-OAuth)
+State-changing actions MUST call the matching RPC wrapper in `js/supabase-auth.js` (keep the local mutation for instant UI, then fire-and-forget the RPC; on failure the next `Sync.pull()` rolls back):
+- Quiz round diamonds → `awardRoundDiamonds(score, total)` (server returns the authoritative balance — use it, don't `+=`)
+- Rare pull → `gachaPull(initExp)` (server deducts diamonds atomically, rolls rarity/chain itself, returns the entry row → `adoptServerEntry()`)
+- Capture success → `obtainCapture(chainKey, dexId)` (+ `settleCapture(dexId)` for logging)
+- EXP gains (quiz settle / Power Up batch) → `addEntryExp(entryId, delta)`
+- Candy feed → `useEntryCandy(entryId, count, expDelta)`
+- EV allocation → `allocEv(entryId, stat)`
+- Partner switch / Eevee branch evolution → `Sync.patchEntry(entryId, { active | branch })`
+- New Google account first-time import → `importState(payload)` (one-shot guard server-side)
 
-If you add a new action that mutates `st.diamonds`, `st.entries`, entry exp/level, etc., add a `Sync.pushState()` call (guarded by `Sync.isEnabled()`).
-
-Diamonds from quiz rewards go through `awardRoundDiamonds` RPC (server-side, anti-cheat). Gacha/capture diamond changes are local → must be pushed.
+Never re-add a direct diamonds/exp/entries write to `pushState()` — it will 403 once the migration SQL is applied.
 
 ## Rule 6 — Every change must be committed AND pushed
 

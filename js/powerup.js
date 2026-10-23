@@ -217,6 +217,7 @@ const PowerUp = {
         if (res && res.levelsGained > 0) {
           App.toast(`${entryCurrentSpecies(entry)[1]} reached Lv.${entry.level}!`);
         }
+        if (res && res.evolvedTo) this._evolvedThisRun = true;
       } else {
         st.pendingExp = (st.pendingExp || 0) + amount;
       }
@@ -232,6 +233,17 @@ const PowerUp = {
     const totalExp = totalFixed * this.EXP_PER_FIX;
     const cb = this.onDone;
     this.onDone = null;
+
+    /* v99：server 權威入帳 —— per-fix 已即時本地入咗俾 UI，
+       呢度一次過 batch RPC 上雲（失敗下次 pull 還原） */
+    const entry = getActiveEntry();
+    if (entry && totalExp > 0 && window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+      SupabaseAuth.addEntryExp(entry.uid, totalExp);
+      if (this._evolvedThisRun && entry.branch != null && window.Sync && Sync.isEnabled()) {
+        Sync.patchEntry(entry.uid, { branch: entry.branch });
+      }
+    }
+    this._evolvedThisRun = false;
 
     /* 慶祝全屏 pop：改錯完成嘅爽感時刻（1.8 秒後自動進捕捉） */
     const overlay = document.createElement("div");

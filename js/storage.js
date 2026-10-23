@@ -204,6 +204,87 @@ function addEntryExp(entry, amount) {
   return { levelsGained: entry.level - oldLevel, learned, evolvedTo, entry };
 }
 
+/* 由 (chainKey, exp, dupes, branch) 重推 derived 欄位（level/stage/ownedSpecies/moves/stars）。
+   純函數：唔 mutate 入參、唔 saveState。
+   用途：Sync.pull() 由雲端還原 entry —— server 只對 exp/candies/ev_points/evs/dupes/ivs/branch
+   權威，level/stage/moves/ownedSpecies/stars 全部係 deterministic 重推（v99 起 DB 敏感欄
+   唔再俾 client 直寫，靠 RPC 改 exp 等基礎欄位）。 */
+function deriveEntryFields(entry) {
+  const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
+  if (!chain) return entry;
+  const out = { ...entry };
+  const maxStage = chainMaxStage(chain);
+
+  /* 進化 replay：同 addEntryExp 嘅 while loop 對齊
+     （branch 未記錄時用 0 佔位 —— 真正 branch 喺進化發生時由 client PATCH 上雲） */
+  out.stage = 1;
+  out.ownedSpecies = [chain.stages[0][0]];
+  while (out.stage < maxStage) {
+    const curDex = entryCurrentSpecies(out)[0];
+    const lv = Math.min(MAX_LEVEL, levelFromExp(curDex, Number(out.exp) || 0));
+    let nextStageArr;
+    if (out.stage < chain.stages.length) {
+      nextStageArr = chain.stages[out.stage];            // 線性進化
+    } else {
+      const opts = chain.branches[out.stage - chain.stages.length];
+      nextStageArr = opts[out.branch ?? 0] || opts[0];   // 分支進化（伊貝）
+    }
+    const evo = ((dexOf(curDex) || {}).evolvesTo || []).find(x => x.id === nextStageArr[0]);
+    const needLevel = (evo && evo.minLevel) || 30;
+    if (lv < needLevel) break;
+    out.stage += 1;
+    if (!out.ownedSpecies.includes(nextStageArr[0])) out.ownedSpecies.push(nextStageArr[0]);
+  }
+
+  /* level 用最終形態嘅 growth table 反推 */
+  const finalDex = entryCurrentSpecies(out)[0];
+  out.level = Math.min(MAX_LEVEL, levelFromExp(finalDex, Number(out.exp) || 0));
+
+  /* moves：初始招 + 最終形態喺現等級內學到嘅招（近似 replay，display 用） */
+  const known = initialMoves(chain.stages[0][0]);
+  const learned = movesBetween(finalDex, 1, out.level, known).map(m => m.move);
+  out.moves = [...new Set([...known, ...learned])];
+
+  /* stars 由 dupes 推（同 obtainPokemon 公式對齊） */
+  out.stars = Math.min(5, 1 + Math.floor((out.dupes || 0) / 5));
+  return out;
+}
+
+/* server 行 → 本地 entry 形狀（v99：gacha_pull / obtain_capture 回傳嘅 row 用） */
+function localEntryFromServer(e) {
+  return deriveEntryFields({
+    uid: e.id,
+    chainKey: e.chain_key,
+    exp: Number(e.exp ?? 0),
+    ivs: e.ivs || {},
+    evs: e.evs || {},
+    evPoints: e.ev_points ?? 0,
+    candies: e.candies ?? 0,
+    dupes: e.dupes ?? 0,
+    branch: (e.branch === 0 || e.branch) ? e.branch : null,
+    obtainedAt: e.obtained_at
+  });
+}
+
+/* 採用 server entry：按 chainKey 搵本地 entry，存在就以 server 值覆蓋（uid 都換 —
+   server id 先係 RPC 認嘅），唔存在就新加。activeUid 指向舊 uid 會一併修正。 */
+function adoptServerEntry(serverRow) {
+  const st = loadState();
+  const mapped = localEntryFromServer(serverRow);
+  const idx = st.entries.findIndex(e => e.chainKey === mapped.chainKey);
+  if (idx >= 0) {
+    const old = st.entries[idx];
+    mapped.nature = old.nature;   // nature 唔上雲，保留本地
+    if (st.activeUid === old.uid) st.activeUid = mapped.uid;
+    st.entries[idx] = mapped;
+  } else {
+    st.entries.push(mapped);
+    if (!st.entries.some(e => e.uid === st.activeUid)) st.activeUid = mapped.uid;
+  }
+  saveState();
+  return mapped;
+}
+
 /* 餵糖果：每粒糖加「升一級所需經驗」，最多餵到 Lv.99
    回傳同 addEntryExp 一樣 */
 function useEntryCandy(entry, count) {

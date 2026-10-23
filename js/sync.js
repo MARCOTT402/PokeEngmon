@@ -165,31 +165,21 @@ window.Sync = (() => {
         saveState();
       }
 
-      /* ---- 2. 還原 entries：寶可夢 ---- */
+      /* ---- 2. 還原 entries：寶可夢 ----
+         server 權威欄位：exp / ivs / evs / ev_points / candies / dupes / branch / active
+         derived 欄位（level / stage / ownedSpecies / moves / stars）：唔信 DB，
+         由 deriveEntryFields 按 (chainKey, exp, dupes, branch) 重推 —— v99 起敏感欄
+         唔俾 client 直寫，derived 欄位喺 DB 只係近似值 */
       if (Array.isArray(entries)) {
         const st = loadState();
         st.entries = entries.map(e => {
-          /* settle_capture RPC 會用 'dex_<id>' 做 chain_key，要轉返正確 chain key */
-          let chainKey = e.chain_key;
-          if (chainKey && chainKey.startsWith("dex_")) {
-            const dexId = parseInt(chainKey.slice(4), 10);
+          /* 舊版 settle_capture RPC 用過 'dex_<id>' 做 chain_key，要轉返正確 chain key */
+          if (e.chain_key && e.chain_key.startsWith("dex_")) {
+            const dexId = parseInt(e.chain_key.slice(4), 10);
             const sp = SPECIES[dexId];
-            if (sp) chainKey = sp.chainKey;
+            if (sp) e = { ...e, chain_key: sp.chainKey };
           }
-          return {
-            uid: e.id,
-            chainKey: chainKey,
-            stage: e.stage ?? 1,
-            exp: Number(e.exp ?? 0),
-            ownedSpecies: Array.isArray(e.owned_species) ? e.owned_species.map(Number) : [],
-            obtainedAt: e.obtained_at,
-            ivs: e.ivs || {},
-            evs: e.evs || {},
-            ev_points: e.ev_points ?? 0,
-            candies: e.candies ?? 0,
-            dupes: e.dupes ?? 0,
-            stars: e.stars ?? 1
-          };
+          return localEntryFromServer(e);
         });
         /* activeUid：邊個 entry.active = true */
         const activeEntry = entries.find(e => e.active === true);
@@ -224,81 +214,30 @@ window.Sync = (() => {
     }
   }
 
-  /* ---------- Push State（首次 Connect 新帳戶時：將本地數據上傳到雲端）---------- */
+  /* ---------- Push State（只推非敏感資料：trainer_name + SM-2 cards/history）----------
+     v99 起：diamonds / totals / entries 全部收歸 RPC 權威（DB column grant 擋直寫），
+     呢度再寫敏感欄會 403。敏感操作改用 SupabaseAuth 嘅 RPC wrapper。 */
   async function pushState() {
     const ref = _accountRef();
     if (!ref.isAuth) { console.warn("[Sync] pushState skipped — not authenticated"); return; }
 
     const st = loadState();
-    const now = Date.now();
     console.log("[Sync] pushState start — account:", ref.account_id,
-      "diamonds:", st.diamonds, "entries:", st.entries?.length||0,
       "cards:", (typeof SM2!=="undefined"&&SM2.listAll)?SM2.listAll().length:0);
 
-    /* ---- 1. Upsert user_account（diamonds + 統計 + trainer name）---- */
-    /* migrateAnonymous 一定已經 create 咗呢個 row → 用 PATCH 更新最穩陣，
-       避免 INSERT ON CONFLICT DO UPDATE 喺 RLS 下嘅潛在問題 */
+    /* ---- 1. Patch user_account（淨 trainer_name —— diamonds/totals 係 RPC-only）---- */
     try {
       const acctPayload = {
         trainer_name: st.playerName || "The PokéEngmon Trainer",
-        diamonds: st.diamonds || 0,
-        total_sets: st.totalSets || 0,
-        total_correct: st.totalCorrect || 0,
-        total_questions: st.totalQuestions || 0,
-        updated_at: now
+        updated_at: Date.now()
       };
-      console.log("[Sync] patching user_account:", JSON.stringify(acctPayload));
-      /* PATCH with id filter — row 由 migrateAnonymous 建立，一定存在 */
-      const acctRes = await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, acctPayload);
-      console.log("[Sync] ✅ user_account patch ok:", JSON.stringify(acctRes).slice(0, 200));
+      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, acctPayload);
+      console.log("[Sync] ✅ user_account patch ok (trainer_name only)");
     } catch (e) {
-      console.warn("[Sync] ❌ patch account failed:", e.message, "— fallback to upsert");
-      /* Fallback：如果 PATCH 失敗（row 唔存在），用 POST upsert */
-      try {
-        const fbPayload = {
-          id: ref.account_id,
-          trainer_name: st.playerName || "The PokéEngmon Trainer",
-          diamonds: st.diamonds || 0,
-          total_sets: st.totalSets || 0,
-          total_correct: st.totalCorrect || 0,
-          total_questions: st.totalQuestions || 0,
-          updated_at: now
-        };
-        const fbRes = await _api("POST", "/user_account?on_conflict=id", fbPayload);
-        console.log("[Sync] ✅ user_account fallback upsert ok:", JSON.stringify(fbRes).slice(0, 200));
-      } catch (e2) { console.warn("[Sync] ❌ user_account fallback also failed:", e2.message); }
+      console.warn("[Sync] ❌ patch account failed:", e.message);
     }
 
-    /* ---- 2. Upsert 所有 user_entries（寶可夢）---- */
-    if (Array.isArray(st.entries) && st.entries.length > 0) {
-      try {
-        const rows = st.entries.map(e => ({
-          id: e.uid,
-          account_id: ref.account_id,
-          chain_key: e.chainKey,
-          stage: e.stage ?? 1,
-          exp: Number(e.exp ?? 0),
-          level: e.level ?? 1,
-          ivs: e.ivs || {},
-          evs: e.evs || {},
-          ev_points: e.ev_points ?? 0,
-          candies: e.candies ?? 0,
-          dupes: e.dupes ?? 0,
-          stars: e.stars ?? 1,
-          active: e.uid === st.activeUid,
-          owned_species: (e.ownedSpecies || []).map(String),
-          obtained_at: e.obtainedAt || now,
-          updated_at: now
-        }));
-        console.log("[Sync] pushing user_entries count:", rows.length);
-        const entriesRes = await _api("POST", "/user_entries?on_conflict=id", rows);
-        console.log("[Sync] ✅ user_entries upsert ok, rows:", entriesRes.length);
-      } catch (e) { console.warn("[Sync] ❌ push entries failed:", e.message); }
-    } else {
-      console.log("[Sync] no entries to push");
-    }
-
-    /* ---- 3. Push 所有 SM-2 cards ---- */
+    /* ---- 2. Push 所有 SM-2 cards ---- */
     try {
       const cards = (typeof SM2 !== "undefined" && SM2.listAll) ? SM2.listAll() : [];
       console.log("[Sync] pushing user_cards count:", cards.length);
@@ -328,7 +267,7 @@ window.Sync = (() => {
       }
     } catch (e) { console.warn("[Sync] ❌ push cards failed:", e.message); }
 
-    /* ---- 4. Push 所有 SM-2 history（答題記錄）---- */
+    /* ---- 3. Push 所有 SM-2 history（答題記錄）---- */
     try {
       const hist = (typeof SM2 !== "undefined" && SM2.listHistory) ? SM2.listHistory() : [];
       console.log("[Sync] pushing user_history count:", hist.length);
@@ -350,11 +289,35 @@ window.Sync = (() => {
     console.info("[Sync] pushState done");
   }
 
+  /* ---------- Entry 非敏感欄位直寫（column grant 只開咗 active / updated_at / branch）---------- */
+  async function patchEntry(entryId, fields) {
+    const ref = _accountRef();
+    if (!ref.isAuth) return;
+    const body = { updated_at: Date.now() };
+    if (typeof fields.active === "boolean") body.active = fields.active;
+    if (fields.branch !== undefined && fields.branch !== null) body.branch = fields.branch;
+    try {
+      await _api("PATCH", `/user_entries?id=eq.${entryId}`, body);
+    } catch (e) { console.warn("[Sync] patchEntry failed:", e.message); }
+  }
+
+  /* 拍檔切換：新 active=true、其他全部 false */
+  async function pushActive(activeUid) {
+    const ref = _accountRef();
+    if (!ref.isAuth) return;
+    try {
+      await _api("PATCH", `/user_entries?id=eq.${activeUid}`, { active: true, updated_at: Date.now() });
+      await _api("PATCH", `/user_entries?account_id=eq.${ref.account_id}&id=not.eq.${activeUid}&active=eq.true`, { active: false, updated_at: Date.now() });
+    } catch (e) { console.warn("[Sync] pushActive failed:", e.message); }
+  }
+
   return {
     queueUpsert,
     queueHistory,
     pull,
     pushState,
+    patchEntry,
+    pushActive,
     flush: () => _flush(),
     isEnabled: () => !!(cfg() && cfg().anonKey && (window.SupabaseAuth ? SupabaseAuth.isEnabled() : true))
   };

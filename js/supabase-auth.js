@@ -191,13 +191,12 @@ const SupabaseAuth = {
     localStorage.removeItem("pokeengmon_auth_session");
   },
 
-  /* ---------- RPC：防金手指 diamonds server 計算 ----------
-     失敗 return null（唔係 0），俾前端 fallback 本地計算 */
-  async awardRoundDiamonds(score, total) {
-    const user = this.currentUser();
-    if (!user) return null; /* 匿名模式 server 唔計，前端自行加 */
+  /* ---------- RPC 共用 helper（v99 起 RPC 全部用 auth.uid()，唔再傳 account_uuid） ----------
+     失敗 return null，俾前端 fallback 本地計算 */
+  async _rpc(name, payload) {
+    if (!this._session?.access_token) return null;
     try {
-      const res = await fetch(`${this.URL}/rest/v1/rpc/award_round_diamonds`, {
+      const res = await fetch(`${this.URL}/rest/v1/rpc/${name}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this._session.access_token}`,
@@ -205,58 +204,71 @@ const SupabaseAuth = {
           "Content-Type": "application/json",
           Prefer: "return=representation"
         },
-        body: JSON.stringify({ account_uuid: user.id, score, total })
+        body: JSON.stringify(payload || {})
       });
-      if (!res.ok) throw new Error("award RPC failed: " + res.status);
+      if (!res.ok) throw new Error(name + " RPC failed: " + res.status);
       const data = await res.json();
-      return typeof data === "number" ? data : (data[0]?.diamonds ?? 0);
-    } catch (e) { console.warn("awardRoundDiamonds failed:", e.message); return null; }
+      return Array.isArray(data) ? data[0] : data;
+    } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
   },
 
-  /* ---------- RPC：捕捉結算（防金手指，server 記錄） ---------- */
-  async settleCapture(dexId, attempts) {
-    const user = this.currentUser();
-    if (!user) return null;
-    try {
-      const res = await fetch(`${this.URL}/rest/v1/rpc/settle_capture`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this._session.access_token}`,
-          apikey: this.ANON_KEY,
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify({ account_uuid: user.id, dex_id: dexId, attempts: attempts || 1 })
-      });
-      if (!res.ok) throw new Error("settle RPC failed: " + res.status);
-      return await res.json();
-    } catch (e) { console.warn("settleCapture failed:", e.message); return null; }
+  /* ---------- RPC：防金手指 diamonds server 計算 ----------
+     回傳 {bonus, balance}（balance 係 server 權威）；失敗 return null */
+  async awardRoundDiamonds(score, total) {
+    if (!this.currentUser()) return null; /* 匿名模式 server 唔計，前端自行加 */
+    return this._rpc("award_round_diamonds", { score, total });
   },
 
-  /* ---------- RPC：匿名資料 migrate 到 auth uid ----------
-     回傳 true = 新建立帳戶（本地要 push 上去）
-     回傳 false = 已有匿名資料已搬移（本地要 pull 落嚟） */
+  /* ---------- RPC：捕捉日誌（log-only） ---------- */
+  async settleCapture(dexId) {
+    if (!this.currentUser()) return null;
+    return this._rpc("settle_capture", { dex_id: dexId });
+  },
+
+  /* ---------- RPC：稀有抽（server 原子扣鑽 + roll rarity + 派寵） ----------
+     回傳 {entry, rarity, is_dupe, balance}；失敗 return null（前端唔好扣本地鑽） */
+  async gachaPull(initExp) {
+    if (!this.currentUser()) return null;
+    return this._rpc("gacha_pull", { init_exp: initExp || 0 });
+  },
+
+  /* ---------- RPC：捕捉成功拎寵（只限 normal 稀有度） ----------
+     回傳 {entry, is_dupe}；失敗 return null */
+  async obtainCapture(chainKey, dexId) {
+    if (!this.currentUser()) return null;
+    return this._rpc("obtain_capture", { chain_key: chainKey, dex_id: dexId });
+  },
+
+  /* ---------- RPC：加 EXP（回傳新 exp 總值） ---------- */
+  async addEntryExp(entryId, delta) {
+    if (!this.currentUser()) return null;
+    return this._rpc("add_entry_exp", { entry_id: entryId, delta });
+  },
+
+  /* ---------- RPC：餵糖（回傳 {candies, exp}） ---------- */
+  async useEntryCandy(entryId, count, expDelta) {
+    if (!this.currentUser()) return null;
+    return this._rpc("use_entry_candy", { entry_id: entryId, count, exp_delta: expDelta });
+  },
+
+  /* ---------- RPC：分配 EV（回傳 {evs, ev_points}） ---------- */
+  async allocEv(entryId, stat) {
+    if (!this.currentUser()) return null;
+    return this._rpc("alloc_ev", { entry_id: entryId, stat });
+  },
+
+  /* ---------- RPC：首次 connect 一次性上傳本地進度（回傳 true/false） ---------- */
+  async importState(payload) {
+    if (!this.currentUser()) return null;
+    return this._rpc("import_state", { payload });
+  },
+
+  /* ---------- RPC：登入後初始化帳戶 ----------
+     回傳 true = 新建立帳戶（本地要 importState 上傳）
+     回傳 false = 已有帳戶（本地要 pull 落嚟） */
   async migrateAnonymous(deviceId) {
     if (!this._session?.user?.id) return null;
-    try {
-      const res = await fetch(`${this.URL}/rest/v1/rpc/migrate_anonymous_to_auth`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this._session.access_token}`,
-          apikey: this.ANON_KEY,
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify({
-          new_auth_uuid: this._session.user.id,
-          old_device_id: deviceId
-        })
-      });
-      if (!res.ok) throw new Error("migrate RPC failed: " + res.status);
-      const data = await res.json();
-      /* RPC 回傳 boolean（PostgREST 會包成 [true] / [false]） */
-      return Array.isArray(data) ? data[0] : data;
-    } catch (e) { console.warn("migrateAnonymous failed:", e.message); return null; }
+    return this._rpc("migrate_anonymous_to_auth", { old_device_id: deviceId });
   },
 
   /* ---------- 通用 fetch wrapper（附 auth header） ---------- */

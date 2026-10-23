@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v98";
+const APP_VERSION = "v99";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -495,7 +495,7 @@ const App = {
     }
     saveState();
 
-    /* v98：diamonds/EXP/entries 已各自經 RPC 上雲；SM-2 cards/history 由 queueUpsert/
+    /* v99：diamonds/EXP/entries 已各自經 RPC 上雲；SM-2 cards/history 由 queueUpsert/
        queueHistory 批量 flush —— 唔再需要 pushState 全量推（會重複 insert history） */
 
     this._renderSettlement(data, rewards);

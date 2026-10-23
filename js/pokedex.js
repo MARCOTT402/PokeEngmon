@@ -156,6 +156,10 @@ const Pokedex = {
     document.querySelectorAll("#modal-root .ev-btn").forEach(btn => {
       btn.onclick = () => {
         if (!addEvPoint(entry, btn.dataset.stat)) return;
+        /* v99：server 權威扣 EV point（背景同步，失敗下次 pull 還原） */
+        if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+          SupabaseAuth.allocEv(entry.uid, btn.dataset.stat);
+        }
         this.showDetail(dexId, true);
         App.renderHome();
       };
@@ -165,7 +169,15 @@ const Pokedex = {
   /* Feed candy -> +1 level (may learn a move / evolve) */
   feedCandy(entry) {
     if (!entry || entry.candies <= 0) return;
+    const expBefore = entry.exp || 0;
     const res = useEntryCandy(entry, 1);
+    /* v99：server 權威扣糖果 + 入 EXP（背景同步，失敗下次 pull 還原） */
+    if (res.used > 0 && window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+      SupabaseAuth.useEntryCandy(entry.uid, res.used, (entry.exp || 0) - expBefore);
+      if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+        Sync.patchEntry(entry.uid, { branch: entry.branch });
+      }
+    }
     App.closeModal();
     this.render();
     App.renderHome();

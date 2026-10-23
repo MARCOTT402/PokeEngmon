@@ -121,22 +121,42 @@ const Gacha = {
   },
 
   /* ---------- 抽獎主流程 ---------- */
-  pull() {
+  async pull() {
     if (this.busy || !this._canPull()) return;
     this.busy = true;
     Pokedex.unlockAudio();   // 喺用戶點擊時解鎖音效（手機自動播放限制）
     const audio = this._audio();
     if (audio) audio.ensure();
     const st = loadState();
-    st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
-    saveState();
 
-    this._rarity = this.rollRarity(this.mode);
-    this._chainKey = this.pickChain(this._rarity);
+    /* v99：登入時走 server 權威抽獎 —— gacha_pull RPC 原子扣鑽 +
+       server 自己 roll rarity/chain + 拎寵，防止 client 改機率/必中神獸。
+       失敗或未登入 → 本地 path 照舊（下次 pull 會以 server 數據還原）。 */
+    this._serverResult = null;
+    const authed = window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser();
+    if (authed) {
+      const r = await SupabaseAuth.gachaPull(st.pendingExp || 0);
+      if (r && r.entry) {
+        this._serverResult = r;
+        st.diamonds = r.balance;          // server 權威餘額（已扣 3 鑽）
+        saveState();
+        this._rarity = r.rarity;
+        this._chainKey = r.entry.chain_key;
+      }
+    }
+    if (!this._serverResult) {
+      st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
+      saveState();
+      this._rarity = this.rollRarity(this.mode);
+      this._chainKey = this.pickChain(this._rarity);
+    }
 
     /* 新 Pokemon：喺動畫期間預先載入叫聲，開球時即刻叫 */
     const preview = EVOLUTION_CHAINS.find(c => c.key === this._chainKey);
-    if (preview && !st.entries.some(e => e.chainKey === this._chainKey)) {
+    const isNewPull = this._serverResult
+      ? !this._serverResult.is_dupe
+      : !st.entries.some(e => e.chainKey === this._chainKey);
+    if (preview && isNewPull) {
       Pokedex.prepareCry(preview.stages[0][0]);
     }
 
@@ -274,20 +294,60 @@ const Gacha = {
     stage.classList.remove("stage-flash");
     this.phase = "done";
 
-    const { entry, isDupe, candyGain } = obtainPokemon(chainKey, this.mode);
-
-    /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
+    /* v99：server path —— 扣鑽/rarity/dupe 已由 gacha_pull RPC 完成，
+       本地用 adoptServerEntry 採用 server row；否則行舊本地邏輯 */
+    const sr = this._serverResult;
+    this._serverResult = null;
     const st = loadState();
+    let entry, isDupe, candyGain;
     let firstExpEvolve = null;
-    if (st.pendingExp > 0) {
-      const res = addEntryExp(entry, st.pendingExp);
-      st.pendingExp = 0;
-      /* 新入手時自動補招（有空位先學，最多 4 招） */
-      (res.learned || []).forEach(m => {
-        if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
-      });
-      saveState();
-      firstExpEvolve = res.evolvedTo;
+
+    if (sr) {
+      const hadEntries = st.entries.length > 0;
+      entry = adoptServerEntry(sr.entry);
+      isDupe = sr.is_dupe;
+      candyGain = isDupe ? 1 : 0;   // 稀有抽 dupe 必送 1 糖（server 已入帳）
+      if (st.pendingExp > 0) {
+        if (!hadEntries && !isDupe) {
+          /* 第一隻寵：server init_exp 已入帳 → 本地清零 */
+          st.pendingExp = 0;
+          saveState();
+          if (entry.stage > 1) firstExpEvolve = SPECIES[entryCurrentSpecies(entry)[0]];
+        } else {
+          /* server 冇 apply init_exp（唔係第一隻）→ 本地入帳 + 背景補 RPC */
+          const pending = st.pendingExp;
+          const res = addEntryExp(entry, pending);
+          st.pendingExp = 0;
+          (res.learned || []).forEach(m => {
+            if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+          });
+          saveState();
+          firstExpEvolve = res.evolvedTo;
+          if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+            SupabaseAuth.addEntryExp(entry.uid, pending);
+            if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+              Sync.patchEntry(entry.uid, { branch: entry.branch });
+            }
+          }
+        }
+      }
+    } else {
+      const got = obtainPokemon(chainKey, this.mode);
+      entry = got.entry;
+      isDupe = got.isDupe;
+      candyGain = got.candyGain;
+
+      /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
+      if (st.pendingExp > 0) {
+        const res = addEntryExp(entry, st.pendingExp);
+        st.pendingExp = 0;
+        /* 新入手時自動補招（有空位先學，最多 4 招） */
+        (res.learned || []).forEach(m => {
+          if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+        });
+        saveState();
+        firstExpEvolve = res.evolvedTo;
+      }
     }
 
     /* 開球動畫 */
@@ -339,9 +399,6 @@ const Gacha = {
     }
 
     App.renderHome();   // 更新主畫面資料
-
-    /* 同步到雲端：diamonds 扣減 + 新 pokemon */
-    if (window.Sync && Sync.isEnabled()) Sync.pushState();
   },
 
   /* ---------- 稀有抽慶祝動畫 ----------
