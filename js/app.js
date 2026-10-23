@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v81";
+const APP_VERSION = "v82";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -746,7 +746,7 @@ const App = {
           <div class="lh-actions">
             <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
           </div>
-        </div>`, true);
+        </div>`, false);
 
       document.getElementById("lh-signout").onclick = async () => {
         try {
@@ -785,7 +785,7 @@ const App = {
           <p class="lh-device">Local ID: <code>${escapeHTML(deviceId.slice(0, 8))}</code></p>
 
           <p class="lh-note">Playing without login is fine — your progress stays on this device. Sign in anytime to cloud-sync.</p>
-        </div>`, true);
+        </div>`, false);
 
       document.getElementById("lh-google").onclick = async () => {
         this.closeModal();
