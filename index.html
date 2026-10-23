@@ -141,8 +141,12 @@
       <h2 class="powerup-title">⚡ Power Up Zone</h2>
       <p class="powerup-sub">Fix every mistake to finish this round!</p>
       <div class="quiz-top">
-        <span class="quiz-progress" id="powerup-progress">1 / 1</span>
-        <span class="powerup-badge">🔋 Correct them all!</span>
+        <button id="btn-powerup-exit" class="quiz-exit-btn" aria-label="Quit Power Up Zone" title="Quit">✕</button>
+        <div class="quiz-top-mid">
+          <span class="quiz-progress" id="powerup-progress">1 / 1</span>
+          <span class="powerup-badge">🔋 Correct them all!</span>
+        </div>
+        <span class="quiz-exit-spacer" aria-hidden="true"></span>
       </div>
       <div class="progressbar"><i id="powerup-bar"></i></div>
       <div class="quiz-card">
@@ -175,7 +179,10 @@
     <section id="view-review" class="view">
       <h2 class="review-title">📖 Mistake Review</h2>
       <div id="review-list" class="review-list"></div>
-      <button id="btn-review-back" class="btn-big btn-secondary">Back</button>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="btn-review-back" class="btn-big btn-secondary">‹ Back</button>
+      </div>
     </section>
 
     <!-- ============ 抽獎 ============ -->
@@ -183,7 +190,7 @@
       <h2 class="gacha-title" id="gacha-title">🎯 Gacha Machine</h2>
       <div class="gacha-topbar">
         <span class="chip chip-diamond">💎 <b id="gacha-diamonds">0</b></span>
-        <span class="chip gacha-cost">Cost: 💎${GAME_CONFIG.RARE_PULL_COST}</span>
+        <span class="chip gacha-cost">Cost: 💎3</span>
       </div>
       <div class="gacha-info">
         <div class="gacha-odds-row">
@@ -214,7 +221,10 @@
       </div>
       <div class="gacha-controls">
         <button id="btn-do-pull" class="btn-big btn-primary">Insert coin to pull!</button>
-        <button id="btn-gacha-home" class="btn-big btn-plain">Back to Home</button>
+      </div>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="btn-gacha-home" class="btn-big btn-secondary">‹ Back to Home</button>
       </div>
     </section>
 

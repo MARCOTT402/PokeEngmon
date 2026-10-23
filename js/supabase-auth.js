@@ -68,6 +68,11 @@ const SupabaseAuth = {
     return !!(this._session && this._session.access_token);
   },
 
+  /* Auth 功能是否啟用（有 URL + anon key 就算，供 sync.js 判斷） */
+  isEnabled() {
+    return !!this.URL && !!this.ANON_KEY;
+  },
+
   currentUser() {
     return this._session?.user || null;
   },
@@ -183,10 +188,11 @@ const SupabaseAuth = {
     localStorage.removeItem("pokeengmon_auth_session");
   },
 
-  /* ---------- RPC：防金手指 diamonds server 計算 ---------- */
+  /* ---------- RPC：防金手指 diamonds server 計算 ----------
+     失敗 return null（唔係 0），俾前端 fallback 本地計算 */
   async awardRoundDiamonds(score, total) {
     const user = this.currentUser();
-    if (!user) return 0; /* 匿名模式 server 唔計，前端自行加 */
+    if (!user) return null; /* 匿名模式 server 唔計，前端自行加 */
     try {
       const res = await fetch(`${this.URL}/rest/v1/rpc/award_round_diamonds`, {
         method: "POST",
@@ -201,7 +207,27 @@ const SupabaseAuth = {
       if (!res.ok) throw new Error("award RPC failed: " + res.status);
       const data = await res.json();
       return typeof data === "number" ? data : (data[0]?.diamonds ?? 0);
-    } catch (e) { console.warn("awardRoundDiamonds failed:", e.message); return 0; }
+    } catch (e) { console.warn("awardRoundDiamonds failed:", e.message); return null; }
+  },
+
+  /* ---------- RPC：捕捉結算（防金手指，server 記錄） ---------- */
+  async settleCapture(dexId, attempts) {
+    const user = this.currentUser();
+    if (!user) return null;
+    try {
+      const res = await fetch(`${this.URL}/rest/v1/rpc/settle_capture`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this._session.access_token}`,
+          apikey: this.ANON_KEY,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify({ account_uuid: user.id, dex_id: dexId, attempts: attempts || 1 })
+      });
+      if (!res.ok) throw new Error("settle RPC failed: " + res.status);
+      return await res.json();
+    } catch (e) { console.warn("settleCapture failed:", e.message); return null; }
   },
 
   /* ---------- RPC：匿名資料 migrate 到 auth uid ---------- */
@@ -241,3 +267,7 @@ const SupabaseAuth = {
 
 /* 自動 init */
 SupabaseAuth.init();
+
+/* 關鍵：top-level const 唔會自動掛上 window，必須手動暴露
+   （app.js / sync.js 都用 window.SupabaseAuth 判斷） */
+window.SupabaseAuth = SupabaseAuth;

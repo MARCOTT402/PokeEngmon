@@ -509,10 +509,21 @@ class CaptureAudio {
   }
 
   /* 圖片單字題：無限重播，重播會先停上一段（避免疊聲）。
-     onFail 會喺檔案載入／解碼失敗時叫（例如語音檔仲未生成）。 */
+     onFail 會喺檔案載入／解碼失敗時叫（例如語音檔仲未生成）。
+     檔案缺失時先用 speechSynthesis 頂住（fallback，好過靜音），
+     之後生成咗正式 TTS 就會自動用返錄音。 */
   playWord(url, onFail) {
     this.ensure();
-    if (!this.ctx) { if (onFail) onFail(); return; }
+    const fallback = () => {
+      const word = decodeURIComponent(String(url).split("/").pop() || "")
+        .replace(/\.mp3$/i, "").replace(/_/g, " ");
+      if (word && this._speakFallback(word)) {
+        if (onFail) onFail(true);   /* true = 已用系統聲頂住 */
+      } else if (onFail) {
+        onFail(false);
+      }
+    };
+    if (!this.ctx) { fallback(); return; }
     if (!this._oneShotBufs) this._oneShotBufs = {};
     const start = (buf) => {
       try {
@@ -529,7 +540,7 @@ class CaptureAudio {
           try { src.disconnect(); g.disconnect(); } catch (e) {}
           if (this._wordSrc === src) this._wordSrc = null;
         };
-      } catch (e) { if (onFail) onFail(); }
+      } catch (e) { fallback(); }
     };
     const cached = this._oneShotBufs[url];
     if (cached && cached.buf) { start(cached.buf); return; }
@@ -547,8 +558,21 @@ class CaptureAudio {
       .catch(() => {
         rec.loading = false; rec.waiters = [];
         delete this._oneShotBufs[url];       // 下次再試，唔好快取失敗結果
-        if (onFail) onFail();
+        fallback();
       });
+  }
+
+  /* 系統語音 fallback（正式錄音嘅代打，唔會靜音） */
+  _speakFallback(word) {
+    try {
+      if (!("speechSynthesis" in window)) return false;
+      const u = new SpeechSynthesisUtterance(word);
+      u.lang = "en-US";
+      u.rate = 0.85;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
   }
 
   jingle() {

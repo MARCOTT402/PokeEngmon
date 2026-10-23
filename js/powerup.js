@@ -11,15 +11,39 @@ const PowerUp = {
   queue: [],        // [{ q, chosen }] 本回合做錯嘅題
   idx: 0,
   attempts: 0,      // 當前題目改錯失敗次數
+  fixedCount: 0,    // 本回合成功改啱嘅題數（供慶祝 pop 顯示）
+  EXP_PER_FIX: 5,   // 每改啱一題嘅小獎勵（懲罰 → 補救有回報）
   locked: false,
   onDone: null,
 
   start(wrongList, onDone) {
     this.queue = wrongList;
     this.idx = 0;
+    this.fixedCount = 0;
     this.onDone = onDone;
     App.showView("view-powerup");
     this._render();
+  },
+
+  /* 退出 Power Up Zone：放棄本回合，彈 confirm 警告 */
+  quit() {
+    if (this.locked) return;
+    App.showModal(`
+      <div class="confirm-box">
+        <p>Quit Power Up Zone?<br><small>Your fixes so far will be lost — this round won't be completed.</small></p>
+        <div class="confirm-row">
+          <button id="pu-quit-yes" class="btn-big btn-danger">Quit</button>
+          <button id="pu-quit-no" class="btn-big btn-plain">Keep Fixing</button>
+        </div>
+      </div>`, true);
+    document.getElementById("pu-quit-yes").onclick = () => {
+      this.locked = true;
+      this.onDone = null;
+      App.closeModal();
+      App.renderHome();
+      App.showView("view-home");
+    };
+    document.getElementById("pu-quit-no").onclick = () => App.closeModal();
   },
 
   _render() {
@@ -61,7 +85,8 @@ const PowerUp = {
     fb.textContent = "";
     fb.className = "quiz-feedback";
 
-    setTimeout(() => input.focus(), 300);
+    /* 圖片單字題唔自動彈鍵盤（會遮住圖片），句子題先自動聚焦 */
+    if (item.q.type !== "word") setTimeout(() => input.focus(), 300);
   },
 
   /* 播圖片單字題嘅語音 */
@@ -110,6 +135,10 @@ const PowerUp = {
         levenshtein_distance: 0,
         is_typo: false
       });
+
+      /* 改啱小獎勵：浮字 +EXP（爽感即時回饋） */
+      this.fixedCount++;
+      this._expFloat();
 
       setTimeout(() => {
         this.idx++;
@@ -167,12 +196,73 @@ const PowerUp = {
     }
   },
 
-  /* 全部錯題 Dist=0 清除 → 直接進 WARNING 捕捉頁
+  /* 改啱獎勵：畫面浮 +EXP，同時實際入帳（拍檔優先，冇拍檔存 pending） */
+  _expFloat() {
+    const amount = this.EXP_PER_FIX;
+    const input = document.getElementById("powerup-answer");
+    const r = input.getBoundingClientRect();
+    const el = document.createElement("div");
+    el.className = "pu-float";
+    el.textContent = `+${amount} EXP ⚡`;
+    el.style.left = (r.left + r.width / 2 - 45) + "px";
+    el.style.top = (r.top - 6) + "px";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+
+    try {
+      const st = loadState();
+      const entry = getActiveEntry();
+      if (entry) {
+        const res = addEntryExp(entry, amount);
+        if (res && res.levelsGained > 0) {
+          App.toast(`${entryCurrentSpecies(entry)[1]} reached Lv.${entry.level}!`);
+        }
+      } else {
+        st.pendingExp = (st.pendingExp || 0) + amount;
+      }
+      saveState();
+    } catch (e) { console.warn("[PowerUp] exp award failed:", e); }
+  },
+
+  /* 全部錯題 Dist=0 清除 → 慶祝 pop → 直接進 WARNING 捕捉頁
      （每張卡已喺 submit() 入面 Dist=0 時即時 upsert，唔再統一清零）*/
   _complete() {
     document.getElementById("powerup-bar").style.width = "100%";
+    const totalFixed = this.fixedCount;
+    const totalExp = totalFixed * this.EXP_PER_FIX;
     const cb = this.onDone;
     this.onDone = null;
-    if (cb) cb();
+
+    /* 慶祝全屏 pop：改錯完成嘅爽感時刻（1.8 秒後自動進捕捉） */
+    const overlay = document.createElement("div");
+    overlay.className = "pu-complete";
+    overlay.innerHTML = `
+      <div class="pu-complete-card">
+        <div class="pu-big">⚡ ALL FIXED!</div>
+        <div class="pu-sub">You powered up ${totalFixed} question${totalFixed !== 1 ? "s" : ""}</div>
+        <div class="pu-exp">+${totalExp} EXP earned</div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    /* 星爆粒子 */
+    for (let i = 0; i < 14; i++) {
+      const dot = document.createElement("i");
+      dot.className = "pu-burst";
+      const ang = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+      const dist = 90 + Math.random() * 90;
+      dot.style.background = ["#ffcb05", "#ff7043", "#66bb6a", "#42a5f5", "#ab47bc"][i % 5];
+      overlay.querySelector(".pu-complete-card").appendChild(dot);
+      requestAnimationFrame(() => {
+        dot.style.transition = "transform .9s ease-out, opacity .9s ease-out";
+        dot.style.transform = `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) scale(.4)`;
+        dot.style.opacity = "0";
+      });
+    }
+
+    if (window.CaptureScene && CaptureScene.audio) CaptureScene.audio.correct();
+    setTimeout(() => {
+      overlay.remove();
+      if (cb) cb();
+    }, 1800);
   }
 };

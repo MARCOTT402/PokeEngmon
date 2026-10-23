@@ -151,7 +151,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .hero-exp-text { font-size: .8rem; color: #7a8299; }
 .pd-menu { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
 .pd-menu-btn {
-  width: 100%; min-height: 46px; display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 50px; display: flex; align-items: center; gap: 8px;
   padding: 0 12px; border-radius: 9px; border: 2px solid #9fbf8a;
   background: linear-gradient(180deg, #f7fbf2, #eef6e6); color: #2f4a1f;
   font-family: inherit; font-size: .98rem; font-weight: 800; text-align: left;
@@ -159,7 +159,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 }
 .pd-menu-btn:active { transform: scale(.97); }
 .pd-menu-start {
-  justify-content: center; border-color: #5f8f33;
+  min-height: 56px; justify-content: center; border-color: #5f8f33;
   background: linear-gradient(180deg, #a6d967, #82bf45); color: #20320f;
   box-shadow: 0 2px 0 #58852c;
 }
@@ -231,13 +231,16 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   background: none; border: none; color: #b6bdd0; font-size: .85rem;
   text-decoration: underline; cursor: pointer; font-family: inherit;
 }
+.reset-link.danger {
+  color: #c0392b; font-weight: 800; margin-top: 14px; display: block;
+}
 
 .site-footer { text-align: center; padding: 4px 0 2px; }
 .footer-link {
   background: none; border: none; color: #8d97ab; font-size: .78rem; font-weight: 800;
   text-decoration: underline; cursor: pointer; font-family: inherit; padding: 4px 6px;
 }
-.footer-note { margin: 2px 0 0; color: #b0b8c8; font-size: .68rem; line-height: 1.35; }
+.footer-note { margin: 2px 0 0; color: #7a8299; font-size: .68rem; line-height: 1.35; }
 
 .disclaimer-box { color: #4a5164; font-size: .9rem; line-height: 1.55; }
 .disclaimer-box h3 { margin: 0 0 10px; font-size: 1.2rem; color: var(--ink); }
@@ -341,7 +344,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .quiz-btn-side { min-height: 60px; flex: 0 0 31%; font-size: 1.05rem; padding: 0 6px; }
 .quiz-btn-grow { flex: 1; }
 
-.progressbar { height: 10px; border-radius: 999px; background: #edf0f6; overflow: hidden; }
+.progressbar { height: 14px; border-radius: 999px; background: #edf0f6; overflow: hidden; }
 .progressbar i { display: block; height: 100%; width: 0; background: var(--yellow); border-radius: 999px; transition: width .3s; }
 
 .quiz-topic {
@@ -1359,10 +1362,17 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 細屏（iPhone SE 級數）：收細 GBA 機身裝飾，確保 menu 喺首屏見到 */
 @media (max-height: 700px) {
-  .pd-top { height: 36px; }
-  .pd-lens { width: 26px; height: 26px; top: 5px; }
-  .pd-bottom { margin-top: 4px; padding: 4px 8px 5px; }
-  .pd-controls { transform: scale(.8); transform-origin: center; }
+  .pd-top { height: 30px; }
+  .pd-lens { width: 22px; height: 22px; top: 4px; left: 14px; }
+  .pd-ball { width: 22px; height: 22px; top: 5px; right: 14px; }
+  .pd-bottom { margin-top: 4px; padding: 3px 6px 4px; }
+  .pd-controls { transform: scale(.72); transform-origin: center; height: 38px; }
+  .pd-greenbar { height: 6px; margin-bottom: 4px; }
+}
+@media (max-height: 620px) {
+  .pd-top { height: 24px; }
+  .pd-lens, .pd-ball { width: 18px; height: 18px; }
+  .pd-bottom { display: none; }
 }
 
 /* 稀有抽按鈕：鑽石不足時 disabled（唔再成粒消失） */

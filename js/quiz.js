@@ -84,9 +84,13 @@ const Quiz = {
 
     document.getElementById("quiz-feedback").textContent = "";
     document.getElementById("quiz-feedback").className = "quiz-feedback";
+    document.getElementById("btn-quiz-continue").classList.add("hidden");
+    document.getElementById("btn-quiz-hint").disabled = false;
 
-    /* 自動聚焦（手提裝置會彈鍵盤） */
-    setTimeout(() => input.focus(), 300);
+    /* 句子題先自動聚焦彈鍵盤；圖片單字題要「睇圖→聽聲→先打字」，唔好遮住圖片 */
+    if (q.type !== "word") {
+      setTimeout(() => input.focus(), 300);
+    }
   },
 
   /* 記憶光芒：SM-2 卡片 rep>0 且未畢業 → 彩色光芒 + 拍檔提醒 + Bonus XP
@@ -155,10 +159,15 @@ const Quiz = {
     const url = wordAudioURL(q.word);
     status.textContent = "🔊 Playing… tap again to replay";
     status.className = "word-status playing";
-    audio.playWord(url, () => {
-      /* 載入失敗（未生成語音）→ 明確提示，唔會靜靜當冇事 */
-      status.textContent = "🔇 No recording yet for \"" + q.word + "\"";
-      status.className = "word-status missing";
+    audio.playWord(url, (usedSpeech) => {
+      if (usedSpeech) {
+        /* 正式錄音未生成 → 系統聲頂住（好過靜音） */
+        status.textContent = "🔊 Playing (system voice — recording coming soon)";
+        status.className = "word-status playing";
+      } else {
+        status.textContent = "🔇 No recording yet for \"" + q.word + "\"";
+        status.className = "word-status missing";
+      }
     });
   },
 
@@ -231,15 +240,112 @@ const Quiz = {
       fb.className = "quiz-feedback bad";
     }
 
-    setTimeout(() => {
+    this._advance(correct);
+  },
+
+  /* ---------- Hint：顯示首字母 + 字數（免費，edu 優先） ---------- */
+  hint() {
+    if (this.locked) return;
+    const q = this.set[this.idx];
+    const target = q.type === "word" ? q.word : q.answer;
+    const fb = document.getElementById("quiz-feedback");
+    if (!target) {
+      fb.textContent = "💡 Maybe no word is needed here — try leaving it blank!";
+    } else {
+      fb.textContent = `💡 Starts with "${target[0].toUpperCase()}"… (${target.length} letter${target.length > 1 ? "s" : ""})`;
+    }
+    fb.className = "quiz-feedback warn";
+    document.getElementById("btn-quiz-hint").disabled = true;
+  },
+
+  /* ---------- Skip：當答錯計（入 Power Up Zone） ---------- */
+  skip() {
+    if (this.locked) return;
+    document.getElementById("btn-quiz-hint").disabled = true;
+    this.locked = true;
+    const q = this.set[this.idx];
+    const target = q.type === "word" ? q.word : q.answer;
+    const response_ms = Date.now() - (this._curQuestionStart || Date.now());
+
+    /* SM-2：空答案 = 完全唔識 → Q 值自然最低 */
+    const judge = SM2.computeQ("", target || "", response_ms);
+    const card = SM2.getOrCreateCard(q);
+    const updatedCard = SM2.updateCard(card, judge.q, response_ms);
+    updatedCard.ease_factor = SM2.computeEF(card.ease_factor, judge.reason);
+    SM2.upsertCard(updatedCard);
+    SM2.appendHistory({
+      device_id: (loadState && loadState().device_id) || "unknown",
+      card_id: card.card_id,
+      ts: Date.now(),
+      q_score: judge.q,
+      response_ms,
+      levenshtein_distance: judge.dist,
+      is_typo: false
+    });
+
+    this.results.push({
+      qid: q.id, chosen: "", correct: false, topic: q.topic,
+      memory: card.repetition > 0 && !card.is_mastered,
+      skipped: true,
+      _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target }
+    });
+
+    const fb = document.getElementById("quiz-feedback");
+    fb.textContent = target ? `Skipped — the answer is "${target}"` : `Skipped — the answer is "(blank)"`;
+    fb.className = "quiz-feedback bad";
+    document.getElementById("quiz-answer").disabled = true;
+    document.getElementById("btn-quiz-submit").disabled = true;
+    this._advance(false);
+  },
+
+  /* ---------- 離開回合（確認彈窗） ---------- */
+  quit() {
+    if (this.locked && this._onContinue) return; /* 已喺最後一題，等 Continue */
+    App.showModal(`
+      <div class="confirm-box">
+        <p>Quit this set?<br><small>Progress in this round will be lost.</small></p>
+        <div class="confirm-row">
+          <button id="quiz-quit-yes" class="btn-big btn-danger">Quit</button>
+          <button id="quiz-quit-no" class="btn-big btn-plain">Keep Going</button>
+        </div>
+      </div>`, true);
+    document.getElementById("quiz-quit-yes").onclick = () => {
+      clearInterval(this.timerId);
+      this.locked = true;
+      this._onContinue = null;
+      App.closeModal();
+      App.renderHome();
+      App.showView("view-home");
+    };
+    document.getElementById("quiz-quit-no").onclick = () => App.closeModal();
+  },
+
+  /* ---------- 前進：答對自動快跳；答錯手動 Continue ---------- */
+  _advance(correct) {
+    const go = () => {
       this.idx++;
       if (this.idx < this.set.length) this._renderQuestion();
       else this.finish();
-    }, correct ? 900 : 2200);
+    };
+    if (correct) {
+      setTimeout(go, 650);
+    } else {
+      /* 答錯：俾玩家自己睇清楚答案先過（Continue 或 Enter） */
+      document.getElementById("btn-quiz-continue").classList.remove("hidden");
+      this._onContinue = go;
+    }
+  },
+
+  _continue() {
+    const go = this._onContinue;
+    this._onContinue = null;
+    document.getElementById("btn-quiz-continue").classList.add("hidden");
+    if (go) go();
   },
 
   finish() {
     clearInterval(this.timerId);
+    this._onContinue = null;   /* 防止殘留狀態喺之後誤觸 Continue */
     document.getElementById("quiz-bar").style.width = "100%";
     const score = this.results.filter(r => r.correct).length;
     const duration = this._elapsedSec();

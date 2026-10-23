@@ -661,8 +661,7 @@ const App = {
         <input id="import-file" type="file" accept=".json,application/json" hidden>
         <small class="settings-note">Backup file: pokeengmon-save-YYYY-MM-DD.json</small>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
-        <button id="btn-reset-progress" class="btn-big btn-danger">🗑 Reset Progress</button>
-        <button id="btn-settings-close" class="btn-big btn-plain">Close</button>
+        <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
       </div>`);
     const fileInput = document.getElementById("import-file");
     document.getElementById("btn-export-save").onclick = () => this.exportSave();
@@ -670,7 +669,6 @@ const App = {
     fileInput.onchange = () => this.handleImportFile(fileInput.files[0]);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
-    document.getElementById("btn-settings-close").onclick = () => this.closeModal();
   },
 
   /* ---------- Login Hub（Poké Ball 風格） ---------- */
@@ -982,6 +980,7 @@ const App = {
 
     /* Power Up Zone：回合尾改錯提交 */
     document.getElementById("btn-powerup-submit").onclick = () => PowerUp.submit();
+    document.getElementById("btn-powerup-exit").onclick = () => PowerUp.quit();
     document.getElementById("powerup-answer").addEventListener("keydown", (e) => {
       if (e.key === "Enter") PowerUp.submit();
     });

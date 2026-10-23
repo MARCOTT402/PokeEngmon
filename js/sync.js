@@ -11,14 +11,14 @@ window.Sync = (() => {
   const cfg = () => window.SUPABASE_CONFIG || null;
 
   /* ---------- Account 識別 ---------- */
-  /* 登入 → auth.uid()；未登入 → device_id */
+  /* 登入 → { account_id, isAuth: true }；未登入 → { device_id, isAuth: false }（唔上傳） */
   function _accountRef() {
     try {
       const user = window.SupabaseAuth && SupabaseAuth.currentUser();
-      if (user) return { account_uuid: user.id, isAuth: true };
+      if (user && user.id) return { account_id: user.id, device_id: null, isAuth: true };
     } catch (e) {}
     const st = (typeof loadState === "function") ? loadState() : { device_id: null };
-    return { device_id: st.device_id || "unknown", isAuth: false };
+    return { account_id: null, device_id: st.device_id || "unknown", isAuth: false };
   }
 
   /* ---------- 通用 fetch wrapper ---------- */
@@ -50,9 +50,9 @@ window.Sync = (() => {
 
   function queueUpsert(card) {
     const ref = _accountRef();
+    if (!ref.isAuth) return;   /* 匿名：RLS 唔允許寫，直接唔好送（本地已保存） */
     _pendingCards.push({
-      account_uuid: ref.account_uuid || null,
-      device_id: ref.device_id || null,
+      account_id: ref.account_id,
       card_id: card.card_id,
       card_type: card.card_type,
       next_review_at: card.next_review_at,
@@ -68,9 +68,9 @@ window.Sync = (() => {
 
   function queueHistory(rec) {
     const ref = _accountRef();
+    if (!ref.isAuth) return;   /* 匿名：同上 */
     _pendingHistory.push({
-      account_uuid: ref.account_uuid || null,
-      device_id: ref.device_id || null,
+      account_id: ref.account_id,
       card_id: rec.card_id,
       ts: rec.ts,
       q_score: rec.q_score,
@@ -124,9 +124,9 @@ window.Sync = (() => {
 
     try {
       const ref = _accountRef();
-      const filter = ref.isAuth
-        ? `account_id=eq.${ref.account_uuid}`
-        : `device_id=eq.${encodeURIComponent(ref.device_id)}`;
+      /* 匿名：RLS 用 current_setting('app.device_id')，PostgREST set 唔到 → 拉唔到嘢，直接跳過 */
+      if (!ref.isAuth) return null;
+      const filter = `account_id=eq.${ref.account_id}`;
 
       const [cards] = await Promise.all([
         _api("GET", `/user_cards?${filter}&select=*`)
