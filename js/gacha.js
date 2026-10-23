@@ -162,8 +162,12 @@ const Gacha = {
         : `<div class="gacha-new">NEW!</div>`}
     `;
 
-    document.getElementById("btn-do-pull").disabled = true;
-    document.getElementById("btn-do-pull").textContent = "Pull complete!";
+    const pullBtn = document.getElementById("btn-do-pull");
+    pullBtn.disabled = true;
+    pullBtn.textContent = "Pull complete!";
+    /* 抽完之後解鎖，稍後自動還原按鈕俾玩家繼續再抽 */
+    this.busy = false;
+    setTimeout(() => this._refreshControls(), 1400);
 
     /* 稀有抽專屬慶祝：要勁過普通捕捉場景嘅爽感 */
     if (this.mode === "rare") this._celebrate(rarity, cur[0]);
