@@ -167,9 +167,14 @@ function chainMaxStage(chain) {
 /* entry 而家嗰隻物種 [dexId, 英文名, 中文名]（考慮伊貝分支） */
 function entryCurrentSpecies(entry) {
   const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
+  if (!chain) {
+    console.warn("[data] entryCurrentSpecies: chain not found for", entry.chainKey);
+    return [1, "Bulbasaur"]; /* fallback */
+  }
   if (entry.stage <= chain.stages.length) return chain.stages[entry.stage - 1];
   const bi = entry.stage - chain.stages.length - 1;
-  return chain.branches[bi][entry.branch || 0];
+  if (chain.branches && chain.branches[bi]) return chain.branches[bi][entry.branch || 0];
+  return chain.stages[chain.stages.length - 1]; /* fallback to last stage */
 }
 
 /* ---------- 題庫（鍵盤輸入形式）----------

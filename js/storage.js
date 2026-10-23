@@ -88,6 +88,7 @@ function uidGen() {
 function obtainPokemon(chainKey, mode) {
   const st = loadState();
   const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
+  if (!chain) { console.warn("[storage] obtainPokemon: chain not found", chainKey); return null; }
   const existing = st.entries.find(e => e.chainKey === chainKey);
   if (existing) {
     ensureEntryPokemonData(existing);

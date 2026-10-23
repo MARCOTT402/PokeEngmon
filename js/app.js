@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v87";
+const APP_VERSION = "v88";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -41,7 +41,7 @@ const App = {
       ensureEntryPokemonData(entry);
       const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
       const cur = entryCurrentSpecies(entry);
-      const rz = RARITY[chain.baseRarity];
+      const rz = RARITY[chain?.baseRarity || "common"];
       const level = entry.level || 1;
       const stars = "★".repeat(entry.stars || 1);
       /* Animated pixel GIF from local assets; falls back to the static sprite */
@@ -126,7 +126,7 @@ const App = {
       ensureEntryPokemonData(entry);
       const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
       const cur = entryCurrentSpecies(entry);
-      const rz = RARITY[chain.baseRarity];
+      const rz = RARITY[chain?.baseRarity || "common"];
       const active = entry.uid === st.activeUid;
       return `
         <button class="dex-cell owned ${active ? "current" : ""}" data-uid="${entry.uid}">
