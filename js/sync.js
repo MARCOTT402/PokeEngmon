@@ -31,7 +31,9 @@ window.Sync = (() => {
       "Authorization": "Bearer " + (window.SupabaseAuth && SupabaseAuth.currentToken
         ? SupabaseAuth.currentToken() : c.anonKey),
       "Content-Type": "application/json",
-      "Prefer": "return=representation"
+      "Prefer": path.includes("on_conflict")
+        ? "return=representation,resolution=merge-duplicates"
+        : "return=representation"
     };
     const opts = { method, headers };
     if (body !== undefined) opts.body = JSON.stringify(body);
