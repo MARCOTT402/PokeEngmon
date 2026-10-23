@@ -106,6 +106,27 @@ const SupabaseAuth = {
     localStorage.removeItem("pokeengmon_auth_session");
   },
 
+  /* ---------- RPC：防金手指 diamonds server 計算 ---------- */
+  async awardRoundDiamonds(score, total) {
+    const user = this.currentUser();
+    if (!user) return 0; /* 匿名模式 server 唔計，前端自行加 */
+    try {
+      const res = await fetch(`${this.URL}/rest/v1/rpc/award_round_diamonds`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this._session.access_token}`,
+          apikey: this.ANON_KEY,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify({ account_uuid: user.id, score, total })
+      });
+      if (!res.ok) throw new Error("award RPC failed: " + res.status);
+      const data = await res.json();
+      return typeof data === "number" ? data : (data[0]?.diamonds ?? 0);
+    } catch (e) { console.warn("awardRoundDiamonds failed:", e.message); return 0; }
+  },
+
   /* ---------- RPC：匿名資料 migrate 到 auth uid ---------- */
   async migrateAnonymous(deviceId) {
     if (!this._session?.user?.id) return null;

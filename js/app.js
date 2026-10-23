@@ -21,7 +21,7 @@ const App = {
     const st = loadState();
     document.getElementById("topbar-name").innerHTML = `${escapeHTML(st.playerName)} <span class="name-edit">✎</span>`;
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
-    document.getElementById("topbar-pulls").textContent = st.normalPulls;
+    /* btn-top-pull (normal pulls) hidden since v48 — skip binding */
 
     /* 拍檔卡 */
     const entry = getActiveEntry();
@@ -913,15 +913,7 @@ const App = {
       }
       Gacha.open("rare");
     };
-    document.getElementById("btn-top-pull").onclick = () => {
-      const st = loadState();
-      if (st.normalPulls < 1) {
-        this.toast("No normal pulls left — earn some by practising!");
-        return;
-      }
-      Gacha.open("normal");
-    };
-    document.getElementById("btn-pull-normal").onclick = () => Gacha.open("normal");
+    /* btn-top-pull hidden since v48 — skip binding */
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();
     document.getElementById("btn-settle-home").onclick = () => { this.renderHome(); this.showView("view-home"); };
