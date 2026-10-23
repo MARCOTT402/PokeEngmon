@@ -1,5 +1,5 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v63";
+const CACHE_NAME = "pokeengmon-v64";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -96,3 +96,4 @@ self.addEventListener("fetch", (e) => {
     );
   }
 });
+

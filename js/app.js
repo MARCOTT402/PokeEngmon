@@ -241,10 +241,7 @@ const App = {
     const selCount = this.selectedTopics.size;
     /* 計算已揀題型嘅總題數（SM-2 Session Pool 會自動分配 Due / New）*/
     const allQ = getAllQuestions();
-    const totalCount = allQ.filter(q => {
-      if (q.type === "word") return this.selectedTopics.has(q.topic) || this.selectedTopics.has(q.category);
-      return this.selectedTopics.has(q.topic);
-    }).length;
+    const totalCount = allQ.filter(q => this.selectedTopics.has(questionTopicKey(q))).length;
     const startBtn = document.getElementById("btn-setup-start");
     startBtn.disabled = selCount === 0 || totalCount === 0;
     startBtn.textContent = selCount === 0
