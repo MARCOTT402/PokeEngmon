@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v82";
+const APP_VERSION = "v83";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -751,16 +751,19 @@ const App = {
       document.getElementById("lh-signout").onclick = async () => {
         try {
           await SupabaseAuth.signOut();
-          /* 登出後重置 migrate 標記，下次登入（可能係另一個帳戶）會重新判斷 push/pull */
-          st._googleMigrated = false;
+          /* 登出後清除本地遊戲進度，防止再登入另一個帳戶時將舊進度複製過去（cheat） */
+          clearGameProgress();
+          /* clearGameProgress 會建立新 state 物件，要重新 load */
+          const fresh = loadState();
+          fresh._googleMigrated = false;
           saveState();
-          /* 登出後清除 auth 狀態 + refresh LocalStorage 拉匿名資料 */
+          /* 登出後清除 auth 狀態 */
           try { await Sync.pull(); } catch (e) {}
           const btn = document.getElementById("btn-login");
           if (btn) { btn.textContent = "🔐"; btn.title = "Sign in"; }
           this.closeModal();
           this.renderHome();
-          this.toast("Signed out");
+          this.toast("Signed out — local progress cleared");
         } catch (e) {
           console.error("[SignOut] failed:", e);
           this.toast("Sign out failed: " + e.message);

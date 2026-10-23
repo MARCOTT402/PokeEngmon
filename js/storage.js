@@ -48,6 +48,20 @@ function resetState() {
   saveState();
 }
 
+/* Sign out 時清除遊戲進度，但保留 device_id（匿名追蹤用）同 customQuestions（家長匯入） */
+function clearGameProgress() {
+  const st = loadState();
+  const keepDeviceId = st.device_id;
+  const keepCustomQuestions = st.customQuestions || [];
+  _state = defaultState();
+  _state.device_id = keepDeviceId;
+  _state.customQuestions = keepCustomQuestions;
+  saveState();
+  /* 清除 SM-2 卡片同歷史 */
+  try { localStorage.removeItem("pokeengmon_sm2_cards_v2"); } catch (e) {}
+  try { localStorage.removeItem("pokeengmon_sm2_history_v2"); } catch (e) {}
+}
+
 /* 由備份 JSON 還原（覆蓋目前進度） */
 function importState(data) {
   _state = Object.assign(defaultState(), data);
