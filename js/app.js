@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v97";
+const APP_VERSION = "v98";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -152,6 +152,8 @@ const App = {
         if (uid === st.activeUid) { this.closeModal(); return; }
         st.activeUid = uid;
         saveState();
+        /* 雲端同步拍檔切換（active 係 column grant 開放嘅非敏感欄位） */
+        if (window.Sync && Sync.isEnabled()) Sync.pushActive(uid);
         this.closeModal();
         this.renderHome();
         const cur = entryCurrentSpecies(target);
@@ -411,12 +413,14 @@ const App = {
               const res = obtainPokemon(chainKey, "normal");
               const cur = entryCurrentSpecies(res.entry);
               this.lastCapture = { dexId: cur[0], name: cur[1], isDupe: res.isDupe, caught: true };
-              /* 防金手指：server 記錄捕捉結果（fire-and-forget，唔阻動畫） */
+              /* 防金手指：server 記錄捕捉 + server 權威派寵（fire-and-forget，唔阻動畫）
+                 obtain_capture 回傳後用 server 行覆蓋本地 entry（IV/dupes/candies 以 server 為準） */
               if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
-                SupabaseAuth.settleCapture(cur[0], 1);
+                SupabaseAuth.settleCapture(cur[0]);
+                SupabaseAuth.obtainCapture(chainKey, cur[0]).then(r => {
+                  if (r && r.entry) adoptServerEntry(r.entry);
+                });
               }
-              /* 同步到雲端：新 pokemon / dupes */
-              if (window.Sync && Sync.isEnabled()) Sync.pushState();
               this.renderHome();
               return { isDupe: res.isDupe, dexId: cur[0], name: cur[1] };
             }
@@ -455,21 +459,22 @@ const App = {
       ? Math.round((expGain / data.total) * 0.5 * memoryCorrect)
       : 0;
     const rewards = { ticket: 0, diamonds: 0, exp: expGain + memoryBonus, memoryBonus };
-    /* Diamonds：防金手指走 RPC（登入時由 server 計算）
+    /* Diamonds：防金手指走 RPC（登入時由 server 計算 + 權威 balance）
        RPC 失敗（null）→ fallback 本地計算，離線都唔會變 0 粒 */
-    let serverBonus = null;
+    let serverRes = null;
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
-      serverBonus = await SupabaseAuth.awardRoundDiamonds(data.score, data.total);
+      serverRes = await SupabaseAuth.awardRoundDiamonds(data.score, data.total);
     }
-    if (serverBonus === null || serverBonus === undefined) {
+    if (serverRes && typeof serverRes.bonus === "number") {
+      rewards.diamonds = serverRes.bonus;
+      st.diamonds = serverRes.balance;   // server 權威，唔係本地 +=
+    } else {
       if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
       else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;
       else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
-    } else {
-      rewards.diamonds = serverBonus;
+      st.diamonds += rewards.diamonds;
     }
 
-    st.diamonds += rewards.diamonds;
     addPracticeRecord(data);
     this.lastRecord = data;
 
@@ -477,13 +482,21 @@ const App = {
     let levelRes = null;
     if (entry) {
       levelRes = addEntryExp(entry, rewards.exp);
+      /* 登入時 EXP 走 RPC（server 權威累加）；失敗唔緊要，下次 pull 以 server 為準。
+         伊貝進化分支一經決定要 PATCH 上雲（branch 係重推進化嘅必要輸入） */
+      if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+        SupabaseAuth.addEntryExp(entry.uid, rewards.exp);
+        if (levelRes && levelRes.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+          Sync.patchEntry(entry.uid, { branch: entry.branch });
+        }
+      }
     } else {
       st.pendingExp = (st.pendingExp || 0) + rewards.exp;
     }
     saveState();
 
-    /* 同步到雲端：diamonds / exp / level 變化 */
-    if (window.Sync && Sync.isEnabled()) Sync.pushState();
+    /* v98：diamonds/EXP/entries 已各自經 RPC 上雲；SM-2 cards/history 由 queueUpsert/
+       queueHistory 批量 flush —— 唔再需要 pushState 全量推（會重複 insert history） */
 
     this._renderSettlement(data, rewards);
     this.showView("view-settlement");
@@ -877,6 +890,8 @@ const App = {
       st.playerName = name;
       st.nameCustomized = true;
       saveState();
+      /* trainer_name 係唯一仲直寫嘅 account 欄位 */
+      if (window.Sync && Sync.isEnabled()) Sync.pushState();
       this.closeModal();
       this.renderHome();
       this.toast(`Trainer name saved: ${name}`);
@@ -974,9 +989,34 @@ const App = {
           const isNewAccount = await SupabaseAuth.migrateAnonymous(deviceId);
           console.log("[OAuth] migrate result — isNewAccount:", isNewAccount);
           if (isNewAccount === true) {
-            /* 新帳戶：將本地匿名數據上傳到雲端 */
+            /* 新帳戶：本地進度經 import_state 一次性上傳（server clamp：diamonds ≤200、
+               entries ≤200、exp ≤1.3M），之後 pull 正規化（server 行先係權威） */
+            const payload = {
+              diamonds: st.diamonds || 0,
+              total_sets: st.totalSets || 0,
+              total_correct: st.totalCorrect || 0,
+              total_questions: st.totalQuestions || 0,
+              trainer_name: st.playerName || "The PokéEngmon Trainer",
+              entries: (st.entries || []).map(e => ({
+                id: e.uid,
+                chain_key: e.chainKey,
+                exp: Number(e.exp ?? 0),
+                ivs: e.ivs || {},
+                evs: e.evs || {},
+                ev_points: e.evPoints ?? 0,
+                candies: e.candies ?? 0,
+                dupes: e.dupes ?? 0,
+                branch: (e.branch === 0 || e.branch) ? e.branch : null,
+                active: e.uid === st.activeUid,
+                obtained_at: e.obtainedAt || Date.now()
+              }))
+            };
+            const imported = await SupabaseAuth.importState(payload);
+            console.log("[OAuth] importState result:", imported);
+            /* SM-2 cards/history 維持直推（非敏感學習數據） */
             await Sync.pushState();
-            console.log("[OAuth] ✅ Local progress uploaded to new Google account");
+            await Sync.pull();
+            console.log("[OAuth] ✅ Local progress imported to new Google account");
             st._googleMigrated = true;
             saveState();
           } else if (isNewAccount === false) {

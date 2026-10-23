@@ -190,6 +190,45 @@ class CaptureAudio {
     this._noiseHit({ freq: 4200, q: 2, gain: 0.05, dur: 0.05, type: "highpass" });
   }
 
+  /* Metallic coin ping — pitch climbs per tap (gacha coin insert) */
+  coin(step) {
+    this.ensure();
+    if (!this.ctx) return;
+    const base = 1320 * Math.pow(1.22, step - 1);
+    this._tone(base, { type: "square", dur: 0.09, gain: 0.055 });
+    this._tone(base * 2.01, { type: "sine", dur: 0.34, gain: 0.13, at: 0.005 });
+    this._tone(base * 2.98, { type: "sine", dur: 0.22, gain: 0.07, at: 0.01 });
+    this._noiseHit({ freq: 6800, q: 3, gain: 0.05, dur: 0.05, type: "highpass" });
+  }
+
+  /* Coin swallowed by the slot: low thunk + metallic tick */
+  coinInsert() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(220, { type: "sine", dur: 0.16, gain: 0.2, slideTo: 70 });
+    this._tone(1560, { type: "sine", dur: 0.3, gain: 0.1, at: 0.03 });
+    this._noiseHit({ freq: 3200, q: 1.6, gain: 0.1, dur: 0.08, at: 0.02 });
+  }
+
+  /* Machine rumble loop (one shot, ~1s of low juddering) */
+  rumble() {
+    this.ensure();
+    if (!this.ctx) return;
+    for (let i = 0; i < 6; i++) {
+      this._tone(70 + Math.random() * 30, { type: "sine", dur: 0.14, gain: 0.15, at: i * 0.16, slideTo: 45 });
+      this._noiseHit({ freq: 300, q: 0.8, gain: 0.09, dur: 0.12, at: i * 0.16, type: "lowpass" });
+    }
+  }
+
+  /* Heavy metal ball landing */
+  ballLand() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(180, { type: "sine", dur: 0.22, gain: 0.2, slideTo: 60 });
+    this._tone(2400, { type: "sine", dur: 0.12, gain: 0.06, at: 0.01 });
+    this._noiseHit({ freq: 700, q: 0.7, gain: 0.12, dur: 0.14, type: "lowpass" });
+  }
+
   charge() {
     this.ensure();
     if (!this.ctx) return;
