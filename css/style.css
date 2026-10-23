@@ -1397,6 +1397,35 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .sync-banner.sync-error { background: #fdecea; color: #b71c1c; border-bottom-color: #ef9a9a; }
 .sync-banner.sync-error button { border-color: #c62828; color: #b71c1c; }
 
+/* 更新提示：畫面中央彈窗（用戶一睇就見到） */
+.update-modal {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn .2s ease;
+}
+.update-modal.hidden { display: none; }
+.update-modal-box {
+  background: #fff; border-radius: 18px; padding: 28px 24px;
+  max-width: 340px; width: 100%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  animation: popIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+.update-modal-icon { font-size: 3rem; margin-bottom: 8px; }
+.update-modal-title { font-size: 1.2rem; font-weight: 900; color: #1a1a2e; margin: 4px 0; }
+.update-modal-desc { font-size: .88rem; color: #5a5a72; margin: 4px 0 18px; line-height: 1.4; }
+.update-modal button {
+  width: 100%; border: none; border-radius: 12px; padding: 14px;
+  font-size: 1rem; font-weight: 800; cursor: pointer;
+  background: linear-gradient(135deg, #4caf50, #2e7d32); color: #fff;
+  box-shadow: 0 4px 14px rgba(46,125,50,.35);
+  transition: transform .1s;
+}
+.update-modal button:active { transform: scale(.97); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
 /* Power Up 爽感：+EXP 浮字 */
 .pu-float {
   position: fixed; z-index: 950; pointer-events: none;

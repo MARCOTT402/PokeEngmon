@@ -300,7 +300,6 @@ const Quiz = {
 
   /* ---------- 離開回合（確認彈窗） ---------- */
   quit() {
-    if (this.locked && this._onContinue) return; /* 已喺最後一題，等 Continue */
     App.showModal(`
       <div class="confirm-box">
         <p>Quit this set?<br><small>Progress in this round will be lost.</small></p>

@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v75";
+const APP_VERSION = "v77";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -716,6 +716,9 @@ const App = {
       };
       document.getElementById("lh-signout").onclick = async () => {
         await SupabaseAuth.signOut();
+        /* 登出後重置 migrate 標記，下次登入（可能係另一個帳戶）會重新判斷 push/pull */
+        st._googleMigrated = false;
+        saveState();
         /* 登出後清除 auth 狀態 + refresh LocalStorage 拉匿名資料 */
         try { await Sync.pull(); } catch (e) {}
         const btn = document.getElementById("btn-login");
@@ -919,12 +922,26 @@ const App = {
         await SupabaseAuth.ensureFreshSession();
         if (!st._googleMigrated) {
           const deviceId = ensureDeviceId();
-          await SupabaseAuth.migrateAnonymous(deviceId);
-          console.log("[OAuth] ✅ Anonymous device migrated to auth uid");
+          const isNewAccount = await SupabaseAuth.migrateAnonymous(deviceId);
+          console.log("[OAuth] migrate result — isNewAccount:", isNewAccount);
+          if (isNewAccount === true) {
+            /* 新帳戶：將本地匿名數據上傳到雲端，唔好被空雲端數據覆蓋 */
+            await Sync.pushState();
+            console.log("[OAuth] ✅ Local progress uploaded to new Google account");
+          } else if (isNewAccount === false) {
+            /* 舊帳戶（有匿名數據已搬移）：從雲端拉下來 */
+            await Sync.pull();
+            console.log("[OAuth] ✅ Existing account data pulled from cloud");
+          } else {
+            /* migrate 失敗 / 未知狀態：保守起見 pull（雲端有就用雲端） */
+            try { await Sync.pull(); } catch (e) {}
+          }
           st._googleMigrated = true;
           saveState();
+        } else {
+          /* 已 migrate 過（之前登入過）：拉雲端最新數據 */
+          try { await Sync.pull(); } catch (e) {}
         }
-        try { await Sync.pull(); } catch (e) {}
         this.renderHome();
         this.toast("✅ Signed in! Your progress is cloud-synced.");
       } catch (e) { console.warn("[OAuth] post-login failed:", e.message); }
@@ -1047,14 +1064,28 @@ const App = {
       /* 儲存 registration 供 checkForUpdates 用 */
       let swReg = null;
 
+      /* 顯示更新彈窗（畫面中央，用戶一睇就見到） */
       const promptUpdate = (reg) => {
-        const el = document.getElementById("sync-banner");
-        if (!el) return;
-        el.className = "sync-banner";
-        el.innerHTML = `<span>🔄 New version ready!</span><button id="sync-banner-x">UPDATE</button>`;
-        document.getElementById("sync-banner-x").onclick = () => {
-          if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-        };
+        let modal = document.getElementById("update-modal");
+        if (!modal) {
+          modal = document.createElement("div");
+          modal.id = "update-modal";
+          modal.className = "update-modal hidden";
+          document.body.appendChild(modal);
+        }
+        if (modal.classList.contains("hidden")) {
+          modal.innerHTML = `
+            <div class="update-modal-box">
+              <div class="update-modal-icon">🔄</div>
+              <div class="update-modal-title">New version ready!</div>
+              <div class="update-modal-desc">A new update is available. Tap below to refresh and get the latest features.</div>
+              <button id="update-modal-btn">UPDATE NOW</button>
+            </div>`;
+          modal.classList.remove("hidden");
+          document.getElementById("update-modal-btn").onclick = () => {
+            if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          };
+        }
       };
 
       /* 新 SW 安裝完成後會 postMessage 通知（比 updatefound 更可靠） */
@@ -1089,20 +1120,31 @@ const App = {
     }
   },
 
-  /* 手動檢查更新：觸發 SW update，有 waiting 就顯示 UPDATE 橫幅 */
+  /* 手動檢查更新：觸發 SW update，有 waiting 就顯示更新彈窗 */
   checkForUpdates() {
     if (!("serviceWorker" in navigator)) { this.toast("Service Worker not supported"); return; }
     navigator.serviceWorker.getRegistration().then(reg => {
       if (!reg) { this.toast("No service worker registered"); return; }
       reg.update().then(() => {
         if (reg.waiting) {
-          this.toast("New version found — close this banner and tap UPDATE");
-          /* 直接顯示更新橫幅 */
-          const el = document.getElementById("sync-banner");
-          if (el) {
-            el.className = "sync-banner";
-            el.innerHTML = `<span>🔄 New version ready!</span><button id="sync-banner-x">UPDATE</button>`;
-            document.getElementById("sync-banner-x").onclick = () => {
+          /* 顯示畫面中央更新彈窗 */
+          let modal = document.getElementById("update-modal");
+          if (!modal) {
+            modal = document.createElement("div");
+            modal.id = "update-modal";
+            modal.className = "update-modal hidden";
+            document.body.appendChild(modal);
+          }
+          if (modal.classList.contains("hidden")) {
+            modal.innerHTML = `
+              <div class="update-modal-box">
+                <div class="update-modal-icon">🔄</div>
+                <div class="update-modal-title">New version ready!</div>
+                <div class="update-modal-desc">A new update is available. Tap below to refresh and get the latest features.</div>
+                <button id="update-modal-btn">UPDATE NOW</button>
+              </div>`;
+            modal.classList.remove("hidden");
+            document.getElementById("update-modal-btn").onclick = () => {
               if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
             };
           }

@@ -149,8 +149,10 @@ end;
 $$;
 
 -- 3. Migrate：匿名 device_id 資料搬到 auth 帳戶
+--    回傳 true = 新建立帳戶（本地要 push 上去）；false = 已有資料搬移完畢（本地要 pull 落嚟）
+drop function if exists migrate_anonymous_to_auth(uuid, text);
 create or replace function migrate_anonymous_to_auth(new_auth_uuid uuid, old_device_id text)
-returns void
+returns boolean
 language plpgsql
 security definer
 as $$
@@ -160,10 +162,11 @@ begin
   select id into old_account_uuid from user_account where device_id = old_device_id;
 
   if old_account_uuid is null then
-    -- 從未登入過，建立新 account entry
+    -- 從未登入過，建立新 account entry（本地有數據要 push 上嚟）
     insert into user_account(id, device_id, trainer_name, updated_at)
-    values (new_auth_uuid, null, 'The PokéEngmon Trainer', extract(epoch from now()) * 1000);
-    return;
+    values (new_auth_uuid, null, 'The PokéEngmon Trainer', extract(epoch from now()) * 1000)
+    on conflict (id) do nothing;
+    return true;
   end if;
 
   -- 搬所有資料到新 auth id
@@ -173,6 +176,7 @@ begin
   update user_captures set account_id = new_auth_uuid where account_id = old_account_uuid;
   update user_account  set id = new_auth_uuid, device_id = null, updated_at = extract(epoch from now()) * 1000
     where id = old_account_uuid;
+  return false;
 end;
 $$;
 

@@ -126,12 +126,53 @@ window.Sync = (() => {
       const ref = _accountRef();
       /* 匿名：RLS 用 current_setting('app.device_id')，PostgREST set 唔到 → 拉唔到嘢，直接跳過 */
       if (!ref.isAuth) return null;
-      const filter = `account_id=eq.${ref.account_id}`;
 
-      const [cards] = await Promise.all([
-        _api("GET", `/user_cards?${filter}&select=*`)
+      /* 一齊拉：account（鑽石+統計）、entries（寶可夢）、cards（SM-2） */
+      const [accountRows, entries, cards] = await Promise.all([
+        _api("GET", `/user_account?select=*`),
+        _api("GET", `/user_entries?select=*&order=obtained_at.asc`),
+        _api("GET", `/user_cards?select=*`)
       ]);
 
+      /* ---- 1. 還原 account：diamonds / 統計 / trainer name ---- */
+      if (accountRows && accountRows[0]) {
+        const acct = accountRows[0];
+        const st = loadState();
+        st.diamonds = acct.diamonds ?? st.diamonds;
+        st.totalSets = acct.total_sets ?? st.totalSets;
+        st.totalCorrect = acct.total_correct ?? st.totalCorrect;
+        st.totalQuestions = acct.total_questions ?? st.totalQuestions;
+        if (acct.trainer_name && acct.trainer_name !== st.playerName) {
+          st.playerName = acct.trainer_name;
+          st.nameCustomized = true;
+        }
+        saveState();
+      }
+
+      /* ---- 2. 還原 entries：寶可夢 ---- */
+      if (Array.isArray(entries)) {
+        const st = loadState();
+        st.entries = entries.map(e => ({
+          uid: e.id,
+          chainKey: e.chain_key,
+          stage: e.stage ?? 1,
+          exp: Number(e.exp ?? 0),
+          ownedSpecies: Array.isArray(e.owned_species) ? e.owned_species.map(Number) : [],
+          obtainedAt: e.obtained_at,
+          ivs: e.ivs || {},
+          evs: e.evs || {},
+          ev_points: e.ev_points ?? 0,
+          candies: e.candies ?? 0,
+          dupes: e.dupes ?? 0,
+          stars: e.stars ?? 1
+        }));
+        /* activeUid：邊個 entry.active = true */
+        const activeEntry = entries.find(e => e.active === true);
+        st.activeUid = activeEntry ? activeEntry.id : (st.entries.length > 0 ? st.entries[0].uid : null);
+        saveState();
+      }
+
+      /* ---- 3. 還原 SM-2 cards（合併本地 vs 雲端，取較新） ---- */
       const local = SM2.listAll();
       const localMap = {};
       local.forEach(c => { localMap[c.card_id] = c; });
@@ -149,7 +190,7 @@ window.Sync = (() => {
       const obj = {};
       Object.values(mergedCards).forEach(c => { obj[c.card_id] = c; });
       try { localStorage.setItem("pokeengmon_sm2_cards_v2", JSON.stringify(obj)); } catch (e) {}
-      console.info("[Sync] pulled", Object.keys(mergedCards).length, "cards");
+      console.info("[Sync] pulled", Object.keys(mergedCards).length, "cards,", (entries?.length||0), "pokemon");
       return Object.values(mergedCards);
 
     } catch (e) {
@@ -158,10 +199,80 @@ window.Sync = (() => {
     }
   }
 
+  /* ---------- Push State（首次 Connect 新帳戶時：將本地數據上傳到雲端）---------- */
+  async function pushState() {
+    const ref = _accountRef();
+    if (!ref.isAuth) return; /* 匿名唔使 push */
+
+    const st = loadState();
+    const now = Date.now();
+
+    /* ---- 1. Upsert user_account（diamonds + 統計 + trainer name）---- */
+    try {
+      await _api("POST", "/user_account?on_conflict=id", {
+        id: ref.account_id,
+        trainer_name: st.playerName || "The PokéEngmon Trainer",
+        diamonds: st.diamonds || 0,
+        total_sets: st.totalSets || 0,
+        total_correct: st.totalCorrect || 0,
+        total_questions: st.totalQuestions || 0,
+        updated_at: now
+      });
+    } catch (e) { console.warn("[Sync] push account failed:", e.message); }
+
+    /* ---- 2. Upsert 所有 user_entries（寶可夢）---- */
+    if (Array.isArray(st.entries) && st.entries.length > 0) {
+      try {
+        const rows = st.entries.map(e => ({
+          id: e.uid,
+          account_id: ref.account_id,
+          chain_key: e.chainKey,
+          stage: e.stage ?? 1,
+          exp: Number(e.exp ?? 0),
+          level: 1,
+          ivs: e.ivs || {},
+          evs: e.evs || {},
+          ev_points: e.ev_points ?? 0,
+          candies: e.candies ?? 0,
+          dupes: e.dupes ?? 0,
+          stars: e.stars ?? 1,
+          active: e.uid === st.activeUid,
+          owned_species: (e.ownedSpecies || []).map(String),
+          obtained_at: e.obtainedAt || now,
+          updated_at: now
+        }));
+        await _api("POST", "/user_entries?on_conflict=id", rows);
+      } catch (e) { console.warn("[Sync] push entries failed:", e.message); }
+    }
+
+    /* ---- 3. Push 所有 SM-2 cards ---- */
+    try {
+      const cards = SM2.listAll();
+      if (cards.length > 0) {
+        const rows = cards.map(c => ({
+          account_id: ref.account_id,
+          card_id: c.card_id,
+          card_type: c.card_type,
+          next_review_at: c.next_review_at,
+          interval_days: Number(c.interval_days),
+          ease_factor: Number(c.ease_factor),
+          repetition: c.repetition,
+          lapse_count: c.lapse_count,
+          is_mastered: c.is_mastered,
+          updated_at: c.updated_at
+        }));
+        await _api("POST", "/user_cards?on_conflict=account_id,card_id", rows);
+      }
+    } catch (e) { console.warn("[Sync] push cards failed:", e.message); }
+
+    console.info("[Sync] pushState done — account,", (st.entries?.length||0), "entries, SM-2 cards pushed");
+  }
+
   return {
     queueUpsert,
     queueHistory,
     pull,
+    pushState,
     flush: () => _flush(),
     isEnabled: () => !!(cfg() && cfg().anonKey && (window.SupabaseAuth ? SupabaseAuth.isEnabled() : true))
   };

@@ -230,7 +230,9 @@ const SupabaseAuth = {
     } catch (e) { console.warn("settleCapture failed:", e.message); return null; }
   },
 
-  /* ---------- RPC：匿名資料 migrate 到 auth uid ---------- */
+  /* ---------- RPC：匿名資料 migrate 到 auth uid ----------
+     回傳 true = 新建立帳戶（本地要 push 上去）
+     回傳 false = 已有匿名資料已搬移（本地要 pull 落嚟） */
   async migrateAnonymous(deviceId) {
     if (!this._session?.user?.id) return null;
     try {
@@ -248,7 +250,9 @@ const SupabaseAuth = {
         })
       });
       if (!res.ok) throw new Error("migrate RPC failed: " + res.status);
-      return await res.json();
+      const data = await res.json();
+      /* RPC 回傳 boolean（PostgREST 會包成 [true] / [false]） */
+      return Array.isArray(data) ? data[0] : data;
     } catch (e) { console.warn("migrateAnonymous failed:", e.message); return null; }
   },
 
