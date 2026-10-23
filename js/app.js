@@ -782,6 +782,11 @@ const App = {
   async init() {
     ensureDeviceId();   /* 確保匿名裝置 ID 存在（供 SM-2 history + Supabase 用）*/
 
+    /* Supabase pull（背景 async，唔阻塞主流程）*/
+    if (window.Sync && Sync.isEnabled()) {
+      Sync.pull().catch(() => {});
+    }
+
     /* 按鈕 */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();

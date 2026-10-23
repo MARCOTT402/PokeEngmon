@@ -195,6 +195,8 @@ window.SM2 = (() => {
     delete clean._lastReason;
     cards[key] = clean;
     _saveCards(cards);
+    /* 背景同步去 Supabase（有 config 先啟動）*/
+    try { if (window.Sync && window.Sync.isEnabled()) Sync.queueUpsert(clean); } catch (e) {}
     return { ...clean, _key: key };
   }
 
@@ -217,6 +219,8 @@ window.SM2 = (() => {
     const hist = _loadHistory();
     hist.push(rec);
     _saveHistory(hist);
+    /* 背景同步去 Supabase */
+    try { if (window.Sync && window.Sync.isEnabled()) Sync.queueHistory(rec); } catch (e) {}
   }
 
   /* ============ Session Pool Builder ============ */
