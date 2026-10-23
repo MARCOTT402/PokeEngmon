@@ -1,12 +1,11 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v71";
+const CACHE_NAME = "pokeengmon-v73";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
   "./index.html",
   "./questions.csv",
   "./picture_words.csv",
-  "./supabase-config.local.js",
   "./js/supabase-auth.js",
   "./js/sm2.js",
   "./js/sync.js",
@@ -51,10 +50,24 @@ const ASSETS = [
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" }))))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async c => {
+      /* 容錯式 pre-cache：逐個 fetch+cache.put，某個 asset 404 唔會拖累整個 install
+         （supabase-config.local.js 等 gitignore 檔案可能唔存在於伺服器） */
+      await Promise.allSettled(
+        ASSETS.map(u =>
+          fetch(new Request(u, { cache: "reload" }))
+            .then(res => { if (res && res.ok) return c.put(u, res); })
+            .catch(() => {})
+        )
+      );
+      self.skipWaiting();
+    })
   );
+});
+
+/* 收到前端「立即更新」指令時，強制新 SW 接管 */
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {

@@ -73,7 +73,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
 /* Normal pull feature temporarily hidden (rare pull + quiz capture stay) */
-#btn-top-pull, #btn-pull-normal { display: none !important; }
+/* #btn-top-pull / #btn-pull-normal removed from DOM since v48/v72 — rule deleted */
 .topbar-name {
   font-size: clamp(.95rem, 4.2vw, 1.25rem); font-weight: 800; line-height: 1.15;
   max-width: 52%; cursor: pointer;
@@ -321,9 +321,25 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 /* ============================================================
    做題
    ============================================================ */
-.quiz-top { display: flex; justify-content: space-between; align-items: center; }
+.quiz-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.quiz-top-mid { display: flex; align-items: center; gap: 12px; }
+.quiz-exit-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2.5px solid #d5dae3; background: #fff; color: #5b6478;
+  font-size: 1.2rem; font-weight: 800; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.quiz-exit-btn:active { transform: scale(.9); border-color: #b6bdd0; }
+.quiz-exit-spacer { width: 44px; flex: none; }
 .quiz-progress { font-size: 1.3rem; font-weight: 800; }
-.quiz-timer { font-size: 1.05rem; font-weight: 700; color: #5b6478; }
+/* 計時器弱化：淨係做參考，唔造成壓力 */
+.quiz-timer { font-size: .9rem; font-weight: 600; color: #9aa3b8; }
+
+/* 答題按鈕列：Hint / Submit / Skip */
+.quiz-answer-row { display: flex; gap: 8px; }
+.quiz-btn-side { min-height: 60px; flex: 0 0 31%; font-size: 1.05rem; padding: 0 6px; }
+.quiz-btn-grow { flex: 1; }
 
 .progressbar { height: 10px; border-radius: 999px; background: #edf0f6; overflow: hidden; }
 .progressbar i { display: block; height: 100%; width: 0; background: var(--yellow); border-radius: 999px; transition: width .3s; }
@@ -541,6 +557,22 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
    ============================================================ */
 .gacha-title { text-align: center; }
 .gacha-stage { position: relative; display: flex; flex-direction: column; align-items: center; }
+
+/* 扭蛋頁頂部：鑽石餘額 + 抽一次成本 */
+.gacha-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; margin-bottom: 4px;
+}
+.gacha-cost { border-color: #ffd54f; background: #fff8e1; color: #7a5b00; }
+
+/* 抽獎資訊：機率 + 重複獎勵 */
+.gacha-info {
+  background: #fff; border: 2px solid #e6ebf5; border-radius: 14px;
+  padding: 10px 12px; margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.gacha-odds-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.gacha-info-note { font-size: .82rem; font-weight: 700; color: #7a8299; text-align: center; }
 
 /* --- 機身 --- */
 .gacha-machine { position: relative; width: 230px; filter: drop-shadow(0 10px 14px rgba(0,0,0,.18)); }
@@ -1307,3 +1339,106 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .btn-google { display: flex !important; align-items: center; justify-content: center; gap: 10px; background: #fff !important; border: 1.5px solid #e0e0e0 !important; color: #333 !important; font-weight: 600 !important; transition: all .15s; }
 .btn-google:active { transform: scale(.97); }
 .confirm-box #reset-name-input { width: 100%; box-sizing: border-box; margin-bottom: 14px; }
+
+/* ============================================================
+   v72 UX review upgrades
+   ============================================================ */
+
+/* 學習場景：放開句子同回饋嘅文字選取（可長按複製對比） */
+.quiz-sentence, .quiz-feedback, .quiz-memory-text, .powerup-hint,
+.explain-card, .review-list {
+  -webkit-user-select: text; user-select: text;
+}
+
+/* 圖片題 speaker 角標：常駐呼吸 pulse，提示可點 */
+.word-speaker { animation: speaker-pulse 1.8s ease-in-out infinite; }
+@keyframes speaker-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 92, 168, .45); }
+  50%      { box-shadow: 0 0 0 12px rgba(59, 92, 168, 0); }
+}
+
+/* 細屏（iPhone SE 級數）：收細 GBA 機身裝飾，確保 menu 喺首屏見到 */
+@media (max-height: 700px) {
+  .pd-top { height: 36px; }
+  .pd-lens { width: 26px; height: 26px; top: 5px; }
+  .pd-bottom { margin-top: 4px; padding: 4px 8px 5px; }
+  .pd-controls { transform: scale(.8); transform-origin: center; }
+}
+
+/* 稀有抽按鈕：鑽石不足時 disabled（唔再成粒消失） */
+.btn-big:disabled.btn-rare { filter: none; opacity: .75; cursor: not-allowed; }
+.settle-btn-gap { font-size: .82rem; font-weight: 700; opacity: .85; display: block; margin-top: 2px; }
+
+/* 同步狀態 banner（可 dismiss，唔會靜靜消失） */
+.sync-banner {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 520px; z-index: 900;
+  padding: 10px 14px; font-size: .9rem; font-weight: 700; text-align: center;
+  background: #fff3cd; color: #7a5c00; border-bottom: 2px solid #ffd54f;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.sync-banner.hidden { display: none; }
+.sync-banner button {
+  border: 1.5px solid #c9a600; background: #fff; color: #7a5c00;
+  border-radius: 8px; padding: 2px 10px; font-weight: 800; cursor: pointer;
+}
+.sync-banner.sync-error { background: #fdecea; color: #b71c1c; border-bottom-color: #ef9a9a; }
+.sync-banner.sync-error button { border-color: #c62828; color: #b71c1c; }
+
+/* Power Up 爽感：+EXP 浮字 */
+.pu-float {
+  position: fixed; z-index: 950; pointer-events: none;
+  font-size: 2rem; font-weight: 900; color: #ffb300;
+  text-shadow: 0 2px 0 #fff, 0 4px 10px rgba(0,0,0,.18);
+  animation: pu-float-up 1.1s ease-out forwards;
+}
+@keyframes pu-float-up {
+  0%   { opacity: 0; transform: translateY(10px) scale(.6); }
+  25%  { opacity: 1; transform: translateY(-6px) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-64px) scale(1); }
+}
+
+/* Power Up 完成慶祝全屏 pop */
+.pu-complete {
+  position: fixed; inset: 0; z-index: 960;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 12, 22, .55); backdrop-filter: blur(4px);
+}
+.pu-complete-card {
+  text-align: center; padding: 30px 40px; border-radius: 24px;
+  background: linear-gradient(160deg, #fffdf3, #fff3c2);
+  border: 4px solid #ffcb05; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  animation: pu-pop-in .45s cubic-bezier(.2, 1.6, .4, 1);
+}
+.pu-complete-card .pu-big { font-size: 2.2rem; font-weight: 900; color: #b8860b; }
+.pu-complete-card .pu-sub { font-size: 1.05rem; font-weight: 800; color: #5b6478; margin-top: 6px; }
+.pu-complete-card .pu-exp { font-size: 1.5rem; font-weight: 900; color: #f59e0b; margin-top: 10px; }
+.pu-complete-card .pu-burst { position: absolute; width: 14px; height: 14px; border-radius: 50%; pointer-events: none; }
+@keyframes pu-pop-in { from { opacity: 0; transform: scale(.5) rotate(-4deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+
+/* 稀有抽慶祝：鑽石光柱 + 星爆 */
+.gacha-celebrate { position: fixed; inset: 0; z-index: 700; pointer-events: none; overflow: hidden; }
+.gacha-beam {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 130px; height: 100%;
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 241, 118, .85) 30%, rgba(255, 213, 79, .95) 100%);
+  filter: blur(6px); opacity: 0;
+}
+.gacha-ring {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 6px solid rgba(255, 235, 59, .9); box-shadow: 0 0 40px 14px rgba(255, 235, 59, .5);
+  opacity: 0;
+}
+.gacha-star { position: absolute; font-size: 26px; opacity: 0; filter: drop-shadow(0 0 8px rgba(255, 213, 79, .9)); }
+.gacha-poke-glow {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  filter: blur(14px); background: radial-gradient(circle, rgba(255,235,59,.9), rgba(255,213,79,0) 70%);
+}
+.gacha-rare-get {
+  position: absolute; left: 50%; top: 20%; transform: translateX(-50%);
+  font-size: 2.1rem; font-weight: 900; letter-spacing: 1px; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(0,0,0,.18), 0 6px 22px rgba(255,213,79,.55);
+  opacity: 0; pointer-events: none;
+}

@@ -23,6 +23,9 @@ const App = {
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
     /* btn-top-pull (normal pulls) hidden since v48 — skip binding */
 
+    /* 登入 chip 狀態：任何情況下都同步返真實登入狀態（包括 localStorage restore） */
+    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) this._markLoggedIn();
+
     /* 拍檔卡 */
     const entry = getActiveEntry();
     const sprite = document.getElementById("hero-sprite");
@@ -404,6 +407,10 @@ const App = {
               const res = obtainPokemon(chainKey, "normal");
               const cur = entryCurrentSpecies(res.entry);
               this.lastCapture = { dexId: cur[0], name: cur[1], isDupe: res.isDupe, caught: true };
+              /* 防金手指：server 記錄捕捉結果（fire-and-forget，唔阻動畫） */
+              if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+                SupabaseAuth.settleCapture(cur[0], 1);
+              }
               this.renderHome();
               return { isDupe: res.isDupe, dexId: cur[0], name: cur[1] };
             }
@@ -442,17 +449,18 @@ const App = {
       ? Math.round((expGain / data.total) * 0.5 * memoryCorrect)
       : 0;
     const rewards = { ticket: 0, diamonds: 0, exp: expGain + memoryBonus, memoryBonus };
-    /* Diamonds：防金手指走 RPC（登入時由 server 計算），未登入保留本地計算 */
+    /* Diamonds：防金手指走 RPC（登入時由 server 計算）
+       RPC 失敗（null）→ fallback 本地計算，離線都唔會變 0 粒 */
     let serverBonus = null;
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
       serverBonus = await SupabaseAuth.awardRoundDiamonds(data.score, data.total);
     }
-    if (serverBonus !== null && serverBonus !== undefined) {
-      rewards.diamonds = serverBonus;
-    } else {
+    if (serverBonus === null || serverBonus === undefined) {
       if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
       else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;
       else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
+    } else {
+      rewards.diamonds = serverBonus;
     }
 
     st.diamonds += rewards.diamonds;
@@ -534,8 +542,12 @@ const App = {
 
     const st = loadState();
     const rareBtn = document.getElementById("btn-pull-rare");
-    rareBtn.style.display = st.diamonds >= GAME_CONFIG.RARE_PULL_COST ? "" : "none";
-    rareBtn.textContent = `💎 Rare pull — ${GAME_CONFIG.RARE_PULL_COST} diamonds (you have ${st.diamonds})`;
+    /* 永遠顯示：唔夠鑽石就 disabled + 顯示差額（目標可見，唔會版面跳動） */
+    const enough = st.diamonds >= GAME_CONFIG.RARE_PULL_COST;
+    rareBtn.disabled = !enough;
+    rareBtn.innerHTML = enough
+      ? `💎 Rare Pull — ${GAME_CONFIG.RARE_PULL_COST}💎 <small class="settle-btn-gap">you have ${st.diamonds}</small>`
+      : `💎 Rare Pull <small class="settle-btn-gap">need ${GAME_CONFIG.RARE_PULL_COST - st.diamonds} more</small>`;
   },
 
   /* ---------- 錯題回顧 ---------- */
@@ -635,10 +647,15 @@ const App = {
 
   /* ---------- 設定：匯出／匯入存檔 ---------- */
   openSettings() {
+    /* 文案按登入狀態切換（有雲端同步就唔好嚇用戶話「只存本機」） */
+    const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isLoggedIn());
+    const saveNote = loggedIn
+      ? `<p class="settings-sub">✅ Cloud sync is on — your progress follows your account.</p>`
+      : `<p class="settings-sub">Your progress is saved in this browser only. Sign in (🔐) to back up to the cloud, or export a backup manually.</p>`;
     this.showModal(`
       <div class="settings-box">
         <h3 class="settings-title">⚙️ Settings</h3>
-        <p class="settings-sub">Your progress is saved in this browser only. Export a backup regularly, or import one to restore.</p>
+        ${saveNote}
         <button id="btn-export-save" class="btn-big btn-secondary">⬇️ Export Save</button>
         <button id="btn-import-save" class="btn-big btn-secondary">⬆️ Import Save</button>
         <input id="import-file" type="file" accept=".json,application/json" hidden>
@@ -683,8 +700,14 @@ const App = {
         </div>`, true);
 
       document.getElementById("lh-sync").onclick = async () => {
-        try { await Sync.pull(); this.toast("Sync complete!"); this.closeModal(); }
-        catch (e) { this.toast("Sync failed — check internet"); }
+        try {
+          const cards = await Sync.pull();
+          if (cards === null) throw new Error("no cloud session");
+          this.toast("Sync complete!"); this.closeModal();
+        } catch (e) {
+          this.closeModal();
+          this.showSyncBanner("Cloud sync failed — check your internet and try again.", true);
+        }
       };
       document.getElementById("lh-signout").onclick = async () => {
         await SupabaseAuth.signOut();
@@ -723,45 +746,6 @@ const App = {
         catch (e) { console.warn("Google sign-in failed:", e); }
       };
     }
-  },
-
-  async _handleOAuthCallback() {
-    const url = new URL(window.location.href);
-    const token = url.searchParams.get("access_token");
-    const refresh = url.searchParams.get("refresh_token");
-    const expires = parseInt(url.searchParams.get("expires_in") || "3600");
-
-    if (!token) return;
-
-    /* Supabase 係 URL fragment 而唔係 query string redirect（popup 模式），
-       但我哋用 window.open → 手動解析 popup URL */
-    /* 呢度處理 redirect 模式返嚟嘅 query string */
-    const session = {
-      access_token: token,
-      refresh_token: refresh,
-      expires_at: Math.floor(Date.now() / 1000) + expires,
-      user: { id: url.searchParams.get("user_id") || uuidGen(), email: url.searchParams.get("email") }
-    };
-    SupabaseAuth.saveSession(session);
-
-    /* 匿名資料 migrate 到 auth uid */
-    const deviceId = ensureDeviceId();
-    if (session.user && session.user.id && deviceId) {
-      await SupabaseAuth.migrateAnonymous(deviceId);
-    }
-
-    /* Clean URL + refresh */
-    window.history.replaceState({}, "", window.location.pathname);
-    try { await Sync.pull(); } catch (e) {}
-    this.renderHome();
-    this.toast("Signed in! Your progress is synced.");
-  },
-
-  async signOut() {
-    if (window.SupabaseAuth) await SupabaseAuth.signOut();
-    try { await Sync.pull(); } catch (e) {}
-    this.renderHome();
-    this.toast("Signed out");
   },
 
   exportSave() {
@@ -883,6 +867,15 @@ const App = {
     document.getElementById("modal-root").innerHTML = "";
   },
 
+  /* 同步狀態 banner：唔會靜靜消失，要俾用戶自己 dismiss */
+  showSyncBanner(msg, isError) {
+    const el = document.getElementById("sync-banner");
+    if (!el) return;
+    el.className = "sync-banner" + (isError ? " sync-error" : "");
+    el.innerHTML = `<span>${escapeHTML(msg)}</span><button id="sync-banner-x">OK</button>`;
+    document.getElementById("sync-banner-x").onclick = () => el.classList.add("hidden");
+  },
+
   toast(msg) {
     const t = document.getElementById("toast");
     t.textContent = msg;
@@ -898,7 +891,10 @@ const App = {
 
     /* Supabase pull（背景 async，唔阻塞主流程）*/
     if (window.Sync && Sync.isEnabled()) {
-      Sync.pull().catch(() => {});
+      /* 非阻塞拉雲端進度；有新卡拉返嚟就刷新主畫面 */
+      Sync.pull()
+        .then(cards => { if (Array.isArray(cards) && cards.length > 0) this.renderHome(); })
+        .catch(() => {});
     }
 
     /* 按鈕 */
@@ -933,15 +929,8 @@ const App = {
       this.toast("❌ Google sign-in failed: " + window.__oauthError);
       window.__oauthError = null;
     }
-    /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
-    document.getElementById("btn-top-diamond").onclick = () => {
-      const st = loadState();
-      if (st.diamonds < GAME_CONFIG.RARE_PULL_COST) {
-        this.toast(`Not enough diamonds — need 💎${GAME_CONFIG.RARE_PULL_COST}`);
-        return;
-      }
-      Gacha.open("rare");
-    };
+    /* 主頁鑽石 chip → 稀有抽頁面（永遠開放，pull 按鈕自己會 disabled） */
+    document.getElementById("btn-top-diamond").onclick = () => Gacha.open("rare");
     /* btn-top-pull hidden since v48 — skip binding */
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();
@@ -975,11 +964,16 @@ const App = {
       Quiz.submit();
     };
     document.getElementById("quiz-answer").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
-        Quiz.submit();
-      }
+      if (e.key !== "Enter") return;
+      if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
+      if (Quiz.locked && Quiz._onContinue) Quiz._continue();  /* 答錯後 Enter = Continue */
+      else if (!Quiz.locked) Quiz.submit();
     });
+    /* 退出 / Hint / Skip / Continue */
+    document.getElementById("btn-quiz-exit").onclick = () => Quiz.quit();
+    document.getElementById("btn-quiz-hint").onclick = () => Quiz.hint();
+    document.getElementById("btn-quiz-skip").onclick = () => Quiz.skip();
+    document.getElementById("btn-quiz-continue").onclick = () => Quiz._continue();
     /* 圖片單字題：點圖聽聲（可無限重播） */
     document.getElementById("quiz-word-image-btn").onclick = () => {
       if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
@@ -1043,8 +1037,37 @@ const App = {
         reloading = true;
         location.reload();
       });
+
+      const promptUpdate = (reg) => {
+        const el = document.getElementById("sync-banner");
+        if (!el) return;
+        el.className = "sync-banner";
+        el.innerHTML = `<span>🔄 New version ready!</span><button id="sync-banner-x">UPDATE</button>`;
+        document.getElementById("sync-banner-x").onclick = () => {
+          if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        };
+      };
+
       navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
-        .then(reg => reg.update().catch(() => {}))
+        .then(reg => {
+          /* 一開始已有 waiting SW（舊版冇更新到）→ 立即提示 */
+          if (reg.waiting) promptUpdate(reg);
+          /* 偵測新安裝緊嘅 SW，裝好就提示 */
+          reg.addEventListener("updatefound", () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener("statechange", () => {
+              if (nw.state === "installed" && navigator.serviceWorker.controller) {
+                promptUpdate(reg);
+              }
+            });
+          });
+          /* 每次載入同返回頁面都檢查更新 */
+          reg.update().catch(() => {});
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") reg.update().catch(() => {});
+          });
+        })
         .catch(() => {});
     }
   }

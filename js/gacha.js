@@ -4,17 +4,22 @@
    ============================================================ */
 
 const Gacha = {
-  mode: "normal",      // 'normal' | 'rare'
+  mode: "rare",        // 淨返稀有抽（normal pull 已移除）
   busy: false,
 
   open(mode) {
     this.mode = mode;
     this.busy = false;
     App.showView("view-gacha");
-    document.getElementById("gacha-title").textContent =
-      mode === "rare" ? "💎 Rare Pull" : "🎯 Normal Pull";
+    document.getElementById("gacha-title").textContent = "💎 Rare Pull";
     this._resetStage();
     this._refreshControls();
+  },
+
+  _updateDiamondDisplay() {
+    const st = loadState();
+    const el = document.getElementById("gacha-diamonds");
+    if (el) el.textContent = st.diamonds;
   },
 
   _resetStage() {
@@ -27,22 +32,19 @@ const Gacha = {
 
   _canPull() {
     const st = loadState();
-    return this.mode === "normal" ? st.normalPulls >= 1 : st.diamonds >= GAME_CONFIG.RARE_PULL_COST;
+    return st.diamonds >= GAME_CONFIG.RARE_PULL_COST;
   },
 
   _refreshControls() {
     const btn = document.getElementById("btn-do-pull");
     const st = loadState();
+    this._updateDiamondDisplay();
     if (this._canPull()) {
       btn.disabled = false;
-      btn.textContent = this.mode === "normal"
-        ? `Insert coin to pull! (${st.normalPulls} left)`
-        : `Insert coin to pull! (💎 ${st.diamonds})`;
+      btn.textContent = `Insert coin to pull! (💎 ${st.diamonds})`;
     } else {
       btn.disabled = true;
-      btn.textContent = this.mode === "normal"
-        ? "No normal pulls left — earn some by practising!"
-        : `Not enough diamonds (need 💎${GAME_CONFIG.RARE_PULL_COST})`;
+      btn.textContent = `Not enough diamonds (need 💎${GAME_CONFIG.RARE_PULL_COST})`;
     }
   },
 
@@ -68,8 +70,7 @@ const Gacha = {
     this.busy = true;
     Pokedex.unlockAudio();   // 喺用戶點擊時解鎖音效（手機自動播放限制）
     const st = loadState();
-    if (this.mode === "normal") st.normalPulls -= 1;
-    else st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
+    st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
     saveState();
 
     const rarity = this.rollRarity(this.mode);
@@ -164,6 +165,9 @@ const Gacha = {
     document.getElementById("btn-do-pull").disabled = true;
     document.getElementById("btn-do-pull").textContent = "Pull complete!";
 
+    /* 稀有抽專屬慶祝：要勁過普通捕捉場景嘅爽感 */
+    if (this.mode === "rare") this._celebrate(rarity, cur[0]);
+
     /* 新 Pokemon 登場時叫一聲（重複抽到唔叫） */
     if (!isDupe) {
       setTimeout(() => Pokedex.playCry(cur[0]), 350);
@@ -175,5 +179,74 @@ const Gacha = {
     }
 
     App.renderHome();   // 更新主畫面資料
+  },
+
+  /* ---------- 稀有抽慶祝動畫 ----------
+     比普通捕捉場景更爽：光柱爆發 → 衝擊波 → 星星四散 → 大字 RARE GET!
+     Epic / Legend 加碼：雙層衝擊波 + 更多星星 + 螢幕震動 */
+  _celebrate(rarity, dexId) {
+    const rz = RARITY[rarity];
+    const layer = document.createElement("div");
+    layer.className = "gacha-celebrate";
+    layer.innerHTML = `
+      <div class="gacha-beam" style="background:linear-gradient(180deg, transparent 0%, ${rz.color}66 30%, ${rz.color} 100%)"></div>
+      <div class="gacha-ring"></div>
+      ${rarity !== "rare" ? `<div class="gacha-ring" style="border-color:${rz.color}cc; box-shadow:0 0 60px 22px ${rz.color}55"></div>` : ""}
+      <div class="gacha-poke-glow" style="background:radial-gradient(circle, ${rz.color}dd, ${rz.color}00 70%)"></div>`;
+    document.body.appendChild(layer);
+
+    /* 星星 */
+    const starCount = rarity === "legend" ? 18 : (rarity === "epic" ? 14 : 10);
+    const stars = [];
+    for (let i = 0; i < starCount; i++) {
+      const s = document.createElement("span");
+      s.className = "gacha-star";
+      s.textContent = rarity === "legend" ? "⭐" : (i % 2 ? "✦" : "✧");
+      s.style.left = (50 + (Math.random() * 56 - 28)) + "%";
+      s.style.top = (46 + (Math.random() * 26 - 13)) + "%";
+      layer.appendChild(s);
+      stars.push(s);
+    }
+
+    /* 大字 */
+    const bigText = document.createElement("div");
+    bigText.className = "gacha-rare-get";
+    bigText.textContent = rarity === "legend" ? "⭐ LEGEND GET! ⭐" : (rarity === "epic" ? "✨ EPIC GET! ✨" : "💫 RARE GET! 💫");
+    bigText.style.color = rz.color;
+    layer.appendChild(bigText);
+
+    const beam = layer.querySelector(".gacha-beam");
+    const rings = layer.querySelectorAll(".gacha-ring");
+    const glow = layer.querySelector(".gacha-poke-glow");
+
+    if (window.gsap) {
+      const tl = gsap.timeline();
+      tl.set([beam, glow, bigText, ...stars], { opacity: 0 })
+        /* 光柱爆發 */
+        .to(beam, { opacity: 1, duration: .16, ease: "power2.out" })
+        .fromTo(beam, { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: .38, ease: "power3.out" }, "<")
+        /* 衝擊波 */
+        .to(rings, { opacity: 1, scale: 3.4, duration: .55, ease: "power1.out", stagger: .12 }, "<")
+        .to(rings, { opacity: 0, duration: .35 }, ">-.15")
+        /* 星星散開 + 大字彈出 */
+        .to(stars, { opacity: 1, scale: 1.25, duration: .12, stagger: .02 }, "<")
+        .to(stars, {
+          x: () => (Math.random() * 260 - 130),
+          y: () => (Math.random() * -200 - 40),
+          opacity: 0, scale: .4, duration: .9, ease: "power2.out"
+        }, "<")
+        .fromTo(bigText, { opacity: 0, scale: .3, rotate: -6 },
+          { opacity: 1, scale: 1, rotate: -3, duration: .45, ease: "back.out(2.2)" }, "<")
+        .to(glow, { opacity: .95, duration: .3 }, "<")
+        .to(beam, { opacity: 0, duration: .7 }, ">1.0")
+        .to(glow, { opacity: 0, duration: .8 }, "<")
+        .to(bigText, { opacity: 0, y: -30, duration: .5 }, "<");
+
+      /* 螢幕震動 */
+      gsap.fromTo(document.body, { x: -7 }, { x: 0, duration: .5, ease: "elastic.out(1, 0.25)", delay: .05 });
+    }
+
+    if (window.CaptureScene && CaptureScene.audio) CaptureScene.audio.correct();
+    setTimeout(() => layer.remove(), 3400);
   }
 };

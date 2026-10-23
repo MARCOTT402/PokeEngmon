@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="PokeEngmon">
@@ -19,7 +19,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/style.css?v=71">
+  <link rel="stylesheet" href="css/style.css?v=73">
 </head>
 <body>
   <div id="app">
@@ -99,8 +99,12 @@
     <!-- ============ 做題 ============ -->
     <section id="view-quiz" class="view">
       <div class="quiz-top">
-        <span class="quiz-progress" id="quiz-progress">1 / 10</span>
-        <span class="quiz-timer" id="quiz-timer">⏱ 0:00</span>
+        <button id="btn-quiz-exit" class="quiz-exit-btn" aria-label="Quit this set" title="Quit this set">✕</button>
+        <div class="quiz-top-mid">
+          <span class="quiz-progress" id="quiz-progress">1 / 10</span>
+          <span class="quiz-timer" id="quiz-timer">⏱ 0:00</span>
+        </div>
+        <span class="quiz-exit-spacer" aria-hidden="true"></span>
       </div>
       <div class="progressbar"><i id="quiz-bar"></i></div>
       <div class="quiz-topic" id="quiz-topic"></div>
@@ -122,7 +126,12 @@
         <input id="quiz-answer" class="quiz-answer-input" type="text"
                autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
                placeholder="Type your answer…">
-        <button id="btn-quiz-submit" class="btn-big btn-primary">Submit ✔</button>
+        <div class="quiz-answer-row">
+          <button id="btn-quiz-hint" class="btn-big btn-plain quiz-btn-side">💡 Hint</button>
+          <button id="btn-quiz-submit" class="btn-big btn-primary quiz-btn-grow">Submit ✔</button>
+          <button id="btn-quiz-skip" class="btn-big btn-plain quiz-btn-side">Skip ⏭</button>
+        </div>
+        <button id="btn-quiz-continue" class="btn-big btn-primary hidden">Continue →</button>
       </div>
       <div class="quiz-feedback" id="quiz-feedback"></div>
     </section>
@@ -156,7 +165,6 @@
       <div class="settle-score" id="settle-score"></div>
       <div class="settle-rewards" id="settle-rewards"></div>
       <div class="settle-buttons">
-        <button id="btn-pull-normal" class="btn-big btn-primary">🎯 Normal Pull</button>
         <button id="btn-pull-rare" class="btn-big btn-rare">💎 Rare Pull</button>
         <button id="btn-review" class="btn-big btn-secondary">📖 Review Mistakes</button>
         <button id="btn-settle-home" class="btn-big btn-plain">Back to Home</button>
@@ -173,6 +181,18 @@
     <!-- ============ 抽獎 ============ -->
     <section id="view-gacha" class="view">
       <h2 class="gacha-title" id="gacha-title">🎯 Gacha Machine</h2>
+      <div class="gacha-topbar">
+        <span class="chip chip-diamond">💎 <b id="gacha-diamonds">0</b></span>
+        <span class="chip gacha-cost">Cost: 💎${GAME_CONFIG.RARE_PULL_COST}</span>
+      </div>
+      <div class="gacha-info">
+        <div class="gacha-odds-row">
+          <span class="rarity-chip" style="background:#e3f2fd;color:#42a5f5">Rare 80%</span>
+          <span class="rarity-chip" style="background:#fff8e1;color:#b8860b">Epic 15%</span>
+          <span class="rarity-chip" style="background:#f3e5f5;color:#ab47bc">Legend 5%</span>
+        </div>
+        <p class="gacha-info-note">Duplicate pull → 🍬 Candy +1 ・ ⚡ EV point +1</p>
+      </div>
       <div class="gacha-stage" id="gacha-stage">
         <div class="gacha-machine" id="gacha-machine">
           <div class="gacha-dome">
@@ -284,27 +304,28 @@
       </div>
     </div>
 
-    <!-- Modal / Toast -->
+    <!-- Modal / Toast / Sync banner -->
+    <div id="sync-banner" class="sync-banner hidden"></div>
     <div id="modal-root"></div>
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase-config.local.js?v=71"></script>
-  <script src="js/supabase-auth.js?v=71"></script>
-  <script src="js/sm2.js?v=71"></script>
-  <script src="js/sync.js?v=71"></script>
-  <script src="js/data.js?v=71"></script>
-  <script src="js/pokemon.js?v=71"></script>
-  <script src="js/storage.js?v=71"></script>
-  <script src="js/explain.js?v=71"></script>
-  <script src="js/quiz.js?v=71"></script>
-  <script src="js/powerup.js?v=71"></script>
-  <script src="js/gacha.js?v=71"></script>
-  <script src="js/pokedex.js?v=71"></script>
-  <script src="js/calendar.js?v=71"></script>
-  <script src="js/app.js?v=71"></script>
-  <script src="vendor/gsap/gsap.min.js?v=71"></script>
-  <script type="module" src="js/capture.js?v=71"></script>
+  <script src="supabase-config.local.js?v=73"></script>
+  <script src="js/supabase-auth.js?v=73"></script>
+  <script src="js/sm2.js?v=73"></script>
+  <script src="js/sync.js?v=73"></script>
+  <script src="js/data.js?v=73"></script>
+  <script src="js/pokemon.js?v=73"></script>
+  <script src="js/storage.js?v=73"></script>
+  <script src="js/explain.js?v=73"></script>
+  <script src="js/quiz.js?v=73"></script>
+  <script src="js/powerup.js?v=73"></script>
+  <script src="js/gacha.js?v=73"></script>
+  <script src="js/pokedex.js?v=73"></script>
+  <script src="js/calendar.js?v=73"></script>
+  <script src="js/app.js?v=73"></script>
+  <script src="vendor/gsap/gsap.min.js?v=73"></script>
+  <script type="module" src="js/capture.js?v=73"></script>
 </body>
 </html>
 
