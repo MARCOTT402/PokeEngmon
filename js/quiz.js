@@ -15,8 +15,12 @@ const Quiz = {
   start(topics) {
     this.set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
     if (this.set.length === 0) {
-      App.toast("No questions available yet — try again later!");
+      App.toast("All caught up here! Pick other courses to keep training 🌟");
       return;
+    }
+    /* 唔夠 10 題＝呢個課題範圍今日嘅到期題就快做完，提示玩家擴闊課題 */
+    if (this.set.length < GAME_CONFIG.SET_SIZE) {
+      App.toast(`Only ${this.set.length} question${this.set.length > 1 ? "s" : ""} left here — pick more courses next round for a full set!`);
     }
     this.idx = 0;
     this.results = [];

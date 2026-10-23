@@ -12,8 +12,9 @@
      appendHistory
 
    Session Pool Builder：
-     buildSession(allQuestions, topicKeys, size) → 10 題
-       Due 卡最耐未見優先 → 補 New 卡至 size → Fisher-Yates 洗牌
+     buildSession(allQuestions, topicKeys, size) → 最多 10 題
+       只抽到期卡：過期最耐未見優先 → 全新題隨機補尾 → Fisher-Yates 洗牌
+       未到期卡一律唔抽（唔夠就出細 set，逼用戶揀其他課題）
    ============================================================ */
 
 window.SM2 = (() => {
@@ -254,36 +255,17 @@ window.SM2 = (() => {
     });
 
     const now = Date.now();
-    const dueCards  = withCard.filter(x => x.card.next_review_at <= now);
-    const notDueNew = withCard.filter(x => x.card.repetition === 0 && x.card.next_review_at > now);
-    const notDueOld = withCard.filter(x => x.card.repetition > 0 && x.card.next_review_at > now);
+    /* 只抽到期的卡，未到期嘅（無論新舊）一律唔抽：唔夠 10 題就出細 set，
+       逼用戶去揀其他課題，唔俾死做一個課題重複刷啱啱做過嘅題 */
+    const due = withCard.filter(x => x.card.next_review_at <= now);
 
-    let picked;
-    if (dueCards.length >= s) {
-      /* 過期最久嘅 s 張 */
-      picked = dueCards.slice(0, s);
-    } else {
-      picked = dueCards.slice();
-      const need = s - picked.length;
-      /* 先補未過期新卡（隨機） */
-      notDueNew.sort(() => Math.random() - 0.5);
-      picked = picked.concat(notDueNew.slice(0, need));
-      if (picked.length < s) {
-        /* 未到期舊卡只係最後手段：
-           1) 20 小時內啱啱複習過嘅卡唔抽（避免「啱做完又見到」）
-           2) 其餘按 next_review_at 升序——最快到期嘅先補
-           3) 真係乾塘先抽返最近做過嘅（同樣最快到期優先） */
-        const RECENT_MS = 20 * 60 * 60 * 1000;
-        const byDueAsc = (a, b) => a.card.next_review_at - b.card.next_review_at;
-        const isRecent = x => (now - (x.card.updated_at || 0)) < RECENT_MS;
-        const fresh = notDueOld.filter(x => !isRecent(x)).sort(byDueAsc);
-        const recent = notDueOld.filter(isRecent).sort(byDueAsc);
-        picked = picked.concat(fresh.slice(0, s - picked.length));
-        if (picked.length < s) {
-          picked = picked.concat(recent.slice(0, s - picked.length));
-        }
-      }
-    }
+    /* 過期卡最耐未見優先；全新題（next_review_at=0）隨機補尾 */
+    const overdue = due.filter(x => x.card.next_review_at > 0)
+      .sort((a, b) => a.card.next_review_at - b.card.next_review_at);
+    const fresh = due.filter(x => x.card.next_review_at === 0);
+    fresh.sort(() => Math.random() - 0.5);
+
+    const picked = overdue.concat(fresh).slice(0, s);
 
     /* Fisher-Yates 完全隨機 */
     const arr = picked.slice(0, s);
