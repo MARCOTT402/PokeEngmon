@@ -28,6 +28,10 @@ drop policy if exists "captures_anon_rw" on user_captures;
 
 -- -------------------- 2. Table privileges --------------------
 -- RLS 管 row、privilege 管 column/verb，兩層疊加
+
+-- branch column 必須先加，下面嘅 column-level grant 先引用到（42703 fix）
+alter table user_entries add column if not exists branch smallint;
+
 revoke all on user_account, user_entries, user_cards, user_history, user_captures from anon;
 
 revoke all on user_account from authenticated;
@@ -48,8 +52,6 @@ grant select, insert on user_history to authenticated;
 
 revoke all on user_captures from authenticated;
 grant select on user_captures to authenticated;                -- insert 只經 settle_capture RPC
-
-alter table user_entries add column if not exists branch smallint;
 
 -- -------------------- 3. chain_rarity 靜態表（同 js/data.js EVOLUTION_CHAINS 對齊） --------------------
 create table if not exists chain_rarity (
