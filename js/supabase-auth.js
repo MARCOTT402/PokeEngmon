@@ -173,16 +173,15 @@ const SupabaseAuth = {
   },
 
   async signOut() {
+    /* 通知 server 撤銷 session（fire-and-forget，唔好等網絡 reply 阻塞 UI） */
     if (this._session?.access_token) {
-      try {
-        await fetch(`${this.URL}/auth/v1/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${this._session.access_token}`,
-            apikey: this.ANON_KEY
-          }
-        });
-      } catch (e) { /* ignore network error */ }
+      fetch(`${this.URL}/auth/v1/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this._session.access_token}`,
+          apikey: this.ANON_KEY
+        }
+      }).catch(() => {});
     }
     this._session = null;
     localStorage.removeItem("pokeengmon_auth_session");
