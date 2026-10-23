@@ -657,6 +657,13 @@ const App = {
   },
 
   /* ---------- Login Hub（Poké Ball 風格） ---------- */
+  _markLoggedIn() {
+    const btn = document.getElementById("btn-login");
+    if (!btn) return;
+    btn.textContent = "✅";
+    btn.title = "Connected — tap to manage";
+  },
+
   openLoginHub() {
     const user = window.SupabaseAuth ? SupabaseAuth.currentUser() : null;
     const deviceId = ensureDeviceId();
@@ -683,6 +690,8 @@ const App = {
         await SupabaseAuth.signOut();
         /* 登出後清除 auth 狀態 + refresh LocalStorage 拉匿名資料 */
         try { await Sync.pull(); } catch (e) {}
+        const btn = document.getElementById("btn-login");
+        if (btn) { btn.textContent = "🔐"; btn.title = "Sign in"; }
         this.closeModal();
         this.renderHome();
         this.toast("Signed out");
@@ -884,6 +893,7 @@ const App = {
 
   /* ---------- 初始化 ---------- */
   async init() {
+    const st = loadState();
     ensureDeviceId();   /* 確保匿名裝置 ID 存在（供 SM-2 history + Supabase 用）*/
 
     /* Supabase pull（背景 async，唔阻塞主流程）*/
@@ -902,17 +912,26 @@ const App = {
 
     /* OAuth 登入完成：Supabase redirect 返嚟時 SupabaseAuth.init() 已經 parse hash → save session */
     /* 呢度 detect 到 isLoggedIn() 就做 migrate + refresh */
-    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn() && !st._googleMigrated) {
-      const deviceId = ensureDeviceId();
+    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+      this._markLoggedIn();
       try {
-        await SupabaseAuth.migrateAnonymous(deviceId);
-        console.log("[OAuth] ✅ Anonymous device migrated to auth uid");
-      } catch (e) { console.warn("[OAuth] migrate failed:", e.message); }
-      try { await Sync.pull(); } catch (e) {}
-      loadState()._googleMigrated = true; /* flag 防止重複 */
-      saveState();
-      this.renderHome();
-      this.toast("✅ Signed in! Your progress is now cloud-synced.");
+        await SupabaseAuth.ensureFreshSession();
+        if (!st._googleMigrated) {
+          const deviceId = ensureDeviceId();
+          await SupabaseAuth.migrateAnonymous(deviceId);
+          console.log("[OAuth] ✅ Anonymous device migrated to auth uid");
+          st._googleMigrated = true;
+          saveState();
+        }
+        try { await Sync.pull(); } catch (e) {}
+        this.renderHome();
+        this.toast("✅ Signed in! Your progress is cloud-synced.");
+      } catch (e) { console.warn("[OAuth] post-login failed:", e.message); }
+    } else if (window.__oauthError) {
+      /* OAuth 失敗 → 明確話俾用戶知，唔好靜靜地乜都冇發生 */
+      console.warn("[OAuth] ❌", window.__oauthError);
+      this.toast("❌ Google sign-in failed: " + window.__oauthError);
+      window.__oauthError = null;
     }
     /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
     document.getElementById("btn-top-diamond").onclick = () => {
