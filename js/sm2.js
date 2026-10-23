@@ -215,6 +215,10 @@ window.SM2 = (() => {
     return Object.values(_loadCards());
   }
 
+  function listHistory() {
+    return _loadHistory();
+  }
+
   function appendHistory(rec) {
     const hist = _loadHistory();
     hist.push(rec);
@@ -285,7 +289,7 @@ window.SM2 = (() => {
     levenshtein, isPrefix, expectedTime,
     computeQ, computeEF, nextInterval, nextRepetition, updateCard,
     /* Storage adapter */
-    getOrCreateCard, upsertCard, listDue, listNew, listAll, appendHistory,
+    getOrCreateCard, upsertCard, listDue, listNew, listAll, listHistory, appendHistory,
     /* Session */
     buildSession,
     /* 常量 */

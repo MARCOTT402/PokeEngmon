@@ -202,23 +202,47 @@ window.Sync = (() => {
   /* ---------- Push State（首次 Connect 新帳戶時：將本地數據上傳到雲端）---------- */
   async function pushState() {
     const ref = _accountRef();
-    if (!ref.isAuth) return; /* 匿名唔使 push */
+    if (!ref.isAuth) { console.warn("[Sync] pushState skipped — not authenticated"); return; }
 
     const st = loadState();
     const now = Date.now();
+    console.log("[Sync] pushState start — account:", ref.account_id,
+      "diamonds:", st.diamonds, "entries:", st.entries?.length||0,
+      "cards:", (typeof SM2!=="undefined"&&SM2.listAll)?SM2.listAll().length:0);
 
     /* ---- 1. Upsert user_account（diamonds + 統計 + trainer name）---- */
+    /* migrateAnonymous 一定已經 create 咗呢個 row → 用 PATCH 更新最穩陣，
+       避免 INSERT ON CONFLICT DO UPDATE 喺 RLS 下嘅潛在問題 */
     try {
-      await _api("POST", "/user_account?on_conflict=id", {
-        id: ref.account_id,
+      const acctPayload = {
         trainer_name: st.playerName || "The PokéEngmon Trainer",
         diamonds: st.diamonds || 0,
         total_sets: st.totalSets || 0,
         total_correct: st.totalCorrect || 0,
         total_questions: st.totalQuestions || 0,
         updated_at: now
-      });
-    } catch (e) { console.warn("[Sync] push account failed:", e.message); }
+      };
+      console.log("[Sync] patching user_account:", JSON.stringify(acctPayload));
+      /* PATCH with id filter — row 由 migrateAnonymous 建立，一定存在 */
+      const acctRes = await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, acctPayload);
+      console.log("[Sync] ✅ user_account patch ok:", JSON.stringify(acctRes).slice(0, 200));
+    } catch (e) {
+      console.warn("[Sync] ❌ patch account failed:", e.message, "— fallback to upsert");
+      /* Fallback：如果 PATCH 失敗（row 唔存在），用 POST upsert */
+      try {
+        const fbPayload = {
+          id: ref.account_id,
+          trainer_name: st.playerName || "The PokéEngmon Trainer",
+          diamonds: st.diamonds || 0,
+          total_sets: st.totalSets || 0,
+          total_correct: st.totalCorrect || 0,
+          total_questions: st.totalQuestions || 0,
+          updated_at: now
+        };
+        const fbRes = await _api("POST", "/user_account?on_conflict=id", fbPayload);
+        console.log("[Sync] ✅ user_account fallback upsert ok:", JSON.stringify(fbRes).slice(0, 200));
+      } catch (e2) { console.warn("[Sync] ❌ user_account fallback also failed:", e2.message); }
+    }
 
     /* ---- 2. Upsert 所有 user_entries（寶可夢）---- */
     if (Array.isArray(st.entries) && st.entries.length > 0) {
@@ -241,13 +265,18 @@ window.Sync = (() => {
           obtained_at: e.obtainedAt || now,
           updated_at: now
         }));
-        await _api("POST", "/user_entries?on_conflict=id", rows);
-      } catch (e) { console.warn("[Sync] push entries failed:", e.message); }
+        console.log("[Sync] pushing user_entries count:", rows.length);
+        const entriesRes = await _api("POST", "/user_entries?on_conflict=id", rows);
+        console.log("[Sync] ✅ user_entries upsert ok, rows:", entriesRes.length);
+      } catch (e) { console.warn("[Sync] ❌ push entries failed:", e.message); }
+    } else {
+      console.log("[Sync] no entries to push");
     }
 
     /* ---- 3. Push 所有 SM-2 cards ---- */
     try {
-      const cards = SM2.listAll();
+      const cards = (typeof SM2 !== "undefined" && SM2.listAll) ? SM2.listAll() : [];
+      console.log("[Sync] pushing user_cards count:", cards.length);
       if (cards.length > 0) {
         const rows = cards.map(c => ({
           account_id: ref.account_id,
@@ -261,11 +290,31 @@ window.Sync = (() => {
           is_mastered: c.is_mastered,
           updated_at: c.updated_at
         }));
-        await _api("POST", "/user_cards?on_conflict=account_id,card_id", rows);
+        const cardsRes = await _api("POST", "/user_cards?on_conflict=account_id,card_id", rows);
+        console.log("[Sync] ✅ user_cards upsert ok, rows:", cardsRes.length);
       }
-    } catch (e) { console.warn("[Sync] push cards failed:", e.message); }
+    } catch (e) { console.warn("[Sync] ❌ push cards failed:", e.message); }
 
-    console.info("[Sync] pushState done — account,", (st.entries?.length||0), "entries, SM-2 cards pushed");
+    /* ---- 4. Push 所有 SM-2 history（答題記錄）---- */
+    try {
+      const hist = (typeof SM2 !== "undefined" && SM2.listHistory) ? SM2.listHistory() : [];
+      console.log("[Sync] pushing user_history count:", hist.length);
+      if (hist.length > 0) {
+        const rows = hist.map(h => ({
+          account_id: ref.account_id,
+          card_id: h.card_id,
+          ts: h.ts,
+          q_score: Number(h.q_score ?? 0),
+          response_ms: Number(h.response_ms ?? 0),
+          levenshtein_distance: Number(h.levenshtein_distance ?? 0),
+          is_typo: !!h.is_typo
+        }));
+        const histRes = await _api("POST", "/user_history", rows);
+        console.log("[Sync] ✅ user_history insert ok, rows:", histRes.length);
+      }
+    } catch (e) { console.warn("[Sync] ❌ push history failed:", e.message); }
+
+    console.info("[Sync] pushState done");
   }
 
   return {
