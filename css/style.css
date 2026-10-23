@@ -48,6 +48,7 @@ body {
 .btn-nav {
   width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--blue);
   background: #fff; color: var(--blue); font-size: 1.4rem; font-weight: 700; cursor: pointer;
+  transition: transform .12s ease;
 }
 
 .chip {
@@ -259,7 +260,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .btn-mini {
   border: 2px solid var(--blue); background: #fff; color: var(--blue);
   border-radius: 999px; padding: 6px 16px; font-weight: 800; font-size: .85rem;
-  cursor: pointer; font-family: inherit;
+  cursor: pointer; font-family: inherit; transition: transform .12s ease;
 }
 .topic-list { display: flex; flex-direction: column; gap: 10px; }
 .topic-chip {
@@ -267,7 +268,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   background: #fff; border: 3px solid #dbe2ee; border-radius: 14px;
   padding: 14px 16px; cursor: pointer; font-family: inherit;
   font-size: 1.05rem; font-weight: 800; color: var(--ink);
-  transition: border-color .15s, background .15s;
+  transition: border-color .15s, background .15s, transform .12s ease;
 }
 .topic-chip.on { border-color: var(--blue); background: #eef3ff; }
 .topic-chip.on .topic-name::before { content: "☑ "; color: var(--blue); }
@@ -732,6 +733,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   background: var(--card); border: 2px solid #e2e7ef; border-radius: 14px;
   padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
   cursor: pointer; box-shadow: 0 2px 6px rgba(35,60,120,.08); font-family: inherit;
+  transition: transform .12s ease;
 }
 .dex-cell.owned { border-color: #ffd54f; }
 .dex-cell img { width: 68px; height: 68px; object-fit: contain; transition: transform .12s ease; }
@@ -744,7 +746,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-rarity { font-size: .68rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
 
 .dex-detail { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.dex-art { width: 190px; height: 190px; object-fit: contain; cursor: pointer; }
+.dex-art { width: 190px; height: 190px; object-fit: contain; cursor: pointer; transition: transform .12s ease; }
 .dex-art:active { transform: scale(.94); }
 .dex-art.pixel { width: 132px; height: 132px; image-rendering: pixelated; }
 .dex-detail-name { font-size: 1.5rem; font-weight: 900; }
@@ -791,6 +793,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-candy button {
   margin-top: 6px; border: 0; border-radius: 999px; padding: 6px 14px;
   background: #ffb300; color: #fff; font-weight: 900; font-family: inherit; cursor: pointer;
+  transition: transform .12s ease;
 }
 .dex-candy button:disabled { background: #ddd; color: #999; cursor: default; }
 .dex-candy-tip { font-size: .72rem; font-weight: 700; color: #9a7b1f; margin-top: 4px; }
@@ -860,6 +863,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background: #eef0f5;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; cursor: default; font-family: inherit; color: var(--ink);
+  transition: transform .12s ease;
 }
 .cal-cell.today { border-color: var(--red); }
 .cal-cell .cal-day { font-weight: 800; font-size: .95rem; }
@@ -1481,4 +1485,40 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   font-size: 2.1rem; font-weight: 900; letter-spacing: 1px; white-space: nowrap;
   text-shadow: 0 3px 0 rgba(0,0,0,.18), 0 6px 22px rgba(255,213,79,.55);
   opacity: 0; pointer-events: none;
+}
+
+/* ---------- Desktop hover lift (mouse only; touch unaffected) ---------- */
+@media (hover: hover) and (pointer: fine) {
+  /* 大按鈕／全寬選項：細幅度，避免水平溢出感 */
+  .btn-big:hover:not(:active):not(:disabled),
+  .btn-google:hover:not(:active):not(:disabled),
+  .pd-menu-btn:hover:not(:active),
+  .word-image-btn:hover:not(:active),
+  .entry-gate-btn:hover:not(:active),
+  .topic-chip:hover:not(:active) {
+    transform: scale(1.02);
+  }
+
+  /* 中型格子／pill：中幅度 */
+  .dex-cell.owned:hover:not(:active),
+  .dex-art:hover:not(:active),
+  .chip-btn:hover:not(:active),
+  .btn-mini:hover:not(:active),
+  .dex-candy button:hover:not(:disabled) {
+    transform: scale(1.05);
+  }
+
+  /* 細 icon 按鈕／日曆格：幅度最大，小目標要明顯啲先 feel 到 */
+  .icon-btn:hover:not(:active),
+  .btn-nav:hover:not(:active),
+  .quiz-exit-btn:hover:not(:active),
+  .cal-cell.lv1:hover, .cal-cell.lv2:hover, .cal-cell.lv3:hover,
+  .hero-sprite.clickable:hover {
+    transform: scale(1.08);
+  }
+}
+
+/* 尊重系統減少動態設定 */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; }
 }
