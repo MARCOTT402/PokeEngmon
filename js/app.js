@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v89";
+const APP_VERSION = "v90";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -415,6 +415,8 @@ const App = {
               if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
                 SupabaseAuth.settleCapture(cur[0], 1);
               }
+              /* 同步到雲端：新 pokemon / dupes */
+              if (window.Sync && Sync.isEnabled()) Sync.pushState();
               this.renderHome();
               return { isDupe: res.isDupe, dexId: cur[0], name: cur[1] };
             }
@@ -479,6 +481,9 @@ const App = {
       st.pendingExp = (st.pendingExp || 0) + rewards.exp;
     }
     saveState();
+
+    /* 同步到雲端：diamonds / exp / level 變化 */
+    if (window.Sync && Sync.isEnabled()) Sync.pushState();
 
     this._renderSettlement(data, rewards);
     this.showView("view-settlement");

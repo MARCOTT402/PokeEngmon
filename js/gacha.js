@@ -179,6 +179,9 @@ const Gacha = {
     }
 
     App.renderHome();   // 更新主畫面資料
+
+    /* 同步到雲端：diamonds 扣減 + 新 pokemon */
+    if (window.Sync && Sync.isEnabled()) Sync.pushState();
   },
 
   /* ---------- 稀有抽慶祝動畫 ----------
