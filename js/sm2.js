@@ -231,11 +231,14 @@ window.SM2 = (() => {
     const s = size || SET_SIZE;
     let pool = allQuestions || [];
 
-    /* 按 topicKeys 篩選；word 題同时接受 topic 或 category */
-    if (topicKeys && topicKeys.size > 0) {
+    /* topicKeys 可能係 Set 或 Array — 統一做 Set 處理 */
+    const tkSet = (topicKeys instanceof Set) ? topicKeys : new Set(topicKeys || []);
+
+    /* 按 topicKeys 篩選；用 questionTopicKey(q) 統一 key format */
+    if (tkSet.size > 0) {
       pool = pool.filter(q => {
-        if (q.type === "word") return topicKeys.has(q.topic) || topicKeys.has(q.category);
-        return topicKeys.has(q.topic);
+        const tk = (typeof questionTopicKey === "function") ? questionTopicKey(q) : q.topic;
+        return tkSet.has(tk);
       });
     }
     if (pool.length === 0) return [];
