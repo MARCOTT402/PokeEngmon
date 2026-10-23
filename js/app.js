@@ -900,9 +900,19 @@ const App = {
     document.getElementById("btn-settings").onclick = () => this.openSettings();
     document.getElementById("btn-login").onclick = () => this.openLoginHub();
 
-    /* OAuth callback：Supabase redirect 返嚟時自動處理 */
-    if (window.location.search.includes("access_token=")) {
-      this._handleOAuthCallback();
+    /* OAuth 登入完成：Supabase redirect 返嚟時 SupabaseAuth.init() 已經 parse hash → save session */
+    /* 呢度 detect 到 isLoggedIn() 就做 migrate + refresh */
+    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn() && !st._googleMigrated) {
+      const deviceId = ensureDeviceId();
+      try {
+        await SupabaseAuth.migrateAnonymous(deviceId);
+        console.log("[OAuth] ✅ Anonymous device migrated to auth uid");
+      } catch (e) { console.warn("[OAuth] migrate failed:", e.message); }
+      try { await Sync.pull(); } catch (e) {}
+      loadState()._googleMigrated = true; /* flag 防止重複 */
+      saveState();
+      this.renderHome();
+      this.toast("✅ Signed in! Your progress is now cloud-synced.");
     }
     /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
     document.getElementById("btn-top-diamond").onclick = () => {
