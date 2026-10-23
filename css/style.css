@@ -1289,4 +1289,21 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .btn-danger:disabled { background: #5a3a38 !important; color: #b99 !important; opacity: 0.6; cursor: not-allowed; }
 .reset-type-hint { font-size: 0.9rem; color: #ccc; margin: 12px 0 8px; }
 .reset-type-hint b { color: #ffd45e; }
+
+/* ==================== Login Hub (Poké Ball 風格) ==================== */
+.login-hub, .login-hub.logged-in { max-width: 360px; padding: 28px 24px 22px; text-align: center; font-family: system-ui, sans-serif; }
+.lh-ball { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; background: linear-gradient(180deg, #e53935 0%, #e53935 48%, #212121 48%, #212121 52%, #fafafa 52%, #fafafa 100%); border: 3px solid #212121; position: relative; animation: lh-ball-bounce 2.4s ease-in-out infinite; }
+.lh-ball::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #212121; }
+@keyframes lh-ball-bounce { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(6deg); } }
+.login-hub h3 { font-size: 18px; margin: 4px 0 6px; color: #212121; }
+.login-hub .lh-email { font-weight: 600; color: #e53935; margin: 2px 0; font-size: 15px; }
+.login-hub .lh-sub { color: #666; font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
+.login-hub .lh-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.login-hub .lh-divider { margin: 18px 0 10px; display: flex; align-items: center; gap: 10px; color: #aaa; font-size: 11px; text-transform: uppercase; }
+.login-hub .lh-divider::before, .login-hub .lh-divider::after { content: ""; flex: 1; height: 1px; background: #e0e0e0; }
+.login-hub .lh-device { font-size: 12px; color: #888; margin: 6px 0; }
+.login-hub .lh-device code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #e53935; }
+.login-hub .lh-note { font-size: 11px; color: #999; line-height: 1.5; margin: 8px 0 0; }
+.btn-google { display: flex !important; align-items: center; justify-content: center; gap: 10px; background: #fff !important; border: 1.5px solid #e0e0e0 !important; color: #333 !important; font-weight: 600 !important; transition: all .15s; }
+.btn-google:active { transform: scale(.97); }
 .confirm-box #reset-name-input { width: 100%; box-sizing: border-box; margin-bottom: 14px; }

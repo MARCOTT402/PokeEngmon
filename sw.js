@@ -1,5 +1,5 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v67";
+const CACHE_NAME = "pokeengmon-v68";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -7,6 +7,7 @@ const ASSETS = [
   "./questions.csv",
   "./picture_words.csv",
   "./supabase-config.local.js",
+  "./js/supabase-auth.js",
   "./js/sm2.js",
   "./js/sync.js",
   "./data/pokemon-151.json",

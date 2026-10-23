@@ -656,6 +656,105 @@ const App = {
     document.getElementById("btn-settings-close").onclick = () => this.closeModal();
   },
 
+  /* ---------- Login Hub（Poké Ball 風格） ---------- */
+  openLoginHub() {
+    const user = window.SupabaseAuth ? SupabaseAuth.currentUser() : null;
+    const deviceId = ensureDeviceId();
+
+    if (user) {
+      /* 已登入狀態 */
+      this.showModal(`
+        <div class="login-hub logged-in">
+          <div class="lh-ball" aria-hidden="true"></div>
+          <h3>✅ Connected Trainer</h3>
+          <p class="lh-email">${escapeHTML(user.email || user.user_metadata?.name || "Trainer")}</p>
+          <p class="lh-sub">Your progress is safely synced to the cloud.</p>
+          <div class="lh-actions">
+            <button id="lh-sync" class="btn-big btn-primary">🔄 Sync Now</button>
+            <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
+          </div>
+        </div>`, true);
+
+      document.getElementById("lh-sync").onclick = async () => {
+        try { await Sync.pull(); this.toast("Sync complete!"); this.closeModal(); }
+        catch (e) { this.toast("Sync failed — check internet"); }
+      };
+      document.getElementById("lh-signout").onclick = async () => {
+        await SupabaseAuth.signOut();
+        /* 登出後清除 auth 狀態 + refresh LocalStorage 拉匿名資料 */
+        try { await Sync.pull(); } catch (e) {}
+        this.closeModal();
+        this.renderHome();
+        this.toast("Signed out");
+      };
+    } else {
+      /* 未登入狀態 */
+      this.showModal(`
+        <div class="login-hub">
+          <div class="lh-ball" aria-hidden="true"></div>
+          <h3>🔐 Save Your Progress</h3>
+          <p class="lh-sub">Sign in to sync across devices &amp; never lose your trainer data.</p>
+
+          <div class="lh-actions">
+            <button id="lh-google" class="btn-big btn-google">
+              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.1l6.6 4.8C14.7 15 19 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 16.3 4.5 9.6 8.8 6.3 14.1z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.6-1.9 13-5l-6-4.8c-2.1 1.4-4.8 2.3-7.9 2.3-5.2 0-9.7-3.1-11.3-7.4l-6.5 5C9.3 39.2 16.1 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6 4.8C42 33.9 43.5 29.2 43.5 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+              Continue with Google
+            </button>
+          </div>
+
+          <div class="lh-divider"><span>Device saved anonymously</span></div>
+          <p class="lh-device">Local ID: <code>${escapeHTML(deviceId.slice(0, 8))}</code></p>
+
+          <p class="lh-note">Playing without login is fine — your progress stays on this device. Sign in anytime to cloud-sync.</p>
+        </div>`, true);
+
+      document.getElementById("lh-google").onclick = async () => {
+        this.closeModal();
+        try { await SupabaseAuth.signInWithGoogle(); }
+        catch (e) { console.warn("Google sign-in failed:", e); }
+      };
+    }
+  },
+
+  async _handleOAuthCallback() {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get("access_token");
+    const refresh = url.searchParams.get("refresh_token");
+    const expires = parseInt(url.searchParams.get("expires_in") || "3600");
+
+    if (!token) return;
+
+    /* Supabase 係 URL fragment 而唔係 query string redirect（popup 模式），
+       但我哋用 window.open → 手動解析 popup URL */
+    /* 呢度處理 redirect 模式返嚟嘅 query string */
+    const session = {
+      access_token: token,
+      refresh_token: refresh,
+      expires_at: Math.floor(Date.now() / 1000) + expires,
+      user: { id: url.searchParams.get("user_id") || uuidGen(), email: url.searchParams.get("email") }
+    };
+    SupabaseAuth.saveSession(session);
+
+    /* 匿名資料 migrate 到 auth uid */
+    const deviceId = ensureDeviceId();
+    if (session.user && session.user.id && deviceId) {
+      await SupabaseAuth.migrateAnonymous(deviceId);
+    }
+
+    /* Clean URL + refresh */
+    window.history.replaceState({}, "", window.location.pathname);
+    try { await Sync.pull(); } catch (e) {}
+    this.renderHome();
+    this.toast("Signed in! Your progress is synced.");
+  },
+
+  async signOut() {
+    if (window.SupabaseAuth) await SupabaseAuth.signOut();
+    try { await Sync.pull(); } catch (e) {}
+    this.renderHome();
+    this.toast("Signed out");
+  },
+
   exportSave() {
     const blob = new Blob([JSON.stringify(loadState(), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -799,6 +898,12 @@ const App = {
     document.getElementById("btn-disclaimer").onclick = () => this.openDisclaimer();
     document.getElementById("topbar-name").onclick = () => this.openRename();
     document.getElementById("btn-settings").onclick = () => this.openSettings();
+    document.getElementById("btn-login").onclick = () => this.openLoginHub();
+
+    /* OAuth callback：Supabase redirect 返嚟時自動處理 */
+    if (window.location.search.includes("access_token=")) {
+      this._handleOAuthCallback();
+    }
     /* 主頁資源：鑽石 → 稀有抽；普通抽券 → 普通抽（資源足夠先入得） */
     document.getElementById("btn-top-diamond").onclick = () => {
       const st = loadState();
