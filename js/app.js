@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v77";
+const APP_VERSION = "v78";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -686,12 +686,58 @@ const App = {
     btn.title = "Connected — tap to manage";
   },
 
+  /* 檢查本地係咪有遊玩進度（用嚟決定 connect 舊帳戶時使唔使彈 overwrite 警告） */
+  _localHasProgress() {
+    const cardCount = (typeof SM2 !== "undefined" && SM2.listAll) ? SM2.listAll().length : 0;
+    return (st.diamonds || 0) > 0
+      || (st.entries && Object.keys(st.entries).length > 0)
+      || cardCount > 0
+      || (st.totalSets || 0) > 0;
+  },
+
+  /* 彈出「覆蓋本地進度」確認視窗，回傳 Promise<boolean> */
+  _confirmOverwrite() {
+    return new Promise((resolve) => {
+      const existing = document.getElementById("overwrite-modal");
+      if (existing) existing.remove();
+      const backdrop = document.createElement("div");
+      backdrop.className = "modal-backdrop";
+      backdrop.id = "overwrite-modal";
+      backdrop.innerHTML = `
+        <div class="modal-card">
+          <div class="modal-icon">⚠️</div>
+          <h3>Overwrite local progress?</h3>
+          <p style="font-size:.85rem;line-height:1.5;margin:6px 0;color:#6b7280;">
+            This Google account already has saved progress in the cloud.<br>
+            Connecting will <strong>overwrite your current local progress</strong> with the cloud data.
+          </p>
+          <p style="font-size:.78rem;color:#ef4444;font-weight:700;margin:8px 0 14px;">
+            Your local diamonds, Pokémon and study records will be replaced.
+          </p>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-secondary" style="flex:1;" data-act="cancel">Cancel</button>
+            <button class="btn-primary" style="flex:1;background:#ef4444;" data-act="confirm">Overwrite &amp; Connect</button>
+          </div>
+        </div>`;
+      backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop || e.target.closest("[data-act=cancel]")) {
+          backdrop.remove();
+          resolve(false);
+        } else if (e.target.closest("[data-act=confirm]")) {
+          backdrop.remove();
+          resolve(true);
+        }
+      });
+      document.body.appendChild(backdrop);
+    });
+  },
+
   openLoginHub() {
     const user = window.SupabaseAuth ? SupabaseAuth.currentUser() : null;
     const deviceId = ensureDeviceId();
 
     if (user) {
-      /* 已登入狀態 */
+      /* 已登入狀態：同步係全自動，唔需要 Sync Now 按鈕 */
       this.showModal(`
         <div class="login-hub logged-in">
           <div class="lh-ball" aria-hidden="true"></div>
@@ -699,21 +745,10 @@ const App = {
           <p class="lh-email">${escapeHTML(user.email || user.user_metadata?.name || "Trainer")}</p>
           <p class="lh-sub">Your progress is safely synced to the cloud.</p>
           <div class="lh-actions">
-            <button id="lh-sync" class="btn-big btn-primary">🔄 Sync Now</button>
             <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
           </div>
         </div>`, true);
 
-      document.getElementById("lh-sync").onclick = async () => {
-        try {
-          const cards = await Sync.pull();
-          if (cards === null) throw new Error("no cloud session");
-          this.toast("Sync complete!"); this.closeModal();
-        } catch (e) {
-          this.closeModal();
-          this.showSyncBanner("Cloud sync failed — check your internet and try again.", true);
-        }
-      };
       document.getElementById("lh-signout").onclick = async () => {
         await SupabaseAuth.signOut();
         /* 登出後重置 migrate 標記，下次登入（可能係另一個帳戶）會重新判斷 push/pull */
@@ -925,19 +960,37 @@ const App = {
           const isNewAccount = await SupabaseAuth.migrateAnonymous(deviceId);
           console.log("[OAuth] migrate result — isNewAccount:", isNewAccount);
           if (isNewAccount === true) {
-            /* 新帳戶：將本地匿名數據上傳到雲端，唔好被空雲端數據覆蓋 */
+            /* 新帳戶：將本地匿名數據上傳到雲端 */
             await Sync.pushState();
             console.log("[OAuth] ✅ Local progress uploaded to new Google account");
+            st._googleMigrated = true;
+            saveState();
           } else if (isNewAccount === false) {
-            /* 舊帳戶（有匿名數據已搬移）：從雲端拉下來 */
+            /* 舊帳戶：從雲端拉下來 */
+            /* 但如果本地有進度，要先警告用戶會覆蓋 */
+            const hasLocalProgress = this._localHasProgress();
+            if (hasLocalProgress) {
+              const confirmed = await this._confirmOverwrite();
+              if (!confirmed) {
+                /* 用戶拒絕 → sign out，保留本地進度 */
+                await SupabaseAuth.signOut();
+                st._googleMigrated = false;
+                saveState();
+                this.renderHome();
+                this.toast("Sign-in cancelled — your local progress is kept.");
+                return;
+              }
+            }
             await Sync.pull();
             console.log("[OAuth] ✅ Existing account data pulled from cloud");
+            st._googleMigrated = true;
+            saveState();
           } else {
             /* migrate 失敗 / 未知狀態：保守起見 pull（雲端有就用雲端） */
             try { await Sync.pull(); } catch (e) {}
+            st._googleMigrated = true;
+            saveState();
           }
-          st._googleMigrated = true;
-          saveState();
         } else {
           /* 已 migrate 過（之前登入過）：拉雲端最新數據 */
           try { await Sync.pull(); } catch (e) {}

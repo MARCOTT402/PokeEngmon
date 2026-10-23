@@ -149,7 +149,7 @@ end;
 $$;
 
 -- 3. Migrate：匿名 device_id 資料搬到 auth 帳戶
---    回傳 true = 新建立帳戶（本地要 push 上去）；false = 已有資料搬移完畢（本地要 pull 落嚟）
+--    回傳 true = 新帳戶（本地要 push 上去）；false = 已有帳戶（本地要 pull 落嚟）
 drop function if exists migrate_anonymous_to_auth(uuid, text);
 create or replace function migrate_anonymous_to_auth(new_auth_uuid uuid, old_device_id text)
 returns boolean
@@ -157,19 +157,28 @@ language plpgsql
 security definer
 as $$
 declare
+  existing_uuid uuid;
   old_account_uuid uuid;
 begin
+  /* 1. 先用 auth uid 檢查帳戶係咪已存在（跨裝置 / sign out 再 sign in 嘅情況） */
+  select id into existing_uuid from user_account where id = new_auth_uuid;
+
+  if existing_uuid is not null then
+    -- 帳戶已存在 → 唔係新帳戶，雲端為準（pull）
+    return false;
+  end if;
+
+  /* 2. 帳戶唔存在 → 睇下有冇匿名數據要搬 */
   select id into old_account_uuid from user_account where device_id = old_device_id;
 
   if old_account_uuid is null then
-    -- 從未登入過，建立新 account entry（本地有數據要 push 上嚟）
+    -- 從未登入過，亦冇匿名數據 → 建立新 account（本地要 push 上嚟）
     insert into user_account(id, device_id, trainer_name, updated_at)
-    values (new_auth_uuid, null, 'The PokéEngmon Trainer', extract(epoch from now()) * 1000)
-    on conflict (id) do nothing;
+    values (new_auth_uuid, null, 'The PokéEngmon Trainer', extract(epoch from now()) * 1000);
     return true;
   end if;
 
-  -- 搬所有資料到新 auth id
+  -- 有匿名數據 → 搬所有資料到新 auth id
   update user_entries   set account_id = new_auth_uuid where account_id = old_account_uuid;
   update user_cards    set account_id = new_auth_uuid where account_id = old_account_uuid;
   update user_history  set account_id = new_auth_uuid where account_id = old_account_uuid;
