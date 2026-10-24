@@ -16,7 +16,18 @@ const Quiz = {
   start(topics) {
     this.set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
     if (this.set.length === 0) {
-      App.toast("All caught up here! Pick other courses to keep training 🌟");
+      /* 冇到期卡 + 冇新題：toast 太易錯過，用彈窗明確提示（介面文字統一英文） */
+      App.showModal(`
+        <div class="confirm-box">
+          <p>🎉 <b>All caught up!</b><br>
+            <small>You've finished every available question in this topic.<br>
+            Reviews unlock as they come due — take a break and come back tomorrow,<br>
+            or pick another course to keep training.</small></p>
+          <div class="confirm-row">
+            <button id="caughtup-ok" class="btn-big btn-primary">OK</button>
+          </div>
+        </div>`, true);
+      document.getElementById("caughtup-ok").onclick = () => App.closeModal();
       return;
     }
     /* 唔夠 10 題＝呢個課題範圍今日嘅到期題就快做完，提示玩家擴闊課題 */
