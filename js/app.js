@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v100";
+const APP_VERSION = "v101";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -12,6 +12,11 @@ const App = {
 
   /* ---------- 路由 ---------- */
   showView(id) {
+    /* 離開抽獎頁：中斷流程（已結算嘅獎勵唔會漏，只係跳過動畫） */
+    const cur = document.querySelector(".view.active");
+    if (cur && cur.id === "view-gacha" && id !== "view-gacha" && typeof Gacha !== "undefined") {
+      Gacha.abort();
+    }
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
     document.body.classList.toggle("capture-mode", id === "view-capture");
@@ -1069,7 +1074,8 @@ const App = {
     document.getElementById("btn-review").onclick = () => this.showReview();
     document.getElementById("btn-settle-home").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-do-pull").onclick = () => Gacha.pull();
-    document.getElementById("btn-gacha-home").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    /* 先切 view（會中斷抽獎流程並結算），再 render 主頁，避免顯示舊鑽石/舊拍檔 */
+    document.getElementById("btn-gacha-home").onclick = () => { this.showView("view-home"); this.renderHome(); };
     document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-review-back").onclick = () => {

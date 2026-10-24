@@ -12,17 +12,57 @@ const Gacha = {
   phase: "idle",       // idle | coin | inserting | rumble | ball | done
   taps: 0,
   _flowId: 0,          // 流程 token：離開頁面後作廢所有 pending timeout
+  _flow: null,         // 當前流程（結算狀態綁喺 flow object，避免中斷污染其他流程）
+  _timers: [],
   _bound: false,
 
   open(mode) {
     this.mode = mode;
-    this.busy = false;
-    this._flowId++;    // 作廢上一次流程嘅 timeout
+    this.abort();      // 清走上次殘留；未結算就補結算，唔會「食咗鑽但冇派寵」
     App.showView("view-gacha");
     document.getElementById("gacha-title").textContent = "💎 Rare Pull";
     this._bindTap();
     this._resetStage();
     this._refreshControls();
+  },
+
+  /* 中斷當前流程：跳過演出，但經濟交易照樣落地 */
+  abort() {
+    const flow = this._flow;
+    this._flowId++;
+    this._clearTimers();
+    this._flow = null;
+    this.busy = false;
+
+    if (flow && !flow.settled) {
+      /* 未結算 → 背景補做，避免中途離開導致扣鑽但冇寵物 */
+      this._settleResult(flow).then(() => {
+        this._refreshControls();
+        App.renderHome();
+      }).catch(() => {});
+    }
+
+    this._resetStage();
+    this._refreshControls();
+  },
+
+  /* 所有流程 timeout 都經呢個 wrapper 記錄，中斷時一次過清走 */
+  _setT(fn, ms) {
+    const id = setTimeout(fn, ms);
+    this._timers.push(id);
+    return id;
+  },
+
+  _clearTimers() {
+    this._timers.forEach(id => clearTimeout(id));
+    this._timers = [];
+  },
+
+  _lockButton(text) {
+    const btn = document.getElementById("btn-do-pull");
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = text;
   },
 
   /* 全版點按（捕捉場景同款）：只有 coin 階段先計數，按鈕除外 */
@@ -144,8 +184,10 @@ const Gacha = {
   },
 
   /* ---------- 抽獎主流程 ----------
-     v100：RPC 延遲解耦 —— 點掣即刻開入幣動畫，server 抽獎背景進行，
-     到波球跌出前先用 _resolveResult() 攞結果（hold 狀態頂住網絡延遲） */
+     v101：RPC 延遲解耦 + 經濟結算提早落地 ——
+     點掣即刻開入幣動畫，server 抽獎背景進行；
+     波球跌出前先結算（扣鑽 + 派寵），之後所有演出純視覺，
+     中途離開只會跳過動畫，唔會出現「扣咗鑽但冇寵物」。 */
   pull() {
     if (this.busy || !this._canPull()) return;
     this.busy = true;
@@ -153,74 +195,124 @@ const Gacha = {
     const audio = this._audio();
     if (audio) audio.ensure();
 
-    this._serverResult = null;
-    this._resultReady = false;
-    this._rarity = null;
-    this._chainKey = null;
-
     /* v99：登入時走 server 權威抽獎 —— gacha_pull RPC 原子扣鑽 +
        server 自己 roll rarity/chain + 拎寵，防止 client 改機率/必中神獸。
-       失敗或未登入 → _resolveResult() 用本地 path 頂上。 */
+       失敗或未登入 → 結算時用本地 path 頂上。 */
     const authed = window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser();
     const st = loadState();
-    this._rpcPromise = authed
-      ? SupabaseAuth.gachaPull(st.pendingExp || 0).catch(() => null)
-      : null;
+
+    this._clearTimers();
+    this._flow = {
+      id: ++this._flowId,
+      rpc: authed ? SupabaseAuth.gachaPull(st.pendingExp || 0).catch(() => null) : null,
+      settled: false,
+      settling: null,
+      settlement: null
+    };
 
     this._resetStage();
     this._refreshControls();
-    document.getElementById("btn-do-pull").disabled = true;
+    this._lockButton("Rolling…");
 
     this._startCoinPhase();
   },
 
-  /* 本地 fallback 抽獎（離線 / RPC 失敗 / 未登入） */
-  _applyLocalRoll() {
-    const st = loadState();
-    st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
-    saveState();
-    this._rarity = this.rollRarity(this.mode);
-    this._chainKey = this.pickChain(this._rarity);
-  },
+  /* 經濟結算：扣鑽 + 派寵一次過落地，同演出完全解耦。
+     server 有結果用 server 權威數據，否則行本地 fallback。 */
+  async _settleResult(flow) {
+    if (!flow) return null;
+    if (flow.settled) return flow.settlement;
+    if (flow.settling) return flow.settling;   // 同一 flow 只結算一次
 
-  /* 波球跌出前攞結果：server 未覆就入 hold 狀態（prompt "…"）等佢 */
-  async _resolveResult() {
-    const fid = this._flowId;
-    if (this._resultReady) return true;
+    flow.settling = (async () => {
+      let r = null;
+      if (flow.rpc) {
+        flow.rpcPending = true;
+        flow.rpc.then(() => { flow.rpcPending = false; });
+        await Promise.resolve();
+        /* 仲等緊 server 先用「…」頂住，避免玩家以為流程卡死 */
+        if (flow.rpcPending && flow.id === this._flowId) this._prompt("…");
+        r = await flow.rpc;
+        if (flow.id === this._flowId) this._prompt("");
+      }
 
-    let r = null;
-    if (this._rpcPromise) {
-      let settled = false;
-      this._rpcPromise.then(() => { settled = true; });
-      await Promise.resolve();          // 已解決嘅 promise 即刻落地
-      if (!settled) this._prompt("…");  // 未覆 → hold
-      r = await this._rpcPromise;
-      if (fid !== this._flowId) return false;
-      this._prompt("");
-    }
-
-    if (r && r.entry) {
       const st = loadState();
-      this._serverResult = r;
-      st.diamonds = r.balance;          // server 權威餘額（已扣 3 鑽）
-      saveState();
-      this._rarity = r.rarity;
-      this._chainKey = r.entry.chain_key;
-    } else {
-      this._applyLocalRoll();
-    }
-    this._resultReady = true;
+      let rarity, chainKey, entry, isDupe, candyGain = 0;
+      let firstExpEvolve = null;
 
-    /* 新 Pokemon：喺動畫期間預先載入叫聲，開球時即刻叫 */
-    const stNow = loadState();
-    const preview = EVOLUTION_CHAINS.find(c => c.key === this._chainKey);
-    const isNewPull = this._serverResult
-      ? !this._serverResult.is_dupe
-      : !stNow.entries.some(e => e.chainKey === this._chainKey);
-    if (preview && isNewPull) {
-      Pokedex.prepareCry(preview.stages[0][0]);
+      if (r && r.entry) {
+        /* server path：扣鑽 / rarity / dupe 已由 gacha_pull RPC 完成 */
+        st.diamonds = r.balance;          // server 權威餘額（已扣 3 鑽）
+        saveState();
+        rarity = r.rarity;
+        chainKey = r.entry.chain_key;
+        const hadEntries = st.entries.length > 0;
+        entry = adoptServerEntry(r.entry);
+        isDupe = r.is_dupe;
+        candyGain = isDupe ? 1 : 0;       // 稀有抽 dupe 必送 1 糖（server 已入帳）
+        if (st.pendingExp > 0) {
+          if (!hadEntries && !isDupe) {
+            /* 第一隻寵：server init_exp 已入帳 → 本地清零 */
+            st.pendingExp = 0;
+            saveState();
+            if (entry.stage > 1) firstExpEvolve = SPECIES[entryCurrentSpecies(entry)[0]];
+          } else {
+            /* server 冇 apply init_exp（唔係第一隻）→ 本地入帳 + 背景補 RPC */
+            const pending = st.pendingExp;
+            const res = addEntryExp(entry, pending);
+            st.pendingExp = 0;
+            (res.learned || []).forEach(m => {
+              if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+            });
+            saveState();
+            firstExpEvolve = res.evolvedTo;
+            if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+              SupabaseAuth.addEntryExp(entry.uid, pending);
+              if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+                Sync.patchEntry(entry.uid, { branch: entry.branch });
+              }
+            }
+          }
+        }
+      } else {
+        /* 本地 fallback（離線 / 未登入 / RPC 失敗） */
+        st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
+        saveState();
+        rarity = this.rollRarity(this.mode);
+        chainKey = this.pickChain(rarity);
+        const got = obtainPokemon(chainKey, this.mode);
+        entry = got.entry;
+        isDupe = got.isDupe;
+        candyGain = got.candyGain;
+
+        /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
+        if (st.pendingExp > 0) {
+          const res = addEntryExp(entry, st.pendingExp);
+          st.pendingExp = 0;
+          (res.learned || []).forEach(m => {
+            if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+          });
+          saveState();
+          firstExpEvolve = res.evolvedTo;
+        }
+      }
+
+      flow.settled = true;
+      flow.settlement = { rarity, chainKey, entry, isDupe, candyGain, firstExpEvolve };
+
+      /* 新 Pokemon：預先載入叫聲，開球時即刻叫（重複抽到唔叫） */
+      const preview = EVOLUTION_CHAINS.find(c => c.key === chainKey);
+      if (preview && !isDupe) Pokedex.prepareCry(preview.stages[0][0]);
+
+      this._updateDiamondDisplay();
+      return flow.settlement;
+    })();
+
+    try {
+      return await flow.settling;
+    } finally {
+      flow.settling = null;
     }
-    return true;
   },
 
   /* 階段 1：巨大發光機身 + 比卡超金幣彈出，等用戶點 3 下 */
@@ -272,7 +364,7 @@ const Gacha = {
   /* 階段 2：金幣側身滑入入幣位 */
   _insertCoin() {
     this.phase = "inserting";
-    const fid = this._flowId;
+    const fid = this._flow ? this._flow.id : this._flowId;
     const coin = document.getElementById("gacha-coin");
     if (coin) coin.classList.add("coin-insert");
     const audio = this._audio();
@@ -281,14 +373,14 @@ const Gacha = {
     this._prompt("Here it comes…");
     this._showTaps(false);
 
-    setTimeout(() => { if (fid === this._flowId && coin) coin.remove(); }, 520);
-    setTimeout(() => { if (fid === this._flowId) this._rumble(); }, 480);
+    this._setT(() => { if (fid === this._flowId && coin) coin.remove(); }, 520);
+    this._setT(() => { if (fid === this._flowId) this._rumble(); }, 480);
   },
 
   /* 階段 3：機身強烈震動 */
   _rumble() {
     this.phase = "rumble";
-    const fid = this._flowId;
+    const fid = this._flow ? this._flow.id : this._flowId;
     const stage = document.getElementById("gacha-stage");
     stage.classList.remove("phase-coin");
     stage.classList.add("stage-rumble");
@@ -297,24 +389,43 @@ const Gacha = {
     this._haptic([30, 40, 30, 40, 60]);
     this._prompt("");
 
-    setTimeout(() => { if (fid === this._flowId) this._dropBall(); }, 1200);
+    this._setT(() => { if (fid === this._flowId) this._dropBall(); }, 1200);
   },
 
-  /* 階段 4（v100 P&D 式）：暗転聚光 → 波球跌出著地 → 搖 3 下漏光遞進
+  /* 階段 4（v100 P&D 式）：結算 → 暗転聚光 → 波球跌出著地 → 搖 3 下漏光遞進
      → 確定演出升級（epic 藍→金 / legend 金→彩虹，rare 無升級）
-     → 閃光 + 光柱爆開 → 結算 */
+     → 閃光 + 光柱爆開 → 結算畫面 */
   async _dropBall() {
+    const flow = this._flow;
+    if (!flow) return;
     this.phase = "ball";
-    const fid = this._flowId;
+    const fid = flow.id;
     const stage = document.getElementById("gacha-stage");
     stage.classList.remove("stage-rumble");
     stage.classList.add("stage-drop");
 
-    /* 攞抽獎結果（RPC 慢就 hold 住先） */
-    const ok = await this._resolveResult();
-    if (!ok || fid !== this._flowId) return;
+    /* 先結算經濟交易（扣鑽 + 派寵），之後全部係純視覺演出；
+       就算之後被中斷，獎勵亦已經落地 */
+    let s = null;
+    try {
+      s = await this._settleResult(flow);
+    } catch (err) {
+      console.error("[Gacha] settlement failed", err);
+    }
+    if (!s) {
+      /* 結算失敗：解鎖 UI，唔可以卡死喺「Rolling…」 */
+      if (fid === this._flowId) {
+        this.busy = false;
+        this._flow = null;
+        this._resetStage();
+        this._refreshControls();
+        this._prompt("Something went wrong — try again.");
+      }
+      return;
+    }
+    if (fid !== this._flowId) return;
 
-    const rarity = this._rarity;
+    const rarity = s.rarity;
     const audio = this._audio();
     const dz = document.getElementById("gacha-dropzone");
 
@@ -331,7 +442,7 @@ const Gacha = {
     dz.appendChild(ball);
 
     /* 著地聲對正 ball-drop 動畫收尾（.95s）+ 眼睛發光預告 */
-    setTimeout(() => {
+    this._setT(() => {
       if (fid !== this._flowId) return;
       if (audio) audio.ballLand();
       this._haptic(35);
@@ -339,7 +450,7 @@ const Gacha = {
     }, 950);
 
     /* 3 下搖晃懸念：漏光 lk1→lk2→lk3 遞進 + 張力低鳴逐步升高 */
-    [1400, 2050, 2700].forEach((t, i) => setTimeout(() => {
+    [1400, 2050, 2700].forEach((t, i) => this._setT(() => {
       if (fid !== this._flowId || !document.body.contains(ball)) return;
       ball.classList.remove("wob");
       void ball.offsetWidth;   // 重啟 CSS 動畫
@@ -350,12 +461,12 @@ const Gacha = {
 
     /* 確定演出：第 3 搖同拍升級（rare 無升級） */
     if (rarity !== "rare") {
-      setTimeout(() => {
+      this._setT(() => {
         if (fid !== this._flowId || !document.body.contains(ball)) return;
         ball.classList.add("upgrade");
         if (audio) audio.upgradeSting(rarity === "legend" ? 2 : 1);
         this._haptic([30, 40, 30]);
-        setTimeout(() => {
+        this._setT(() => {
           if (fid !== this._flowId || !document.body.contains(ball)) return;
           ball.classList.remove("upgrade", "leak-blue", "leak-gold", "ball-blue");
           if (rarity === "epic") {
@@ -370,7 +481,7 @@ const Gacha = {
     }
 
     /* 開球：暗転退場 + 閃光 + 光柱爆點 */
-    setTimeout(() => {
+    this._setT(() => {
       if (fid !== this._flowId) return;
       this._ensureDim().classList.remove("on");
       this._setEyes(null);
@@ -380,75 +491,29 @@ const Gacha = {
       const burst = document.createElement("div");
       burst.className = "gacha-burst on";
       dz.appendChild(burst);
-      setTimeout(() => burst.remove(), 700);
+      setTimeout(() => burst.remove(), 700);   // 唔入 _timers：中斷時都要清走
       if (audio) audio.gotcha();
     }, 3300);
 
-    setTimeout(() => { if (fid === this._flowId) this._reveal(rarity, this._chainKey); }, 3700);
+    this._setT(() => { if (fid === this._flowId) this._reveal(flow, s); }, 3700);
   },
 
-  _reveal(rarity, chainKey) {
+  _reveal(flow, s) {
     const stage = document.getElementById("gacha-stage");
     const flash = document.getElementById("gacha-flash");
-    flash.classList.remove("on");
+    /* 一定要重設成基礎 class：淨係 remove("on") 會殘留上次嘅 flash-legend / flash-epic，
+       令之後嘅 rare 抽錯用傳奇金色閃光 */
+    flash.className = "gacha-flash";
     stage.classList.remove("stage-flash");
     this.phase = "done";
+    this._flow = null;
 
-    /* v99：server path —— 扣鑽/rarity/dupe 已由 gacha_pull RPC 完成，
-       本地用 adoptServerEntry 採用 server row；否則行舊本地邏輯 */
-    const sr = this._serverResult;
-    this._serverResult = null;
-    const st = loadState();
-    let entry, isDupe, candyGain;
-    let firstExpEvolve = null;
-
-    if (sr) {
-      const hadEntries = st.entries.length > 0;
-      entry = adoptServerEntry(sr.entry);
-      isDupe = sr.is_dupe;
-      candyGain = isDupe ? 1 : 0;   // 稀有抽 dupe 必送 1 糖（server 已入帳）
-      if (st.pendingExp > 0) {
-        if (!hadEntries && !isDupe) {
-          /* 第一隻寵：server init_exp 已入帳 → 本地清零 */
-          st.pendingExp = 0;
-          saveState();
-          if (entry.stage > 1) firstExpEvolve = SPECIES[entryCurrentSpecies(entry)[0]];
-        } else {
-          /* server 冇 apply init_exp（唔係第一隻）→ 本地入帳 + 背景補 RPC */
-          const pending = st.pendingExp;
-          const res = addEntryExp(entry, pending);
-          st.pendingExp = 0;
-          (res.learned || []).forEach(m => {
-            if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
-          });
-          saveState();
-          firstExpEvolve = res.evolvedTo;
-          if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
-            SupabaseAuth.addEntryExp(entry.uid, pending);
-            if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
-              Sync.patchEntry(entry.uid, { branch: entry.branch });
-            }
-          }
-        }
-      }
-    } else {
-      const got = obtainPokemon(chainKey, this.mode);
-      entry = got.entry;
-      isDupe = got.isDupe;
-      candyGain = got.candyGain;
-
-      /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
-      if (st.pendingExp > 0) {
-        const res = addEntryExp(entry, st.pendingExp);
-        st.pendingExp = 0;
-        /* 新入手時自動補招（有空位先學，最多 4 招） */
-        (res.learned || []).forEach(m => {
-          if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
-        });
-        saveState();
-        firstExpEvolve = res.evolvedTo;
-      }
-    }
+    const fid = flow.id;
+    const rarity = s.rarity;
+    const entry = s.entry;
+    const isDupe = s.isDupe;
+    const candyGain = s.candyGain;
+    const firstExpEvolve = s.firstExpEvolve;
 
     /* 開球動畫 */
     stage.classList.add("stage-open");
@@ -473,17 +538,19 @@ const Gacha = {
     result.classList.add("enter");
 
     /* 結算過場：機身淡出，還原資訊同按鈕 */
-    setTimeout(() => {
+    this._setT(() => {
+      if (fid !== this._flowId) return;
       stage.classList.add("settling");
       document.getElementById("view-gacha").classList.remove("playing");
     }, 480);
 
-    const pullBtn = document.getElementById("btn-do-pull");
-    pullBtn.disabled = true;
-    pullBtn.textContent = "Pull complete!";
-    /* 抽完之後解鎖，稍後自動還原按鈕俾玩家繼續再抽 */
+    this._lockButton("Pull complete!");
     this.busy = false;
-    setTimeout(() => this._refreshControls(), 1400);
+    /* 抽完之後解鎖，稍後自動還原按鈕俾玩家繼續再抽（只限同一流程） */
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      this._refreshControls();
+    }, 1400);
 
     /* 稀有抽專屬慶祝：要勁過普通捕捉場景嘅爽感 */
     if (this.mode === "rare") this._celebrate(rarity, cur[0]);
