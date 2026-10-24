@@ -50,6 +50,14 @@ window.Sync = (() => {
   let _pendingHistory = [];
   let _flushTimer = null;
 
+  /* Reset Progress：丟棄未發送嘅卡片／歷史，避免 reset 後又被 queue 寫返上雲 */
+  function clearQueue() {
+    _pendingCards = [];
+    _pendingHistory = [];
+    clearTimeout(_flushTimer);
+    _flushTimer = null;
+  }
+
   function queueUpsert(card) {
     const ref = _accountRef();
     if (!ref.isAuth) { console.log("[Sync] queueUpsert skipped — not auth"); return; }
@@ -314,6 +322,7 @@ window.Sync = (() => {
   return {
     queueUpsert,
     queueHistory,
+    clearQueue,
     pull,
     pushState,
     patchEntry,

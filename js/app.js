@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v104";
+const APP_VERSION = "v105";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -115,7 +115,13 @@ const App = {
     };
     input.onkeydown = (e) => { if (e.key === "Enter" && !yesBtn.disabled) yesBtn.click(); };
     setTimeout(() => input.focus(), 50);
-    yesBtn.onclick = () => {
+    yesBtn.onclick = async () => {
+      /* 先丟棄未發送嘅同步 queue，再清雲端，最後清本機（避免 reset 後又被寫返上去） */
+      if (window.Sync) Sync.clearQueue();
+      if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+        const cloud = await SupabaseAuth.resetProgress();
+        if (!cloud) this.toast("Cloud reset failed — this device was cleared only");
+      }
       resetState();
       this.closeModal();
       this.renderHome();

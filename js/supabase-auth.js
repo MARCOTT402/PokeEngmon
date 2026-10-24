@@ -257,6 +257,12 @@ const SupabaseAuth = {
     return this._rpc("alloc_ev", { entry_id: entryId, stat });
   },
 
+  /* ---------- RPC：清空雲端進度（Reset Progress 用；以 auth.uid() 為準） ---------- */
+  async resetProgress() {
+    if (!this.currentUser()) return null;
+    return this._rpc("reset_progress", {});
+  },
+
   /* ---------- RPC：首次 connect 一次性上傳本地進度（回傳 true/false） ---------- */
   async importState(payload) {
     if (!this.currentUser()) return null;
