@@ -10,6 +10,7 @@ const Quiz = {
   startTime: 0,
   timerId: null,
   locked: false,
+  _advanceTimer: null,
 
   /* topics: 揀咗嘅題型（空陣列＝全部）；圖片單字題會混合抽 */
   start(topics) {
@@ -25,6 +26,7 @@ const Quiz = {
     this.idx = 0;
     this.results = [];
     this.startTime = Date.now();
+    this._cancelAdvance();   /* 清掉上一個回合殘留嘅自動跳題 timer */
     App.showView("view-quiz");
     clearInterval(this.timerId);
     this.timerId = setInterval(() => this._tickTimer(), 500);
@@ -184,8 +186,10 @@ const Quiz = {
     const target = q.type === "word" ? q.word : q.answer;
     const response_ms = Date.now() - (this._curQuestionStart || Date.now());
 
-    /* SM-2 完整評分（Levenshtein + 過早提交保護 + 動態時間期望 + Q 值）*/
-    const judge = SM2.computeQ(text || "", target || "", response_ms);
+    /* SM-2 完整評分（Levenshtein + 過早提交保護 + 動態時間期望 + Q 值）
+       多個可接受答案（q.accept）一併評分，取最高 Q */
+    const targets = q.type === "word" ? [q.word] : [q.answer || "", ...(q.accept || [])];
+    const judge = SM2.computeBestQ(text || "", targets, response_ms);
     /* 答對：q >= 3（q=3 答得慢但仍算答對；SM-2 原版設計）*/
     const correct = judge.q >= 3;
 
@@ -216,7 +220,7 @@ const Quiz = {
       topic: q.topic,
       memory: card.repetition > 0 && !card.is_mastered,
       /* 額外資料 */
-      _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target }
+      _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target: judge.target }
     });
 
     input.disabled = true;
@@ -271,8 +275,11 @@ const Quiz = {
     const target = q.type === "word" ? q.word : q.answer;
     const response_ms = Date.now() - (this._curQuestionStart || Date.now());
 
-    /* SM-2：空答案 = 完全唔識 → Q 值自然最低 */
-    const judge = SM2.computeQ("", target || "", response_ms);
+    /* SM-2：空答案 = 完全唔識 → Q 值自然最低
+       零冠詞題（target 為空）唔可以用空字串比空字串，否則會變 dist=0 當答對 */
+    const judge = target
+      ? SM2.computeQ("", target, response_ms)
+      : { q: 1, reason: "hard_fail", dist: 0, lenRatio: 1, premature: false };
     const card = SM2.getOrCreateCard(q);
     const updatedCard = SM2.updateCard(card, judge.q, response_ms);
     updatedCard.ease_factor = SM2.computeEF(card.ease_factor, judge.reason);
@@ -314,6 +321,7 @@ const Quiz = {
       </div>`, true);
     document.getElementById("quiz-quit-yes").onclick = () => {
       clearInterval(this.timerId);
+      this._cancelAdvance();   /* 唔好俾答對後嘅 650ms 自動跳題喺退出後仍然執行 */
       this.locked = true;
       this._onContinue = null;
       App.closeModal();
@@ -324,14 +332,22 @@ const Quiz = {
   },
 
   /* ---------- 前進：答對自動快跳；答錯手動 Continue ---------- */
+  _cancelAdvance() {
+    if (this._advanceTimer) {
+      clearTimeout(this._advanceTimer);
+      this._advanceTimer = null;
+    }
+  },
+
   _advance(correct) {
     const go = () => {
+      this._advanceTimer = null;
       this.idx++;
       if (this.idx < this.set.length) this._renderQuestion();
       else this.finish();
     };
     if (correct) {
-      setTimeout(go, 650);
+      this._advanceTimer = setTimeout(go, 650);
     } else {
       /* 答錯：俾玩家自己睇清楚答案先過（Continue 或 Enter） */
       document.getElementById("btn-quiz-continue").classList.remove("hidden");
@@ -348,6 +364,7 @@ const Quiz = {
 
   finish() {
     clearInterval(this.timerId);
+    this._cancelAdvance();
     this._onContinue = null;   /* 防止殘留狀態喺之後誤觸 Continue */
     document.getElementById("quiz-bar").style.width = "100%";
     const score = this.results.filter(r => r.correct).length;

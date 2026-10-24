@@ -15,19 +15,25 @@ const PowerUp = {
   EXP_PER_FIX: 5,   // 每改啱一題嘅小獎勵（懲罰 → 補救有回報）
   locked: false,
   onDone: null,
+  _timer: null,      // 改對後自動跳題 / 慶祝 pop 嘅 timer
+  _cancelled: false, // 用戶退出後阻止殘留 timer 繼續推進
 
   start(wrongList, onDone) {
     this.queue = wrongList;
     this.idx = 0;
     this.fixedCount = 0;
     this.onDone = onDone;
+    this._cancelled = false;
+    clearTimeout(this._timer);
+    this._timer = null;
+    document.querySelectorAll(".pu-complete").forEach(el => el.remove());
     App.showView("view-powerup");
     this._render();
   },
 
-  /* 退出 Power Up Zone：放棄本回合，彈 confirm 警告 */
+  /* 退出 Power Up Zone：放棄本回合，彈 confirm 警告
+     鎖定期間（改對後 0.9 秒 / 慶祝 1.8 秒）都必須有反應 */
   quit() {
-    if (this.locked) return;
     App.showModal(`
       <div class="confirm-box">
         <p>Quit Power Up Zone?<br><small>Your fixes so far will be lost — this round won't be completed.</small></p>
@@ -38,7 +44,11 @@ const PowerUp = {
       </div>`, true);
     document.getElementById("pu-quit-yes").onclick = () => {
       this.locked = true;
+      this._cancelled = true;
       this.onDone = null;
+      clearTimeout(this._timer);
+      this._timer = null;
+      document.querySelectorAll(".pu-complete").forEach(el => el.remove());
       App.closeModal();
       App.renderHome();
       App.showView("view-home");
@@ -97,8 +107,9 @@ const PowerUp = {
 
   /* SM-2 評分：Dist=0 先算清除（唔係只 exact match 嘅 _isCorrect）*/
   _judge(q, text, response_ms) {
-    const target = q.type === "word" ? q.word : q.answer;
-    return SM2.computeQ(text || "", target || "", response_ms || 0);
+    /* 多個可接受答案（q.accept）一併評分，取最高 Q */
+    const targets = q.type === "word" ? [q.word] : [q.answer || "", ...(q.accept || [])];
+    return SM2.computeBestQ(text || "", targets, response_ms || 0);
   },
 
   submit() {
@@ -140,7 +151,9 @@ const PowerUp = {
       this.fixedCount++;
       this._expFloat();
 
-      setTimeout(() => {
+      this._timer = setTimeout(() => {
+        this._timer = null;
+        if (this._cancelled) return;
         this.idx++;
         if (this.idx < this.queue.length) this._render();
         else this._complete();
@@ -272,8 +285,10 @@ const PowerUp = {
     }
 
     if (window.CaptureScene && CaptureScene.audio) CaptureScene.audio.correct();
-    setTimeout(() => {
+    this._timer = setTimeout(() => {
+      this._timer = null;
       overlay.remove();
+      if (this._cancelled) return;
       if (cb) cb();
     }, 1800);
   }

@@ -60,6 +60,9 @@ function saveState() {
 function resetState() {
   _state = defaultState();
   saveState();
+  /* Reset 必須連 SM-2 卡片與歷史一併清除，否則新開局會被舊到期卡影響 */
+  try { localStorage.removeItem("pokeengmon_sm2_cards_v2"); } catch (e) {}
+  try { localStorage.removeItem("pokeengmon_sm2_history_v2"); } catch (e) {}
 }
 
 /* Sign out 時清除遊戲進度，但保留 device_id（匿名追蹤用）同 customQuestions（家長匯入） */

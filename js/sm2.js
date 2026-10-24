@@ -93,6 +93,21 @@ window.SM2 = (() => {
     return { q: 1, reason: "hard_fail", dist, lenRatio, premature: false };
   }
 
+  /* ============ 多個可接受答案：逐個計分，取最高 Q ============
+     同分時取較短編輯距離；回傳值附加 target 方便記錄實際命中嘅答案 */
+  function computeBestQ(input, targets, response_ms) {
+    const list = (Array.isArray(targets) ? targets : [targets]).filter(t => t != null);
+    const pool = list.length ? list : [""];
+    let best = null;
+    pool.forEach(t => {
+      const j = computeQ(input || "", t || "", response_ms);
+      if (!best || j.q > best.q || (j.q === best.q && j.dist < best.dist)) {
+        best = { ...j, target: t };
+      }
+    });
+    return best;
+  }
+
   /* ============ 演算法 5：Ease Factor ============ */
   function computeEF(oldEF, reason) {
     /* 保護例外：premature_submit / soft_fail_typo / good_normal 唔扣 EF */
@@ -280,7 +295,7 @@ window.SM2 = (() => {
   return {
     /* 演算法（純函數，方便測試）*/
     levenshtein, isPrefix, expectedTime,
-    computeQ, computeEF, nextInterval, nextRepetition, updateCard,
+    computeQ, computeBestQ, computeEF, nextInterval, nextRepetition, updateCard,
     /* Storage adapter */
     getOrCreateCard, upsertCard, listDue, listNew, listAll, listHistory, appendHistory,
     /* Session */

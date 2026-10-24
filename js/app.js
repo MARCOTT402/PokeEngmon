@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v103";
+const APP_VERSION = "v104";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -1107,6 +1107,17 @@ const App = {
       if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
       if (Quiz.locked && Quiz._onContinue) Quiz._continue();  /* 答錯後 Enter = Continue */
       else if (!Quiz.locked) Quiz.submit();
+    });
+    /* 答錯／Skip 後輸入框會被 disable（收唔到 keydown），
+       用 document 層接住 Enter 繼續，兌現「Enter 亦可 Continue」 */
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const quizView = document.getElementById("view-quiz");
+      if (!quizView || !quizView.classList.contains("active")) return;
+      if (Quiz.locked && Quiz._onContinue) {
+        e.preventDefault();
+        Quiz._continue();
+      }
     });
     /* 退出 / Hint / Skip / Continue */
     document.getElementById("btn-quiz-exit").onclick = () => Quiz.quit();
