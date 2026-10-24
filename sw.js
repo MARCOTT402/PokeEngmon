@@ -1,5 +1,5 @@
 ﻿/* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v107";
+const CACHE_NAME = "pokeengmon-v108";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -80,6 +80,9 @@ self.addEventListener("activate", (e) => {
    assets/（屬性 Icon、動態 GIF）同 Pokemon 圖片（外部 CDN）：快取優先，慳流量 */
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  /* 非 http(s) scheme（例如 chrome-extension://）Cache API 唔支援，直接放行，
+     否則 caches.put 會抛「Request scheme is unsupported」 */
+  if (!e.request.url.startsWith("http")) return;
   const sameOrigin = e.request.url.startsWith(self.location.origin);
   const isAsset = sameOrigin && e.request.url.includes("/assets/");
 
