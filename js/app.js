@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v105";
+const APP_VERSION = "v106";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -818,7 +818,7 @@ const App = {
           <div class="lh-divider"><span>Device saved anonymously</span></div>
           <p class="lh-device">Local ID: <code>${escapeHTML(deviceId.slice(0, 8))}</code></p>
 
-          <p class="lh-note">Playing without login is fine — your progress stays on this device. Sign in anytime to cloud-sync.</p>
+          <p class="lh-note">Playing without login is fine — your progress stays on this device. Sign in anytime to cloud-sync: your Pokémon & learning progress carry over, and diamonds become a fresh 20💎 welcome bonus.</p>
         </div>`, false);
 
       document.getElementById("lh-google").onclick = async () => {
@@ -1000,8 +1000,11 @@ const App = {
           const isNewAccount = await SupabaseAuth.migrateAnonymous(deviceId);
           console.log("[OAuth] migrate result — isNewAccount:", isNewAccount);
           if (isNewAccount === true) {
-            /* 新帳戶：本地進度經 import_state 一次性上傳（server clamp：diamonds ≤200、
-               entries ≤200、exp ≤1.3M），之後 pull 正規化（server 行先係權威） */
+            /* 新帳戶：本地進度經 import_state 一次性上傳（v106 server 收緊：
+               diamonds 唔過界——固定派 20 粒 welcome bonus；entries ≤151、
+               exp ≤1.25M、candies ≤99、dupes ≤100；每帳戶一生一次
+               imported_at 鎖 + user_imports audit log），之後 pull 正規化
+               （server 行先係權威） */
             const payload = {
               diamonds: st.diamonds || 0,
               total_sets: st.totalSets || 0,
