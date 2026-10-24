@@ -681,15 +681,17 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 
 /* 跌球（舞台 A）：由肚仔彈出彈跳滾走 */
 .gacha-dropzone { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
-.eject-ball { position: absolute; width: 64px; height: 64px; animation: ball-eject .95s cubic-bezier(.3, .6, .4, 1) forwards; }
+.eject-ball { position: absolute; width: 64px; height: 64px; animation: ball-eject 1.7s cubic-bezier(.3, .6, .4, 1) forwards; }
+/* 彈跳弧線全部用固定 px（唔用 vw），確保波喺任何屏幕都留喺 stage 界內 */
 @keyframes ball-eject {
   0%   { transform: translate(0, 0) rotate(0); opacity: 0; }
-  8%   { opacity: 1; }
-  34%  { transform: translate(6vw, 16dvh) rotate(120deg); }
-  50%  { transform: translate(14vw, 9dvh) rotate(220deg); }
-  66%  { transform: translate(24vw, 14dvh) rotate(330deg); }
-  82%  { transform: translate(38vw, 12dvh) rotate(470deg); }
-  100% { transform: translate(66vw, 13dvh) rotate(640deg); opacity: 1; }
+  6%   { opacity: 1; }
+  20%  { transform: translate(26px, -34px) rotate(80deg); }   /* 彈出肚仔向右上拋 */
+  38%  { transform: translate(64px, 96px) rotate(200deg); }   /* 第一落點 */
+  52%  { transform: translate(92px, 44px) rotate(290deg); }   /* 反彈 */
+  66%  { transform: translate(112px, 100px) rotate(370deg); } /* 第二落點 */
+  80%  { transform: translate(130px, 76px) rotate(430deg); }  /* 細彈 */
+  100% { transform: translate(146px, 96px) rotate(480deg); opacity: 1; } /* 滾前停定 */
 }
 
 /* --- 精靈球（CSS 繪製：Great / Ultra / Master） --- */

@@ -472,13 +472,14 @@ const Gacha = {
     dz.appendChild(ball);
 
     const audio = this._audio();
-    this._setT(() => { if (audio) audio.ballLand(); }, 320);
-    this._setT(() => { if (audio) audio.ballRoll(); }, 600);
+    /* 時間點對齊 ball-eject 1.7s：第一落點 ~38%（650ms）、滾動 ~68%（1160ms）、完結 1700ms */
+    this._setT(() => { if (audio) audio.ballLand(); }, 650);
+    this._setT(() => { if (audio) audio.ballRoll(); }, 1160);
     this._setT(() => {
       if (fid !== this._flowId) return;
       ball.remove();
       this._openSceneB(flow, s);
-    }, 950);
+    }, 1750);
   },
 
   /* 背景 A overlay（lazy 建立，fixed 掛 body 避免 containing block 問題） */
