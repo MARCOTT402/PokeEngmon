@@ -203,35 +203,24 @@
       </div>
       <div class="gacha-stage" id="gacha-stage">
         <div class="gacha-prompt" id="gacha-prompt"></div>
-        <div class="gacha-machine dragonite" id="gacha-machine">
-          <div class="dm-antenna"></div>
-          <div class="dm-head">
-            <div class="dm-horn"></div>
-            <div class="dm-eye left"></div><div class="dm-eye right"></div>
-            <div class="dm-snout"></div>
+        <div class="gacha-machine dragonite-art" id="gacha-machine">
+          <img class="dm-art" src="assets/gacha/dragonite.png" alt="Dragonite" draggable="false">
+          <div class="dm-belly" id="dm-belly">
+            <span class="dm-cavity"></span>
+            <span class="dm-door left"></span>
+            <span class="dm-door right"></span>
           </div>
-          <div class="dm-wing left"></div>
-          <div class="dm-wing right"></div>
-          <div class="gacha-dome">
-            <span class="mini-ball mb-red"></span>
-            <span class="mini-ball mb-blue"></span>
-            <span class="mini-ball mb-red"></span>
-            <span class="mini-ball mb-blue"></span>
-            <span class="mini-ball mb-red"></span>
-          </div>
-          <div class="gacha-body">
-            <div class="gacha-coin-slot" id="gacha-coin-slot"></div>
-            <div class="gacha-knob"></div>
-            <div class="gacha-outlet"></div>
+          <div class="dm-arm" id="dm-arm" role="slider" tabindex="0"
+               aria-label="Pull Dragonite's hand" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="dm-bracket"></span>
+            <span class="dm-arm-upper"></span>
+            <span class="dm-hand"><i></i><i></i><i></i></span>
           </div>
         </div>
-        <div class="gacha-taps" id="gacha-taps" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div class="gacha-flash" id="gacha-flash"></div>
         <div class="gacha-dropzone" id="gacha-dropzone"></div>
-        <div class="gacha-result" id="gacha-result"></div>
       </div>
       <div class="gacha-controls">
-        <button id="btn-do-pull" class="btn-big btn-primary">Insert coin to pull!</button>
+        <button id="btn-do-pull" class="btn-big btn-primary">💎 ×3 TO GO!</button>
       </div>
       <div class="hub-spacer"></div>
       <div class="hub-bar">

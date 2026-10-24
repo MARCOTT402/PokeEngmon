@@ -1,27 +1,41 @@
 /* ============================================================
-   PokeEngmon - 扭蛋抽獎系統（v98 互動版）
-   流程沿用捕捉場景節奏：
-     比卡超金幣彈出 → 用戶點 3 下逐步投入入幣位
-     → 機身震動 → 巨大金屬球跌出（稀有度決定球種）
-     → 搖 3 下懸念 → 閃光開球 → 結算
+   PokeEngmon - 扭蛋抽獎系統（v102 快龍拉手版）
+   流程：💎 ×3 TO GO! → 拉動快龍隻手 ≥72% → 肚仔艙門打開
+     → 跌出精靈球（稀有度決定球種）→ 金色背景 A 滾入
+     → 搖 2 下懸念 → 按稀有度爆發 → 開球光柱 → 全屏檢視卡
+   經濟結算沿用 v99/v101 server 權威（gacha_pull RPC），
+   演出層完全解耦：中途離開只跳過動畫，獎勵照樣落地。
    ============================================================ */
+
+/* 稀有度 → 球種 / 漏光 / 檢視卡光線色 */
+const GACHA_BALL = {
+  rare:   { cls: "ball-great",  glow: "leak-blue",    ray: "#7fb8ff", label: "RARE" },
+  epic:   { cls: "ball-ultra",  glow: "leak-gold",    ray: "#c984ff", label: "EPIC" },
+  legend: { cls: "ball-master", glow: "leak-rainbow", ray: "#ffc93c", label: "LEGENDARY" }
+};
+const GACHA_MAX_PULL = 150;     // 手臂最大下拉距離（px）
+const GACHA_THRESHOLD = 0.72;   // 拉過 72% 即觸發，唔使放手
 
 const Gacha = {
   mode: "rare",        // 淨返稀有抽（normal pull 已移除）
   busy: false,
-  phase: "idle",       // idle | coin | inserting | rumble | ball | done
-  taps: 0,
+  phase: "idle",       // idle | hand | opening | drop | sceneB | inspect
   _flowId: 0,          // 流程 token：離開頁面後作廢所有 pending timeout
   _flow: null,         // 當前流程（結算狀態綁喺 flow object，避免中斷污染其他流程）
   _timers: [],
   _bound: false,
+  /* 拖拽狀態 */
+  _dragging: false, _startY: 0, _curP: 0, _triggered: false, _lastCreak: 0,
+  _sceneB: null,       // lazy 金色背景 A overlay（掛 body）
+  _inspect: null,      // lazy 檢視卡 overlay（掛 body）
+  _pendingEvolve: null,
 
   open(mode) {
     this.mode = mode;
     this.abort();      // 清走上次殘留；未結算就補結算，唔會「食咗鑽但冇派寵」
     App.showView("view-gacha");
     document.getElementById("gacha-title").textContent = "💎 Rare Pull";
-    this._bindTap();
+    this._bindArm();
     this._resetStage();
     this._refreshControls();
   },
@@ -58,48 +72,10 @@ const Gacha = {
     this._timers = [];
   },
 
-  _lockButton(text) {
-    const btn = document.getElementById("btn-do-pull");
-    if (!btn) return;
-    btn.disabled = true;
-    btn.textContent = text;
-  },
-
-  /* 全版點按（捕捉場景同款）：只有 coin 階段先計數，按鈕除外 */
-  _bindTap() {
-    if (this._bound) return;
-    this._bound = true;
-    document.getElementById("view-gacha").addEventListener("pointerdown", (e) => {
-      if (e.target && e.target.closest("button")) return;
-      this._tap();
-    });
-  },
-
   _updateDiamondDisplay() {
     const st = loadState();
     const el = document.getElementById("gacha-diamonds");
     if (el) el.textContent = st.diamonds;
-  },
-
-  _resetStage() {
-    const stage = document.getElementById("gacha-stage");
-    stage.className = "gacha-stage";
-    document.getElementById("gacha-dropzone").innerHTML = "";
-    const result = document.getElementById("gacha-result");
-    result.innerHTML = "";
-    result.classList.remove("enter");
-    document.getElementById("gacha-flash").className = "gacha-flash";
-    document.getElementById("gacha-machine").classList.remove("grand");
-    const coin = document.getElementById("gacha-coin");
-    if (coin) coin.remove();
-    document.getElementById("view-gacha").classList.remove("playing");
-    const dim = document.getElementById("gacha-dim");
-    if (dim) dim.classList.remove("on");
-    this._setEyes(null);
-    this._prompt("");
-    this._showTaps(false);
-    this.phase = "idle";
-    this.taps = 0;
   },
 
   _canPull() {
@@ -109,14 +85,15 @@ const Gacha = {
 
   _refreshControls() {
     const btn = document.getElementById("btn-do-pull");
+    if (!btn) return;
     const st = loadState();
     this._updateDiamondDisplay();
     if (this._canPull()) {
       btn.disabled = false;
-      btn.textContent = `Insert coin to pull! (💎 ${st.diamonds})`;
+      btn.textContent = `💎 ×${GAME_CONFIG.RARE_PULL_COST} TO GO!`;
     } else {
       btn.disabled = true;
-      btn.textContent = `Not enough diamonds (need 💎${GAME_CONFIG.RARE_PULL_COST})`;
+      btn.textContent = `Need 💎${GAME_CONFIG.RARE_PULL_COST} (you have ${st.diamonds})`;
     }
   },
 
@@ -142,17 +119,7 @@ const Gacha = {
     if (!el) return;
     el.textContent = text;
     el.classList.toggle("show", !!text);
-  },
-
-  _showTaps(show) {
-    const el = document.getElementById("gacha-taps");
-    if (el) el.classList.toggle("show", !!show);
-  },
-
-  _updateDots() {
-    document.querySelectorAll("#gacha-taps i").forEach((d, i) => {
-      d.classList.toggle("on", i < this.taps);
-    });
+    if (!text) el.classList.remove("almost");
   },
 
   _haptic(pattern) {
@@ -163,29 +130,34 @@ const Gacha = {
     return (window.CaptureScene && CaptureScene.audio) ? CaptureScene.audio : null;
   },
 
-  /* P&D 暗転 overlay（lazy 建立，鋪滿成個 gacha view） */
-  _ensureDim() {
-    let dim = document.getElementById("gacha-dim");
-    if (!dim) {
-      dim = document.createElement("div");
-      dim.className = "gacha-dim";
-      dim.id = "gacha-dim";
-      document.getElementById("view-gacha").appendChild(dim);
-    }
-    return dim;
+  _rm() {
+    return matchMedia("(prefers-reduced-motion: reduce)").matches;
   },
 
-  /* 機械快龍眼睛發光預告（跟住波球漏光色走） */
-  _setEyes(cls) {
-    document.querySelectorAll("#gacha-machine .dm-eye").forEach(e => {
-      e.classList.remove("leak-blue", "leak-gold", "leak-rainbow");
-      if (cls) e.classList.add(cls);
-    });
+  _gsap() {
+    return window.gsap || null;
+  },
+
+  _machine() {
+    return document.getElementById("gacha-machine");
+  },
+
+  _arm() {
+    return document.getElementById("dm-arm");
+  },
+
+  /* dev hook（只限 localhost）：覆寫視覺稀有度方便驗收，經濟結果不變 */
+  _visualRarity(s) {
+    const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    if (local && window.__gachaForceRarity && GACHA_BALL[window.__gachaForceRarity]) {
+      return window.__gachaForceRarity;
+    }
+    return s.rarity;
   },
 
   /* ---------- 抽獎主流程 ----------
      v101：RPC 延遲解耦 + 經濟結算提早落地 ——
-     點掣即刻開入幣動畫，server 抽獎背景進行；
+     點掣即刻進入拉手階段，server 抽獎背景進行；
      波球跌出前先結算（扣鑽 + 派寵），之後所有演出純視覺，
      中途離開只會跳過動畫，唔會出現「扣咗鑽但冇寵物」。 */
   pull() {
@@ -212,9 +184,10 @@ const Gacha = {
 
     this._resetStage();
     this._refreshControls();
-    this._lockButton("Rolling…");
+    const btn = document.getElementById("btn-do-pull");
+    if (btn) btn.disabled = true;
 
-    this._startCoinPhase();
+    this._startHandPhase();
   },
 
   /* 經濟結算：扣鑽 + 派寵一次過落地，同演出完全解耦。
@@ -294,15 +267,21 @@ const Gacha = {
           });
           saveState();
           firstExpEvolve = res.evolvedTo;
+          if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+            SupabaseAuth.addEntryExp(entry.uid, st.pendingExp);
+            if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+              Sync.patchEntry(entry.uid, { branch: entry.branch });
+            }
+          }
         }
       }
 
       flow.settled = true;
       flow.settlement = { rarity, chainKey, entry, isDupe, candyGain, firstExpEvolve };
 
-      /* 新 Pokemon：預先載入叫聲，開球時即刻叫（重複抽到唔叫） */
+      /* 預先載入叫聲，出卡時即刻叫（v102 起：新舊寵都播） */
       const preview = EVOLUTION_CHAINS.find(c => c.key === chainKey);
-      if (preview && !isDupe) Pokedex.prepareCry(preview.stages[0][0]);
+      if (preview) Pokedex.prepareCry(preview.stages[0][0]);
 
       this._updateDiamondDisplay();
       return flow.settlement;
@@ -315,97 +294,138 @@ const Gacha = {
     }
   },
 
-  /* 階段 1：巨大發光機身 + 比卡超金幣彈出，等用戶點 3 下 */
-  _startCoinPhase() {
-    this.phase = "coin";
-    this.taps = 0;
-    const stage = document.getElementById("gacha-stage");
+  /* ============================================================
+     v102 演出層：拉手 → 肚開 → 跌球 → 背景 A → 檢視卡
+     ============================================================ */
+
+  _startHandPhase() {
+    this.phase = "hand";
     document.getElementById("view-gacha").classList.add("playing");
-    stage.classList.add("phase-coin");
-    document.getElementById("gacha-machine").classList.add("grand");
-
-    const coin = document.createElement("div");
-    coin.className = "gacha-coin-grand";
-    coin.id = "gacha-coin";
-    coin.innerHTML = `
-      <div class="gc-spin">
-        <div class="gc-face"><img class="gc-pika" src="assets/animated/25.gif" alt=""></div>
-        <div class="gc-shine"></div>
-      </div>`;
-    document.getElementById("gacha-machine").appendChild(coin);
-
-    this._prompt("Tap the coin 3× to insert it!");
-    this._showTaps(true);
-    this._updateDots();
+    this._prompt("⇣ DRAG DRAGONITE'S HAND ⇣");
     const audio = this._audio();
     if (audio) audio.ready();
   },
 
-  /* 階段 1 互動：每點一下金幣移近入幣位，聲調逐步升高 */
-  _tap() {
-    if (this.phase !== "coin") return;
-    this.taps += 1;
-    const audio = this._audio();
-    if (audio) audio.coin(this.taps);
-    this._haptic(10 + this.taps * 8);
-    this._updateDots();
+  /* 手臂拖拽監聽（open() 綁一次，handler 內檢查 phase） */
+  _bindArm() {
+    if (this._bound) return;
+    this._bound = true;
+    const arm = this._arm();
+    if (!arm) return;
+    arm.addEventListener("pointerdown", e => this._onArmDown(e));
+    arm.addEventListener("pointermove", e => this._onArmMove(e));
+    arm.addEventListener("pointerup", e => this._onArmUp(e));
+    arm.addEventListener("pointercancel", e => this._onArmUp(e));
+    arm.addEventListener("keydown", e => {
+      if (this.phase !== "hand") return;
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this._autoPull(); }
+    });
+    arm.addEventListener("click", () => {
+      if (this.phase === "hand" && !this._dragging && !this._triggered && this._curP < 0.05) this._autoPull();
+    });
+  },
 
-    const coin = document.getElementById("gacha-coin");
-    if (coin && this.taps < 3) {
-      coin.classList.remove("coin-step-1", "coin-step-2");
-      coin.classList.add(`coin-step-${this.taps}`);
+  _setPull(p) {
+    this._curP = p;
+    const m = this._machine();
+    if (!m) return;
+    m.style.setProperty("--pull", Math.round(p * GACHA_MAX_PULL) + "px");
+    m.style.setProperty("--pullp", p.toFixed(3));
+    const arm = this._arm();
+    if (arm) arm.setAttribute("aria-valuenow", Math.round(p * 100));
+    const pr = document.getElementById("gacha-prompt");
+    if (pr && this.phase === "hand") pr.classList.toggle("almost", p > 0.5);
+  },
+
+  _onArmDown(e) {
+    if (this.phase !== "hand" || this._dragging) return;
+    this._dragging = true;
+    this._triggered = false;
+    this._startY = e.clientY;
+    try { this._arm().setPointerCapture(e.pointerId); } catch (_) { /* unsupported */ }
+    this._machine().classList.add("dragging");
+    e.preventDefault();
+  },
+
+  _onArmMove(e) {
+    if (!this._dragging || this._triggered) return;
+    const dy = Math.min(Math.max(e.clientY - this._startY, 0), GACHA_MAX_PULL);
+    const p = dy / GACHA_MAX_PULL;
+    this._setPull(p);
+    const now = performance.now();
+    const audio = this._audio();
+    if (audio && now - this._lastCreak > 80 && p > 0.05) {
+      this._lastCreak = now;
+      audio.pullCreak(p);
     }
-
-    if (this.taps === 1) this._prompt("Nice! Tap again…");
-    if (this.taps === 2) this._prompt("One more tap!");
-    if (this.taps >= 3) this._insertCoin();
+    if (p >= GACHA_THRESHOLD) this._triggerPull();
   },
 
-  /* 階段 2：金幣側身滑入入幣位 */
-  _insertCoin() {
-    this.phase = "inserting";
-    const fid = this._flow ? this._flow.id : this._flowId;
-    const coin = document.getElementById("gacha-coin");
-    if (coin) coin.classList.add("coin-insert");
+  _onArmUp() {
+    if (!this._dragging) return;
+    this._dragging = false;
+    this._machine().classList.remove("dragging");
+    if (this._triggered) return;
+    /* 未達標放手 → 彈簧回彈 */
     const audio = this._audio();
-    if (audio) audio.coinInsert();
-    this._haptic([20, 30, 40]);
-    this._prompt("Here it comes…");
-    this._showTaps(false);
-
-    this._setT(() => { if (fid === this._flowId && coin) coin.remove(); }, 520);
-    this._setT(() => { if (fid === this._flowId) this._rumble(); }, 480);
+    if (audio) audio.pullSnap();
+    const g = this._gsap();
+    if (g && !this._rm()) {
+      const proxy = { p: this._curP };
+      g.to(proxy, { p: 0, duration: .7, ease: "elastic.out(1,.45)", onUpdate: () => this._setPull(proxy.p) });
+    } else {
+      this._setPull(0);
+    }
   },
 
-  /* 階段 3：機身強烈震動 */
-  _rumble() {
-    this.phase = "rumble";
-    const fid = this._flow ? this._flow.id : this._flowId;
-    const stage = document.getElementById("gacha-stage");
-    stage.classList.remove("phase-coin");
-    stage.classList.add("stage-rumble");
-    const audio = this._audio();
-    if (audio) audio.rumble();
-    this._haptic([30, 40, 30, 40, 60]);
-    this._prompt("");
-
-    this._setT(() => { if (fid === this._flowId) this._dropBall(); }, 1200);
+  /* 無障礙 / 單擊：自動拉到底觸發 */
+  _autoPull() {
+    const g = this._gsap();
+    if (g && !this._rm()) {
+      const proxy = { p: this._curP };
+      g.to(proxy, { p: 1, duration: .45, ease: "power2.in",
+        onUpdate: () => this._setPull(proxy.p),
+        onComplete: () => this._triggerPull() });
+    } else {
+      this._setPull(1);
+      this._triggerPull();
+    }
   },
 
-  /* 階段 4（v100 P&D 式）：結算 → 暗転聚光 → 波球跌出著地 → 搖 3 下漏光遞進
-     → 確定演出升級（epic 藍→金 / legend 金→彩虹，rare 無升級）
-     → 閃光 + 光柱爆開 → 結算畫面 */
-  async _dropBall() {
+  /* 拉過閾值：手臂回彈 → 180ms 艙門開 → 等結算 → 600ms 跌球 */
+  async _triggerPull() {
+    if (this._triggered) return;
     const flow = this._flow;
     if (!flow) return;
-    this.phase = "ball";
+    this._triggered = true;
+    this._dragging = false;
+    this.phase = "opening";
     const fid = flow.id;
-    const stage = document.getElementById("gacha-stage");
-    stage.classList.remove("stage-rumble");
-    stage.classList.add("stage-drop");
+    const machine = this._machine();
+    machine.classList.remove("dragging");
+    this._prompt("");
+    const audio = this._audio();
+    if (audio) audio.pullSnap();
+    this._haptic(20);
 
-    /* 先結算經濟交易（扣鑽 + 派寵），之後全部係純視覺演出；
-       就算之後被中斷，獎勵亦已經落地 */
+    /* 手臂回彈 */
+    const g = this._gsap();
+    if (g && !this._rm()) {
+      const proxy = { p: this._curP };
+      g.to(proxy, { p: 0, duration: .3, ease: "power3.out", onUpdate: () => this._setPull(proxy.p) });
+    } else {
+      this._setPull(0);
+    }
+
+    /* 艙門打開 */
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      machine.classList.add("belly-open");
+      if (audio) audio.bellyOpen();
+      this._haptic([30, 40, 30]);
+    }, 180);
+
+    /* 經濟結算：RPC 未完成時 _settleResult 會自己顯示「…」hold 狀態 */
     let s = null;
     try {
       s = await this._settleResult(flow);
@@ -413,7 +433,7 @@ const Gacha = {
       console.error("[Gacha] settlement failed", err);
     }
     if (!s) {
-      /* 結算失敗：解鎖 UI，唔可以卡死喺「Rolling…」 */
+      /* 結算失敗：解鎖 UI，唔可以卡死 */
       if (fid === this._flowId) {
         this.busy = false;
         this._flow = null;
@@ -425,221 +445,389 @@ const Gacha = {
     }
     if (fid !== this._flowId) return;
 
-    const rarity = s.rarity;
-    const audio = this._audio();
+    this._setT(() => { if (fid === this._flowId) this._dropBall(flow, s); }, 600);
+  },
+
+  _ballHTML() {
+    return `<span class="pb-top"></span><span class="pb-bottom"></span><span class="pb-mid"></span><span class="pb-btn"></span><span class="pb-shine"></span>`;
+  },
+
+  /* 肚仔跌球：彈出 → 彈跳 → 滾走 → 入背景 A */
+  _dropBall(flow, s) {
+    this.phase = "drop";
+    const fid = flow.id;
+    const rarity = this._visualRarity(s);
+    const cfg = GACHA_BALL[rarity];
     const dz = document.getElementById("gacha-dropzone");
-
-    /* 暗転：全版變暗，聚光燈對正波球 */
-    this._ensureDim().classList.add("on");
-
-    /* 出場色：legend 金開場，epic / rare 藍開場（確定演出規則） */
-    const startBall = rarity === "legend" ? "ball-yellow" : "ball-blue";
-    const startLeak = rarity === "legend" ? "leak-gold" : "leak-blue";
+    const belly = document.getElementById("dm-belly");
+    if (!dz || !belly) return;
 
     const ball = document.createElement("div");
-    ball.className = `pokeball metal giant ${startBall} ${startLeak}`;
-    ball.innerHTML = `<div class="pb-top"></div><div class="pb-mid"></div><div class="pb-bottom"></div><div class="pb-btn"></div>`;
+    ball.className = `eject-ball pokeball ${cfg.cls}`;
+    ball.innerHTML = this._ballHTML();
+    const bRect = belly.getBoundingClientRect();
+    const dzRect = dz.getBoundingClientRect();
+    ball.style.left = (bRect.left - dzRect.left + bRect.width / 2 - 32) + "px";
+    ball.style.top = (bRect.top - dzRect.top + bRect.height * .3) + "px";
     dz.appendChild(ball);
 
-    /* 著地聲對正 ball-drop 動畫收尾（.95s）+ 眼睛發光預告 */
+    const audio = this._audio();
+    this._setT(() => { if (audio) audio.ballLand(); }, 320);
+    this._setT(() => { if (audio) audio.ballRoll(); }, 600);
     this._setT(() => {
       if (fid !== this._flowId) return;
-      if (audio) audio.ballLand();
-      this._haptic(35);
-      this._setEyes(startLeak);
+      ball.remove();
+      this._openSceneB(flow, s);
     }, 950);
-
-    /* 3 下搖晃懸念：漏光 lk1→lk2→lk3 遞進 + 張力低鳴逐步升高 */
-    [1400, 2050, 2700].forEach((t, i) => this._setT(() => {
-      if (fid !== this._flowId || !document.body.contains(ball)) return;
-      ball.classList.remove("wob");
-      void ball.offsetWidth;   // 重啟 CSS 動畫
-      ball.classList.add("wob", `lk${i + 1}`);
-      if (audio) { audio.wobble(i + 1); audio.leakHum(i + 1); }
-      this._haptic(18);
-    }, t));
-
-    /* 確定演出：第 3 搖同拍升級（rare 無升級） */
-    if (rarity !== "rare") {
-      this._setT(() => {
-        if (fid !== this._flowId || !document.body.contains(ball)) return;
-        ball.classList.add("upgrade");
-        if (audio) audio.upgradeSting(rarity === "legend" ? 2 : 1);
-        this._haptic([30, 40, 30]);
-        this._setT(() => {
-          if (fid !== this._flowId || !document.body.contains(ball)) return;
-          ball.classList.remove("upgrade", "leak-blue", "leak-gold", "ball-blue");
-          if (rarity === "epic") {
-            ball.classList.add("ball-yellow", "leak-gold");
-            this._setEyes("leak-gold");
-          } else {
-            ball.classList.add("leak-rainbow");
-            this._setEyes("leak-rainbow");
-          }
-        }, 220);
-      }, 2700);
-    }
-
-    /* 開球：暗転退場 + 閃光 + 光柱爆點 */
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      this._ensureDim().classList.remove("on");
-      this._setEyes(null);
-      stage.classList.add("stage-flash");
-      const flash = document.getElementById("gacha-flash");
-      flash.classList.add("on", `flash-${rarity}`);
-      const burst = document.createElement("div");
-      burst.className = "gacha-burst on";
-      dz.appendChild(burst);
-      setTimeout(() => burst.remove(), 700);   // 唔入 _timers：中斷時都要清走
-      if (audio) audio.gotcha();
-    }, 3300);
-
-    this._setT(() => { if (fid === this._flowId) this._reveal(flow, s); }, 3700);
   },
 
-  _reveal(flow, s) {
-    const stage = document.getElementById("gacha-stage");
-    const flash = document.getElementById("gacha-flash");
-    /* 一定要重設成基礎 class：淨係 remove("on") 會殘留上次嘅 flash-legend / flash-epic，
-       令之後嘅 rare 抽錯用傳奇金色閃光 */
-    flash.className = "gacha-flash";
-    stage.classList.remove("stage-flash");
-    this.phase = "done";
-    this._flow = null;
-
-    const fid = flow.id;
-    const rarity = s.rarity;
-    const entry = s.entry;
-    const isDupe = s.isDupe;
-    const candyGain = s.candyGain;
-    const firstExpEvolve = s.firstExpEvolve;
-
-    /* 開球動畫 */
-    stage.classList.add("stage-open");
-    const ball = document.querySelector("#gacha-dropzone .pokeball");
-    if (ball) ball.classList.add("open");
-
-    /* Pokemon 出現並上下彈跳 */
-    const cur = entryCurrentSpecies(entry);
-    const rz = RARITY[rarity];
-
-    const result = document.getElementById("gacha-result");
-    result.innerHTML = `
-      <div class="gacha-pokemon bounce">
-        <img src="${spriteURL(cur[0])}" alt="${cur[1]}"
-             onerror="this.onerror=null;this.src='${artworkURL(cur[0])}'">
+  /* 背景 A overlay（lazy 建立，fixed 掛 body 避免 containing block 問題） */
+  _ensureSceneB() {
+    if (this._sceneB) return this._sceneB;
+    const el = document.createElement("div");
+    el.id = "gacha-scene-b";
+    el.className = "hidden";
+    el.innerHTML = `
+      <div class="gsb-bg">
+        <i class="gsb-wave w1"></i><i class="gsb-wave w2"></i><i class="gsb-wave w3"></i>
+        <i class="gsb-horizon"></i>
+        <div class="gsb-particles"></div>
       </div>
-      <div class="gacha-name">${cur[1]} <small>Lv.${entry.level}</small></div>
-      <span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-      ${isDupe
-        ? `<div class="gacha-dupe">You already have it! EV point +1${candyGain ? " ・ 🍬 Candy +1" : ""}</div>` : `<div class="gacha-new">NEW!</div>`}
-    `;
-    result.classList.add("enter");
-
-    /* 結算過場：機身淡出，還原資訊同按鈕 */
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      stage.classList.add("settling");
-      document.getElementById("view-gacha").classList.remove("playing");
-    }, 480);
-
-    this._lockButton("Pull complete!");
-    this.busy = false;
-    /* 抽完之後解鎖，稍後自動還原按鈕俾玩家繼續再抽（只限同一流程） */
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      this._refreshControls();
-    }, 1400);
-
-    /* 稀有抽專屬慶祝：要勁過普通捕捉場景嘅爽感 */
-    if (this.mode === "rare") this._celebrate(rarity, cur[0]);
-
-    /* 新 Pokemon 登場時叫一聲（重複抽到唔叫） */
-    if (!isDupe) {
-      setTimeout(() => Pokedex.playCry(cur[0]), 350);
-    }
-
-    /* 首次入帳經驗引起嘅進化 */
-    if (firstExpEvolve) {
-      setTimeout(() => App.showEvolveModal(firstExpEvolve), 1400);
-    }
-
-    App.renderHome();   // 更新主畫面資料
+      <div class="gsb-spot"></div>
+      <div class="gsb-stage">
+        <div class="gsb-ball-wrap"></div>
+        <div class="gsb-rings"></div>
+        <div class="gsb-magic hidden"></div>
+        <div class="gsb-beam"></div>
+      </div>
+      <div class="gsb-flash"></div>
+      <div class="gsb-prompt"></div>`;
+    document.body.appendChild(el);
+    this._sceneB = el;
+    return el;
   },
 
-  /* ---------- 稀有抽慶祝動畫 ----------
-     比普通捕捉場景更爽：光柱爆發 → 衝擊波 → 星星四散 → 大字 RARE GET!
-     Epic / Legend 加碼：雙層衝擊波 + 更多星星 + 螢幕震動 */
-  _celebrate(rarity, dexId) {
-    const rz = RARITY[rarity];
-    const layer = document.createElement("div");
-    layer.className = "gacha-celebrate";
-    layer.innerHTML = `
-      <div class="gacha-beam" style="background:linear-gradient(180deg, transparent 0%, ${rz.color}66 30%, ${rz.color} 100%)"></div>
-      <div class="gacha-ring"></div>
-      ${rarity !== "rare" ? `<div class="gacha-ring" style="border-color:${rz.color}cc; box-shadow:0 0 60px 22px ${rz.color}55"></div>` : ""}
-      <div class="gacha-poke-glow" style="background:radial-gradient(circle, ${rz.color}dd, ${rz.color}00 70%)"></div>`;
-    document.body.appendChild(layer);
+  _openSceneB(flow, s) {
+    this.phase = "sceneB";
+    const fid = flow.id;
+    const rarity = this._visualRarity(s);
+    const cfg = GACHA_BALL[rarity];
+    const sc = this._ensureSceneB();
+    const wrap = sc.querySelector(".gsb-ball-wrap");
+    const particles = sc.querySelector(".gsb-particles");
+    const prompt = sc.querySelector(".gsb-prompt");
 
-    /* 星星 */
-    const starCount = rarity === "legend" ? 18 : (rarity === "epic" ? 14 : 10);
-    const stars = [];
-    for (let i = 0; i < starCount; i++) {
-      const s = document.createElement("span");
-      s.className = "gacha-star";
-      s.textContent = rarity === "legend" ? "⭐" : (i % 2 ? "✦" : "✧");
-      s.style.left = (50 + (Math.random() * 56 - 28)) + "%";
-      s.style.top = (46 + (Math.random() * 26 - 13)) + "%";
-      layer.appendChild(s);
-      stars.push(s);
+    sc.classList.remove("hidden");
+    requestAnimationFrame(() => sc.classList.add("show"));
+
+    /* 上升金粉粒子 */
+    particles.innerHTML = "";
+    if (!this._rm()) {
+      for (let i = 0; i < 22; i++) {
+        const sp = document.createElement("span");
+        sp.style.left = (Math.random() * 100) + "%";
+        sp.style.animationDuration = (5 + Math.random() * 7) + "s";
+        sp.style.animationDelay = (-Math.random() * 8) + "s";
+        sp.style.transform = "scale(" + (0.5 + Math.random()) + ")";
+        particles.appendChild(sp);
+      }
     }
 
-    /* 大字 */
-    const bigText = document.createElement("div");
-    bigText.className = "gacha-rare-get";
-    bigText.textContent = rarity === "legend" ? "⭐ LEGEND GET! ⭐" : (rarity === "epic" ? "✨ EPIC GET! ✨" : "💫 RARE GET! 💫");
-    bigText.style.color = rz.color;
-    layer.appendChild(bigText);
+    prompt.textContent = "It's rolling…";
+    wrap.innerHTML = `<span class="leak ${cfg.glow}"></span><div class="pokeball giant ${cfg.cls}">${this._ballHTML()}<span class="pb-light"></span></div>`;
+    wrap.classList.add("roll-in");
+    const audio = this._audio();
+    if (audio) audio.ballRoll();
 
-    const beam = layer.querySelector(".gacha-beam");
-    const rings = layer.querySelectorAll(".gacha-ring");
-    const glow = layer.querySelector(".gacha-poke-glow");
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      wrap.classList.remove("roll-in");
+      prompt.textContent = "Something is moving…";
+      this._sceneBTimeline(flow, s);
+    }, this._rm() ? 200 : 750);
+  },
 
-    if (window.gsap) {
-      const tl = gsap.timeline();
-      tl.set([beam, glow, bigText, ...stars], { opacity: 0 })
-        /* 光柱爆發 */
-        .to(beam, { opacity: 1, duration: .16, ease: "power2.out" })
-        .fromTo(beam, { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: .38, ease: "power3.out" }, "<")
-        /* 衝擊波 */
-        .to(rings, { opacity: 1, scale: 3.4, duration: .55, ease: "power1.out", stagger: .12 }, "<")
-        .to(rings, { opacity: 0, duration: .35 }, ">-.15")
-        /* 星星散開 + 大字彈出 */
-        .to(stars, { opacity: 1, scale: 1.25, duration: .12, stagger: .02 }, "<")
-        .to(stars, {
-          x: () => (Math.random() * 260 - 130),
-          y: () => (Math.random() * -200 - 40),
-          opacity: 0, scale: .4, duration: .9, ease: "power2.out"
-        }, "<")
-        .fromTo(bigText, { opacity: 0, scale: .3, rotate: -6 },
-          { opacity: 1, scale: 1, rotate: -3, duration: .45, ease: "back.out(2.2)" }, "<")
-        .to(glow, { opacity: .95, duration: .3 }, "<")
-        .to(beam, { opacity: 0, duration: .7 }, ">1.0")
-        .to(glow, { opacity: 0, duration: .8 }, "<")
-        .to(bigText, { opacity: 0, y: -30, duration: .5 }, "<");
+  /* 背景 A 時間線：搖 2 下 → 分級爆發 → 開球 → 光柱 zoom → 檢視卡 */
+  _sceneBTimeline(flow, s) {
+    const fid = flow.id;
+    const rarity = this._visualRarity(s);
+    const sc = this._sceneB;
+    const ball = sc.querySelector(".pokeball");
+    const leak = sc.querySelector(".leak");
+    const magic = sc.querySelector(".gsb-magic");
+    const beam = sc.querySelector(".gsb-beam");
+    const flash = sc.querySelector(".gsb-flash");
+    const rings = sc.querySelector(".gsb-rings");
+    const prompt = sc.querySelector(".gsb-prompt");
+    const audio = this._audio();
+    const k = this._rm() ? 0.25 : 1;   // reduced-motion 壓縮時間
 
-      /* 螢幕震動：只震慶祝 layer，唔可以震 document.body ——
-         body 一旦有 transform（即使最終 x:0），所有 position:fixed 後代
-         （例如 .hub-bar 底部浮窗）嘅 containing block 就會變成 body，
-         之後所有頁面嘅浮窗都會跟住移位。 */
-      gsap.fromTo(layer, { x: -7 }, {
-        x: 0, duration: .5, ease: "elastic.out(1, 0.25)", delay: .05,
-        onComplete: () => { layer.style.transform = ""; }
-      });
+    const wobbleOnce = (n) => {
+      if (!document.body.contains(ball)) return;
+      ball.classList.remove("wob"); void ball.offsetWidth;   // 重啟 CSS 動畫
+      ball.classList.add("wob");
+      if (audio) audio.wobble(n);
+      this._haptic(n === 2 ? 26 : 18);
+      leak.classList.remove("lk1", "lk2"); void leak.offsetWidth;
+      leak.classList.add(n === 2 ? "lk2" : "lk1");
+    };
+    const spawnRings = (count, color) => {
+      for (let i = 0; i < count; i++) {
+        const r = document.createElement("i");
+        r.className = "gsb-ring";
+        r.style.borderColor = color;
+        r.style.animationDelay = (i * 0.12) + "s";
+        rings.appendChild(r);
+        this._setT(() => r.remove(), 1100 + i * 120);
+      }
+    };
+    const spawnStars = (n, color) => {
+      for (let i = 0; i < n; i++) {
+        const sp = document.createElement("span");
+        sp.className = "gsb-star";
+        sp.textContent = "✦";
+        sp.style.color = color;
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 90 + Math.random() * 160;
+        sp.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+        sp.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+        sp.style.fontSize = (12 + Math.random() * 18) + "px";
+        rings.appendChild(sp);
+        this._setT(() => sp.remove(), 1000);
+      }
+    };
+    /* 震屏只震 overlay 本身 —— 唔好震 body，否則 .hub-bar fixed 定位會移位 */
+    const shake = (strength) => {
+      const g = this._gsap();
+      if (this._rm() || !g || strength <= 0) return;
+      g.fromTo(sc, { x: -strength }, { x: 0, duration: .5, ease: "elastic.out(1.2,.3)",
+        onComplete: () => { sc.style.transform = ""; } });
+    };
+    const doFlash = (big) => {
+      flash.classList.remove("on", "big"); void flash.offsetWidth;
+      flash.classList.add("on");
+      if (big) flash.classList.add("big");
+    };
+
+    this._setT(() => { if (fid === this._flowId) wobbleOnce(1); }, 350 * k);
+    this._setT(() => { if (fid === this._flowId) { wobbleOnce(2); if (audio) audio.leakHum(2); } }, 1050 * k);
+
+    /* 分級爆發 */
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      prompt.textContent = "";
+      const starColor = rarity === "rare" ? "#8ecbff" : rarity === "epic" ? "#d8a4ff" : "#ffe28a";
+      if (rarity === "rare") {
+        if (audio) audio.gotcha();
+        doFlash(false);
+        spawnRings(1, "#bfe0ff");
+        spawnStars(10, starColor);
+      } else if (rarity === "epic") {
+        magic.classList.remove("hidden");
+        magic.style.filter = "blur(.4px) drop-shadow(0 0 14px rgba(200,120,255,.8))";
+        if (audio) audio.upgradeSting(1);
+        this._setT(() => { if (audio) audio.gotcha(); }, 140);
+        doFlash(false);
+        spawnRings(2, "#d8a4ff");
+        spawnStars(16, starColor);
+        shake(5);
+      } else {
+        magic.classList.remove("hidden");
+        magic.style.filter = "blur(.4px) drop-shadow(0 0 18px rgba(255,210,90,.95))";
+        if (audio) audio.upgradeSting(2);
+        this._setT(() => { if (audio) audio.gotcha(); }, 180);
+        doFlash(true);
+        spawnRings(3, "#ffe28a");
+        spawnStars(24, starColor);
+        shake(8);
+        this._haptic([40, 60, 60]);
+      }
+    }, 1800 * k);
+
+    /* 開球：上下分離 + 內光 */
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      ball.classList.add("open");
+      leak.classList.remove("lk1", "lk2");
+      if (audio) audio.ballLand();
+    }, 2450 * k);
+
+    /* 光柱沖天 + zoom */
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      beam.classList.add("rise");
+      if (audio) audio.beamWhoosh();
+      const g = this._gsap();
+      if (g && !this._rm()) {
+        g.to(sc.querySelector(".gsb-stage"), { scale: 1.12, duration: .4, ease: "power2.in" });
+        g.to(sc.querySelector(".gsb-ball-wrap"), { scale: 1.8, duration: .4, ease: "power2.in" });
+      }
+      doFlash(true);
+    }, 2850 * k);
+
+    this._setT(() => { if (fid === this._flowId) this._revealInspect(flow, s); }, 3250 * k);
+  },
+
+  /* 檢視卡 overlay（lazy 建立，fixed 掛 body） */
+  _ensureInspect() {
+    if (this._inspect) return this._inspect;
+    const el = document.createElement("div");
+    el.id = "gacha-inspect";
+    el.className = "hidden";
+    el.innerHTML = `
+      <div class="gi-rays"></div>
+      <div class="gi-card">
+        <span class="gi-rarity"></span>
+        <img class="gi-art" alt="">
+        <div class="gi-name"></div>
+        <div class="gi-meta"></div>
+        <div class="gi-types"></div>
+        <div class="gi-stats"></div>
+        <div class="gi-note"></div>
+        <div class="gi-actions">
+          <button class="btn-big btn-primary gi-again"></button>
+          <button class="btn-big btn-plain gi-home">‹ Back to Home</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    el.querySelector(".gi-again").addEventListener("click", () => this._pullAgain());
+    el.querySelector(".gi-home").addEventListener("click", () => this._goHome());
+    this._inspect = el;
+    return el;
+  },
+
+  _refreshAgainButton() {
+    if (!this._inspect) return;
+    const btn = this._inspect.querySelector(".gi-again");
+    const st = loadState();
+    const cost = GAME_CONFIG.RARE_PULL_COST;
+    if (st.diamonds >= cost) {
+      btn.disabled = false;
+      btn.textContent = `💎 ×${cost} TO GO!`;
+    } else {
+      btn.disabled = true;
+      btn.textContent = `Need 💎${cost} (you have ${st.diamonds})`;
     }
+  },
 
-    if (window.CaptureScene && CaptureScene.audio) CaptureScene.audio.correct();
-    setTimeout(() => layer.remove(), 3400);
+  _revealInspect(flow, s) {
+    this.phase = "inspect";
+    this._flow = null;
+    const rarity = this._visualRarity(s);
+    const cfg = GACHA_BALL[rarity];
+    const entry = s.entry;
+    const cur = entryCurrentSpecies(entry);
+    const dex = cur[0];
+    const insp = this._ensureInspect();
+
+    insp.dataset.rarity = rarity;
+    insp.querySelector(".gi-rays").style.setProperty("--ray", cfg.ray);
+    insp.querySelector(".gi-rarity").textContent = cfg.label;
+    const art = insp.querySelector(".gi-art");
+    art.onerror = () => { art.onerror = null; art.src = spriteURL(dex); };
+    art.src = artworkURL(dex);
+    art.alt = cur[1];
+    insp.querySelector(".gi-name").textContent = cur[1];
+    /* 星級跟稀有度：legend ★★★ / epic ★★ / rare ★ */
+    const stars = rarity === "legend" ? "★★★" : rarity === "epic" ? "★★" : "★";
+    insp.querySelector(".gi-meta").textContent =
+      `No.${String(dex).padStart(3, "0")} ・ Lv.${entry.level} ・ ${stars}`;
+    const dexEntry = dexOf(dex);
+    const types = (dexEntry && dexEntry.types) || [];
+    insp.querySelector(".gi-types").innerHTML = types.map(t =>
+      `<span class="gi-type" style="background:${typeColor(t)}"><img src="${typeIconURL(t)}" alt="" onerror="this.remove()">${typeLabel(t).toUpperCase()}</span>`
+    ).join("");
+    const stats = statsForEntry(entry);
+    insp.querySelector(".gi-stats").innerHTML = stats
+      ? STAT_KEYS.map(k2 => `<div class="gi-stat"><b>${stats[k2]}</b><span>${STAT_LABELS[k2]}</span></div>`).join("")
+      : "";
+    const note = insp.querySelector(".gi-note");
+    if (s.isDupe) {
+      note.className = "gi-note";
+      note.textContent = `Already have it! ⚡ EV point +1${s.candyGain ? " ・ 🍬 Candy +1" : ""}`;
+    } else {
+      note.className = "gi-note new";
+      note.textContent = "NEW! Registered to your Pokédex.";
+    }
+    this._refreshAgainButton();
+    this._pendingEvolve = s.firstExpEvolve || null;
+
+    /* 背景 A 退場 → 檢視卡登場 */
+    const sc = this._sceneB;
+    if (sc) sc.classList.remove("show");
+    this._setT(() => {
+      if (sc) sc.classList.add("hidden");
+      insp.classList.remove("hidden");
+      requestAnimationFrame(() => insp.classList.add("show"));
+    }, 450);
+
+    /* 每次出卡都播叫聲（v102 起：唔再只限新寵） */
+    this._setT(() => { try { Pokedex.playCry(dex); } catch (e) { /* audio unavailable */ } }, 350);
+
+    this.busy = false;
+    this._refreshControls();
+    App.renderHome();
+  },
+
+  /* 檢視卡「💎 ×3 TO GO!」：執場後即刻再抽 */
+  _pullAgain() {
+    if (this.busy || !this._canPull()) return;
+    this._cleanupScene();
+    const evo = this._pendingEvolve;
+    this._pendingEvolve = null;
+    if (evo) App.showEvolveModal(evo);
+    this.pull();
+  },
+
+  /* 檢視卡「Back to Home」 */
+  _goHome() {
+    this._cleanupScene();
+    const evo = this._pendingEvolve;
+    this._pendingEvolve = null;
+    App.showView("view-home");
+    if (evo) App.showEvolveModal(evo);
+  },
+
+  /* 執場：overlay / 艙門 / 拖拽旗標全部還原（Prototype 教訓：旗標唔重置會卡死再抽） */
+  _cleanupScene() {
+    const g = this._gsap();
+    const sc = this._sceneB;
+    if (sc) {
+      if (g) {
+        g.killTweensOf(sc);
+        g.killTweensOf(sc.querySelector(".gsb-stage"));
+        g.killTweensOf(sc.querySelector(".gsb-ball-wrap"));
+      }
+      sc.classList.remove("show");
+      sc.classList.add("hidden");
+      sc.style.transform = "";
+      sc.querySelector(".gsb-rings").innerHTML = "";
+      const wrap = sc.querySelector(".gsb-ball-wrap");
+      wrap.innerHTML = "";
+      wrap.style.transform = "";
+      sc.querySelector(".gsb-stage").style.transform = "";
+      sc.querySelector(".gsb-magic").classList.add("hidden");
+      sc.querySelector(".gsb-beam").classList.remove("rise");
+      sc.querySelector(".gsb-prompt").textContent = "";
+    }
+    if (this._inspect) {
+      this._inspect.classList.remove("show");
+      this._inspect.classList.add("hidden");
+    }
+    const machine = this._machine();
+    if (machine) machine.classList.remove("belly-open", "dragging", "stop-bob");
+    const dz = document.getElementById("gacha-dropzone");
+    if (dz) dz.innerHTML = "";
+    document.getElementById("view-gacha").classList.remove("playing");
+    this._dragging = false;
+    this._triggered = false;
+    this._curP = 0;
+    this._setPull(0);
+  },
+
+  _resetStage() {
+    this._cleanupScene();
+    this._prompt("");
+    this.phase = "idle";
   }
 };

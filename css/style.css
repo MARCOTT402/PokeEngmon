@@ -581,219 +581,205 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .gacha-odds-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .gacha-info-note { font-size: .82rem; font-weight: 700; color: #7a8299; text-align: center; }
 
-/* --- 機械快龍機身 --- */
-.gacha-machine {
-  position: relative; width: 230px;
-  margin-top: 90px;   /* 預留龍頭 + 天線向上伸出嘅空間，避免壓住上面嘅提示 pill */
-  filter: drop-shadow(0 10px 14px rgba(0,0,0,.18));
+/* ============================================================
+   v102 快龍拉手抽獎：舞台 A（快龍 + 機械手臂 + 肚仔艙門）
+   ============================================================ */
+.gacha-stage {
+  border-radius: 24px; overflow: hidden;
+  background:
+    radial-gradient(90% 60% at 50% 108%, rgba(255,222,130,.95) 0%, rgba(238,183,74,.85) 38%, rgba(150,104,26,.9) 78%, #4a2f0a 100%),
+    linear-gradient(180deg, #2a1a06, #4a2f0a);
+  padding-bottom: 10px;
+}
+.gacha-machine.dragonite-art {
+  --pull: 0px; --pullp: 0;
+  position: relative; width: clamp(210px, 58vw, 320px);
+  margin: 4px auto 0;
+  animation: dm-idle-bob 3.2s ease-in-out infinite;
+}
+@keyframes dm-idle-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.gacha-machine.dragonite-art.stop-bob { animation: none; }
+.dm-art {
+  width: 100%; height: auto; display: block; pointer-events: none; position: relative; z-index: 1;
+  transform: rotate(calc(var(--pullp) * -2deg)) translateY(calc(var(--pullp) * 4px));
+  filter: drop-shadow(0 14px 22px rgba(40, 20, 0, .45));
+}
+/* 肚仔艙門 */
+.dm-belly {
+  position: absolute; left: 13%; top: 50%; width: 34%; height: 22%; z-index: 3;
+  border-radius: 46% 46% 44% 44% / 52% 52% 46% 46%;
+  box-shadow: 0 0 calc(var(--pullp) * 34px) calc(var(--pullp) * 6px) rgba(255, 205, 80, calc(.25 + var(--pullp) * .65));
+}
+.dm-cavity {
+  position: absolute; inset: 6%; border-radius: inherit;
+  background: radial-gradient(60% 60% at 50% 40%, #ffd870 0%, #7a4c08 55%, #2a1804 100%);
+  box-shadow: inset 0 6px 18px rgba(0, 0, 0, .8);
+  opacity: 0; transition: opacity .25s;
+}
+.dm-door {
+  position: absolute; top: 0; bottom: 0; width: 52%;
+  background: repeating-linear-gradient(180deg, #f9ecc4 0 12%, #e8d3a0 12% 13.5%, #f6e7bd 13.5% 26%);
+  border: 2px solid #6b4a1c; z-index: 2;
+  transition: transform .38s cubic-bezier(.5, 1.6, .4, 1);
+  backface-visibility: hidden;
+}
+.dm-door.left  { left: 0;  border-radius: 90% 14% 14% 90% / 60% 10% 10% 60%; transform-origin: left center; }
+.dm-door.right { right: 0; border-radius: 14% 90% 90% 14% / 10% 60% 60% 10%; transform-origin: right center; }
+.gacha-machine.belly-open .dm-door.left  { transform: translateX(-38%) rotate(-64deg); }
+.gacha-machine.belly-open .dm-door.right { transform: translateX(38%) rotate(64deg); }
+.gacha-machine.belly-open .dm-cavity { opacity: 1; }
+/* 機械手臂（右側腰間，可拖拽） */
+.dm-arm {
+  position: absolute; right: -9%; top: 42%; width: 26%; aspect-ratio: 0.55; z-index: 4;
+  touch-action: none; cursor: grab; outline-offset: 6px;
+  transform: translateY(var(--pull));
+  filter: drop-shadow(0 6px 10px rgba(40, 20, 0, .4));
+}
+.dm-arm:active { cursor: grabbing; }
+.dm-arm:focus-visible { outline: 3px solid #fff3cf; border-radius: 16px; }
+.dm-bracket {
+  position: absolute; top: -4%; left: 14%; width: 46%; height: 20%;
+  background: linear-gradient(180deg, #d7dde6, #8b93a3 60%, #5c6371);
+  border: 2px solid #3c424e; border-radius: 8px;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, .5);
+}
+.dm-bracket::after {
+  content: ""; position: absolute; inset: 22% 30%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #98a0ae 55%, #4c5260);
+  border: 1.5px solid #3c424e;
+}
+.dm-arm-upper {
+  position: absolute; top: 12%; left: 30%; width: 26%; height: 56%;
+  background: linear-gradient(90deg, #e8933c, #f7b561 45%, #d97f24);
+  border: 2px solid #8a4d10; border-radius: 14px;
+  transform-origin: 50% 0;
+  transform: scaleY(calc(1 + var(--pullp) * .38));
+}
+.dm-arm-upper::before, .dm-arm-upper::after {
+  content: ""; position: absolute; left: -16%; right: -16%; height: 12%;
+  background: linear-gradient(180deg, #c3c9d4, #767e8d); border: 2px solid #3c424e; border-radius: 8px;
+}
+.dm-arm-upper::before { top: 26%; }
+.dm-arm-upper::after { top: 62%; }
+.dm-hand {
+  position: absolute; bottom: 0; left: 4%; width: 70%; height: 34%;
+  background: radial-gradient(80% 80% at 40% 25%, #ffc477, #f09a3e 60%, #d97f24);
+  border: 2.5px solid #8a4d10; border-radius: 46% 46% 50% 50% / 40% 40% 60% 60%;
+  animation: dm-hand-call 1.3s ease-in-out infinite;
+}
+@keyframes dm-hand-call { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 220, 130, 0); } 50% { box-shadow: 0 0 22px 6px rgba(255, 220, 130, .75); } }
+.gacha-machine.dragging .dm-hand, .gacha-machine.belly-open .dm-hand { animation: none; }
+.dm-hand i {
+  position: absolute; bottom: -9px; width: 26%; height: 34%;
+  background: linear-gradient(180deg, #fff, #e8e8e8);
+  clip-path: polygon(50% 100%, 8% 12%, 92% 12%);
+  filter: drop-shadow(0 1px 0 #8a8a8a);
+}
+.dm-hand i:nth-child(1) { left: 2%; transform: rotate(10deg); }
+.dm-hand i:nth-child(2) { left: 37%; }
+.dm-hand i:nth-child(3) { right: 2%; transform: rotate(-10deg); }
+
+/* 跌球（舞台 A）：由肚仔彈出彈跳滾走 */
+.gacha-dropzone { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.eject-ball { position: absolute; width: 64px; height: 64px; animation: ball-eject .95s cubic-bezier(.3, .6, .4, 1) forwards; }
+@keyframes ball-eject {
+  0%   { transform: translate(0, 0) rotate(0); opacity: 0; }
+  8%   { opacity: 1; }
+  34%  { transform: translate(6vw, 16dvh) rotate(120deg); }
+  50%  { transform: translate(14vw, 9dvh) rotate(220deg); }
+  66%  { transform: translate(24vw, 14dvh) rotate(330deg); }
+  82%  { transform: translate(38vw, 12dvh) rotate(470deg); }
+  100% { transform: translate(66vw, 13dvh) rotate(640deg); opacity: 1; }
 }
 
-/* 頭部（坐落 dome 頂，唔好伸得太高） */
-.dm-head {
-  position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
-  width: 120px; height: 76px; z-index: 2;
-  background: linear-gradient(160deg, #f8c06a 0%, #f0a04a 40%, #d97e2e 80%, #b86520 100%);
-  border-radius: 44px 44px 20px 20px;
-  border: 3px solid #b86520;
-  box-shadow: inset 0 2px 4px rgba(255,255,255,.4), inset 0 -3px 6px rgba(0,0,0,.2), 0 4px 8px rgba(0,0,0,.25);
-}
-/* 頭頂小角 */
-.dm-horn {
-  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
-  width: 14px; height: 20px;
-  background: linear-gradient(180deg, #f8d898, #e0a040);
-  border-radius: 4px 4px 2px 2px;
-  border: 2px solid #b86520;
-  box-shadow: 0 1px 3px rgba(0,0,0,.2);
-}
-/* 天線（頭頂長桿 + 頂端波） */
-.dm-antenna {
-  position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
-  width: 3px; height: 30px; z-index: 1;
-  background: linear-gradient(180deg, #888, #aaa);
-  border-radius: 2px;
-}
-.dm-antenna::after {
-  content: ""; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
-  width: 12px; height: 12px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe259, #f0b400);
-  border: 2px solid #b28700;
-  box-shadow: 0 0 8px rgba(255, 213, 79, .6);
-}
-/* 機械眼（面罩式，稀有度發光預告） */
-.dm-eye {
-  position: absolute; top: 24px; width: 18px; height: 12px;
-  background: #1a1a2e; border-radius: 4px;
-  border: 2px solid #333;
-  transition: box-shadow .4s ease;
-}
-.dm-eye.left  { left: 18px; }
-.dm-eye.right { right: 18px; }
-/* 稀有度發光（JS 控制 class） */
-.dm-eye.leak-blue   { box-shadow: 0 0 10px 3px rgba(66, 165, 245, .7), inset 0 0 4px rgba(66, 165, 245, .5); }
-.dm-eye.leak-gold   { box-shadow: 0 0 12px 4px rgba(255, 213, 79, .8), inset 0 0 5px rgba(255, 213, 79, .6); }
-.dm-eye.leak-rainbow {
-  box-shadow: 0 0 14px 5px rgba(255, 100, 200, .8);
-  animation: eye-rainbow 1.2s linear infinite;
-}
-@keyframes eye-rainbow {
-  0%   { box-shadow: 0 0 14px 5px rgba(255, 100, 100, .8); }
-  25%  { box-shadow: 0 0 14px 5px rgba(100, 255, 100, .8); }
-  50%  { box-shadow: 0 0 14px 5px rgba(100, 100, 255, .8); }
-  75%  { box-shadow: 0 0 14px 5px rgba(255, 100, 200, .8); }
-  100% { box-shadow: 0 0 14px 5px rgba(255, 100, 100, .8); }
-}
-/* 鼻吻 */
-.dm-snout {
-  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
-  width: 48px; height: 20px;
-  background: #f5e0c0; border-radius: 12px;
-  border: 2px solid #d4a060;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,.3);
-}
-/* 雙翼（機身兩側伸出） */
-.dm-wing {
-  position: absolute; top: 80px; width: 42px; height: 64px; z-index: 1;
-  background: linear-gradient(160deg, #7ab8a8, #4a8a7a 60%, #2a6a5a);
-  border-radius: 8px 40px 8px 40px;
-  border: 3px solid #3a7a6a;
-  box-shadow: inset 0 2px 4px rgba(255,255,255,.25), 0 4px 8px rgba(0,0,0,.2);
-}
-.dm-wing.left  { left: -20px; transform: rotate(-12deg); }
-.dm-wing.right { right: -20px; transform: rotate(12deg) scaleX(-1); }
-
-/* 玻璃罩（dome）微調以配合龍頭 */
-.gacha-dome {
-  position: relative; height: 118px; border-radius: 118px 118px 10px 10px;
-  background: linear-gradient(160deg, rgba(255,255,255,.92), rgba(215,235,255,.55) 60%, rgba(255,255,255,.75));
-  border: 6px solid #d97e2e; overflow: hidden;
-  margin-top: 28px;   /* 預留空間俾龍頭 */
-}
-.mini-ball {
-  position: absolute; width: 32px; height: 32px; border-radius: 50%;
-  border: 2.5px solid var(--ink); background: linear-gradient(to bottom, var(--mb-top, #ee4035) 44%, #f5f5f5 56%);
-  box-shadow: 0 2px 3px rgba(0,0,0,.15);
-}
-.mb-red { --mb-top: #ee4035; }
-.mb-blue { --mb-top: #3aa1ff; }
-.mini-ball:nth-child(1) { left: 22px; bottom: 8px; }
-.mini-ball:nth-child(2) { left: 66px; bottom: 22px; }
-.mini-ball:nth-child(3) { left: 108px; bottom: 6px; }
-.mini-ball:nth-child(4) { left: 148px; bottom: 20px; }
-.mini-ball:nth-child(5) { left: 92px; bottom: -12px; }
-
-/* 機身主體（橙色金屬 + 鉚釘） */
-.gacha-body {
-  background: linear-gradient(180deg, #f8c06a 0%, #e8954a 40%, #d97e2e 80%, #c06a20 100%);
-  border-radius: 10px 10px 22px 22px; padding: 12px 18px 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  position: relative;
-  box-shadow: inset 0 2px 4px rgba(255,255,255,.35), inset 0 -3px 8px rgba(0,0,0,.15);
-}
-/* 鉚釘裝飾（左右各一排） */
-.gacha-body::before, .gacha-body::after {
-  content: ""; position: absolute; top: 10px; bottom: 10px; width: 10px;
-  background: repeating-linear-gradient(180deg,
-    transparent 0px, transparent 18px,
-    #b86520 18px, #b86520 22px,
-    transparent 22px, transparent 28px);
-  opacity: .5;
-}
-.gacha-body::before { left: 6px; }
-.gacha-body::after  { right: 6px; }
-
-.gacha-coin-slot {
-  width: 26px; height: 7px; border-radius: 4px; background: #6e1216;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
-}
-.gacha-knob {
-  width: 46px; height: 46px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe259, #f0b400);
-  border: 4px solid #b28700; box-shadow: 0 3px 5px rgba(0,0,0,.25);
-}
-.gacha-outlet {
-  width: 92px; height: 30px; border-radius: 10px; background: #6e1216;
-  box-shadow: inset 0 3px 6px rgba(0,0,0,.55);
-}
-
-/* --- 精靈球（CSS 繪製） --- */
-.gacha-dropzone { height: 132px; display: flex; align-items: flex-end; justify-content: center; }
+/* --- 精靈球（CSS 繪製：Great / Ultra / Master） --- */
 .pokeball {
-  position: relative; width: 112px; height: 112px; border-radius: 50%;
-  background: var(--ball-bottom, #f5f5f5); border: 4px solid var(--ink);
-  box-shadow: 0 6px 10px rgba(0,0,0,.22), 0 0 0 0 rgba(255,255,255,0);
-  overflow: hidden; opacity: 0; --ball-top: #ee4035;
+  position: relative; border-radius: 50%; overflow: hidden; background: #fff;
+  box-shadow: inset -8px -10px 0 rgba(0, 0, 0, .18), 0 10px 22px rgba(0, 0, 0, .45);
+  border: 3px solid #26221f;
 }
-.ball-red    { --ball-top: #ee4035; --ball-bottom: #f5f5f5; }
-.ball-blue   { --ball-top: #3aa1ff; --ball-bottom: #f5f5f5; }
-.ball-yellow { --ball-top: #26262e; --ball-bottom: #ffcb05; }
-.ball-purple { --ball-top: #8e44ad; --ball-bottom: #f3d9ff; }
-
-.stage-drop .pokeball { animation: ball-drop .95s cubic-bezier(.3,.6,.4,1) forwards; }
-@keyframes ball-drop {
-  0% { transform: translateY(-14px); opacity: 0; }
-  8% { opacity: 1; }
-  30% { transform: translateY(0); }
-  45% { transform: translateY(-46px); }
-  62% { transform: translateY(0); }
-  74% { transform: translateY(-18px); }
-  85% { transform: translateY(0); }
-  92% { transform: translateY(-6px); }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-.pb-top, .pb-bottom { position: absolute; left: -1px; right: -1px; }
-.pb-top {
-  top: -1px; height: 50%; background: var(--ball-top);
-  border-radius: 112px 112px 0 0; border-bottom: 5px solid var(--ink);
-}
-.pb-bottom {
-  bottom: -1px; height: 50%; background: var(--ball-bottom);
-  border-radius: 0 0 112px 112px;
-}
+.pokeball.giant { width: min(150px, 34vw); height: min(150px, 34vw); }
+.eject-ball.pokeball { width: 64px; height: 64px; }
+.pb-top { position: absolute; inset: 0 0 50% 0; background: #e23b3a; }
+.pb-bottom { position: absolute; inset: 50% 0 0 0; background: #f4f4f4; }
+.pb-mid { position: absolute; left: 0; right: 0; top: 50%; height: 10%; transform: translateY(-50%); background: #26221f; }
 .pb-btn {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 32px; height: 32px; border-radius: 50%; background: #fff;
-  border: 5px solid var(--ink); z-index: 2;
+  position: absolute; left: 50%; top: 50%; width: 26%; height: 26%; transform: translate(-50%, -50%);
+  border-radius: 50%; background: radial-gradient(circle at 38% 32%, #fff 0 34%, #cfd4dc 35% 62%, #26221f 63% 100%);
+  border: 3px solid #26221f; z-index: 2;
 }
-
-/* --- 開球 --- */
-.stage-open .pb-top { animation: pb-top-open .55s ease-in forwards; }
-.stage-open .pb-bottom { animation: pb-bottom-open .55s ease-in forwards; }
-.stage-open .pb-btn { animation: pb-fade .4s forwards; }
-@keyframes pb-top-open { to { transform: translateY(-86px); } }
-@keyframes pb-bottom-open { to { transform: translateY(86px); } }
-@keyframes pb-fade { to { opacity: 0; } }
-
-/* --- 閃光 --- */
-.gacha-flash {
-  position: absolute; inset: -20px; pointer-events: none; opacity: 0; z-index: 4;
-  background: radial-gradient(circle at 50% 58%, rgba(255,255,255,.95), rgba(255,255,255,0) 62%);
+.pb-shine {
+  position: absolute; left: 12%; top: 8%; width: 30%; height: 18%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .9), transparent 70%); z-index: 2; transform: rotate(-18deg);
 }
-.gacha-flash.on { animation: flash-on .45s ease-out; }
-.flash-legend { background: radial-gradient(circle at 50% 58%, rgba(255,241,118,.95), rgba(255,255,255,0) 66%); }
-.flash-epic { background: radial-gradient(circle at 50% 58%, rgba(255,224,178,.95), rgba(255,255,255,0) 66%); }
-@keyframes flash-on { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
-
-/* --- 結果 --- */
-.gacha-result { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 176px; }
-.gacha-pokemon img { width: 132px; height: 132px; object-fit: contain; }
-.gacha-pokemon.bounce { animation: bounce-soft 1.1s ease infinite; }
-@keyframes bounce-soft {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
+/* Great Ball = RARE */
+.ball-great .pb-top { background: linear-gradient(180deg, #5b8def, #2f5fc0); }
+.ball-great .pb-top::before, .ball-great .pb-top::after {
+  content: ""; position: absolute; top: -6%; width: 26%; height: 74%;
+  background: #e23b3a; border-radius: 0 0 50% 50% / 0 0 90% 90%; border: 2px solid #26221f; border-top: 0;
 }
-.gacha-name { font-size: 1.5rem; font-weight: 900; }
-.gacha-zh { font-size: 1rem; color: #7a8299; font-weight: 700; }
-.gacha-new { font-weight: 900; color: #2e7d32; background: #e8f5e9; padding: 3px 14px; border-radius: 999px; }
-.gacha-dupe { font-weight: 800; color: #b28700; background: #fff8e1; padding: 3px 14px; border-radius: 999px; }
+.ball-great .pb-top::before { left: 4%; transform: rotate(-14deg); }
+.ball-great .pb-top::after { right: 4%; transform: rotate(14deg); }
+/* Ultra Ball = EPIC */
+.ball-ultra .pb-top { background: linear-gradient(180deg, #3a3a3a, #171717); }
+.ball-ultra .pb-top::before, .ball-ultra .pb-top::after {
+  content: ""; position: absolute; top: 6%; width: 15%; height: 66%; background: #f7c531;
+  border-radius: 6px; border: 2px solid #26221f;
+}
+.ball-ultra .pb-top::before { left: 14%; transform: rotate(-8deg); }
+.ball-ultra .pb-top::after { right: 14%; transform: rotate(8deg); }
+/* Master Ball = LEGEND */
+.ball-master .pb-top { background: linear-gradient(180deg, #8a52c9, #5a2e91); }
+.ball-master .pb-top::before, .ball-master .pb-top::after {
+  content: ""; position: absolute; top: 2%; width: 17%; height: 30%; border-radius: 50%;
+  background: #ef7ec2; border: 2px solid #26221f;
+}
+.ball-master .pb-top::before { left: 8%; }
+.ball-master .pb-top::after { right: 8%; }
+.ball-master .pb-mid::before {
+  content: "M"; position: absolute; left: 50%; top: -400%; transform: translateX(-50%);
+  font-weight: 900; font-size: 340%; color: #fff; line-height: 1;
+  text-shadow: 0 0 0 #fff, 2px 2px 0 #d94f9e, -2px 2px 0 #d94f9e;
+  z-index: 3; pointer-events: none;
+}
+/* 開球狀態 */
+.pb-light {
+  position: absolute; left: 50%; top: 50%; width: 90%; height: 60%; transform: translate(-50%, -50%) scale(.2);
+  border-radius: 50%; background: radial-gradient(circle, #fff 0 30%, rgba(255, 240, 180, .9) 55%, transparent 75%);
+  opacity: 0; transition: opacity .3s, transform .5s ease-out; pointer-events: none;
+}
+.pokeball.open .pb-light { opacity: 1; transform: translate(-50%, -50%) scale(1.6); }
+.pokeball.open .pb-top { transform: translateY(-95%) rotate(-12deg); transition: transform .45s ease-in; }
+.pokeball.open .pb-bottom { transform: translateY(95%); transition: transform .45s ease-in; }
+.pokeball.open .pb-mid, .pokeball.open .pb-btn { opacity: 0; transition: opacity .2s; }
+/* 開球前搖晃 */
+.pokeball.wob { animation: ball-wobble .55s ease-in-out; }
+@keyframes ball-wobble {
+  0%, 100% { transform: rotate(0); }
+  22% { transform: rotate(-16deg) translateX(-4%); }
+  55% { transform: rotate(13deg) translateX(4%); }
+  80% { transform: rotate(-6deg) translateX(-2%); }
+}
+/* 球底漏光（稀有度預告） */
+.leak {
+  position: absolute; left: 50%; top: 88%; transform: translateX(-50%); width: 130%; height: 16%;
+  border-radius: 50%; filter: blur(10px); opacity: 0; pointer-events: none;
+}
+.leak.lk1 { opacity: .55; }
+.leak.lk2 { opacity: .95; }
+.leak-blue { background: radial-gradient(closest-side, #8ecbff, transparent); }
+.leak-gold { background: radial-gradient(closest-side, #ffd870, transparent); }
+.leak-rainbow { background: conic-gradient(#ff9aa2, #ffd28a, #fff3a0, #a8f0b8, #9ad1ff, #d3a4ff, #ff9aa2); filter: blur(12px); }
+
+@media (max-height: 700px) {
+  .gacha-machine.dragonite-art { width: clamp(180px, 50vw, 240px); }
+}
 
 .gacha-controls { display: flex; flex-direction: column; gap: 12px; }
 
 /* ============================================================
-   稀有抽互動動畫（v98）：巨大發光扭蛋機 + 比卡超金幣 3 連點投入
-   互動節奏沿用捕捉場景：點 3 下 → 機身震動 → 金屬球跌出
-   → 搖 3 下懸念 → 開球結算
+   稀有抽互動演出（v102）：拉動快龍隻手 → 肚仔艙門打開跌出精靈球
+   → 金色背景 A 搖 2 下 → 按稀有度爆發 → 開球光柱 → 全屏檢視卡
    ============================================================ */
 
 /* 互動期間隱藏機率說明同按鈕（保留位避免跳版） */
@@ -813,258 +799,172 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 }
 .gacha-prompt.show { opacity: 1; transform: none; }
 
-/* --- 點按進度點（捕捉 taps 同款） --- */
-.gacha-taps {
-  display: flex; gap: 12px; padding: 10px 18px; margin-top: 10px;
-  border-radius: 999px; background: rgba(43, 43, 51, .07);
-  border: 1px solid rgba(178, 135, 0, .25);
-  opacity: 0; transform: translateY(8px);
-  transition: opacity .25s ease, transform .25s ease;
-}
-.gacha-taps.show { opacity: 1; transform: none; }
-.gacha-taps i {
-  width: 14px; height: 14px; border-radius: 50%;
-  border: 2px solid #b28700; background: transparent;
-  transition: background .18s ease, box-shadow .18s ease, transform .18s ease;
-}
-.gacha-taps i.on {
-  background: var(--yellow, #ffd54f); border-color: #b28700;
-  box-shadow: 0 0 14px #ffd54f, 0 0 4px #fff; transform: scale(1.15);
-}
 
-/* --- 巨大發光機身 --- */
-.gacha-machine { transition: transform .4s cubic-bezier(.25, 1, .5, 1); }
-.gacha-machine.grand { transform: scale(1.13); }
-/* 細屏（≤380px）：機身連雙翼放大後會撐爆邊緣，收細放大倍率 */
-@media (max-width: 380px) {
-  .gacha-machine.grand { transform: scale(1.05); }
-}
-.gacha-machine.grand::before {
-  content: ""; position: absolute; inset: -30px; z-index: -1;
-  border-radius: 48px;
-  background: radial-gradient(circle at 50% 42%, rgba(255, 215, 80, .6), rgba(255, 160, 40, .22) 55%, transparent 75%);
-  filter: blur(16px);
-  animation: machine-halo 2.2s ease-in-out infinite;
-}
-@keyframes machine-halo {
-  0%, 100% { opacity: .45; transform: scale(.96); }
-  50% { opacity: .85; transform: scale(1.05); }
-}
+/* ============================================================
+   v102 快龍拉手抽獎：背景 A（金色競技場 fixed overlay，掛 body）
+   ============================================================ */
+#view-gacha { position: relative; }
+/* 演出期間標題同頂欄變暗，聚焦舞台 */
+#view-gacha.playing .gacha-title,
+#view-gacha.playing .gacha-topbar { opacity: .22; transition: opacity .5s ease; }
+/* 拉手接近觸發時提示 pill 發光 */
+.gacha-prompt.almost { background: #4a3208; box-shadow: 0 0 22px rgba(255, 205, 80, .8); }
 
-/* 入幣位發光提示（引導用戶點金幣） */
-.gacha-stage.phase-coin .gacha-coin-slot {
-  animation: slot-pulse 1s ease-in-out infinite;
+#gacha-scene-b {
+  position: fixed; inset: 0; height: 100dvh; z-index: 640; overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 112%, #f2c34e 0%, #b9821f 34%, #5c3c0c 68%, #170e03 100%);
+  opacity: 0; transition: opacity .5s;
 }
-@keyframes slot-pulse {
-  0%, 100% { box-shadow: inset 0 1px 2px rgba(0,0,0,.6), 0 0 4px 1px rgba(255, 213, 79, .5); }
-  50% { box-shadow: inset 0 1px 2px rgba(0,0,0,.6), 0 0 16px 5px rgba(255, 213, 79, .95); }
+#gacha-scene-b.show { opacity: 1; }
+.gsb-bg { position: absolute; inset: 0; overflow: hidden; }
+.gsb-wave {
+  position: absolute; left: -25%; width: 150%; height: 44%; border-radius: 50%;
+  filter: blur(38px); opacity: .5; mix-blend-mode: screen;
 }
-
-/* --- 比卡超金幣（金屬質感） --- */
-.gacha-coin-grand {
-  position: absolute; left: 50%; top: 330px; margin-left: -48px; z-index: 6;
-  width: 96px; height: 96px; cursor: pointer;
-  transition: top .42s cubic-bezier(.34, 1.3, .5, 1), transform .42s cubic-bezier(.34, 1.2, .4, 1), opacity .28s ease;
+.gsb-wave.w1 { top: 52%; background: radial-gradient(closest-side, #ffe9a8, transparent 70%); animation: gsb-drift 9s ease-in-out infinite alternate; }
+.gsb-wave.w2 { top: 64%; background: radial-gradient(closest-side, #f7b733, transparent 70%); animation: gsb-drift 12s ease-in-out infinite alternate-reverse; }
+.gsb-wave.w3 { top: 40%; background: radial-gradient(closest-side, #fff3cf, transparent 72%); opacity: .28; animation: gsb-drift 7s ease-in-out infinite alternate; }
+@keyframes gsb-drift { from { transform: translateX(-6%) scaleY(1); } to { transform: translateX(6%) scaleY(1.12); } }
+.gsb-horizon {
+  position: absolute; left: 0; right: 0; bottom: 16%; height: 2px;
+  background: linear-gradient(90deg, transparent, #ffedb0 20% 80%, transparent);
+  box-shadow: 0 0 24px 6px rgba(255, 220, 120, .7);
 }
-.gacha-coin-grand.coin-step-1 { top: 268px; }
-.gacha-coin-grand.coin-step-2 { top: 200px; }
-.gacha-coin-grand.coin-insert {
-  top: 88px; transform: rotateY(92deg) scale(.6); opacity: 0;
-  transition: top .36s ease-in, transform .36s ease-in, opacity .26s ease .1s;
+.gsb-particles span {
+  position: absolute; bottom: -12px; width: 5px; height: 5px; border-radius: 50%;
+  background: radial-gradient(circle, #fff3cf, #f5c542 70%, transparent);
+  animation: gsb-rise linear infinite; opacity: .8;
 }
-.gc-spin {
-  position: relative; width: 100%; height: 100%;
-  animation: coin-pop .5s cubic-bezier(.3, 1.6, .4, 1) backwards, coin-bob 2.4s ease-in-out .5s infinite;
+@keyframes gsb-rise {
+  from { transform: translateY(0) scale(1); opacity: 0; }
+  12% { opacity: .85; }
+  to { transform: translateY(-108dvh) scale(.4); opacity: 0; }
 }
-@keyframes coin-pop {
-  0% { transform: translateY(60px) scale(0); opacity: 0; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+.gsb-spot {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(46% 34% at 50% 58%, rgba(255, 246, 214, .35), transparent 70%);
 }
-@keyframes coin-bob {
-  0%, 100% { transform: translateY(0) rotateY(-14deg); }
-  50% { transform: translateY(-9px) rotateY(14deg); }
+.gsb-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.gsb-ball-wrap { position: relative; }
+.gsb-ball-wrap.roll-in { animation: gsb-roll-in .72s cubic-bezier(.25, .7, .35, 1); }
+@keyframes gsb-roll-in {
+  from { transform: translateX(64vw) rotate(680deg); }
+  60% { transform: translateX(-2vw) rotate(-24deg); }
+  80% { transform: translateX(1vw) rotate(10deg); }
+  to { transform: none; }
 }
-.gc-face {
-  position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle at 32% 26%, #fff6c8 0%, #ffe259 28%, #f5b301 58%, #c98a00 88%, #8f6200 100%);
-  border: 5px solid #a8760a;
-  box-shadow:
-    0 12px 26px rgba(0, 0, 0, .35),
-    inset 0 4px 7px rgba(255, 255, 255, .7),
-    inset 0 -7px 14px rgba(140, 90, 0, .55),
-    0 0 36px rgba(255, 215, 80, .55);
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
+.gsb-rings { position: absolute; inset: 0; pointer-events: none; }
+.gsb-ring {
+  position: absolute; left: 50%; top: 50%; width: min(150px, 34vw); height: min(150px, 34vw);
+  border: 5px solid rgba(255, 255, 255, .9); border-radius: 50%;
+  transform: translate(-50%, -50%); animation: ring-out .8s ease-out forwards;
 }
-/* 內圈壓紋 */
-.gc-face::before {
-  content: ""; position: absolute; inset: 8px; border-radius: 50%;
-  border: 2.5px dashed rgba(140, 90, 0, .5);
+@keyframes ring-out { from { opacity: .95; transform: translate(-50%, -50%) scale(.4); } to { opacity: 0; transform: translate(-50%, -50%) scale(3.4); } }
+.gsb-star {
+  position: absolute; left: 50%; top: 50%; font-size: 20px; pointer-events: none;
+  animation: star-pop .9s ease-out forwards; text-shadow: 0 0 8px currentColor;
 }
-/* 比卡超浮雕（本地 25.gif 轉剪影壓印） */
-.gc-pika {
-  width: 62%; height: 62%; object-fit: contain;
-  filter: brightness(0); opacity: .38; mix-blend-mode: multiply;
+@keyframes star-pop {
+  from { opacity: 1; transform: translate(-50%, -50%) rotate(0) scale(.5); }
+  to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(240deg) scale(1.3); }
 }
-/* 金屬掃光 */
-.gc-shine {
-  position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
-  pointer-events: none; mix-blend-mode: screen;
+.gsb-magic {
+  position: absolute; left: 50%; top: 50%; width: min(300px, 72vw); height: min(300px, 72vw);
+  transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(216, 140, 255, .85) 0 6deg, transparent 6deg 18deg),
+    radial-gradient(circle, transparent 52%, rgba(178, 107, 224, .5) 54% 60%, transparent 62%),
+    radial-gradient(circle, transparent 30%, rgba(255, 255, 255, .4) 31% 33%, transparent 34%);
+  -webkit-mask: radial-gradient(circle, transparent 16%, #000 17%);
+  mask: radial-gradient(circle, transparent 16%, #000 17%);
+  animation: gsb-magic-spin 1.4s linear infinite;
+  filter: blur(.4px) drop-shadow(0 0 14px rgba(200, 120, 255, .8));
 }
-.gc-shine::before {
-  content: ""; position: absolute; top: -30%; bottom: -30%; left: -70%; width: 46%;
-  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .9) 50%, transparent);
-  transform: skewX(-18deg);
-  animation: coin-sweep 2.8s ease-in-out .6s infinite;
+@keyframes gsb-magic-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.gsb-beam {
+  position: absolute; left: 50%; bottom: 50%; width: min(120px, 26vw); height: 120dvh;
+  transform: translateX(-50%) scaleY(0); transform-origin: bottom center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 244, 200, .95) 30%, #fff 55%, rgba(255, 244, 200, .95) 70%, rgba(255, 255, 255, 0) 100%);
+  filter: blur(2px); pointer-events: none;
 }
-@keyframes coin-sweep {
-  0%, 55% { left: -70%; }
-  85%, 100% { left: 130%; }
+.gsb-beam.rise { animation: beam-rise .55s cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes beam-rise {
+  0% { transform: translateX(-50%) scaleY(0); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateX(-50%) scaleY(1); opacity: 1; }
 }
-
-/* --- 機身強烈震動（含 .grand 嘅 scale，避免動畫期間回彈） --- */
-.gacha-stage.stage-rumble .gacha-machine {
-  animation: machine-rumble 1.15s ease-in-out;
-  transform-origin: 50% 95%;
-}
-@keyframes machine-rumble {
-  0%, 100% { transform: scale(1.13) translateX(0) rotate(0); }
-  8% { transform: scale(1.13) translateX(-7px) rotate(-3.5deg); }
-  18% { transform: scale(1.13) translateX(7px) rotate(3.5deg); }
-  28% { transform: scale(1.13) translateX(-6px) rotate(-3deg); }
-  38% { transform: scale(1.13) translateX(6px) rotate(3deg); }
-  48% { transform: scale(1.13) translateX(-5px) rotate(-2.4deg); }
-  58% { transform: scale(1.13) translateX(5px) rotate(2.4deg); }
-  68% { transform: scale(1.13) translateX(-4px) rotate(-1.8deg); }
-  78% { transform: scale(1.13) translateX(4px) rotate(1.8deg); }
-  88% { transform: scale(1.13) translateX(-2px) rotate(-.8deg); }
-}
-
-/* 震動時天線劇震 + 雙翼拍震 */
-.gacha-stage.stage-rumble .dm-antenna {
-  animation: antenna-jitter .12s linear infinite;
-}
-@keyframes antenna-jitter {
-  0%, 100% { transform: translateX(-50%) rotate(0); }
-  25% { transform: translateX(-50%) rotate(-8deg); }
-  75% { transform: translateX(-50%) rotate(8deg); }
-}
-.gacha-stage.stage-rumble .dm-wing.left {
-  animation: wing-flap-l .3s ease-in-out infinite;
-}
-.gacha-stage.stage-rumble .dm-wing.right {
-  animation: wing-flap-r .3s ease-in-out infinite;
-}
-@keyframes wing-flap-l {
-  0%, 100% { transform: rotate(-12deg); }
-  50% { transform: rotate(-28deg); }
-}
-@keyframes wing-flap-r {
-  0%, 100% { transform: rotate(12deg) scaleX(-1); }
-  50% { transform: rotate(28deg) scaleX(-1); }
-}
-
-/* --- 巨大金屬球 --- */
-.pokeball.giant { width: 140px; height: 140px; border-width: 5px; }
-.pokeball.giant .pb-btn { width: 40px; height: 40px; border-width: 6px; }
-.pokeball.metal {
-  box-shadow: 0 12px 24px rgba(0, 0, 0, .38), 0 0 28px rgba(255, 255, 255, .3);
-}
-/* 金屬高光鍍層 */
-.pokeball.metal::after {
-  content: ""; position: absolute; inset: 0; border-radius: 50%; z-index: 3;
-  background: linear-gradient(135deg,
-    rgba(255, 255, 255, .8) 0%, rgba(255, 255, 255, .1) 26%,
-    rgba(0, 0, 0, .16) 58%, rgba(255, 255, 255, .3) 100%);
-  pointer-events: none;
-}
-
-/* 開球前搖晃（捕捉場景懸念節奏） */
-.pokeball.wob { animation: ball-wobble .55s ease-in-out; transform-origin: 50% 92%; }
-@keyframes ball-wobble {
-  0%, 100% { transform: rotate(0); }
-  22% { transform: rotate(-15deg); }
-  72% { transform: rotate(15deg); }
-}
-
-/* --- 結算過場：機身淡出縮細，結果卡升起 --- */
-.gacha-stage.settling .gacha-machine,
-.gacha-stage.settling .gacha-taps,
-.gacha-stage.settling .gacha-prompt,
-.gacha-stage.settling .gacha-dropzone {
-  opacity: 0; transform: scale(.85); pointer-events: none;
-  transition: opacity .45s ease, transform .45s ease;
-}
-.gacha-result.enter { animation: result-rise .55s cubic-bezier(.25, 1, .5, 1); }
-@keyframes result-rise {
-  0% { opacity: 0; transform: translateY(26px) scale(.92); }
-  100% { opacity: 1; transform: none; }
+.gsb-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.gsb-flash.on { animation: flash-pop .5s ease-out; }
+.gsb-flash.on.big { animation: flash-pop .8s ease-out; }
+@keyframes flash-pop { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+.gsb-prompt {
+  position: absolute; bottom: calc(9dvh + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  color: #fff3cf; font-weight: 800; letter-spacing: .16em; font-size: clamp(12px, 3.6vw, 16px);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .6); white-space: nowrap;
 }
 
 /* ============================================================
-   P&D 式演出（v100）：暗転聚光燈 + 蛋縫漏光 + 確定演出升級 + 光柱
+   v102 檢視卡（fixed overlay，掛 body）
    ============================================================ */
+#gacha-inspect {
+  position: fixed; inset: 0; height: 100dvh; z-index: 660;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 100% at 50% 0%, rgba(60, 36, 8, .35), rgba(12, 7, 2, .92) 70%), #170e03;
+  overflow-y: auto;
+  padding: calc(18px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
+  opacity: 0; transition: opacity .45s;
+}
+#gacha-inspect.show { opacity: 1; }
+.gi-rays {
+  position: fixed; left: 50%; top: 50%; width: 180vmax; height: 180vmax; transform: translate(-50%, -50%);
+  pointer-events: none; opacity: .5;
+  background: repeating-conic-gradient(from 0deg, var(--ray, #ffc93c) 0 7deg, transparent 7deg 17deg);
+  -webkit-mask: radial-gradient(circle, #000 0 34%, transparent 62%);
+  mask: radial-gradient(circle, #000 0 34%, transparent 62%);
+  animation: rays-spin 16s linear infinite;
+}
+@keyframes rays-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.gi-card {
+  position: relative; width: min(380px, 92vw); border-radius: 26px; padding: 22px 18px 18px; text-align: center;
+  background: linear-gradient(180deg, #fffdf4, #ffeec2);
+  border: 3px solid #c8862a;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .65), inset 0 2px 0 #fff;
+  animation: gi-in .55s cubic-bezier(.2, 1.5, .35, 1) .1s backwards;
+}
+@keyframes gi-in { from { transform: translateY(60px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+.gi-rarity {
+  display: inline-block; padding: 5px 16px; border-radius: 999px; font-size: 12px; font-weight: 900;
+  letter-spacing: .18em; color: #fff; background: #42a5f5; box-shadow: 0 3px 0 rgba(0, 0, 0, .25);
+}
+#gacha-inspect[data-rarity="epic"] .gi-rarity { background: #b26be0; }
+#gacha-inspect[data-rarity="legend"] .gi-rarity { background: linear-gradient(180deg, #ffd970, #e09a12); color: #5a3a00; }
+.gi-art {
+  width: min(220px, 52vw); height: auto; display: block; margin: 6px auto -2px;
+  filter: drop-shadow(0 10px 16px rgba(60, 30, 0, .35)); animation: art-bob 2.6s ease-in-out infinite;
+}
+@keyframes art-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.gi-name { font-size: clamp(24px, 6.4vw, 32px); letter-spacing: .04em; color: #3a2408; }
+.gi-meta { font-size: 13px; font-weight: 700; color: #8a6420; letter-spacing: .1em; margin-top: 2px; }
+.gi-types { display: flex; gap: 8px; justify-content: center; margin-top: 9px; }
+.gi-type {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px;
+  color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+.gi-type img { width: 14px; height: 14px; }
+.gi-stats { margin-top: 13px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.gi-stat { background: rgba(255, 255, 255, .75); border: 2px solid #e8cf92; border-radius: 12px; padding: 7px 4px; }
+.gi-stat b { display: block; font-size: 15px; color: #3a2408; }
+.gi-stat span { font-size: 9.5px; font-weight: 800; letter-spacing: .12em; color: #a57b2c; }
+.gi-note { margin-top: 11px; font-size: 13px; font-weight: 800; color: #7a5a16; }
+.gi-note.new { color: #c2461f; animation: note-pop 1s ease-in-out infinite alternate; }
+@keyframes note-pop { from { transform: scale(1); } to { transform: scale(1.06); } }
+.gi-actions { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.gi-actions .btn-big { width: 100%; }
+@media (max-height: 700px) {
+  .gi-art { width: min(160px, 42vw); }
+  .gi-card { max-height: calc(100dvh - 24px); overflow-y: auto; }
+}
 
-/* --- 暗転 overlay：全版變暗，聚光燈挖空對正波球位置 --- */
-#view-gacha { position: relative; }
-.gacha-dim {
-  position: absolute; inset: 0; z-index: 5; pointer-events: none;
-  opacity: 0; transition: opacity .55s ease;
-  background: radial-gradient(circle 118px at 50% 62%,
-    rgba(4, 6, 14, 0) 0 96px, rgba(4, 6, 14, .86) 132px);
-}
-.gacha-dim.on { opacity: 1; }
-/* 演出期間標題同頂欄一齊變暗，聚焦舞台 */
-#view-gacha.playing .gacha-title,
-#view-gacha.playing .gacha-topbar { opacity: .22; transition: opacity .5s ease; }
-/* 波球區高於暗転層，保持照亮 */
-.gacha-dropzone { position: relative; z-index: 6; }
-
-/* --- 蛋縫漏光：稀有度預告（lk1→lk3 每搖一下增強） --- */
-.pokeball { --leak: transparent; --leak-shadow: 0 0 0 0 transparent; transition: box-shadow .3s ease; }
-.pokeball.leak-blue    { --leak: #6ec6ff; }
-.pokeball.leak-gold    { --leak: #ffd54f; }
-.pokeball.leak-rainbow { --leak: #ffffff; }
-/* 中縫透光帶 */
-.pokeball .pb-mid {
-  position: absolute; top: 50%; left: 5%; right: 5%; height: 5px;
-  transform: translateY(-50%); z-index: 1; border-radius: 999px;
-  background: var(--leak); opacity: 0; transition: opacity .3s ease, box-shadow .3s ease;
-}
-.pokeball.lk1 .pb-mid { opacity: .55; box-shadow: 0 0 10px 2px var(--leak); }
-.pokeball.lk2 .pb-mid { opacity: .8;  box-shadow: 0 0 18px 5px var(--leak); }
-.pokeball.lk3 .pb-mid { opacity: 1;   box-shadow: 0 0 28px 9px var(--leak); }
-/* 球體外圍光暈（metal 基礎影 + 漏光影，lk 級數遞進） */
-.pokeball.metal { box-shadow: 0 12px 24px rgba(0, 0, 0, .38), 0 0 28px rgba(255, 255, 255, .3), var(--leak-shadow); }
-.pokeball.lk1 { --leak-shadow: 0 0 16px 3px var(--leak); }
-.pokeball.lk2 { --leak-shadow: 0 0 30px 8px var(--leak); }
-.pokeball.lk3 { --leak-shadow: 0 0 46px 14px var(--leak); }
-/* 彩虹漏光：中縫彩虹流動 + 白熾外暈 */
-.pokeball.leak-rainbow .pb-mid {
-  background: conic-gradient(from 0deg,
-    #ff5b5b, #ffb300, #ffee58, #69f0ae, #40c4ff, #b388ff, #ff5b5b);
-  animation: leak-rainbow-spin 1.1s linear infinite;
-}
-@keyframes leak-rainbow-spin {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(360deg); }
-}
-
-/* --- 確定演出升級閃光：淨動 filter，避免同 .wob 嘅 transform 衝突 --- */
-.pokeball.upgrade { filter: brightness(2.6) saturate(1.25); transition: filter .1s ease; }
-
-/* --- 開球光柱爆點 --- */
-.gacha-burst {
-  position: absolute; left: 50%; bottom: 8px; width: 96px; height: 0;
-  transform: translateX(-50%); z-index: 6; pointer-events: none; opacity: 0;
-  background: linear-gradient(to top, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 88%);
-  border-radius: 48px;
-}
-.gacha-burst.on { animation: burst-shoot .6s cubic-bezier(.2, .7, .3, 1) forwards; }
-@keyframes burst-shoot {
-  0% { opacity: 0; height: 0; }
-  18% { opacity: 1; }
-  100% { opacity: 0; height: 105vh; }
-}
 
 /* ============================================================
    圖鑑
@@ -1809,31 +1709,6 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pu-complete-card .pu-burst { position: absolute; width: 14px; height: 14px; border-radius: 50%; pointer-events: none; }
 @keyframes pu-pop-in { from { opacity: 0; transform: scale(.5) rotate(-4deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
 
-/* 稀有抽慶祝：鑽石光柱 + 星爆 */
-.gacha-celebrate { position: fixed; inset: 0; z-index: 700; pointer-events: none; overflow: hidden; }
-.gacha-beam {
-  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  width: 130px; height: 100%;
-  background: linear-gradient(180deg, transparent 0%, rgba(255, 241, 118, .85) 30%, rgba(255, 213, 79, .95) 100%);
-  filter: blur(6px); opacity: 0;
-}
-.gacha-ring {
-  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
-  width: 90px; height: 90px; border-radius: 50%;
-  border: 6px solid rgba(255, 235, 59, .9); box-shadow: 0 0 40px 14px rgba(255, 235, 59, .5);
-  opacity: 0;
-}
-.gacha-star { position: absolute; font-size: 26px; opacity: 0; filter: drop-shadow(0 0 8px rgba(255, 213, 79, .9)); }
-.gacha-poke-glow {
-  position: absolute; border-radius: 50%; pointer-events: none;
-  filter: blur(14px); background: radial-gradient(circle, rgba(255,235,59,.9), rgba(255,213,79,0) 70%);
-}
-.gacha-rare-get {
-  position: absolute; left: 50%; top: 20%; transform: translateX(-50%);
-  font-size: 2.1rem; font-weight: 900; letter-spacing: 1px; white-space: nowrap;
-  text-shadow: 0 3px 0 rgba(0,0,0,.18), 0 6px 22px rgba(255,213,79,.55);
-  opacity: 0; pointer-events: none;
-}
 
 /* ---------- Desktop hover lift (mouse only; touch unaffected) ---------- */
 @media (hover: hover) and (pointer: fine) {

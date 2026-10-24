@@ -296,6 +296,49 @@ class CaptureAudio {
     this._tone(930, { type: "sine", dur: 0.3, gain: 0.1, at: 0.07 });
   }
 
+  /* ---------- v102 快龍拉手抽獎專用 ---------- */
+
+  /* 拉手時嘅機械吱呀聲 — 音高跟拉動進度 p (0..1) 上升 */
+  pullCreak(p) {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(95 + p * 130, { type: "sawtooth", dur: 0.07, gain: 0.05 });
+    this._noiseHit({ freq: 300 + p * 500, q: 3, gain: 0.03, dur: 0.05, type: "bandpass" });
+  }
+
+  /* 放手回彈 / 觸發瞬間嘅彈簧聲 */
+  pullSnap() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(160, { type: "sine", dur: 0.14, gain: 0.3, slideTo: 60 });
+    this._noiseHit({ freq: 2400, q: 1.2, gain: 0.1, dur: 0.05, type: "highpass" });
+  }
+
+  /* 快龍肚仔艙門打開：低頻開閂 + 上升金屬聲 */
+  bellyOpen() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(220, { type: "square", dur: 0.22, gain: 0.13, slideTo: 90 });
+    this._tone(520, { type: "triangle", dur: 0.16, gain: 0.11, at: 0.09, slideTo: 980 });
+    this._noiseHit({ freq: 900, q: 1, gain: 0.08, dur: 0.2, at: 0.06, type: "bandpass" });
+  }
+
+  /* 波球滾動聲 */
+  ballRoll() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._noiseHit({ freq: 300, q: 0.8, gain: 0.09, dur: 0.65, type: "bandpass" });
+    this._noiseSweep(300, 700, 0.6, 0.05);
+  }
+
+  /* 開球光柱沖天嘅 whoosh */
+  beamWhoosh() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._noiseSweep(500, 6500, 0.55, 0.18);
+    this._tone(300, { type: "sawtooth", dur: 0.5, gain: 0.1, slideTo: 1400 });
+  }
+
   breakFree() {
     this.ensure();
     if (!this.ctx) return;
