@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v106";
+const APP_VERSION = "v107";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -678,29 +678,21 @@ const App = {
     };
   },
 
-  /* ---------- 設定：匯出／匯入存檔 ---------- */
+  /* ---------- 設定 ---------- */
   openSettings() {
     /* 文案按登入狀態切換（有雲端同步就唔好嚇用戶話「只存本機」） */
     const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isLoggedIn());
     const saveNote = loggedIn
       ? `<p class="settings-sub">✅ Cloud sync is on — your progress follows your account.</p>`
-      : `<p class="settings-sub">Your progress is saved in this browser only. Sign in (🔐) to back up to the cloud, or export a backup manually.</p>`;
+      : `<p class="settings-sub">Your progress is saved in this browser only. Sign in (🔐) to back up to the cloud.</p>`;
     this.showModal(`
       <div class="settings-box">
         <h3 class="settings-title">⚙️ Settings</h3>
         ${saveNote}
-        <button id="btn-export-save" class="btn-big btn-secondary">⬇️ Export Save</button>
-        <button id="btn-import-save" class="btn-big btn-secondary">⬆️ Import Save</button>
-        <input id="import-file" type="file" accept=".json,application/json" hidden>
-        <small class="settings-note">Backup file: pokeengmon-save-YYYY-MM-DD.json</small>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
         <small class="settings-note">App version: ${APP_VERSION} (auto-updates)</small>
       </div>`);
-    const fileInput = document.getElementById("import-file");
-    document.getElementById("btn-export-save").onclick = () => this.exportSave();
-    document.getElementById("btn-import-save").onclick = () => fileInput.click();
-    fileInput.onchange = () => this.handleImportFile(fileInput.files[0]);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
   },
@@ -827,52 +819,6 @@ const App = {
         catch (e) { console.warn("Google sign-in failed:", e); }
       };
     }
-  },
-
-  exportSave() {
-    const blob = new Blob([JSON.stringify(loadState(), null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pokeengmon-save-${dateKey()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    this.toast("Save file exported!");
-  },
-
-  async handleImportFile(file) {
-    if (!file) return;
-    let parsed;
-    try {
-      parsed = JSON.parse(await file.text());
-      if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.entries)) {
-        throw new Error("invalid");
-      }
-    } catch (e) {
-      this.toast("That is not a valid PokeEngmon save file");
-      return;
-    }
-    const count = parsed.entries.length;
-    const name = parsed.playerName || "Trainer";
-    this.showModal(`
-      <div class="confirm-box">
-        <p>Import this save for <b>${escapeHTML(name)}</b>?<br>
-          <small>${count} Pokémon · your current progress will be replaced.</small></p>
-        <div class="confirm-row">
-          <button id="import-yes" class="btn-big btn-primary">Import</button>
-          <button id="import-no" class="btn-big btn-plain">Cancel</button>
-        </div>
-      </div>`, true);
-    document.getElementById("import-yes").onclick = () => {
-      importState(parsed);
-      migrateEntries();
-      this.closeModal();
-      this.renderHome();
-      this.toast(`Save imported: ${name}`);
-    };
-    document.getElementById("import-no").onclick = () => this.openSettings();
   },
 
   /* ---------- 改訓練員名 ---------- */
