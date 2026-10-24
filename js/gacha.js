@@ -629,8 +629,14 @@ const Gacha = {
         .to(glow, { opacity: 0, duration: .8 }, "<")
         .to(bigText, { opacity: 0, y: -30, duration: .5 }, "<");
 
-      /* 螢幕震動 */
-      gsap.fromTo(document.body, { x: -7 }, { x: 0, duration: .5, ease: "elastic.out(1, 0.25)", delay: .05 });
+      /* 螢幕震動：只震慶祝 layer，唔可以震 document.body ——
+         body 一旦有 transform（即使最終 x:0），所有 position:fixed 後代
+         （例如 .hub-bar 底部浮窗）嘅 containing block 就會變成 body，
+         之後所有頁面嘅浮窗都會跟住移位。 */
+      gsap.fromTo(layer, { x: -7 }, {
+        x: 0, duration: .5, ease: "elastic.out(1, 0.25)", delay: .05,
+        onComplete: () => { layer.style.transform = ""; }
+      });
     }
 
     if (window.CaptureScene && CaptureScene.audio) CaptureScene.audio.correct();
