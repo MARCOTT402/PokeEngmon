@@ -101,6 +101,8 @@ const Quiz = {
 
     document.getElementById("quiz-feedback").textContent = "";
     document.getElementById("quiz-feedback").className = "quiz-feedback";
+    /* 清除上一題遺留喺圖片卡嘅答題回應狀態 */
+    document.getElementById("quiz-word-card").classList.remove("correct", "wrong");
     document.getElementById("btn-quiz-continue").classList.add("hidden");
     document.getElementById("btn-quiz-hint").disabled = false;
 
@@ -188,6 +190,45 @@ const Quiz = {
     });
   },
 
+  /* ---------- 統一答題回應（所有題型共用） ----------
+     任何題型（句子題 / 圖片單字題 / 日後新增題型）答對答錯都必須經呢個函數，
+     唔可以自己另外寫一套回饋，否則玩家會見到唔一致的「回應」。
+     kind: "correct" | "warn" | "wrong"
+     句子題：輸入框綠/紅 + 對錯音效 + #quiz-feedback 文字
+     圖片單字題：喺同一組元素上顯示同一段文字，另外將回應搬上圖片卡
+                 （因為圖片題冇句子卡，唔同步就會睇落同句子題唔一樣） */
+  _showFeedback(kind, text) {
+    const input = document.getElementById("quiz-answer");
+    input.classList.remove("correct", "wrong");
+    if (kind === "correct") input.classList.add("correct");
+    else if (kind === "wrong") input.classList.add("wrong");
+
+    /* 對錯音效 */
+    if (window.CaptureScene && CaptureScene.audio) {
+      if (kind === "correct") CaptureScene.audio.correct();
+      else if (kind === "wrong") CaptureScene.audio.wrong();
+    }
+
+    const fb = document.getElementById("quiz-feedback");
+    fb.textContent = text;
+    fb.className = "quiz-feedback " + (kind === "correct" ? "good" : kind === "warn" ? "warn" : "bad");
+
+    const q = this.set[this.idx];
+    if (q && q.type === "word") {
+      const status = document.getElementById("quiz-word-status");
+      if (status) {
+        status.textContent = text;
+        status.className = "word-status " + (kind === "correct" ? "good" : kind === "warn" ? "warn" : "bad");
+      }
+      const card = document.getElementById("quiz-word-card");
+      if (card) {
+        card.classList.remove("correct", "wrong");
+        if (kind === "correct") card.classList.add("correct");
+        else if (kind === "wrong") card.classList.add("wrong");
+      }
+    }
+  },
+
   submit() {
     if (this.locked) return;
     const input = document.getElementById("quiz-answer");
@@ -236,27 +277,16 @@ const Quiz = {
 
     input.disabled = true;
     document.getElementById("btn-quiz-submit").disabled = true;
-    input.classList.add(correct ? "correct" : "wrong");
 
-    /* 對錯音效 */
-    if (window.CaptureScene && CaptureScene.audio) {
-      if (correct) CaptureScene.audio.correct();
-      else CaptureScene.audio.wrong();
-    }
-
-    const fb = document.getElementById("quiz-feedback");
+    /* 統一答題回應：句子題 / 圖片單字題 / 日後新題型一律經 _showFeedback */
     if (correct) {
-      fb.textContent = ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)];
-      fb.className = "quiz-feedback good";
+      this._showFeedback("correct", ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)]);
     } else if (judge.reason === "premature_submit") {
-      fb.textContent = "You stopped halfway — go back and finish the whole word.";
-      fb.className = "quiz-feedback bad";
+      this._showFeedback("wrong", "You stopped halfway — go back and finish the whole word.");
     } else if (judge.reason === "soft_fail_typo") {
-      fb.textContent = `Almost! One tiny typo — fix it in the Power Up Zone.`;
-      fb.className = "quiz-feedback warn";
+      this._showFeedback("warn", "Almost! One tiny typo — fix it in the Power Up Zone.");
     } else {
-      fb.textContent = target ? `The answer is "${target}"` : `The answer is "(blank)"`;
-      fb.className = "quiz-feedback bad";
+      this._showFeedback("wrong", target ? `The answer is "${target}"` : `The answer is "(blank)"`);
     }
 
     this._advance(correct);
@@ -312,9 +342,9 @@ const Quiz = {
       _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target }
     });
 
-    const fb = document.getElementById("quiz-feedback");
-    fb.textContent = target ? `Skipped — the answer is "${target}"` : `Skipped — the answer is "(blank)"`;
-    fb.className = "quiz-feedback bad";
+    this._showFeedback("wrong", target
+      ? `Skipped — the answer is "${target}"`
+      : `Skipped — the answer is "(blank)"`);
     document.getElementById("quiz-answer").disabled = true;
     document.getElementById("btn-quiz-submit").disabled = true;
     this._advance(false);

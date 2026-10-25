@@ -99,6 +99,16 @@ Images for word questions live in `Q_folder/picture_words/picture_words_images/`
 
 Spaced-repetition keys for word/image questions are prefixed `w:` so they never collide with sentence-question keys. When authoring or debugging SRS data, keep this prefix intact.
 
+## Rule 11 — Every question type must share the same answer feedback（答對／答錯回應）
+
+Adding a new question type means it must feel identical to sentence questions when the player answers.
+
+- All correct / wrong / almost feedback goes through **`Quiz._showFeedback(kind, text)`** in `js/quiz.js` — `kind` is `"correct" | "warn" | "wrong"`.
+- It applies, in one place: input green/red state, correct/wrong SFX, `#quiz-feedback` text + colour, and (for word questions) the same text on `#quiz-word-status` plus the green/red state on `#quiz-word-card`.
+- ❌ Never write a second feedback path (own DOM element, own text, own sound) for a new type — that is exactly how picture questions drifted from sentence questions.
+- For a new type, extend `_showFeedback` with that type's own surface (like the `q.type === "word"` branch) instead of bypassing it.
+- If a type has no sentence card, mirror the feedback onto its own question surface so the player sees the same reaction.
+
 ## Pre-import self-check (per row of questions.csv)
 
 - [ ] Exactly 8 columns

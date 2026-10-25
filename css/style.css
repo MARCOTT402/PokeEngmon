@@ -406,6 +406,12 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .word-status { font-size: 1rem; font-weight: 800; color: #5b6478; text-align: center; }
 .word-status.playing { color: #2e7d32; }
 .word-status.missing { color: #c62828; }
+/* 答題回應：同句子題一致（綠＝對、紅＝錯、橙＝差少少） */
+.word-status.good { color: #2e7d32; animation: pop .3s; }
+.word-status.bad { color: #c62828; }
+.word-status.warn { color: #b26a00; }
+.word-card.correct .word-image-btn { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.25), var(--shadow); }
+.word-card.wrong .word-image-btn { border-color: #c62828; box-shadow: 0 0 0 3px rgba(198,40,40,.25), var(--shadow); animation: shake-x .4s; }
 
 /* Power Up Zone 嘅圖片單字題 */
 .powerup-word-image {
