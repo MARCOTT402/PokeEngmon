@@ -334,6 +334,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .guide-link:hover { color: var(--blue-dark, #1565c0); }
 
 .guide-box { text-align: left; max-height: 70dvh; overflow-y: auto; }
+.guide-box a { color: var(--blue); font-weight: 700; }
 .guide-box h3 { text-align: center; margin: 0 0 4px; }
 .guide-lead { color: #5a6478; font-size: .95rem; margin: 0 0 14px; }
 .guide-section {

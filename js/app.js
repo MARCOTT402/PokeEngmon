@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v118";
+const APP_VERSION = "v119";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -388,7 +388,7 @@ const App = {
         <div class="guide-section">
           <h4>Method A — Ask AI to generate questions (easiest)</h4>
           <ol>
-            <li>Copy the full prompt from the <b>AI出題指引.md</b> file in this project (or the text below).</li>
+            <li>Copy the full prompt from <a href="AI%E5%87%BA%E9%A1%8C%E6%8C%87%E5%BC%95.md" target="_blank" rel="noopener">📄 AI出題指引.md</a> (opens in a new tab).</li>
             <li>Paste it to ChatGPT / Claude / Gemini, and add what you want, e.g.<br><i>"Generate 30 P.3 questions on Past Tense, split into 2 courses, 2–3 topics each, level 1–4."</i></li>
             <li>The AI will return CSV text. Copy it.</li>
             <li>Back here → <b>Settings → 📥 Import CSV Questions → Option 2: paste the content</b> → Import.</li>
