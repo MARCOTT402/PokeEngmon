@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v125";
+const APP_VERSION = "v126";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -623,7 +623,7 @@ const App = {
     /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!" */
     if (cap && window.CaptureScene && CaptureScene.audio) {
       const jingleUrl = cap.caught ? "assets/bgm/obtained-pokemon.mp3" : "assets/bgm/obtained-berry.mp3";
-      CaptureScene.audio.playOnce(jingleUrl, 0.6);
+      CaptureScene.audio.playOnce(jingleUrl, 0.4);
     }
     /* 捕捉完結：jingle 播完後恢復全域 BGM */
     if (window.CaptureScene && CaptureScene.audio) {
