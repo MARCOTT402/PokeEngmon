@@ -7,7 +7,7 @@ const Explain = {
   /**
    * 在 container 內渲染一個錯題解釋卡
    * @param {HTMLElement} container
-   * @param {object} q  題目物件（QUESTION_BANK 項目）
+   * @param {object} q  題目物件（句子題／圖片題通用）
    * @param {string|null} chosen  學生揀錯嘅選項（null 則只顯示答案）
    */
   render(container, q, chosen) {
