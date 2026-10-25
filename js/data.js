@@ -317,7 +317,7 @@ async function loadSiteQuestions() {
    - Course   : 課題（例如 Dictation）
    - Type     : 題型（例如 Noun）
    - Category : 主題分組（例如 Animals / Food），用於錯題回顧顯示
-   - Image    : 圖片相對路徑（例如 word_image/elephant.png）
+   - Image    : 圖片相對路徑（例如 word_image/elephant.webp）
    - Accept   : 其他可接受串法，用 / 分隔（例如 color/colour）
    - Source   : 圖片來源，供版權聲明列明（可留空） */
 function wordsFromCSV(text) {
@@ -341,7 +341,7 @@ function wordsFromCSV(text) {
       sentence: "___",                              // 令舊有解釋／Power Up 渲染器可直接重用
       answer: word,
       accept: String(acceptRaw || "").split(/[|/]/).map(s => s.trim()).filter(Boolean),
-      image: imageRaw || `word_image/${word.toLowerCase().replace(/\s+/g, "_")}.png`,
+      image: imageRaw || `word_image/${word.toLowerCase().replace(/\s+/g, "_")}.webp`,
       source: sourceRaw || "",
       custom: false,
       explain: { keyword: "", hint: "" }
