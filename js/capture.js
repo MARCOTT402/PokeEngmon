@@ -553,7 +553,7 @@ class CaptureAudio {
     if (!this._townBuf) { this._townPending = true; this._loadTownBuffer(); return; }
     try {
       const g = this.ctx.createGain();
-      g.gain.value = 0.25;
+      g.gain.value = 0;
       g.connect(this.ctx.destination);
       const src = this.ctx.createBufferSource();
       src.buffer = this._townBuf;
