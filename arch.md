@@ -1,6 +1,7 @@
 # PokeEngmon 架構文檔（ARCH）
 
 > 純前端 SPA + Supabase（PostgreSQL + Auth + REST）。無 Node、無 build step，直接 deploy 去 GitHub Pages。
+> 目前版本：**v116**（2026-10）
 
 ---
 
@@ -8,13 +9,13 @@
 
 | 層 | 技術 |
 |----|------|
-| 前端 | 原生 HTML/CSS/JS（無框架） |
-| 動畫 | GSAP、Three.js（捕捉場景） |
+| 前端 | 原生 HTML/CSS/JS（無框架、無 build step） |
+| 動畫 | GSAP（快龍扭蛋）、Three.js（捕捉場景） |
 | 後端 | Supabase（PostgreSQL + PostgREST + GoTrue Auth） |
-| 圖鑑素材 | PokeAPI sprites + 本地 pre-download 嘅 151 個 pixel GIF |
-| 音效 | 本地 BGM + 寶可夢叫聲 MP3 |
-| 部署 | GitHub Pages（靜態） |
-| PWA | Service Worker + manifest.json |
+| 圖鑑素材 | PokeAPI sprites + 本地 pre-download 嘅 151 個 pixel GIF + 官方 artwork |
+| 音效 | 本地 BGM + 寶可夢叫聲 MP3 + Azure TTS（圖片題單字）+ 瀏覽器 speechSynthesis 兜底 |
+| 部署 | GitHub Pages（靜態，main branch root） |
+| PWA | Service Worker + manifest.json，容錯式逐個快取 |
 
 ---
 
@@ -23,44 +24,51 @@
 ```
 PokeEngmon/
 ├── index.html              # 單一入口，所有 view 用 .active 切換
-├── sw.js                   # Service Worker（CACHE_NAME 版本化）
+├── sw.js                   # Service Worker（CACHE_NAME 跟 APP_VERSION）
 ├── manifest.json           # PWA manifest
-├── supabase-config.js      # Supabase URL + anon key（已 commit）
+├── prd.md / arch.md        # 產品需求 / 架構（就係呢兩份）
+├── AI出題指引.md            # 家長貼俾 AI 出題嘅 prompt
+├── supabase-config.js      # Supabase URL + anon key（已 commit，公開金鑰）
 ├── supabase-schema.sql     # 完整 schema + RPC + RLS（reference）
 ├── supabase-migrate-*.sql  # 遷移腳本（按日期）
 ├── css/style.css
 ├── js/
-│   ├── app.js              # 主流程：路由、主畫面、結算、進化、modal
-│   ├── data.js             # EVOLUTION_CHAINS、SPECIES、GAME_CONFIG、RARITY
-│   ├── storage.js          # LocalStorage 層：defaultState、load/save、clearGameProgress
-│   ├── quiz.js             # 答題邏輯
-│   ├── sm2.js              # SM-2 SRS：listAll、upsertCard、appendHistory
-│   ├── sync.js             # 雲端同步：pushState、pull、queueUpsert、_flush
-│   ├── supabase-auth.js    # Google OAuth + RPC（awardRoundDiamonds、settleCapture、migrateAnonymous）
-│   ├── gacha.js            # 抽卡動畫 + obtainPokemon 調用
-│   ├── capture.js          # Three.js 捕捉場景
+│   ├── app.js              # 主流程：路由、主畫面、結算、進化、modal、版本號
+│   ├── data.js             # EVOLUTION_CHAINS、SPECIES、GAME_CONFIG、RARITY、wordAudioURL()
+│   ├── storage.js          # LocalStorage 層：loadState、saveState、obtainPokemon、deriveEntryFields、migrateEntries
+│   ├── quiz.js             # 答題邏輯 + _showFeedback（所有題型共用嘅回應入口）
+│   ├── powerup.js          # Power Up Zone（回合尾改錯）
+│   ├── sm2.js              # SM-2 SRS：computeBestQ、updateCard、computeEF、buildSession（只抽到期卡）
+│   ├── sync.js             # 雲端同步：pushState（淨 trainer_name）、pull、queueUpsert、_flush
+│   ├── supabase-auth.js    # Google OAuth + 所有 RPC wrapper（awardRoundDiamonds、gachaPull、obtainCapture、addEntryExp、useEntryCandy、allocEv、importState、settleCapture、migrateAnonymous）
+│   ├── gacha.js            # 快龍扭蛋機 UI + 稀有度爆發動畫（v102）
+│   ├── capture.js          # Three.js 捕捉場景 + 音頻管理（Web Audio API）
 │   ├── pokedex.js          # 圖鑑 UI
-│   ├── pokemon.js          # 寶可夢數值：expAtLevel、levelSpan、IV/EV、進化
-│   ├── powerup.js          # 強化／糖果
+│   ├── pokemon.js          # 寶可夢數值：expAtLevel、levelSpan、IV/EV、進化、initialMoves、learnsetOf
 │   ├── calendar.js         # 練習日曆
-│   └── explain.js          # 錯題解析
+│   └── explain.js          # 錯題解析（關鍵詞箭咀）
 ├── data/
-│   ├── pokemon-151.json    # 151 隻寶可夢資料
-│   └── moves.json          # 技能資料
+│   ├── pokemon-151.json    # 151 隻寶可夢資料（含 learnset）
+│   └── moves.json          # 技能資料（威力、命中、PP、屬性、效果）
 ├── assets/
-│   ├── animated/           # 1-151.gif（pixel 動畫）
-│   ├── cries/              # 1-151.mp3（叫聲）
+│   ├── animated/           # 1-151.gif（pixel 動畫，首頁拍檔顯示）
+│   ├── cries/              # 1-151.mp3（叫聲，僅首次解鎖播放）
 │   ├── bgm/                # 背景音樂
 │   └── types/              # 屬性 icon
-├── Q_folder/             # 所有考題集中放呢度，方便擴充新題型
-│   ├── questions/        # 句子題
+├── Q_folder/               # 所有考題集中放呢度，方便擴充新題型
+│   ├── questions/          # 句子題
 │   │   ├── questions.csv
 │   │   └── questions_images/
-│   └── picture_words/    # 圖片單字題
+│   └── picture_words/      # 圖片單字題
 │       ├── picture_words.csv
 │       ├── picture_words_images/
-│       └── picture_words_audio/   # 單字發音 mp3（<word>.mp3）
-└── .trae/skills/...        # pre-op checklist skill
+│       └── picture_words_audio/   # 單字發音 mp3（<word>.mp3，Azure Jenny -10%）
+├── tools/
+│   ├── gen_word_tts.py     # 離線生成圖片題 TTS mp3（用 Azure Speech）
+│   └── git_commit_push.py  # 一鍵 git add/commit/push（見 .trae/documents/git-commit-push-guide.md）
+└── .trae/
+    ├── documents/          # 歷次 plan / spec / 設計文檔
+    └── skills/             # 兩個常駐 skill：preop-checklist、question-authoring
 ```
 
 ---
@@ -69,19 +77,24 @@ PokeEngmon/
 
 ```
 index.html
-  └─ 載入所有 js（global functions，無 module system）
+  └─ 載入所有 js（global functions / objects，無 module system）
      │
-     ├─ data.js ───────────── EVOLUTION_CHAINS / SPECIES / PULLABLE / RARITY
-     ├─ storage.js ────────── loadState() / saveState() / obtainPokemon()
-     ├─ pokemon.js ────────── expAtLevel() / addEntryExp() / entryCurrentSpecies()
-     ├─ sm2.js ────────────── SM2.listAll() / SM2.upsertCard() / SM2.appendHistory()
-     ├─ supabase-auth.js ──── SupabaseAuth（OAuth + RPC）
-     ├─ sync.js ───────────── Sync.pushState() / Sync.pull() / Sync.queueUpsert()
-     ├─ quiz.js / gacha.js / capture.js / pokedex.js / ...
-     └─ app.js ────────────── App（路由 + 協調所有模組）
+     ├─ data.js ───────────── EVOLUTION_CHAINS / SPECIES / GAME_CONFIG / RARITY / wordAudioURL
+     ├─ storage.js ────────── loadState() / saveState() / obtainPokemon() / deriveEntryFields()
+     ├─ pokemon.js ────────── expAtLevel() / addEntryExp() / entryCurrentSpecies() / initialMoves()
+     ├─ sm2.js ────────────── SM2.computeBestQ() / updateCard() / buildSession()（只抽到期卡）
+     ├─ supabase-auth.js ──── SupabaseAuth（OAuth + 所有 RPC wrapper，要 mount 上 window）
+     ├─ sync.js ───────────── Sync.pushState()（淨 trainer_name）/ Sync.pull() / Sync.queueUpsert()
+     ├─ quiz.js ───────────── Quiz（_showFeedback 係所有題型嘅唯一回應入口）
+     ├─ powerup.js ────────── PowerUp（Power Up Zone 三階腳架）
+     ├─ gacha.js ──────────── 快龍扭蛋機（拖手臂 → 跌球 → 爆發 → 檢視卡）
+     ├─ capture.js ────────── 捕捉場景 + audio 子模組（正確/錯誤 SFX、playWord、_speakFallback）
+     ├─ pokedex.js / calendar.js / explain.js
+     └─ app.js ────────────── App（路由 + 協調所有模組 + 版本號 + 啟動流程）
 ```
 
 所有模組用 **global function / object** 溝通，無 import/export。
+例外：`capture.js` 係 ES module，但照樣 mount 上 `window.CaptureScene`。
 
 ---
 
@@ -92,36 +105,48 @@ index.html
 ```
 pokeengmon_state_v1 = {
   device_id, playerName, diamonds,
-  entries: [{ uid, chainKey, stage, exp, level, ownedSpecies, ivs, evs, ... }],
+  entries: [{ uid, chainKey, stage, exp, level, ownedSpecies, ivs, evs, moves, candies, dupes, branch, ... }],
   activeUid, records: { "YYYY-MM-DD": [...] },
-  customQuestions, totalSets, totalCorrect, bestStreak
+  customQuestions, totalSets, totalCorrect, bestStreak,
+  pendingExp,            # 冇拍檔時暫存嘅 EXP
+  _googleMigrated        # 已經連接咗 Google 帳戶
 }
 
-pokeengmon_sm2_cards_v2  → { cardId: { card_id, card_type, next_review_at, ... } }
-pokeengmon_sm2_history_v2 → [ { card_id, ts, q_score, response_ms, ... } ]
+pokeengmon_sm2_cards_v2  → { cardId: { card_id, card_type, next_review_at, interval_days, ease_factor, ... } }
+pokeengmon_sm2_history_v2 → [ { card_id, ts, q_score, response_ms, levenshtein_distance, is_typo } ]
 pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 ```
+
+**關鍵**：`level / stage / ownedSpecies / moves / stars` 係 `(chainKey, exp, dupes, branch)` 嘅 **deterministic derived 欄位**，由 `deriveEntryFields()` 重推；server row 經 `localEntryFromServer()` / `adoptServerEntry()` 落地。
 
 ### 4.2 雲端資料模型（Supabase）
 
 | Table | PK | 說明 |
 |-------|----|------|
-| `user_account` | `id uuid` | 鑽石、統計、trainer name |
-| `user_entries` | `id uuid` | 擁有嘅寶可夢（chain_key, stage, exp, level, owned_species[]） |
-| `user_cards` | `(account_id, card_id)` | SM-2 卡片狀態 |
+| `user_account` | `id uuid` | 鑽石、統計、trainer name、`imported_at`（一次性 import 鎖） |
+| `user_entries` | `id uuid` | 擁有嘅寶可夢（chain_key, exp, dupes, branch, candies, ivs, evs） |
+| `user_cards` | `(account_id, card_id)` | SM-2 卡片狀態（句子題 + `w:` 前綴嘅圖片題共用） |
 | `user_history` | `id bigserial` | 答題記錄（q_score, response_ms, levenshtein_distance） |
-| `user_captures` | `id bigserial` | 捕捉記錄（dex_id, success, new_pokemon） |
+| `user_captures` | `id bigserial` | 捕捉記錄（每次捕捉無論成功失敗都寫一條） |
+| `user_imports` | `id bigserial` | import_state 審計記錄（v106 加） |
 
 ### 4.3 同步方向
 
 ```
-本地（localStorage）──pushState──▶ 雲端（Supabase）
-本地（localStorage）◀──pull────── 雲端（Supabase）
+本地（localStorage）──敏感操作──▶ 雲端 RPC（server 權威）
+本地（localStorage）──pushState──▶ 雲端（淨 trainer_name）
+本地（localStorage）◀──pull────── 雲端（完整還原 account/entries/cards）
 ```
 
-**pushState 觸發時機**：gacha reveal、quiz 完成、capture 成功、新帳戶 migrate。
-**pull 觸發時機**：page load（已登入／已 migrate）。
-**SM-2 cards/history**：`queueUpsert` / `queueHistory` 背景 flush（1 秒 debounce + beforeunload）。
+**v99 起嘅規則**：
+- **敏感數值**（diamonds、entries、exp、IVs/EVs、candies）→ 全部行 server RPC，前端直寫會被 column-level grants 擋（403）
+- **非敏感**（trainer_name）→ `Sync.pushState()`
+- **SM-2 cards/history** → `Sync.queueUpsert()` / `queueHistory()`，背景 queue 1s debounce + `beforeunload` flush
+
+**觸發時機**：
+- `pushState`：trainer name 改變
+- RPC：答題結算（`awardRoundDiamonds`）、稀有抽（`gachaPull`）、捕捉（`obtainCapture`）、EXP（`addEntryExp`）、糖果（`useEntryCandy`）、EV（`allocEv`）、import（`importState`）
+- `pull`：page load（已登入）、登入後、import 後
 
 ---
 
@@ -129,64 +154,105 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 
 ### 5.1 首次使用（匿名）
 1. `ensureDeviceId()` 生成 UUID，存 localStorage
-2. `Sync.pushState()` 以 anon 身份寫入 `user_account`（`device_id` 綁定）
-3. RLS policy `account_anon_rw` 用 `current_setting('app.device_id')` 過濾
+2. RLS policy 用 `app.device_id` session 變數過濾
+3. **匿名用戶唔上傳 user_cards / user_history**（PostgREST 設唔到 session 變數，RLS 會擋）— 匿名進度純本地
 
 ### 5.2 Google OAuth 登入
-1. `SupabaseAuth.signInWithGoogle()` → redirect 去 Google
+1. `SupabaseAuth.signInWithGoogle()` → 清本地 `pokeengmon_auth_session` → redirect 去 Google（URL 必須有 `prompt=select_account`）
 2. Google redirect 返 `#access_token=...`
-3. `tryParseSessionFromURL()` 解析 hash → 存 localStorage
+3. `tryParseSessionFromURL()` 從 **hash fragment**（唔係 query string）解析 → 存 localStorage
 4. `migrateAnonymous(deviceId)` RPC：
-   - 帳戶已存在 → return false → pull 雲端
-   - 匿名數據存在 → 搬去 auth uid → return false → pull
-   - 全新 → return true → push 本地上去
+   - 帳戶已存在 → pull 雲端
+   - 匿名數據存在 → 搬去 auth uid → pull
+   - 全新 → return true → push 本地上去（觸發 `importState`，一次性鎖定，鑽石固定派 20 粒）
 5. `st._googleMigrated = true`
+6. Toast 顯示實際登入嘅 email（俾用戶核對係咪預期帳戶）
 
 ### 5.3 答題結算
-1. `onSetComplete(data)` 計算 exp
-2. `awardRoundDiamonds(score, total)` RPC（server 計算 + 累加 diamonds）
-3. `addEntryExp(entry, exp)` 更新拍檔等級／進化
-4. `saveState()` + `Sync.pushState()` 同步
+1. `onSetComplete(data)` 計算 score + EXP
+2. 如有錯題 → 入 Power Up Zone，**全部改啱先至結算**
+3. 調用 `SupabaseAuth.awardRoundDiamonds(score, total)` RPC → server 返回權威餘額，前端採用（**唔好本地 `+=`**）
+4. RPC 失敗 → fallback 本地計算（離線可用）
+5. `addEntryExp(entryId, delta)` RPC 更新拍檔等級／進化
+6. SM-2 卡片背景 `queueUpsert`（唔阻塞 UI）
 
-### 5.4 抽卡
-1. `st.diamonds -= 3` + `saveState()`
-2. 動畫 → `obtainPokemon(chainKey, "rare")` 建立 entry
-3. `Sync.pushState()` 同步 diamonds + entry
+### 5.4 Power Up Zone（v93 起）
+1. 答題 set 完成後，錯題進入 `PowerUp.start(wrongList, onDone)`
+2. 每題三階腳架：
+   - 第 1 次仍錯 → 只俾 Hint（關鍵詞高亮 + 首字母 + 字數 + Levenshtein 差距）
+   - 第 2 次仍錯 → 顯示完整解析 + 正確答案，要求重答至 Dist=0
+3. 改啱一題 → +5 EXP（`EXP_PER_FIX`）+ 浮字動畫
+4. 全部改啱 → 全屏 ALL FIXED 慶祝 pop → 先統一更新所有錯題嘅 SRS → 先跳入 WARNING 捕捉頁
+5. 用戶中途退出 → 彈確認「fixes will be lost」，確認後放棄本回合
 
-### 5.5 捕捉
+### 5.5 稀有抽（v102 快龍扭蛋機）
+1. 主頁撳 💎 → 入快龍頁
+2. 用戶拖／撳 `#dm-arm` ≥ 72% → 觸發動畫
+3. **即時開動畫**（唔等 server），背景同時調用 `SupabaseAuth.gachaPull(initExp)` RPC
+4. RPC 返回：原子扣 💎3、server roll rarity（rare 80% / epic 15% / legend 5%）、roll chain、生成 entry row
+5. 前端 `adoptServerEntry()` 落地 → 全屏稀有度爆發動畫 → 檢視卡
+6. 檢視卡兩個掣：「💎 ×3 TO GO!」（再抽）/「‹ Back to Home」
+7. 鑽石唔夠 → 按鈕 disabled + 顯示「Need 💎3 (you have N)」
+8. RPC 失敗 → fallback 本地 `obtainPokemon(chainKey, "rare")`（離線可用）
+9. 快龍頁揭示時每次播叫聲（覆蓋「僅首次解鎖播放」嘅一般規則）
+
+### 5.6 捕捉
 1. Three.js 場景 → `onCaught` callback
-2. `obtainPokemon(chainKey, "normal")` 建立 entry
-3. `settleCapture(dexId, 1)` RPC 記錄（只寫 `user_captures`，唔寫 `user_entries`）
-4. `Sync.pushState()` 同步 entry
+2. `SupabaseAuth.obtainCapture(chainKey, dexId)` RPC 生成 server 端 entry（server 決定 IV 等）
+3. `SupabaseAuth.settleCapture(dexId)` RPC 記錄 `user_captures`（每次捕捉必寫，無論成功失敗）
+4. 捕捉成功唔會自動替換拍檔
+5. BGM 音量曲線：WARNING→草叢 0.55 → 第一下 400ms 收到 0.32 → 拋出後 6.2 秒線性淡出到 0（**用 JS setInterval 逐格調 gain.value**，唔好用 AudioParam 長 ramp — iOS WebKit 有 bug）
+
+### 5.7 TTS 兜底（v116）
+1. `playWord(url, onFail)` 試 fetch mp3 → decodeAudioData → 播
+2. 失敗 → `_speakFallback(word)`：
+   - 等 `onvoiceschanged`（最多 1.5s 超時）
+   - 優先揀 `en-*` 語音
+   - `rate 0.85 / pitch 1 / volume 1`，講之前 `cancel()` 清隊列
+3. 完全失敗 → 顯示「🔇 Audio unavailable」常駐提示（唔係 3 秒 toast）
 
 ---
 
-## 6. 防金手指設計
+## 6. 防金手指設計（v99 起）
 
 | 機制 | 做法 |
 |------|------|
-| 鑽石 | `award_round_diamonds` RPC（security definer）server 計算，前端唔可以硬寫 |
+| 鑽石 | `award_round_diamonds` RPC（security definer）server 計算 + 累加，前端唔可以硬寫 |
+| 抽卡 | `gacha_pull` RPC 原子扣鑽 + server roll rarity/chain，前端唔控制結果 |
 | 捕捉成功率 | `settle_capture` RPC server 用 `random()` 決定 |
-| Sign out | `clearGameProgress()` 清除 localStorage，防止離線改數再 sign in |
+| EXP / 糖果 / EV | `add_entry_exp` / `use_entry_candy` / `alloc_ev` RPC server 計算 |
+| 匯入進度 | `import_state` RPC 一次性鎖定（`user_account.imported_at`），鑽石固定派 20，server clamp 上限（entries ≤151, exp ≤1.25M, candies ≤99, dupes ≤100） |
+| Column-level grants | 收回 anon 對敏感欄（diamonds、entries.exp、entries.candies 等）嘅直寫權限 |
+| RPC 身份驗證 | 每個 SECURITY DEFINER RPC 內部用 `auth.uid()` 驗證 caller；`revoke execute from public, anon` + `grant execute to authenticated` |
+| Sign out | `clearGameProgress()` 清除 localStorage，防止離線改數再 sign in 上傳 |
 | RLS | anon 綁定 device_id；auth 綁定 auth.uid()；用戶只可讀寫自己數據 |
+| plpgsql 變數 | `v_` 前綴命名，避免同 column 撞名（42702 ambiguous） |
+
+**已知暫緩**（記低咗但未做）：`award_round_diamonds` 無回合真實性檢查、`obtain_capture` 無回合證明、`add_entry_exp` 無速率限制。
 
 ---
 
 ## 7. 已知坑位（重要！）
 
-> 詳見 `.trae/skills/pokeengmon-preop-checklist/SKILL.md`
+> 詳見 `.trae/skills/pokeengmon-preop-checklist/SKILL.md`，呢度只係精選
 
-1. **Version bump 要改 3 個檔**：`app.js` + `sw.js` + `index.html` 嘅 `?v=NN`
+1. **Version bump 要改 3 個檔**：`app.js` + `sw.js` + `index.html` 嘅 `?v=NN`，三處同號
 2. **Upsert 必須有 `Prefer: resolution=merge-duplicates`**，否則 `on_conflict` 唔生效 → 409
-3. **`uuid` column 要用 valid UUID**（`crypto.randomUUID()`），否則 → 400 Invalid input
+3. **`uuid` column 要用 valid UUID**（`crypto.randomUUID()`），唔好用 base36 timestamp → 400 Invalid input
 4. **`chain_key` 要用鏈名**（如 `bulbasaur`），唔好用 `dex_<id>`，否則 render 搵唔到 chain
-5. **改 diamonds/entries/exp 後必須 call `Sync.pushState()`**，否則 pull 會覆蓋本地
+5. **敏感數值唔好再 pushState**：v99 起一律行 RPC，直寫會被 403 擋
+6. **新增 RPC 必須 live smoke-test**：本地 fallback 會令壞 RPC 睇落冇事
+7. **Sync.pull 前要 `await loadPokemonDex()`**：否則 `initialMoves()` 返回空陣列，新抽嘅寶可夢無招式（v113 教訓）
+8. **新增題型必須共用 `Quiz._showFeedback`**：唔好另起爐灶（v114 教訓）
+9. **Service Worker 用容錯式逐個快取**：`caches.addAll()` 一個 404 全盤失敗
+10. **圖片題 mp3 放 `Q_folder/picture_words/picture_words_audio/`**：唔好放返 `assets/tts/`
 
 ---
 
 ## 8. 部署
 
-1. `git push` 去 GitHub
-2. GitHub Pages 自動部署（`main` branch root）
-3. Service Worker `CACHE_NAME` 改 → 瀏覽器自動更新
-4. Supabase schema 變更：Dashboard → SQL Editor 跑 `supabase-migrate-*.sql`
+1. 改完代碼 → bump 版本（3 處同步）
+2. `python tools/git_commit_push.py -m "vNN: ..."` 或手動 `git add / commit / push`
+3. GitHub Pages 自動部署（main branch root，幾十秒）
+4. Service Worker `CACHE_NAME` 改 → 瀏覽器下次開頁面自動安裝新 SW → `skipWaiting` 接管 → 前端 `controllerchange` 自動刷新
+5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）
