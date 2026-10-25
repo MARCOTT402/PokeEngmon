@@ -80,6 +80,8 @@ After finishing ANY change in this repo:
 
 Note: this shell is Windows PowerShell 5 — `&&` is NOT supported. Chain commands with `;` instead.
 
+**Fast path**: `python tools/git_commit_push.py -m "vNN: ..."` does add + commit + push in one shot (commit message fed via stdin, so no Windows mojibake). Full usage, gotchas and troubleshooting: `.trae/documents/git-commit-push-guide.md`. Note its default staging behaves like `git add -A`; pass `--paths <files...>` when only specific files changed.
+
 If the user reports "the site still shows the old version", check `git status`/`git log` first — most likely the change was never pushed.
 
 ## Rule 7 — SM-2 sessions only pull DUE cards
