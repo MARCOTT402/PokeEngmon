@@ -113,7 +113,7 @@
 
 ### 3.10 音效與無障礙
 
-- 全域 BGM：Nuvema Town，音量 0.4，捕捉場景暫停、結算 jingle 完後恢復
+- 全域 BGM：One Summer's Day（Spirited Away / Joe Hisaishi），音量 0.25，捕捉場景暫停、結算 jingle 完後恢復
 - 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）
 - 圖片題 TTS：Azure `en-US-JennyNeural` rate -10%，本地 mp3 + **v116 起 speechSynthesis 兜底**（mp3 缺失都唔會靜音）
 - 寶可夢叫聲：本地 1-151 mp3，僅首次解鎖播放

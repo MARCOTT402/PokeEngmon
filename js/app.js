@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v120";
+const APP_VERSION = "v121";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -929,8 +929,9 @@ const App = {
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
 
         <h4>Music &amp; Sound Credits</h4>
-        <p>Background music (<i>Nuvema Town</i>, from Pokémon Black/White) and battle/jingle tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
-        <p>Soundtrack resources referenced from <a href="https://downloads.khinsider.com" target="_blank" rel="noopener">KHInsider Video Game Music</a> (unofficial fan archive).</p>
+        <p>Background music: <i>One Summer's Day</i>, from the Studio Ghibli film <i>Spirited Away</i>, composed by Joe Hisaishi. © Studio Ghibli / Tokuma Japan Communications Co., Ltd. All rights belong to their respective owners.</p>
+        <p>Battle/jingle tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
+        <p>Pokémon soundtrack resources referenced from <a href="https://downloads.khinsider.com" target="_blank" rel="noopener">KHInsider Video Game Music</a> (unofficial fan archive).</p>
 
         <h4>In-Game Items</h4>
         <p>All diamonds, pull tickets, candies, cards, and Pokémon in this app are virtual learning rewards. They have no real-world value and cannot be exchanged for money or physical goods. There is no real-money trading.</p>
@@ -1166,7 +1167,7 @@ const App = {
     this.renderHome();
     this.showView("view-home");
 
-    /* 全域 BGM（Nuvema Town）+ Entry Gate：
+    /* 全域 BGM（One Summer's Day）+ Entry Gate：
        1) 開頁即試播 —— PWA / 高互動用戶可直接出聲，唔彈窗
        2) Autoplay 被擋 → 彈 entry gate，撳 YES!（合法手勢）解鎖 + 播 BGM */
     const entryGate = document.getElementById("entry-gate");

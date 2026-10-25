@@ -11,7 +11,7 @@
 
 | 音樂 | 搜尋關鍵字 | 位置（大約） | 預設音量 |
 |---|---|---|---|
-| 主頁全域音樂（Nuvema Town） | `g.gain.value = 0.25` | `startTownBGM()` 入面，約第 556 行 | 0.25 |
+| 主頁全域音樂（One Summer's Day） | `g.gain.value = 0.25` | `startTownBGM()` 入面，約第 556 行 | 0.25 |
 | 捕捉場景戰鬥音樂（Wild Battle） | `g.gain.value = 0.55` | `startBGM()` 入面，約第 378 行 | 0.55 |
 
 音量數字規則：
