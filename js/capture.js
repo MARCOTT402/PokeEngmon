@@ -540,7 +540,7 @@ class CaptureAudio {
     this.ensure();
     if (!this.ctx || this._townBuf || this._townBufLoading) return;
     this._townBufLoading = true;
-    fetch("assets/bgm/nuvema-town.mp3")
+    fetch("assets/bgm/one-summers-day.mp3")
       .then(r => r.arrayBuffer())
       .then(ab => this.ctx.decodeAudioData(ab))
       .then(buf => { this._townBuf = buf; if (this._townPending) { this._townPending = false; this.startTownBGM(); } })
