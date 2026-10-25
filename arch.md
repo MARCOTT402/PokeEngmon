@@ -51,15 +51,15 @@ PokeEngmon/
 │   ├── animated/           # 1-151.gif（pixel 動畫）
 │   ├── cries/              # 1-151.mp3（叫聲）
 │   ├── bgm/                # 背景音樂
-│   ├── types/              # 屬性 icon
-│   └── tts/w/              # 單字發音
+│   └── types/              # 屬性 icon
 ├── Q_folder/             # 所有考題集中放呢度，方便擴充新題型
 │   ├── questions/        # 句子題
 │   │   ├── questions.csv
 │   │   └── questions_images/
 │   └── picture_words/    # 圖片單字題
 │       ├── picture_words.csv
-│       └── picture_words_images/
+│       ├── picture_words_images/
+│       └── picture_words_audio/   # 單字發音 mp3（<word>.mp3）
 └── .trae/skills/...        # pre-op checklist skill
 ```
 

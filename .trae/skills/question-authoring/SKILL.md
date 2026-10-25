@@ -93,7 +93,7 @@ Images for word questions live in `Q_folder/picture_words/picture_words_images/`
 ## Rule 9 — Word-image TTS: Azure Jenny, rate −10%, per-word cache
 
 - TTS for word/image questions uses Azure voice `en-US-JennyNeural` at rate `-10%`.
-- Audio is stored per-word under `assets/tts/w/` and reused across questions — generate once per word, never per-question.
+- Audio is stored per-word under `Q_folder/picture_words/picture_words_audio/` named `<word>.mp3` (lowercase, spaces → `_`) and reused across questions — generate once per word, never per-question. The path is built by `wordAudioURL()` in `js/data.js`.
 
 ## Rule 10 — SRS keys for word/image questions use the `w:` prefix
 

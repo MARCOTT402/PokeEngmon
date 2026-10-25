@@ -35,8 +35,8 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV_PATH = ROOT / "picture_words.csv"
-OUT_DIR = ROOT / "assets" / "tts" / "w"
+CSV_PATH = ROOT / "Q_folder" / "picture_words" / "picture_words.csv"
+OUT_DIR = ROOT / "Q_folder" / "picture_words" / "picture_words_audio"
 OUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
 
 

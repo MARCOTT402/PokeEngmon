@@ -311,9 +311,19 @@ async function loadSiteQuestions() {
   }
 }
 
+/* 圖片單字題語音路徑：Q_folder/picture_words/picture_words_audio/<word>.mp3
+   命名同 tools/gen_word_tts.py 嘅 safe_name() 保持一致（細楷、空格→_、只留 a-z0-9_-'） */
+const WORD_AUDIO_DIR = "Q_folder/picture_words/picture_words_audio";
+function wordAudioURL(word) {
+  const key = String(word || "").trim().toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_\-']/g, "");
+  return `${WORD_AUDIO_DIR}/${key}.mp3`;
+}
+
 /* 載入圖片單字題庫（picture_words.csv）
    欄位：Word,Level,Course,Type,Category,Image,Accept,Source
-   - Word     : 正確串法（亦係語音檔名：assets/tts/w/<word>.mp3）
+   - Word     : 正確串法（亦係語音檔名：Q_folder/picture_words/picture_words_audio/<word>.mp3）
    - Course   : 課題（例如 Dictation）
    - Type     : 題型（例如 Noun）
    - Category : 主題分組（例如 Animals / Food），用於錯題回顧顯示
