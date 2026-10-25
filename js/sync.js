@@ -177,7 +177,13 @@ window.Sync = (() => {
          server 權威欄位：exp / ivs / evs / ev_points / candies / dupes / branch / active
          derived 欄位（level / stage / ownedSpecies / moves / stars）：唔信 DB，
          由 deriveEntryFields 按 (chainKey, exp, dupes, branch) 重推 —— v99 起敏感欄
-         唔俾 client 直寫，derived 欄位喺 DB 只係近似值 */
+         唔俾 client 直寫，derived 欄位喺 DB 只係近似值
+
+         v113：deriveEntryFields 入面嘅 initialMoves 要讀 POKEMON_DEX，
+         但 Sync.pull 可能喺 loadPokemonDex 完成前就跑（app.js init 頂部 fire-and-forget）。
+         唔等嘅話 initialMoves 會回傳 [] → entry.moves 變空數組 → 永久冇招式。
+         所以喺 derive 之前一定要等 POKEMON_DEX 就緒。 */
+      await loadPokemonDex();
       if (Array.isArray(entries)) {
         const st = loadState();
         st.entries = entries.map(e => {

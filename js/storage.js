@@ -313,6 +313,13 @@ function migrateEntries() {
   }
   st.entries.forEach(e => {
     if (ensureEntryPokemonData(e)) changed = true;
+    /* v113：修復舊存檔（Sync.pull 喺 POKEMON_DEX 就緒前跑過，moves 被寫成 []）。
+       migrateEntries 喺 loadPokemonDex 之後先跑（app.js:1105），所以呢度可以安全重推。
+       用 deriveEntryFields 而非 initialMoves，先至包含升級學到嘅招（lv>1 啱）。 */
+    if ((!e.moves || e.moves.length === 0) && typeof POKEMON_DEX !== "undefined" && POKEMON_DEX) {
+      e.moves = deriveEntryFields(e).moves;
+      changed = true;
+    }
   });
   if (changed) saveState();
 }
