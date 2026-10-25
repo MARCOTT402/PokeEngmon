@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v116";
+const APP_VERSION = "v117";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -378,6 +378,63 @@ const App = {
     }
   },
 
+  /* ---------- 家長自訂題教學（由 Settings → How to create your own questions 開啟） ---------- */
+  openParentGuide() {
+    this.showModal(`
+      <div class="guide-box">
+        <h3>📖 How to Create Your Own Questions</h3>
+        <p class="guide-lead">You can add your own English questions for your child — no coding needed. There are two ways:</p>
+
+        <div class="guide-section">
+          <h4>Method A — Ask AI to generate questions (easiest)</h4>
+          <ol>
+            <li>Copy the full prompt from the <b>AI出題指引.md</b> file in this project (or the text below).</li>
+            <li>Paste it to ChatGPT / Claude / Gemini, and add what you want, e.g.<br><i>"Generate 30 P.3 questions on Past Tense, split into 2 courses, 2–3 topics each, level 1–4."</i></li>
+            <li>The AI will return CSV text. Copy it.</li>
+            <li>Back here → <b>Settings → 📥 Import CSV Questions → Option 2: paste the content</b> → Import.</li>
+          </ol>
+        </div>
+
+        <div class="guide-section">
+          <h4>Method 2 — Write or edit the CSV yourself</h4>
+          <p>One question per line, 8 columns, comma separated:</p>
+          <pre class="guide-pre">No,Course,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
+          <ul>
+            <li><b>No</b> (optional): five digits, e.g. <code>00001</code> — also used as the question image filename</li>
+            <li><b>Course</b>: the big group, e.g. <code>Articles</code></li>
+            <li><b>Topic</b>: the small group inside the course, e.g. <code>Articles: Basics</code></li>
+            <li><b>Level</b>: <code>1</code>–<code>5</code> (1 = easiest; shows that many ★)</li>
+            <li><b>Sentence</b>: must contain <code>___</code> (three underscores) as the blank</li>
+            <li><b>Answer</b>: the correct answer; separate multiple accepted answers with <code>/</code> (e.g. <code>were not / weren't</code>); <b>leave completely empty for zero-article questions</b></li>
+            <li><b>Keywords</b> (optional): words to highlight in the sentence, separated with <code>/</code>; each must appear verbatim in the sentence</li>
+            <li><b>Hint</b> (optional): short English explanation shown after a wrong answer</li>
+          </ul>
+          <p class="guide-tip">⚠ Course, Topic and Hint must be in <b>English</b>. Wrap any value containing a comma in double quotes.</p>
+        </div>
+
+        <div class="guide-section">
+          <h4>Example (copy-paste ready)</h4>
+          <pre class="guide-pre">No,Course,Topic,Level,Sentence,Answer,Keywords,Hint
+00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
+00002,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school
+00003,Past Tense,Past Tense Verbs,2,Yesterday I ___(go) to the park.,went,Yesterday,Past tense of go is went.</pre>
+        </div>
+
+        <div class="guide-section">
+          <h4>Question images (optional)</h4>
+          <p>If you want a picture for a question, put the image in <code>Q_folder/questions/questions_images/</code> and name it after the question number, e.g. <code>00001.png</code> (<code>.jpg</code> / <code>.jpeg</code> / <code>.webp</code> / <code>.gif</code> also work). No image = the question just shows text.</p>
+        </div>
+
+        <div class="guide-section">
+          <h4>Where do imported questions live?</h4>
+          <p>Imported questions are saved in this browser's storage (<code>customQuestions</code>) and merged with the built-in question bank. They are kept even after sign-out, and will appear under their own Course/Topic in the course picker. You can delete them any time via <b>🗑 Delete all imported questions</b> in the Import window.</p>
+        </div>
+
+        <button id="guide-close" class="btn-big btn-primary">Got it!</button>
+      </div>`, true);
+    document.getElementById("guide-close").onclick = () => this.closeModal();
+  },
+
   /* ---------- 完成一組 → （有錯題先入 Power Up Zone）→ 捕捉場景 → 結算 ---------- */
   async onQuizFinished(data) {
     this.lastCapture = null;
@@ -690,10 +747,12 @@ const App = {
         <h3 class="settings-title">⚙️ Settings</h3>
         ${saveNote}
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
+        <button id="btn-parent-guide" class="guide-link">📖 How to create your own questions</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
         <small class="settings-note">App version: ${APP_VERSION} (auto-updates)</small>
       </div>`);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
+    document.getElementById("btn-parent-guide").onclick = () => this.openParentGuide();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
   },
 

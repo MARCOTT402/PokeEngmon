@@ -325,6 +325,30 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   font-family: inherit; font-size: .9rem; resize: vertical; width: 100%;
 }
 
+/* ---------- 家長自訂題教學 Modal ---------- */
+.guide-link {
+  display: block; margin: 8px auto 0; background: none; border: none;
+  color: var(--blue); font-weight: 800; font-size: .9rem; cursor: pointer;
+  text-decoration: underline; padding: 4px 8px;
+}
+.guide-link:hover { color: var(--blue-dark, #1565c0); }
+
+.guide-box { text-align: left; max-height: 70dvh; overflow-y: auto; }
+.guide-box h3 { text-align: center; margin: 0 0 4px; }
+.guide-lead { color: #5a6478; font-size: .95rem; margin: 0 0 14px; }
+.guide-section {
+  border: 2px solid #e2e7ef; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+}
+.guide-section h4 { margin: 0 0 6px; color: var(--ink); }
+.guide-section p, .guide-section li { font-size: .9rem; line-height: 1.6; }
+.guide-section ul, .guide-section ol { padding-left: 20px; margin: 6px 0; }
+.guide-section code { background: #eef3ff; padding: 1px 5px; border-radius: 4px; }
+.guide-pre {
+  background: #f6f8fc; border-radius: 8px; padding: 10px; overflow-x: auto;
+  font-size: .8rem; margin: 6px 0; white-space: pre;
+}
+.guide-tip { color: #b8860b; font-weight: 700; }
+
 /* ============================================================
    做題
    ============================================================ */
