@@ -288,7 +288,7 @@ function normalizeQuestion(q) {
   const d = TOPIC_DEFAULTS[q.topic] || {};
   if (!q.course) q.course = d.course || "Uncategorized";
   if (!q.level) q.level = d.level || 1;
-  /* 內建題目用自己嘅 q01…q40 做圖片編號（可加 image_file/q01.png） */
+  /* 內建題目用自己嘅 q01…q40 做圖片編號（可加 questions_images/q01.png） */
   if (!q.no) q.no = /^q\d+$/.test(q.id) ? q.id : "";
   return q;
 }
@@ -317,7 +317,7 @@ async function loadSiteQuestions() {
    - Course   : 課題（例如 Dictation）
    - Type     : 題型（例如 Noun）
    - Category : 主題分組（例如 Animals / Food），用於錯題回顧顯示
-   - Image    : 圖片相對路徑（例如 word_image/elephant.webp）
+   - Image    : 圖片相對路徑（例如 picture_words_images/elephant.webp）
    - Accept   : 其他可接受串法，用 / 分隔（例如 color/colour）
    - Source   : 圖片來源，供版權聲明列明（可留空） */
 function wordsFromCSV(text) {
@@ -341,7 +341,7 @@ function wordsFromCSV(text) {
       sentence: "___",                              // 令舊有解釋／Power Up 渲染器可直接重用
       answer: word,
       accept: String(acceptRaw || "").split(/[|/]/).map(s => s.trim()).filter(Boolean),
-      image: imageRaw || `word_image/${word.toLowerCase().replace(/\s+/g, "_")}.webp`,
+      image: imageRaw || `picture_words_images/${word.toLowerCase().replace(/\s+/g, "_")}.webp`,
       source: sourceRaw || "",
       custom: false,
       explain: { keyword: "", hint: "" }
@@ -451,9 +451,9 @@ function parseCSV(text) {
   return rows;
 }
 
-/* 題目圖片：image_file/00001.png（亦支援 jpg / jpeg / webp / gif）
+/* 題目圖片：questions_images/00001.png（亦支援 jpg / jpeg / webp / gif）
    唔可以列出資料夾，所以逐個副檔名試載入；結果記住，唔會重複試 */
-const IMAGE_DIR = "image_file";
+const IMAGE_DIR = "questions_images";
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif"];
 const _imageCache = new Map();   // 編號 → 圖片路徑（搵唔到＝null）
 
@@ -496,7 +496,7 @@ function questionsFromCSV(text) {
   if (rows.length === 0) return { questions, skipped };
 
   /* 判斷格式：
-     8 欄（第一格「編號」）＝ 有題目編號，可對應 image_file/<編號>.png
+     8 欄（第一格「編號」）＝ 有題目編號，可對應 questions_images/<編號>.png
      7 欄（第一格「課題」）＝ 冇編號
      5 欄 ＝ 舊格式（題型,句子,答案,關鍵詞,提示） */
   const firstRow = rows[0].map(s => s.trim());

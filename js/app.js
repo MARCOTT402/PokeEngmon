@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v110";
+const APP_VERSION = "v111";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -291,7 +291,7 @@ const App = {
             <p><b>One question per line, 8 columns, comma separated:</b></p>
             <pre>No,Course,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
             <ul>
-              <li><b>No</b> (optional): five digits, e.g. <code>00001</code>; also matches <code>image_file/00001.png</code> as the question image</li>
+              <li><b>No</b> (optional): five digits, e.g. <code>00001</code>; also matches <code>questions_images/00001.png</code> as the question image</li>
               <li><b>Course</b>: the big group (e.g. <code>Articles</code>); a course can hold many topics</li>
               <li><b>Topic</b>: the small group inside the course (e.g. <code>Articles: Basics</code>); same name = same topic</li>
               <li><b>Level</b>: number <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>… (shows that many ★ when answering)</li>
@@ -304,7 +304,7 @@ const App = {
             <pre>No,Course,Topic,Level,Sentence,Answer,Keywords,Hint
 00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
 00002,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school</pre>
-            <p class="csv-note">⚠ A header row (first cell "No" or "Course") is skipped automatically. Wrap any value containing commas in double quotes.<br>Question images live in <code>image_file/</code> named after the number (<code>00001.png</code>; jpg/jpeg/webp/gif also accepted). No image = nothing shown.</p>
+            <p class="csv-note">⚠ A header row (first cell "No" or "Course") is skipped automatically. Wrap any value containing commas in double quotes.<br>Question images live in <code>questions_images/</code> named after the number (<code>00001.png</code>; jpg/jpeg/webp/gif also accepted). No image = nothing shown.</p>
           </div>
         </details>
 

@@ -15,7 +15,7 @@ Read this file FIRST, before adding, generating, or editing rows in `questions.c
 編號,課題,題型,難度,句子,答案,關鍵詞,提示
 ```
 
-- 編號 — 5 digits (e.g. `00001`), unique, maps to `image_file/00001.png`. May be left blank (blank = no image).
+- 編號 — 5 digits (e.g. `00001`), unique, maps to `questions_images/00001.png`. May be left blank (blank = no image).
 - 難度 — integer `1`–`5`; the quiz shows that many ★.
 - 句子 — complete English sentence containing exactly one `___` (three underscores, not `____`/`__`/`……`). A hint word may follow the blank, e.g. `___(go)`.
 - Any field containing a half-width comma must be wrapped in double quotes. Full-width `，` needs no quoting.
@@ -48,9 +48,9 @@ Read this file FIRST, before adding, generating, or editing rows in `questions.c
 
 The CSV importer deduplicates on the (sentence, answer) combo. Re-importing a CSV that overlaps with existing rows is safe — duplicates are skipped, so don't hand-delete overlap before merging batches.
 
-## Rule 6 — Sentence-question images: `image_file/` named by 編號
+## Rule 6 — Sentence-question images: `questions_images/` named by 編號
 
-- Images for sentence questions live in `image_file/` and are named by the 5-digit question number: `image_file/00001.png`.
+- Images for sentence questions live in `questions_images/` and are named by the 5-digit question number: `questions_images/00001.png`.
 - Accepted extensions: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`.
 - No image needed? The 編號 can stay filled — the app just skips missing files.
 
@@ -64,9 +64,9 @@ Word,Level,Course,Type,Category,Image,Accept,Source
 
 Do not reuse the sentence-question 8-column format here.
 
-## Rule 8 — Word-question images: `word_image/` named by the word
+## Rule 8 — Word-question images: `picture_words_images/` named by the word
 
-Images for word questions live in `word_image/` and are named by the word itself (not a number). One image per word, reused wherever that word appears.
+Images for word questions live in `picture_words_images/` and are named by the word itself (not a number). One image per word, reused wherever that word appears.
 
 ## Rule 9 — Word-image TTS: Azure Jenny, rate −10%, per-word cache
 
