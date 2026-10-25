@@ -666,15 +666,40 @@ class CaptureAudio {
       });
   }
 
-  /* 系統語音 fallback（正式錄音嘅代打，唔會靜音） */
+  /* 系統語音 fallback（正式錄音嘅代打，目標係一定唔會靜音）。
+     強化版：等 voices 載入、優先揀 en-US 語音、講之前 cancel 清隊列。
+     回傳 true = 已排程講嘢（可能要等一陣 voices 先載入）；false = 完全唔得。 */
   _speakFallback(word) {
     try {
       if (!("speechSynthesis" in window)) return false;
-      const u = new SpeechSynthesisUtterance(word);
-      u.lang = "en-US";
-      u.rate = 0.85;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
+      const synth = window.speechSynthesis;
+
+      const speak = () => {
+        try {
+          const voices = synth.getVoices() || [];
+          const u = new SpeechSynthesisUtterance(word);
+          const enVoice = voices.find(v => /^en[-_]/i.test(v.lang)) || voices[0];
+          if (enVoice) u.voice = enVoice;
+          u.lang = (enVoice && enVoice.lang) || "en-US";
+          u.rate = 0.85;
+          u.pitch = 1;
+          u.volume = 1;
+          synth.cancel();
+          synth.speak(u);
+        } catch (e) { /* 講嘢失敗就靜默，由 caller 決定點提示 */ }
+      };
+
+      if ((synth.getVoices() || []).length === 0) {
+        /* Safari / 首次使用：voices 仲未載入，等 onvoiceschanged 先講 */
+        const onLoaded = () => { synth.onvoiceschanged = null; speak(); };
+        synth.onvoiceschanged = onLoaded;
+        /* 保底：1.5 秒仲未 load 到都照講一次（可能 getVoices 突然有嘢） */
+        setTimeout(() => {
+          if (synth.onvoiceschanged === onLoaded) { synth.onvoiceschanged = null; speak(); }
+        }, 1500);
+      } else {
+        speak();
+      }
       return true;
     } catch (e) { return false; }
   }

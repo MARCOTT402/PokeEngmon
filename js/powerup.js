@@ -99,10 +99,16 @@ const PowerUp = {
     if (item.q.type !== "word") setTimeout(() => input.focus(), 300);
   },
 
-  /* 播圖片單字題嘅語音 */
+  /* 播圖片單字題嘅語音（mp3 缺失時自動用系統聲兜底） */
   _playWord(q) {
     const audio = window.CaptureScene && CaptureScene.audio;
-    if (audio) audio.playWord(wordAudioURL(q.word));
+    if (!audio) return;
+    audio.playWord(wordAudioURL(q.word), (ok) => {
+      if (!ok) {
+        const fb = document.getElementById("powerup-feedback");
+        if (fb) fb.textContent = "🔇 Audio unavailable — please try again.";
+      }
+    });
   },
 
   /* SM-2 評分：Dist=0 先算清除（唔係只 exact match 嘅 _isCorrect）*/
