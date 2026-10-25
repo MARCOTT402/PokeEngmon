@@ -1026,6 +1026,74 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-cell:not(.owned) .dex-name { color: #c3c9d6; }
 .dex-rarity { font-size: .68rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
 
+/* ---------- 浮動世代 hub（貼頂；捲落收、捲上放） ---------- */
+.gen-hub {
+  position: sticky; top: 8px; z-index: 50;
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  padding: 8px; border-radius: var(--radius);
+  background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow); border: 2px solid #e2e7ef;
+  transition: transform .2s ease;
+  margin-bottom: 6px;
+}
+.gen-hub::-webkit-scrollbar { display: none; }
+.gen-hub.hide { transform: translateY(-130%); }
+
+.gen-chip {
+  flex: 1 0 auto; min-width: 82px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 6px 8px 7px; border-radius: 14px;
+  border: 2px solid #e2e7ef; background: #fff; cursor: pointer;
+  font-family: inherit; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
+  position: relative;
+}
+.gen-chip img { width: 44px; height: 44px; object-fit: contain; }
+.gen-chip .gc-gen { font-size: .66rem; font-weight: 800; color: #5b6478; letter-spacing: .06em; }
+.gen-chip .gc-name { font-size: .8rem; font-weight: 800; color: var(--ink); }
+.gen-chip.active { border-color: var(--blue); background: #eef3ff; box-shadow: 0 0 0 2px rgba(59, 92, 168, .18); }
+.gen-chip.locked { opacity: .55; }
+.gen-chip.locked img { filter: grayscale(1); }
+.gen-chip .gc-lock { position: absolute; top: 2px; right: 4px; font-size: .72rem; }
+@media (hover: hover) and (pointer: fine) {
+  .gen-chip:hover:not(:active):not(:disabled) { transform: scale(1.05); }
+}
+
+/* ---------- 世代鎖定橫幅 ---------- */
+.gen-lock-banner {
+  text-align: center; padding: 18px 16px; margin: 10px 0 14px;
+  border: 3px dashed #c6cddc; border-radius: var(--radius); background: #f4f6fb;
+}
+.gen-lock-banner .glb-icon { font-size: 2rem; }
+.gen-lock-banner h3 { margin: 4px 0; font-size: 1.15rem; }
+.gen-lock-banner p { color: #5b6478; font-weight: 700; font-size: .92rem; }
+
+/* 未解鎖世代嘅 placeholder 格：純「?」，零圖片請求 */
+.dex-cell-locked {
+  cursor: default; background: #f4f6fb; border-style: dashed; color: #c3c9d6;
+}
+.dex-cell-locked .dex-qmark {
+  width: 68px; height: 68px; display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 900; color: #d5dbe8;
+}
+.dex-cell-locked .dex-name { color: #c3c9d6; }
+
+/* ---------- 世代解鎖慶祝彈窗 / 資料包下載 ---------- */
+.gen-unlock-card { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.gen-unlock-card img { width: 140px; height: 140px; object-fit: contain; }
+.gen-unlock-card h2 { margin: 4px 0 0; font-size: 1.5rem; }
+.gen-unlock-card .gu-region { color: var(--blue); font-weight: 900; font-size: 1.05rem; }
+.gen-unlock-card .gu-desc { color: #5b6478; font-weight: 700; font-size: .92rem; }
+.gen-unlock-bar {
+  width: 100%; height: 14px; border-radius: 999px; background: #e6eaf2;
+  border: 2px solid #d5dbe8; overflow: hidden;
+}
+.gen-unlock-card .gen-unlock-bar i {
+  display: block; height: 100%; width: 0; background: var(--yellow); border-radius: 999px;
+  transition: width .2s ease;
+}
+.gen-unlock-card .gu-progress-text { font-size: .82rem; font-weight: 800; color: #7a8299; }
+
 .dex-detail { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .dex-art { width: 190px; height: 190px; object-fit: contain; cursor: pointer; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1); }
 .dex-art:active { transform: scale(.94); }

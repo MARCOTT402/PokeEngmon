@@ -109,7 +109,9 @@ const Gacha = {
   },
 
   pickChain(rarity) {
-    const list = PULLABLE[rarity];
+    const st = loadState();
+    const list = pullablePool(st.unlockedGen || 1, rarity);
+    if (!list || list.length === 0) return null;
     return list[Math.floor(Math.random() * list.length)];
   },
 
@@ -176,7 +178,7 @@ const Gacha = {
     this._clearTimers();
     this._flow = {
       id: ++this._flowId,
-      rpc: authed ? SupabaseAuth.gachaPull(st.pendingExp || 0).catch(() => null) : null,
+      rpc: authed ? SupabaseAuth.gachaPull(st.pendingExp || 0, st.unlockedGen || 1).catch(() => null) : null,
       settled: false,
       settling: null,
       settlement: null
@@ -212,6 +214,7 @@ const Gacha = {
       const st = loadState();
       let rarity, chainKey, entry, isDupe, candyGain = 0;
       let firstExpEvolve = null;
+      let newlyUnlockedGen = null;
 
       if (r && r.entry) {
         /* server path：扣鑽 / rarity / dupe 已由 gacha_pull RPC 完成 */
@@ -220,7 +223,10 @@ const Gacha = {
         rarity = r.rarity;
         chainKey = r.entry.chain_key;
         const hadEntries = st.entries.length > 0;
+        const genBefore = st.unlockedGen || 1;
         entry = adoptServerEntry(r.entry);
+        const genAfter = loadState().unlockedGen || 1;
+        if (genAfter > genBefore) newlyUnlockedGen = genAfter;
         isDupe = r.is_dupe;
         candyGain = isDupe ? 1 : 0;       // 稀有抽 dupe 必送 1 糖（server 已入帳）
         if (st.pendingExp > 0) {
@@ -249,14 +255,21 @@ const Gacha = {
         }
       } else {
         /* 本地 fallback（離線 / 未登入 / RPC 失敗） */
-        st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
-        saveState();
         rarity = this.rollRarity(this.mode);
         chainKey = this.pickChain(rarity);
+        if (!chainKey) {
+          /* 該世代呢個稀有度冇鏈（理論上唔會發生）→ 退款兼中止 */
+          flow.settled = true;
+          flow.settlement = null;
+          return null;
+        }
+        st.diamonds -= GAME_CONFIG.RARE_PULL_COST;
+        saveState();
         const got = obtainPokemon(chainKey, this.mode);
         entry = got.entry;
         isDupe = got.isDupe;
-        candyGain = got.candyGain;
+        candyGain = got.candyGain || 0;
+        newlyUnlockedGen = got.newlyUnlockedGen || null;
 
         /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
         if (st.pendingExp > 0) {
@@ -277,7 +290,7 @@ const Gacha = {
       }
 
       flow.settled = true;
-      flow.settlement = { rarity, chainKey, entry, isDupe, candyGain, firstExpEvolve };
+      flow.settlement = { rarity, chainKey, entry, isDupe, candyGain, firstExpEvolve, newlyUnlockedGen };
 
       /* 預先載入叫聲，出卡時即刻叫（v102 起：新舊寵都播） */
       const preview = EVOLUTION_CHAINS.find(c => c.key === chainKey);
@@ -752,6 +765,8 @@ const Gacha = {
     }
     this._refreshAgainButton();
     this._pendingEvolve = s.firstExpEvolve || null;
+    /* 世代解鎖 stash 落 App，等用戶離開檢視卡時先彈慶祝窗（避免遮擋抽獎卡） */
+    if (s.newlyUnlockedGen) App._pendingGenUnlock = s.newlyUnlockedGen;
 
     /* 背景 A 退場 → 檢視卡登場 */
     const sc = this._sceneB;
@@ -777,6 +792,7 @@ const Gacha = {
     const evo = this._pendingEvolve;
     this._pendingEvolve = null;
     if (evo) App.showEvolveModal(evo);
+    App.maybeShowGenUnlock();
     this.pull();
   },
 
@@ -787,6 +803,7 @@ const Gacha = {
     this._pendingEvolve = null;
     App.showView("view-home");
     if (evo) App.showEvolveModal(evo);
+    App.maybeShowGenUnlock();
   },
 
   /* 執場：overlay / 艙門 / 拖拽旗標全部還原（Prototype 教訓：旗標唔重置會卡死再抽） */

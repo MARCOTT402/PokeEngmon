@@ -57,10 +57,34 @@ async function loadPokemonDex() {
     ]);
     if (!dexRes.ok) throw new Error(`HTTP ${dexRes.status}`);
     POKEMON_DEX = await dexRes.json();
+    POKEMON_DEX._loadedGens = { 1: true };   // 記低已載入嘅世代（Gen 1 開 app 即載）
     if (moveRes.ok) MOVES = (await moveRes.json()).moves || {};
   } catch (e) {
     console.warn("Pokemon data load failed", e);
     POKEMON_DEX = null;
+  }
+  return POKEMON_DEX;
+}
+
+/* 按需載入其他世代資料（解鎖時呼叫）：合併入 POKEMON_DEX.pokemon，
+   growthRates / natures 同 Gen 1 一樣嘅話唔會覆蓋（腳本輸出已對齊 shape） */
+async function ensureGenDataLoaded(gen) {
+  if (gen <= 1) return loadPokemonDex();
+  await loadPokemonDex();
+  if (!POKEMON_DEX) return null;
+  if (POKEMON_DEX._loadedGens[gen]) return POKEMON_DEX;
+  try {
+    const res = await fetch(`data/pokemon-gen${gen}.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const doc = await res.json();
+    Object.assign(POKEMON_DEX.pokemon, doc.pokemon);
+    /* 新 growth-rate 表（erratic / fluctuating）補入，唔覆蓋現有 */
+    Object.keys(doc.growthRates || {}).forEach(k => {
+      if (!POKEMON_DEX.growthRates[k]) POKEMON_DEX.growthRates[k] = doc.growthRates[k];
+    });
+    POKEMON_DEX._loadedGens[gen] = true;
+  } catch (e) {
+    console.warn(`Gen ${gen} data load failed`, e);
   }
   return POKEMON_DEX;
 }

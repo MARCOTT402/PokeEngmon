@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v126";
+const APP_VERSION = "v127";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -481,12 +481,19 @@ const App = {
               const res = obtainPokemon(chainKey, "normal");
               const cur = entryCurrentSpecies(res.entry);
               this.lastCapture = { dexId: cur[0], name: cur[1], isDupe: res.isDupe, caught: true };
+              /* 世代解鎖：儲起喺結算後彈慶祝窗 + 背景下載新代資料包 */
+              if (res.newlyUnlockedGen) this._pendingGenUnlock = res.newlyUnlockedGen;
               /* 防金手指：server 記錄捕捉 + server 權威派寵（fire-and-forget，唔阻動畫）
                  obtain_capture 回傳後用 server 行覆蓋本地 entry（IV/dupes/candies 以 server 為準） */
               if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
                 SupabaseAuth.settleCapture(cur[0]);
                 SupabaseAuth.obtainCapture(chainKey, cur[0]).then(r => {
-                  if (r && r.entry) adoptServerEntry(r.entry);
+                  if (r && r.entry) {
+                    const before = loadState().unlockedGen || 1;
+                    adoptServerEntry(r.entry);
+                    const after = loadState().unlockedGen || 1;
+                    if (after > before) this._pendingGenUnlock = after;
+                  }
                 });
               }
               this.renderHome();
@@ -578,6 +585,9 @@ const App = {
         setTimeout(() => this.queueMoveLearn(entry, levelRes.learned), levelRes.evolvedTo ? 1500 : 600);
       }
     }
+    /* 世代解鎖慶祝：等進化/結算動畫行完先彈（levelRes 有進化就再遲啲） */
+    const unlockDelay = levelRes && levelRes.evolvedTo ? 2200 : 900;
+    setTimeout(() => this.maybeShowGenUnlock(), unlockDelay);
   },
 
   _renderSettlement(data, rewards) {
@@ -709,6 +719,55 @@ const App = {
         saveState();
         next();
       };
+    });
+  },
+
+  /* ---------- 世代解鎖慶祝 + 資料包下載 ----------
+     onCaught / gacha 結算發現 newlyUnlockedGen 時 stash 落 _pendingGenUnlock，
+     結算頁出現後由 maybeShowGenUnlock() 彈窗（避免同進化/結算彈窗撞車）。 */
+  maybeShowGenUnlock() {
+    const gen = this._pendingGenUnlock;
+    if (!gen) return;
+    this._pendingGenUnlock = null;
+    this.showGenUnlock(gen);
+  },
+
+  showGenUnlock(gen) {
+    if (typeof GENS === "undefined") return;
+    const g = GENS.find(x => x.gen === gen);
+    if (!g) return;
+    /* 即刻載入新世代圖鑑資料（之後捕捉/抽獎要用 learnset） */
+    ensureGenDataLoaded(gen);
+    const roman = ["I","II","III","IV","V"][gen - 1] || String(gen);
+    /* 即場開下資料包（背景）；modal 顯示進度 */
+    this.showModal(`
+      <div class="gen-unlock-card">
+        <img src="assets/gen-icons/${gen}.png" alt="${g.name}"
+             onerror="this.onerror=null;this.src='${artworkURL(g.iconDex)}'">
+        <h2>🎉 Gen ${roman} Unlocked!</h2>
+        <div class="gu-region">${g.name} Region</div>
+        <div class="gu-desc">New Pokémon now appear in tall grass and Rare Pulls!<br>
+          Downloading the ${g.name} pack for offline play…</div>
+        <div class="gen-unlock-bar"><i id="gu-bar"></i></div>
+        <div class="gu-progress-text" id="gu-text">Preparing…</div>
+        <button id="gu-ok" class="btn-big btn-primary">Let's go!</button>
+      </div>`, true);
+    document.getElementById("gu-ok").onclick = () => {
+      this.closeModal();
+      /* 用戶撳完 OK 都未下完 → 背景繼續（GenPack 內部有續傳） */
+    };
+    GenPack.download(gen, ({ done, total, failed }) => {
+      const bar = document.getElementById("gu-bar");
+      const txt = document.getElementById("gu-text");
+      if (!bar || !txt) return;   // 用戶已關彈窗，背景下載繼續
+      const pct = total ? Math.round(done / total * 100) : 0;
+      bar.style.width = pct + "%";
+      txt.textContent = failed > 0
+        ? `${done}/${total} files (${failed} failed — will retry next launch)`
+        : `${done}/${total} files`;
+    }).then(ok => {
+      const txt = document.getElementById("gu-text");
+      if (txt) txt.textContent = ok ? "Pack ready — playable offline! ✅" : "Pack partly downloaded — will resume next launch.";
     });
   },
 
@@ -1162,7 +1221,21 @@ const App = {
 
     /* 載入網站題庫（questions.csv）＋本地 PokéAPI 資料，先畫主畫面 */
     await Promise.all([loadSiteQuestions(), loadPictureWords(), loadPokemonDex()]);
+
+    /* 世代系統（v127+）：
+       1) 舊玩家可能已儲齊 Gen 1 → 啟動時重算 unlockedGen（靜默，唔彈慶祝窗）
+       2) 已擁有嘅 Gen 2-5 entry 需要對應世代資料先好 derive 招式 */
+    recomputeUnlockedGen();
+    {
+      const st = loadState();
+      const gensOwned = new Set(st.entries.map(e => genOfChain(e.chainKey)));
+      for (const g of gensOwned) {
+        if (g > 1) await ensureGenDataLoaded(g);
+      }
+    }
     migrateEntries();
+    /* 背景補下未完嘅世代資料包（斷點續傳） */
+    if (window.GenPack) GenPack.resumePending(loadState().unlockedGen || 1);
 
     this.renderHome();
     this.showView("view-home");

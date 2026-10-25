@@ -1,0 +1,1263 @@
+{
+ "gen": 5,
+ "files": [
+  {
+   "path": "assets/animated/494.gif",
+   "bytes": 27671
+  },
+  {
+   "path": "assets/cries/494.mp3",
+   "bytes": 9224
+  },
+  {
+   "path": "assets/animated/495.gif",
+   "bytes": 25230
+  },
+  {
+   "path": "assets/cries/495.mp3",
+   "bytes": 6272
+  },
+  {
+   "path": "assets/animated/496.gif",
+   "bytes": 44725
+  },
+  {
+   "path": "assets/cries/496.mp3",
+   "bytes": 10052
+  },
+  {
+   "path": "assets/animated/497.gif",
+   "bytes": 72501
+  },
+  {
+   "path": "assets/cries/497.mp3",
+   "bytes": 11420
+  },
+  {
+   "path": "assets/animated/498.gif",
+   "bytes": 17034
+  },
+  {
+   "path": "assets/cries/498.mp3",
+   "bytes": 4580
+  },
+  {
+   "path": "assets/animated/499.gif",
+   "bytes": 48503
+  },
+  {
+   "path": "assets/cries/499.mp3",
+   "bytes": 13112
+  },
+  {
+   "path": "assets/animated/500.gif",
+   "bytes": 126480
+  },
+  {
+   "path": "assets/cries/500.mp3",
+   "bytes": 11420
+  },
+  {
+   "path": "assets/animated/501.gif",
+   "bytes": 40787
+  },
+  {
+   "path": "assets/cries/501.mp3",
+   "bytes": 5408
+  },
+  {
+   "path": "assets/animated/502.gif",
+   "bytes": 21398
+  },
+  {
+   "path": "assets/cries/502.mp3",
+   "bytes": 6308
+  },
+  {
+   "path": "assets/animated/503.gif",
+   "bytes": 107447
+  },
+  {
+   "path": "assets/cries/503.mp3",
+   "bytes": 16892
+  },
+  {
+   "path": "assets/animated/504.gif",
+   "bytes": 26700
+  },
+  {
+   "path": "assets/cries/504.mp3",
+   "bytes": 6380
+  },
+  {
+   "path": "assets/animated/505.gif",
+   "bytes": 44389
+  },
+  {
+   "path": "assets/cries/505.mp3",
+   "bytes": 5768
+  },
+  {
+   "path": "assets/animated/506.gif",
+   "bytes": 28525
+  },
+  {
+   "path": "assets/cries/506.mp3",
+   "bytes": 4904
+  },
+  {
+   "path": "assets/animated/507.gif",
+   "bytes": 35370
+  },
+  {
+   "path": "assets/cries/507.mp3",
+   "bytes": 4868
+  },
+  {
+   "path": "assets/animated/508.gif",
+   "bytes": 80889
+  },
+  {
+   "path": "assets/cries/508.mp3",
+   "bytes": 11492
+  },
+  {
+   "path": "assets/animated/509.gif",
+   "bytes": 14644
+  },
+  {
+   "path": "assets/cries/509.mp3",
+   "bytes": 5264
+  },
+  {
+   "path": "assets/animated/510.gif",
+   "bytes": 42628
+  },
+  {
+   "path": "assets/cries/510.mp3",
+   "bytes": 8036
+  },
+  {
+   "path": "assets/animated/511.gif",
+   "bytes": 56161
+  },
+  {
+   "path": "assets/cries/511.mp3",
+   "bytes": 6020
+  },
+  {
+   "path": "assets/animated/512.gif",
+   "bytes": 72810
+  },
+  {
+   "path": "assets/cries/512.mp3",
+   "bytes": 8756
+  },
+  {
+   "path": "assets/animated/513.gif",
+   "bytes": 23007
+  },
+  {
+   "path": "assets/cries/513.mp3",
+   "bytes": 5624
+  },
+  {
+   "path": "assets/animated/514.gif",
+   "bytes": 43251
+  },
+  {
+   "path": "assets/cries/514.mp3",
+   "bytes": 8792
+  },
+  {
+   "path": "assets/animated/515.gif",
+   "bytes": 19225
+  },
+  {
+   "path": "assets/cries/515.mp3",
+   "bytes": 5840
+  },
+  {
+   "path": "assets/animated/516.gif",
+   "bytes": 34592
+  },
+  {
+   "path": "assets/cries/516.mp3",
+   "bytes": 7676
+  },
+  {
+   "path": "assets/animated/517.gif",
+   "bytes": 28964
+  },
+  {
+   "path": "assets/cries/517.mp3",
+   "bytes": 9620
+  },
+  {
+   "path": "assets/animated/518.gif",
+   "bytes": 29584
+  },
+  {
+   "path": "assets/cries/518.mp3",
+   "bytes": 16568
+  },
+  {
+   "path": "assets/animated/519.gif",
+   "bytes": 17166
+  },
+  {
+   "path": "assets/cries/519.mp3",
+   "bytes": 9008
+  },
+  {
+   "path": "assets/animated/520.gif",
+   "bytes": 52711
+  },
+  {
+   "path": "assets/cries/520.mp3",
+   "bytes": 8144
+  },
+  {
+   "path": "assets/animated/521.gif",
+   "bytes": 72408
+  },
+  {
+   "path": "assets/cries/521.mp3",
+   "bytes": 9116
+  },
+  {
+   "path": "assets/animated/522.gif",
+   "bytes": 44064
+  },
+  {
+   "path": "assets/cries/522.mp3",
+   "bytes": 9116
+  },
+  {
+   "path": "assets/animated/523.gif",
+   "bytes": 63856
+  },
+  {
+   "path": "assets/cries/523.mp3",
+   "bytes": 12176
+  },
+  {
+   "path": "assets/animated/524.gif",
+   "bytes": 15639
+  },
+  {
+   "path": "assets/cries/524.mp3",
+   "bytes": 10376
+  },
+  {
+   "path": "assets/animated/525.gif",
+   "bytes": 40899
+  },
+  {
+   "path": "assets/cries/525.mp3",
+   "bytes": 13040
+  },
+  {
+   "path": "assets/animated/526.gif",
+   "bytes": 108769
+  },
+  {
+   "path": "assets/cries/526.mp3",
+   "bytes": 17360
+  },
+  {
+   "path": "assets/animated/527.gif",
+   "bytes": 55207
+  },
+  {
+   "path": "assets/cries/527.mp3",
+   "bytes": 9368
+  },
+  {
+   "path": "assets/animated/528.gif",
+   "bytes": 73732
+  },
+  {
+   "path": "assets/cries/528.mp3",
+   "bytes": 11240
+  },
+  {
+   "path": "assets/animated/529.gif",
+   "bytes": 40261
+  },
+  {
+   "path": "assets/cries/529.mp3",
+   "bytes": 9836
+  },
+  {
+   "path": "assets/animated/530.gif",
+   "bytes": 89975
+  },
+  {
+   "path": "assets/cries/530.mp3",
+   "bytes": 14156
+  },
+  {
+   "path": "assets/animated/531.gif",
+   "bytes": 34145
+  },
+  {
+   "path": "assets/cries/531.mp3",
+   "bytes": 8252
+  },
+  {
+   "path": "assets/animated/532.gif",
+   "bytes": 17335
+  },
+  {
+   "path": "assets/cries/532.mp3",
+   "bytes": 7100
+  },
+  {
+   "path": "assets/animated/533.gif",
+   "bytes": 135686
+  },
+  {
+   "path": "assets/cries/533.mp3",
+   "bytes": 13364
+  },
+  {
+   "path": "assets/animated/534.gif",
+   "bytes": 65652
+  },
+  {
+   "path": "assets/cries/534.mp3",
+   "bytes": 12428
+  },
+  {
+   "path": "assets/animated/535.gif",
+   "bytes": 34345
+  },
+  {
+   "path": "assets/cries/535.mp3",
+   "bytes": 7280
+  },
+  {
+   "path": "assets/animated/536.gif",
+   "bytes": 54210
+  },
+  {
+   "path": "assets/cries/536.mp3",
+   "bytes": 10052
+  },
+  {
+   "path": "assets/animated/537.gif",
+   "bytes": 190922
+  },
+  {
+   "path": "assets/cries/537.mp3",
+   "bytes": 8216
+  },
+  {
+   "path": "assets/animated/538.gif",
+   "bytes": 47545
+  },
+  {
+   "path": "assets/cries/538.mp3",
+   "bytes": 7748
+  },
+  {
+   "path": "assets/animated/539.gif",
+   "bytes": 34193
+  },
+  {
+   "path": "assets/cries/539.mp3",
+   "bytes": 9296
+  },
+  {
+   "path": "assets/animated/540.gif",
+   "bytes": 48319
+  },
+  {
+   "path": "assets/cries/540.mp3",
+   "bytes": 4904
+  },
+  {
+   "path": "assets/animated/541.gif",
+   "bytes": 27942
+  },
+  {
+   "path": "assets/cries/541.mp3",
+   "bytes": 6812
+  },
+  {
+   "path": "assets/animated/542.gif",
+   "bytes": 30701
+  },
+  {
+   "path": "assets/cries/542.mp3",
+   "bytes": 12176
+  },
+  {
+   "path": "assets/animated/543.gif",
+   "bytes": 40589
+  },
+  {
+   "path": "assets/cries/543.mp3",
+   "bytes": 6740
+  },
+  {
+   "path": "assets/animated/544.gif",
+   "bytes": 62828
+  },
+  {
+   "path": "assets/cries/544.mp3",
+   "bytes": 11240
+  },
+  {
+   "path": "assets/animated/545.gif",
+   "bytes": 163488
+  },
+  {
+   "path": "assets/cries/545.mp3",
+   "bytes": 18836
+  },
+  {
+   "path": "assets/animated/546.gif",
+   "bytes": 45296
+  },
+  {
+   "path": "assets/cries/546.mp3",
+   "bytes": 6272
+  },
+  {
+   "path": "assets/animated/547.gif",
+   "bytes": 42752
+  },
+  {
+   "path": "assets/cries/547.mp3",
+   "bytes": 11096
+  },
+  {
+   "path": "assets/animated/548.gif",
+   "bytes": 18669
+  },
+  {
+   "path": "assets/cries/548.mp3",
+   "bytes": 7640
+  },
+  {
+   "path": "assets/animated/549.gif",
+   "bytes": 48422
+  },
+  {
+   "path": "assets/cries/549.mp3",
+   "bytes": 11852
+  },
+  {
+   "path": "assets/animated/550.gif",
+   "bytes": 41218
+  },
+  {
+   "path": "assets/cries/550.mp3",
+   "bytes": 5408
+  },
+  {
+   "path": "assets/animated/551.gif",
+   "bytes": 54156
+  },
+  {
+   "path": "assets/cries/551.mp3",
+   "bytes": 5948
+  },
+  {
+   "path": "assets/animated/552.gif",
+   "bytes": 43906
+  },
+  {
+   "path": "assets/cries/552.mp3",
+   "bytes": 9404
+  },
+  {
+   "path": "assets/animated/553.gif",
+   "bytes": 86473
+  },
+  {
+   "path": "assets/cries/553.mp3",
+   "bytes": 14048
+  },
+  {
+   "path": "assets/animated/554.gif",
+   "bytes": 48924
+  },
+  {
+   "path": "assets/cries/554.mp3",
+   "bytes": 11924
+  },
+  {
+   "path": "assets/animated/555.gif",
+   "bytes": 114677
+  },
+  {
+   "path": "assets/cries/555.mp3",
+   "bytes": 13688
+  },
+  {
+   "path": "assets/animated/556.gif",
+   "bytes": 71635
+  },
+  {
+   "path": "assets/cries/556.mp3",
+   "bytes": 11996
+  },
+  {
+   "path": "assets/animated/557.gif",
+   "bytes": 15814
+  },
+  {
+   "path": "assets/cries/557.mp3",
+   "bytes": 12356
+  },
+  {
+   "path": "assets/animated/558.gif",
+   "bytes": 56041
+  },
+  {
+   "path": "assets/cries/558.mp3",
+   "bytes": 13364
+  },
+  {
+   "path": "assets/animated/559.gif",
+   "bytes": 29075
+  },
+  {
+   "path": "assets/cries/559.mp3",
+   "bytes": 7064
+  },
+  {
+   "path": "assets/animated/560.gif",
+   "bytes": 69486
+  },
+  {
+   "path": "assets/cries/560.mp3",
+   "bytes": 10412
+  },
+  {
+   "path": "assets/animated/561.gif",
+   "bytes": 308334
+  },
+  {
+   "path": "assets/cries/561.mp3",
+   "bytes": 12428
+  },
+  {
+   "path": "assets/animated/562.gif",
+   "bytes": 54713
+  },
+  {
+   "path": "assets/cries/562.mp3",
+   "bytes": 9872
+  },
+  {
+   "path": "assets/animated/563.gif",
+   "bytes": 92572
+  },
+  {
+   "path": "assets/cries/563.mp3",
+   "bytes": 14300
+  },
+  {
+   "path": "assets/animated/564.gif",
+   "bytes": 53423
+  },
+  {
+   "path": "assets/cries/564.mp3",
+   "bytes": 7496
+  },
+  {
+   "path": "assets/animated/565.gif",
+   "bytes": 92319
+  },
+  {
+   "path": "assets/cries/565.mp3",
+   "bytes": 12032
+  },
+  {
+   "path": "assets/animated/566.gif",
+   "bytes": 40033
+  },
+  {
+   "path": "assets/cries/566.mp3",
+   "bytes": 6596
+  },
+  {
+   "path": "assets/animated/567.gif",
+   "bytes": 53958
+  },
+  {
+   "path": "assets/cries/567.mp3",
+   "bytes": 11024
+  },
+  {
+   "path": "assets/animated/568.gif",
+   "bytes": 66583
+  },
+  {
+   "path": "assets/cries/568.mp3",
+   "bytes": 11492
+  },
+  {
+   "path": "assets/animated/569.gif",
+   "bytes": 85440
+  },
+  {
+   "path": "assets/cries/569.mp3",
+   "bytes": 12140
+  },
+  {
+   "path": "assets/animated/570.gif",
+   "bytes": 28148
+  },
+  {
+   "path": "assets/cries/570.mp3",
+   "bytes": 4868
+  },
+  {
+   "path": "assets/animated/571.gif",
+   "bytes": 74416
+  },
+  {
+   "path": "assets/cries/571.mp3",
+   "bytes": 11888
+  },
+  {
+   "path": "assets/animated/572.gif",
+   "bytes": 55608
+  },
+  {
+   "path": "assets/cries/572.mp3",
+   "bytes": 6776
+  },
+  {
+   "path": "assets/animated/573.gif",
+   "bytes": 39826
+  },
+  {
+   "path": "assets/cries/573.mp3",
+   "bytes": 14516
+  },
+  {
+   "path": "assets/animated/574.gif",
+   "bytes": 24822
+  },
+  {
+   "path": "assets/cries/574.mp3",
+   "bytes": 5120
+  },
+  {
+   "path": "assets/animated/575.gif",
+   "bytes": 80016
+  },
+  {
+   "path": "assets/cries/575.mp3",
+   "bytes": 7712
+  },
+  {
+   "path": "assets/animated/576.gif",
+   "bytes": 77355
+  },
+  {
+   "path": "assets/cries/576.mp3",
+   "bytes": 16676
+  },
+  {
+   "path": "assets/animated/577.gif",
+   "bytes": 19741
+  },
+  {
+   "path": "assets/cries/577.mp3",
+   "bytes": 7712
+  },
+  {
+   "path": "assets/animated/578.gif",
+   "bytes": 37711
+  },
+  {
+   "path": "assets/cries/578.mp3",
+   "bytes": 11240
+  },
+  {
+   "path": "assets/animated/579.gif",
+   "bytes": 68613
+  },
+  {
+   "path": "assets/cries/579.mp3",
+   "bytes": 10736
+  },
+  {
+   "path": "assets/animated/580.gif",
+   "bytes": 14774
+  },
+  {
+   "path": "assets/cries/580.mp3",
+   "bytes": 5300
+  },
+  {
+   "path": "assets/animated/581.gif",
+   "bytes": 45096
+  },
+  {
+   "path": "assets/cries/581.mp3",
+   "bytes": 10232
+  },
+  {
+   "path": "assets/animated/582.gif",
+   "bytes": 16554
+  },
+  {
+   "path": "assets/cries/582.mp3",
+   "bytes": 11600
+  },
+  {
+   "path": "assets/animated/583.gif",
+   "bytes": 41885
+  },
+  {
+   "path": "assets/cries/583.mp3",
+   "bytes": 15596
+  },
+  {
+   "path": "assets/animated/584.gif",
+   "bytes": 171063
+  },
+  {
+   "path": "assets/cries/584.mp3",
+   "bytes": 12824
+  },
+  {
+   "path": "assets/animated/585.gif",
+   "bytes": 24534
+  },
+  {
+   "path": "assets/cries/585.mp3",
+   "bytes": 8720
+  },
+  {
+   "path": "assets/animated/586.gif",
+   "bytes": 41658
+  },
+  {
+   "path": "assets/cries/586.mp3",
+   "bytes": 9620
+  },
+  {
+   "path": "assets/animated/587.gif",
+   "bytes": 52848
+  },
+  {
+   "path": "assets/cries/587.mp3",
+   "bytes": 6092
+  },
+  {
+   "path": "assets/animated/588.gif",
+   "bytes": 39378
+  },
+  {
+   "path": "assets/cries/588.mp3",
+   "bytes": 5444
+  },
+  {
+   "path": "assets/animated/589.gif",
+   "bytes": 124185
+  },
+  {
+   "path": "assets/cries/589.mp3",
+   "bytes": 11816
+  },
+  {
+   "path": "assets/animated/590.gif",
+   "bytes": 13667
+  },
+  {
+   "path": "assets/cries/590.mp3",
+   "bytes": 5696
+  },
+  {
+   "path": "assets/animated/591.gif",
+   "bytes": 37131
+  },
+  {
+   "path": "assets/cries/591.mp3",
+   "bytes": 6848
+  },
+  {
+   "path": "assets/animated/592.gif",
+   "bytes": 62247
+  },
+  {
+   "path": "assets/cries/592.mp3",
+   "bytes": 10340
+  },
+  {
+   "path": "assets/animated/593.gif",
+   "bytes": 58130
+  },
+  {
+   "path": "assets/cries/593.mp3",
+   "bytes": 11060
+  },
+  {
+   "path": "assets/animated/594.gif",
+   "bytes": 38582
+  },
+  {
+   "path": "assets/cries/594.mp3",
+   "bytes": 12428
+  },
+  {
+   "path": "assets/animated/595.gif",
+   "bytes": 11333
+  },
+  {
+   "path": "assets/cries/595.mp3",
+   "bytes": 5264
+  },
+  {
+   "path": "assets/animated/596.gif",
+   "bytes": 64589
+  },
+  {
+   "path": "assets/cries/596.mp3",
+   "bytes": 9800
+  },
+  {
+   "path": "assets/animated/597.gif",
+   "bytes": 100351
+  },
+  {
+   "path": "assets/cries/597.mp3",
+   "bytes": 8000
+  },
+  {
+   "path": "assets/animated/598.gif",
+   "bytes": 64147
+  },
+  {
+   "path": "assets/cries/598.mp3",
+   "bytes": 12716
+  },
+  {
+   "path": "assets/animated/599.gif",
+   "bytes": 6447
+  },
+  {
+   "path": "assets/cries/599.mp3",
+   "bytes": 10664
+  },
+  {
+   "path": "assets/animated/600.gif",
+   "bytes": 23112
+  },
+  {
+   "path": "assets/cries/600.mp3",
+   "bytes": 12140
+  },
+  {
+   "path": "assets/animated/601.gif",
+   "bytes": 12403
+  },
+  {
+   "path": "assets/cries/601.mp3",
+   "bytes": 20708
+  },
+  {
+   "path": "assets/animated/602.gif",
+   "bytes": 58426
+  },
+  {
+   "path": "assets/cries/602.mp3",
+   "bytes": 18224
+  },
+  {
+   "path": "assets/animated/603.gif",
+   "bytes": 77957
+  },
+  {
+   "path": "assets/cries/603.mp3",
+   "bytes": 12320
+  },
+  {
+   "path": "assets/animated/604.gif",
+   "bytes": 122588
+  },
+  {
+   "path": "assets/cries/604.mp3",
+   "bytes": 13832
+  },
+  {
+   "path": "assets/animated/605.gif",
+   "bytes": 38964
+  },
+  {
+   "path": "assets/cries/605.mp3",
+   "bytes": 9584
+  },
+  {
+   "path": "assets/animated/606.gif",
+   "bytes": 40166
+  },
+  {
+   "path": "assets/cries/606.mp3",
+   "bytes": 14156
+  },
+  {
+   "path": "assets/animated/607.gif",
+   "bytes": 30399
+  },
+  {
+   "path": "assets/cries/607.mp3",
+   "bytes": 8324
+  },
+  {
+   "path": "assets/animated/608.gif",
+   "bytes": 31842
+  },
+  {
+   "path": "assets/cries/608.mp3",
+   "bytes": 13508
+  },
+  {
+   "path": "assets/animated/609.gif",
+   "bytes": 66253
+  },
+  {
+   "path": "assets/cries/609.mp3",
+   "bytes": 17108
+  },
+  {
+   "path": "assets/animated/610.gif",
+   "bytes": 38275
+  },
+  {
+   "path": "assets/cries/610.mp3",
+   "bytes": 5696
+  },
+  {
+   "path": "assets/animated/611.gif",
+   "bytes": 39383
+  },
+  {
+   "path": "assets/cries/611.mp3",
+   "bytes": 11168
+  },
+  {
+   "path": "assets/animated/612.gif",
+   "bytes": 109757
+  },
+  {
+   "path": "assets/cries/612.mp3",
+   "bytes": 13832
+  },
+  {
+   "path": "assets/animated/613.gif",
+   "bytes": 18605
+  },
+  {
+   "path": "assets/cries/613.mp3",
+   "bytes": 5552
+  },
+  {
+   "path": "assets/animated/614.gif",
+   "bytes": 99496
+  },
+  {
+   "path": "assets/cries/614.mp3",
+   "bytes": 10772
+  },
+  {
+   "path": "assets/animated/615.gif",
+   "bytes": 121550
+  },
+  {
+   "path": "assets/cries/615.mp3",
+   "bytes": 13976
+  },
+  {
+   "path": "assets/animated/616.gif",
+   "bytes": 49456
+  },
+  {
+   "path": "assets/cries/616.mp3",
+   "bytes": 6488
+  },
+  {
+   "path": "assets/animated/617.gif",
+   "bytes": 78736
+  },
+  {
+   "path": "assets/cries/617.mp3",
+   "bytes": 7820
+  },
+  {
+   "path": "assets/animated/618.gif",
+   "bytes": 37653
+  },
+  {
+   "path": "assets/cries/618.mp3",
+   "bytes": 13364
+  },
+  {
+   "path": "assets/animated/619.gif",
+   "bytes": 35685
+  },
+  {
+   "path": "assets/cries/619.mp3",
+   "bytes": 12356
+  },
+  {
+   "path": "assets/animated/620.gif",
+   "bytes": 63573
+  },
+  {
+   "path": "assets/cries/620.mp3",
+   "bytes": 9296
+  },
+  {
+   "path": "assets/animated/621.gif",
+   "bytes": 88984
+  },
+  {
+   "path": "assets/cries/621.mp3",
+   "bytes": 14876
+  },
+  {
+   "path": "assets/animated/622.gif",
+   "bytes": 47702
+  },
+  {
+   "path": "assets/cries/622.mp3",
+   "bytes": 8468
+  },
+  {
+   "path": "assets/animated/623.gif",
+   "bytes": 85327
+  },
+  {
+   "path": "assets/cries/623.mp3",
+   "bytes": 13868
+  },
+  {
+   "path": "assets/animated/624.gif",
+   "bytes": 39739
+  },
+  {
+   "path": "assets/cries/624.mp3",
+   "bytes": 7892
+  },
+  {
+   "path": "assets/animated/625.gif",
+   "bytes": 67098
+  },
+  {
+   "path": "assets/cries/625.mp3",
+   "bytes": 11528
+  },
+  {
+   "path": "assets/animated/626.gif",
+   "bytes": 67118
+  },
+  {
+   "path": "assets/cries/626.mp3",
+   "bytes": 15128
+  },
+  {
+   "path": "assets/animated/627.gif",
+   "bytes": 42748
+  },
+  {
+   "path": "assets/cries/627.mp3",
+   "bytes": 5336
+  },
+  {
+   "path": "assets/animated/628.gif",
+   "bytes": 29636
+  },
+  {
+   "path": "assets/cries/628.mp3",
+   "bytes": 9620
+  },
+  {
+   "path": "assets/animated/629.gif",
+   "bytes": 91141
+  },
+  {
+   "path": "assets/cries/629.mp3",
+   "bytes": 11996
+  },
+  {
+   "path": "assets/animated/630.gif",
+   "bytes": 59878
+  },
+  {
+   "path": "assets/cries/630.mp3",
+   "bytes": 11888
+  },
+  {
+   "path": "assets/animated/631.gif",
+   "bytes": 50452
+  },
+  {
+   "path": "assets/cries/631.mp3",
+   "bytes": 14120
+  },
+  {
+   "path": "assets/animated/632.gif",
+   "bytes": 44837
+  },
+  {
+   "path": "assets/cries/632.mp3",
+   "bytes": 9980
+  },
+  {
+   "path": "assets/animated/633.gif",
+   "bytes": 25208
+  },
+  {
+   "path": "assets/cries/633.mp3",
+   "bytes": 17288
+  },
+  {
+   "path": "assets/animated/634.gif",
+   "bytes": 39724
+  },
+  {
+   "path": "assets/cries/634.mp3",
+   "bytes": 12428
+  },
+  {
+   "path": "assets/animated/635.gif",
+   "bytes": 57397
+  },
+  {
+   "path": "assets/cries/635.mp3",
+   "bytes": 17576
+  },
+  {
+   "path": "assets/animated/636.gif",
+   "bytes": 41875
+  },
+  {
+   "path": "assets/cries/636.mp3",
+   "bytes": 8936
+  },
+  {
+   "path": "assets/animated/637.gif",
+   "bytes": 137577
+  },
+  {
+   "path": "assets/cries/637.mp3",
+   "bytes": 18296
+  },
+  {
+   "path": "assets/animated/638.gif",
+   "bytes": 83476
+  },
+  {
+   "path": "assets/cries/638.mp3",
+   "bytes": 14372
+  },
+  {
+   "path": "assets/animated/639.gif",
+   "bytes": 72785
+  },
+  {
+   "path": "assets/cries/639.mp3",
+   "bytes": 10196
+  },
+  {
+   "path": "assets/animated/640.gif",
+   "bytes": 57152
+  },
+  {
+   "path": "assets/cries/640.mp3",
+   "bytes": 11600
+  },
+  {
+   "path": "assets/animated/641.gif",
+   "bytes": 142330
+  },
+  {
+   "path": "assets/cries/641.mp3",
+   "bytes": 14336
+  },
+  {
+   "path": "assets/animated/642.gif",
+   "bytes": 295899
+  },
+  {
+   "path": "assets/cries/642.mp3",
+   "bytes": 17432
+  },
+  {
+   "path": "assets/animated/643.gif",
+   "bytes": 139313
+  },
+  {
+   "path": "assets/cries/643.mp3",
+   "bytes": 17864
+  },
+  {
+   "path": "assets/animated/644.gif",
+   "bytes": 150361
+  },
+  {
+   "path": "assets/cries/644.mp3",
+   "bytes": 16568
+  },
+  {
+   "path": "assets/animated/645.gif",
+   "bytes": 113623
+  },
+  {
+   "path": "assets/cries/645.mp3",
+   "bytes": 14552
+  },
+  {
+   "path": "assets/animated/646.gif",
+   "bytes": 84295
+  },
+  {
+   "path": "assets/cries/646.mp3",
+   "bytes": 11312
+  },
+  {
+   "path": "assets/animated/647.gif",
+   "bytes": 59004
+  },
+  {
+   "path": "assets/cries/647.mp3",
+   "bytes": 10124
+  },
+  {
+   "path": "assets/animated/648.gif",
+   "bytes": 86664
+  },
+  {
+   "path": "assets/cries/648.mp3",
+   "bytes": 12356
+  },
+  {
+   "path": "assets/animated/649.gif",
+   "bytes": 70437
+  },
+  {
+   "path": "assets/cries/649.mp3",
+   "bytes": 10484
+  },
+  {
+   "path": "assets/gen-icons/5.png",
+   "bytes": 164691
+  },
+  {
+   "path": "data/pokemon-gen5.json",
+   "bytes": 118336
+  }
+ ],
+ "totalBytes": 11155411,
+ "generatedAt": "2026-10-26"
+}

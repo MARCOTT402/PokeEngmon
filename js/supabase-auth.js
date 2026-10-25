@@ -226,10 +226,11 @@ const SupabaseAuth = {
   },
 
   /* ---------- RPC：稀有抽（server 原子扣鑽 + roll rarity + 派寵） ----------
-     回傳 {entry, rarity, is_dupe, balance}；失敗 return null（前端唔好扣本地鑽） */
-  async gachaPull(initExp) {
+     回傳 {entry, rarity, is_dupe, balance}；失敗 return null（前端唔好扣本地鑽）
+     gen = 目前最高已解鎖世代（server 按 gen 過濾鏈池，防越代作弊） */
+  async gachaPull(initExp, gen) {
     if (!this.currentUser()) return null;
-    return this._rpc("gacha_pull", { init_exp: initExp || 0 });
+    return this._rpc("gacha_pull", { init_exp: initExp || 0, p_gen: gen || 1 });
   },
 
   /* ---------- RPC：捕捉成功拎寵（只限 normal 稀有度） ----------

@@ -19,7 +19,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/style.css?v=126">
+  <link rel="stylesheet" href="css/style.css?v=127">
 </head>
 <body>
   <div id="app">
@@ -230,8 +230,14 @@
 
     <!-- ============ 圖鑑 ============ -->
     <section id="view-pokedex" class="view">
+      <nav class="gen-hub" id="gen-hub" aria-label="Generations"></nav>
       <h2 class="dex-title">📕 Pokédex</h2>
       <div class="dex-progress" id="dex-progress"></div>
+      <div class="gen-lock-banner" id="gen-lock-banner" hidden>
+        <div class="glb-icon">🔒</div>
+        <h3 id="gen-lock-title">Locked</h3>
+        <p id="gen-lock-desc"></p>
+      </div>
       <div id="pokedex-grid" class="pokedex-grid"></div>
       <div class="hub-spacer"></div>
       <div class="hub-bar">
@@ -320,22 +326,24 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase-config.js?v=126"></script>
-  <script src="js/supabase-auth.js?v=126"></script>
-  <script src="js/sm2.js?v=126"></script>
-  <script src="js/sync.js?v=126"></script>
-  <script src="js/data.js?v=126"></script>
-  <script src="js/pokemon.js?v=126"></script>
-  <script src="js/storage.js?v=126"></script>
-  <script src="js/explain.js?v=126"></script>
-  <script src="js/quiz.js?v=126"></script>
-  <script src="js/powerup.js?v=126"></script>
-  <script src="js/gacha.js?v=126"></script>
-  <script src="js/pokedex.js?v=126"></script>
-  <script src="js/calendar.js?v=126"></script>
-  <script src="js/app.js?v=126"></script>
-  <script src="vendor/gsap/gsap.min.js?v=126"></script>
-  <script type="module" src="js/capture.js?v=126"></script>
+  <script src="supabase-config.js?v=127"></script>
+  <script src="js/supabase-auth.js?v=127"></script>
+  <script src="js/sm2.js?v=127"></script>
+  <script src="js/sync.js?v=127"></script>
+  <script src="js/gens-data.js?v=127"></script>
+  <script src="js/data.js?v=127"></script>
+  <script src="js/pokemon.js?v=127"></script>
+  <script src="js/genpack.js?v=127"></script>
+  <script src="js/storage.js?v=127"></script>
+  <script src="js/explain.js?v=127"></script>
+  <script src="js/quiz.js?v=127"></script>
+  <script src="js/powerup.js?v=127"></script>
+  <script src="js/gacha.js?v=127"></script>
+  <script src="js/pokedex.js?v=127"></script>
+  <script src="js/calendar.js?v=127"></script>
+  <script src="js/app.js?v=127"></script>
+  <script src="vendor/gsap/gsap.min.js?v=127"></script>
+  <script type="module" src="js/capture.js?v=127"></script>
 </body>
 </html>
 

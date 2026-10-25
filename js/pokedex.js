@@ -13,26 +13,122 @@ function capitalizeWord(slug) {
 }
 
 const Pokedex = {
+  curGen: 1,
+  _hubBound: false,
+
   open() {
+    const st = loadState();
+    /* 預設顯示最高已解鎖世代 */
+    this.curGen = Math.min(st.unlockedGen || 1, MAX_GEN);
     App.showView("view-pokedex");
     this.render();
+    this._bindHubScroll();
+  },
+
+  _genRoman(n) {
+    return ["I", "II", "III", "IV", "V"][n - 1] || String(n);
+  },
+
+  /* ---------- 浮動世代 hub ---------- */
+  renderHub() {
+    const hub = document.getElementById("gen-hub");
+    if (!hub || typeof GENS === "undefined") return;
+    const st = loadState();
+    const unlocked = st.unlockedGen || 1;
+    hub.innerHTML = "";
+    GENS.forEach(g => {
+      const locked = g.gen > unlocked;
+      const btn = document.createElement("button");
+      btn.className = "gen-chip" + (g.gen === this.curGen ? " active" : "") + (locked ? " locked" : "");
+      btn.innerHTML = `
+        ${locked ? '<span class="gc-lock">🔒</span>' : ""}
+        <img src="assets/gen-icons/${g.gen}.png" alt="${g.name}" loading="lazy"
+             onerror="this.onerror=null;this.src='${artworkURL(g.iconDex)}'">
+        <span class="gc-gen">GEN ${this._genRoman(g.gen)}</span>
+        <span class="gc-name">${g.name}</span>`;
+      btn.onclick = () => { this.curGen = g.gen; this.render(); };
+      hub.appendChild(btn);
+    });
+    /* 撳完自動捲去 active chip（手機橫向列表） */
+    const active = hub.querySelector(".gen-chip.active");
+    if (active && active.scrollIntoView) {
+      active.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  },
+
+  /* 捲落收 hub、捲上放 hub */
+  _bindHubScroll() {
+    if (this._hubBound) return;
+    this._hubBound = true;
+    let lastY = 0;
+    window.addEventListener("scroll", () => {
+      const hub = document.getElementById("gen-hub");
+      if (!hub || !document.getElementById("view-pokedex").classList.contains("active")) return;
+      const y = window.scrollY;
+      if (y > lastY && y > 70) hub.classList.add("hide");
+      else hub.classList.remove("hide");
+      lastY = y;
+    }, { passive: true });
   },
 
   render() {
     const st = loadState();
+    const unlocked = st.unlockedGen || 1;
+    const gen = this.curGen;
+    const locked = gen > unlocked;
+    const [lo, hi] = genRange(gen);
+
     const owned = new Set();
     st.entries.forEach(e => e.ownedSpecies.forEach(id => owned.add(id)));
 
+    /* 標題列：Gen II · Johto · 45/100 owned */
+    let ownedInGen = 0;
+    for (let id = lo; id <= hi; id++) if (owned.has(id)) ownedInGen++;
+    const total = hi - lo + 1;
+    const gMeta = (typeof GENS !== "undefined") ? GENS.find(g => g.gen === gen) : null;
+    const region = gMeta ? gMeta.name : "";
     document.getElementById("dex-progress").innerHTML =
-      `Collected <b>${owned.size}</b> / ${TOTAL_SPECIES}`;
-    document.getElementById("home-dex-progress").textContent = `${owned.size}/${TOTAL_SPECIES}`;
+      `Gen ${this._genRoman(gen)}${region ? " · " + region : ""} — Collected <b>${locked ? 0 : ownedInGen}</b> / ${total}`;
+
+    /* 主頁進度：顯示最高已解鎖世代嘅進度 */
+    const [hlo, hhi] = genRange(unlocked);
+    let ownedHome = 0;
+    for (let id = hlo; id <= hhi; id++) if (owned.has(id)) ownedHome++;
+    document.getElementById("home-dex-progress").textContent = `${ownedHome}/${hhi - hlo + 1}`;
+
+    /* 鎖定橫幅 */
+    const banner = document.getElementById("gen-lock-banner");
+    if (banner) {
+      banner.hidden = !locked;
+      if (locked && gMeta) {
+        const prev = (typeof GENS !== "undefined") ? GENS.find(g => g.gen === gen - 1) : null;
+        document.getElementById("gen-lock-title").textContent =
+          `Gen ${this._genRoman(gen)} · ${region} is locked`;
+        document.getElementById("gen-lock-desc").textContent =
+          `Complete Gen ${this._genRoman(gen - 1)}${prev ? " · " + prev.name : ""} (own every Pokémon line) to unlock!`;
+      }
+    }
 
     const grid = document.getElementById("pokedex-grid");
     grid.innerHTML = "";
 
-    Object.values(SPECIES).sort((a, b) => a.dexId - b.dexId).forEach(sp => {
-      const isOwned = owned.has(sp.dexId);
+    for (let id = lo; id <= hi; id++) {
+      const sp = SPECIES[id];
       const cell = document.createElement("button");
+
+      if (locked) {
+        /* 未解鎖世代：純「?」placeholder cell，零圖片請求 */
+        cell.className = "dex-cell dex-cell-locked";
+        cell.innerHTML = `
+          <span class="dex-qmark">?</span>
+          <span class="dex-name">#${String(id).padStart(3, "0")}</span>`;
+        cell.disabled = true;
+        grid.appendChild(cell);
+        continue;
+      }
+
+      if (!sp) continue;   // 理論上唔會（腳本已保證全覆蓋）
+      const isOwned = owned.has(id);
       cell.className = "dex-cell" + (isOwned ? " owned" : "");
       const rz = RARITY[sp.rarity];
       cell.innerHTML = `
@@ -48,7 +144,9 @@ const Pokedex = {
         img.onclick = (e) => { e.stopPropagation(); this.playCry(sp.dexId); };
       }
       grid.appendChild(cell);
-    });
+    }
+
+    this.renderHub();
   },
 
   /* Owned -> big art + data modal */

@@ -132,8 +132,19 @@ const EVOLUTION_CHAINS = [
   { key: "mew",        baseRarity: "legend", stages: [[151, "Mew"]] }
 ];
 
+/* ---------- Gen 2-5 擴充（js/gens-data.js，自動生成）----------
+   跨代進化鏈按世代截斷：Gen 1 鏈完全維持現狀（唔會有 crobat 等），
+   跨代後段（crobat、espeon 等）喺自己世代做獨立鏈 stage 1。
+   每条 Gen 2-5 鏈自帶 gen 欄位；Gen 1 鏈喺下面補 gen:1。 */
+if (typeof EVOLUTION_CHAINS_G25 !== "undefined" && Array.isArray(EVOLUTION_CHAINS_G25)) {
+  EVOLUTION_CHAINS.forEach(c => { if (!c.gen) c.gen = 1; });
+  EVOLUTION_CHAINS.push(...EVOLUTION_CHAINS_G25);
+} else {
+  EVOLUTION_CHAINS.forEach(c => { if (!c.gen) c.gen = 1; });
+}
+
 /* ---------- 展開所有物種（圖鑑用） ---------- */
-const SPECIES = {};          // dexId -> { dexId, name, zh, chainKey, stageIndex, stage, rarity, branch }
+const SPECIES = {};          // dexId -> { dexId, name, zh, chainKey, stageIndex, stage, rarity, branch, gen }
 const PULLABLE = {};         // rarity -> [chainKey,...]  只有 stage 1 會被抽中
 
 EVOLUTION_CHAINS.forEach(chain => {
@@ -141,7 +152,7 @@ EVOLUTION_CHAINS.forEach(chain => {
     SPECIES[st[0]] = {
       dexId: st[0], name: st[1],
       chainKey: chain.key, stageIndex: i, stage: i + 1,
-      rarity: chain.baseRarity, branch: false
+      rarity: chain.baseRarity, branch: false, gen: chain.gen || 1
     };
   });
   (chain.branches || []).forEach((opts, bi) => {
@@ -149,7 +160,7 @@ EVOLUTION_CHAINS.forEach(chain => {
       SPECIES[st[0]] = {
         dexId: st[0], name: st[1],
         chainKey: chain.key, stageIndex: chain.stages.length + bi, stage: chain.stages.length + bi + 1,
-        rarity: chain.baseRarity, branch: true
+        rarity: chain.baseRarity, branch: true, gen: chain.gen || 1
       };
     });
   });
@@ -157,7 +168,28 @@ EVOLUTION_CHAINS.forEach(chain => {
   PULLABLE[chain.baseRarity].push(chain.key);
 });
 
-const TOTAL_SPECIES = Object.keys(SPECIES).length;   // 圖鑑總數（151）
+const TOTAL_SPECIES = Object.keys(SPECIES).length;   // 圖鑑總數（649，Gen 1-5）
+
+/* ---------- 世代 helpers ---------- */
+function genOfChain(chainKey) {
+  const c = EVOLUTION_CHAINS.find(x => x.key === chainKey);
+  return c ? (c.gen || 1) : 1;
+}
+function chainsOfGen(n) {
+  return EVOLUTION_CHAINS.filter(c => (c.gen || 1) === n);
+}
+/* 抽獎／捕捉池：只限指定世代 + 稀有度（世代解鎖制：淨係最高已解鎖世代） */
+function pullablePool(gen, rarity) {
+  return EVOLUTION_CHAINS.filter(c => (c.gen || 1) === gen && c.baseRarity === rarity).map(c => c.key);
+}
+/* 該世代圖鑑編號範圍（GENS 未定義時 fallback Gen 1） */
+function genRange(n) {
+  if (typeof GENS !== "undefined") {
+    const g = GENS.find(x => x.gen === n);
+    if (g) return g.range;
+  }
+  return [1, 151];
+}
 
 /* 進化鏈最高階數（線性 stages + 分支步數） */
 function chainMaxStage(chain) {

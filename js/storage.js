@@ -19,7 +19,8 @@ function defaultState() {
     entries: [],             // 擁有嘅 Pokemon { uid, chainKey, stage, exp, branch?, ownedSpecies:[dexId], obtainedAt }
     activeUid: null,         // 目前拍檔（練經驗目標）
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
-    customQuestions: []      // 家長用 CSV 匯入嘅自訂題目
+    customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
+    unlockedGen: 1           // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
 }
@@ -87,6 +88,34 @@ function dateKey(ts) {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
+/* ---------- 世代解鎖 ----------
+   規則：擁有該世代全部進化鏈（每條鏈至少一個 entry，連傳說）→ 開下一代。
+   捕捉／抽獎池只包最高已解鎖世代。 */
+const MAX_GEN = 5;
+
+function isGenComplete(n) {
+  const st = loadState();
+  const owned = new Set(st.entries.map(e => e.chainKey));
+  return chainsOfGen(n).every(c => owned.has(c.key));
+}
+
+/* 逐代向上檢查，回傳新解鎖嘅世代數字（冇新解鎖 → null）。
+   silent=true 時唔會觸發下載/慶祝（啟動時用）。 */
+function recomputeUnlockedGen() {
+  const st = loadState();
+  let g = st.unlockedGen || 1;
+  let newly = null;
+  while (g < MAX_GEN && isGenComplete(g)) {
+    g += 1;
+    newly = g;
+  }
+  if (g !== st.unlockedGen) {
+    st.unlockedGen = g;
+    saveState();
+  }
+  return newly;
+}
+
 /* ---------- Pokemon 擁有記錄 ---------- */
 function uidGen() {
   /* 用 crypto.randomUUID() 產生 valid UUID v4，符合 Supabase uuid column */
@@ -140,7 +169,9 @@ function obtainPokemon(chainKey, mode) {
   /* 唔再自動切換拍檔；只係冇拍檔時先指派（例如第一隻） */
   if (!st.entries.some(e => e.uid === st.activeUid)) st.activeUid = entry.uid;
   saveState();
-  return { entry, isDupe: false };
+  /* 世代解鎖檢查（新寵落地後）：新開代會回傳世代數字俾上層彈慶祝窗 + 落資料包 */
+  const newlyUnlockedGen = recomputeUnlockedGen();
+  return { entry, isDupe: false, newlyUnlockedGen };
 }
 
 /* 用 1 點自由 EV 加落某項能力（每項上限 252、總和上限 510） */
@@ -278,6 +309,8 @@ function adoptServerEntry(serverRow) {
     if (!st.entries.some(e => e.uid === st.activeUid)) st.activeUid = mapped.uid;
   }
   saveState();
+  /* server 派寵（gacha_pull / obtain_capture RPC）落地後都要檢查世代解鎖 */
+  recomputeUnlockedGen();
   return mapped;
 }
 

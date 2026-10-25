@@ -185,6 +185,15 @@ window.Sync = (() => {
          所以喺 derive 之前一定要等 POKEMON_DEX 就緒。 */
       await loadPokemonDex();
       if (Array.isArray(entries)) {
+        /* Gen 2-5：雲端還原嘅 entry 可能屬未載入嘅世代，
+           deriveEntryFields 前必須先 ensureGenDataLoaded，否則 moves 會變空 */
+        const gensNeeded = new Set();
+        entries.forEach(e => {
+          if (e.chain_key && !e.chain_key.startsWith("dex_")) gensNeeded.add(genOfChain(e.chain_key));
+        });
+        for (const g of gensNeeded) {
+          if (g > 1) await ensureGenDataLoaded(g);
+        }
         const st = loadState();
         st.entries = entries.map(e => {
           /* 舊版 settle_capture RPC 用過 'dex_<id>' 做 chain_key，要轉返正確 chain key */
