@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pokédex Gen Tabs — Prototype</title>
+<style>
+  /* ===== 由 css/style.css 抽岀嘅設計 token，保持同正式 app 一致 ===== */
+  :root {
+    --yellow: #ffcb05;
+    --blue: #3b5ca8;
+    --red: #ee4035;
+    --ink: #23252b;
+    --bg1: #eaf4ff;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --shadow: 0 4px 14px rgba(35, 60, 120, .14);
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: "Segoe UI", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%) fixed;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 10px 14px 40px; }
+
+  /* ===== 原型標記 ===== */
+  .proto-ribbon {
+    text-align: center; font-size: .72rem; font-weight: 800; letter-spacing: .12em;
+    color: #8a93a8; padding: 6px 0 2px;
+  }
+
+  /* ===== 浮動世代 hub（貼頂；捲落收、捲上放） ===== */
+  .gen-hub {
+    position: sticky; top: 8px; z-index: 50;
+    display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+    padding: 8px; border-radius: var(--radius);
+    background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px);
+    box-shadow: var(--shadow); border: 2px solid #e2e7ef;
+    transition: transform .2s ease;
+  }
+  .gen-hub::-webkit-scrollbar { display: none; }
+  .gen-hub.hide { transform: translateY(-115%); }
+
+  .gen-chip {
+    flex: 1 0 auto; min-width: 82px;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 6px 8px 7px; border-radius: 14px;
+    border: 2px solid #e2e7ef; background: #fff; cursor: pointer;
+    font-family: inherit; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
+    position: relative;
+  }
+  .gen-chip img { width: 44px; height: 44px; object-fit: contain; }
+  .gen-chip .gc-gen { font-size: .66rem; font-weight: 800; color: #5b6478; letter-spacing: .06em; }
+  .gen-chip .gc-name { font-size: .8rem; font-weight: 800; color: var(--ink); }
+  .gen-chip.active { border-color: var(--blue); background: #eef3ff; box-shadow: 0 0 0 2px rgba(59, 92, 168, .18); }
+  .gen-chip.locked { opacity: .55; }
+  .gen-chip.locked img { filter: grayscale(1); }
+  .gen-chip .gc-lock {
+    position: absolute; top: 2px; right: 4px; font-size: .72rem;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .gen-chip:hover:not(:active) { transform: scale(1.05); }
+  }
+
+  /* ===== 世代頁標題 + 進度 ===== */
+  .dex-title { text-align: center; margin: 14px 0 2px; font-size: 1.5rem; }
+  .dex-region { text-align: center; color: #5b6478; font-weight: 700; font-size: .95rem; }
+  .dex-progress { text-align: center; font-size: 1.05rem; color: #5b6478; font-weight: 700; margin: 6px 0 8px; }
+  .dex-progress b { color: var(--blue); font-size: 1.25rem; }
+  .progressbar {
+    height: 14px; border-radius: 999px; background: #e6eaf2;
+    border: 2px solid #d5dbe8; overflow: hidden; margin: 0 6px 14px;
+  }
+  .progressbar i { display: block; height: 100%; width: 0; background: var(--yellow); border-radius: 999px; transition: width .3s; }
+
+  /* ===== 鎖定橫幅 ===== */
+  .gen-lock-banner {
+    text-align: center; padding: 18px 16px; margin: 10px 0 14px;
+    border: 3px dashed #c6cddc; border-radius: var(--radius); background: #f4f6fb;
+  }
+  .gen-lock-banner .glb-icon { font-size: 2rem; }
+  .gen-lock-banner h3 { margin: 4px 0; font-size: 1.15rem; }
+  .gen-lock-banner p { color: #5b6478; font-weight: 700; font-size: .92rem; }
+
+  /* ===== 圖鑑格（同正式 .dex-cell 一致） ===== */
+  .pokedex-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px; align-content: start;
+  }
+  .dex-cell {
+    background: var(--card); border: 2px solid #e2e7ef; border-radius: 14px;
+    padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(35, 60, 120, .08);
+    transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .dex-cell.owned { border-color: #ffd54f; }
+  .dex-cell img { width: 68px; height: 68px; object-fit: contain; }
+  .dex-cell:not(.owned) img { filter: brightness(0); opacity: .28; }
+  .dex-cell:not(.owned) { cursor: default; }
+  .dex-name { font-size: .78rem; font-weight: 800; color: #4a5468; }
+  .dex-cell:not(.owned) .dex-name { color: #c3c9d6; }
+  @media (hover: hover) and (pointer: fine) {
+    .dex-cell.owned:hover:not(:active) { transform: scale(1.05); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="proto-ribbon">P R O T O T Y P E</div>
+
+  <!-- 浮動世代 hub -->
+  <nav class="gen-hub" id="gen-hub" aria-label="Generations"></nav>
+
+  <!-- 世代頁內容 -->
+  <h1 class="dex-title" id="dex-title">Pokédex</h1>
+  <div class="dex-region" id="dex-region"></div>
+  <div class="dex-progress" id="dex-progress"></div>
+  <div class="progressbar"><i id="dex-bar"></i></div>
+
+  <div class="gen-lock-banner" id="lock-banner" hidden>
+    <div class="glb-icon">🔒</div>
+    <h3 id="lock-title">Locked</h3>
+    <p id="lock-desc"></p>
+  </div>
+
+  <div class="pokedex-grid" id="pokedex-grid"></div>
+</div>
+
+<script>
+/* ============================================================
+   Prototype：5 代分頁圖鑑 + 浮動世代 hub
+   Demo 狀態寫死：Gen 1 全齊、Gen 2 部分、Gen 3–5 鎖定
+   圖片用 PokeAPI CDN（原型在線用；正式版會用本地素材）
+   ============================================================ */
+
+const SPRITE = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+const ARTWORK = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+
+const GENS = [
+  { gen: 1, roman: "I",   name: "Kanto",  range: [1, 151],   icon: 150 },  // Mewtwo
+  { gen: 2, roman: "II",  name: "Johto",  range: [152, 251], icon: 250 },  // Ho-Oh
+  { gen: 3, roman: "III", name: "Hoenn",  range: [252, 386], icon: 383 },  // Groudon
+  { gen: 4, roman: "IV",  name: "Sinnoh", range: [387, 493], icon: 483 },  // Dialga
+  { gen: 5, roman: "V",   name: "Unova",  range: [494, 649], icon: 643 },  // Reshiram
+];
+
+/* Demo 擁有狀態（寫死） */
+const unlockedGen = 2;
+function isOwned(gen, dexId) {
+  if (gen === 1) return true;                       // Gen 1 全齊
+  if (gen === 2) return ((dexId * 31) % 100) < 45;  // Gen 2 約 45%（散射效果）
+  return false;                                     // Gen 3–5 鎖定
+}
+
+let curGen = 1;
+
+/* ---------- 世代 hub ---------- */
+function renderHub() {
+  const hub = document.getElementById("gen-hub");
+  hub.innerHTML = "";
+  GENS.forEach(g => {
+    const locked = g.gen > unlockedGen;
+    const btn = document.createElement("button");
+    btn.className = "gen-chip" + (g.gen === curGen ? " active" : "") + (locked ? " locked" : "");
+    btn.innerHTML = `
+      ${locked ? '<span class="gc-lock">🔒</span>' : ""}
+      <img src="${ARTWORK(g.icon)}" alt="${g.name}" loading="lazy">
+      <span class="gc-gen">GEN ${g.roman}</span>
+      <span class="gc-name">${g.name}</span>`;
+    btn.onclick = () => renderGen(g.gen);
+    hub.appendChild(btn);
+  });
+}
+
+/* ---------- 世代頁 ---------- */
+function renderGen(gen) {
+  curGen = gen;
+  const g = GENS.find(x => x.gen === gen);
+  const locked = gen > unlockedGen;
+  const [lo, hi] = g.range;
+  const total = hi - lo + 1;
+  const owned = locked ? 0 : countOwned(g);
+
+  document.getElementById("dex-title").textContent = `Gen ${g.roman}`;
+  document.getElementById("dex-region").textContent = g.name;
+  document.getElementById("dex-progress").innerHTML = `<b>${owned}</b> / ${total} owned`;
+  document.getElementById("dex-bar").style.width = (owned / total * 100) + "%";
+
+  const banner = document.getElementById("lock-banner");
+  banner.hidden = !locked;
+  if (locked) {
+    const prev = GENS.find(x => x.gen === gen - 1);
+    document.getElementById("lock-title").textContent = `Gen ${g.roman} · ${g.name} is locked`;
+    document.getElementById("lock-desc").textContent =
+      `Complete Gen ${prev.roman} · ${prev.name} (own every Pokémon line) to unlock!`;
+  }
+
+  const grid = document.getElementById("pokedex-grid");
+  grid.innerHTML = "";
+  for (let id = lo; id <= hi; id++) {
+    const owned = !locked && isOwned(gen, id);
+    const cell = document.createElement("div");
+    cell.className = "dex-cell" + (owned ? " owned" : "");
+    cell.innerHTML = `
+      <img src="${SPRITE(id)}" alt="#${id}" loading="lazy">
+      <span class="dex-name">#${String(id).padStart(3, "0")}</span>`;
+    grid.appendChild(cell);
+  }
+
+  renderHub();
+  /* 切代後捲返上面 */
+  window.scrollTo({ top: 0 });
+}
+
+function countOwned(g) {
+  let n = 0;
+  for (let id = g.range[0]; id <= g.range[1]; id++) if (isOwned(g.gen, id)) n++;
+  return n;
+}
+
+/* ---------- 捲落收 hub、捲上放 hub ---------- */
+let lastY = 0;
+window.addEventListener("scroll", () => {
+  const y = window.scrollY;
+  const hub = document.getElementById("gen-hub");
+  if (y > lastY && y > 70) hub.classList.add("hide");
+  else hub.classList.remove("hide");
+  lastY = y;
+}, { passive: true });
+
+renderGen(1);
+</script>
+</body>
+</html>
