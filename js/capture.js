@@ -375,7 +375,7 @@ class CaptureAudio {
     if (this.ctx && this._bgmBuf) {
       try {
         const g = this.ctx.createGain();
-        g.gain.value = 0.55;
+        g.gain.value = 0.42;
         g.connect(this.ctx.destination);  /* bypass master — gain values match old element volumes */
         const src = this.ctx.createBufferSource();
         src.buffer = this._bgmBuf;
@@ -462,7 +462,7 @@ class CaptureAudio {
     try {
       this.bgm = new Audio("assets/bgm/wild-battle.mp3");
       this.bgm.loop = true;
-      this.bgm.volume = 0.55;
+      this.bgm.volume = 0.42;
       this.bgm.preload = "auto";
     } catch (e) { this.bgm = null; }
   }
@@ -498,7 +498,7 @@ class CaptureAudio {
       try { this.bgm.volume = vol * Math.max(0, 1 - i / steps); } catch (e) {}
       if (i < steps) setTimeout(step, 55);
       else {
-        try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.volume = 0.55; } catch (e) {}
+        try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.volume = 0.42; } catch (e) {}
         this._bgmFading = false;
       }
     };
@@ -1663,8 +1663,8 @@ class PokemonCaptureScene {
       /* If autoplay was blocked, start BGM now (user gesture unlocks it) */
       this.startBGM();
       /* Duck BGM on the very first tap so charge SFX take focus —
-         0.32 keeps it clearly audible so the throw-time fadeout is perceptible */
-      this.duckBGM(0.32, 400);
+         0.24 keeps it clearly audible so the throw-time fadeout is perceptible */
+      this.duckBGM(0.24, 400);
     }
     this.taps += 1;
     this.audio.tap(this.taps);
