@@ -1,11 +1,11 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v111";
+const CACHE_NAME = "pokeengmon-v112";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
   "./index.html",
-  "./questions.csv",
-  "./picture_words.csv",
+  "./Q_folder/questions/questions.csv",
+  "./Q_folder/picture_words/picture_words.csv",
   "./js/supabase-auth.js",
   "./js/sm2.js",
   "./js/sync.js",

@@ -53,8 +53,13 @@ PokeEngmon/
 │   ├── bgm/                # 背景音樂
 │   ├── types/              # 屬性 icon
 │   └── tts/w/              # 單字發音
-├── questions.csv           # 預設題庫
-├── picture_words.csv       # 圖片詞庫
+├── Q_folder/             # 所有考題集中放呢度，方便擴充新題型
+│   ├── questions/        # 句子題
+│   │   ├── questions.csv
+│   │   └── questions_images/
+│   └── picture_words/    # 圖片單字題
+│       ├── picture_words.csv
+│       └── picture_words_images/
 └── .trae/skills/...        # pre-op checklist skill
 ```
 

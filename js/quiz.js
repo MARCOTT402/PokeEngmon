@@ -68,7 +68,7 @@ const Quiz = {
     /* 記憶光芒：呢題係記憶曲線到期嘅複習題（stage > 0）→ 彩色光芒 + 拍檔提醒 */
     this._renderMemoryLight(q);
 
-    /* 題目圖片（questions_images/<編號>.png）；冇圖片就收起個窗 */
+    /* 題目圖片（Q_folder/questions/questions_images/<編號>.png）；冇圖片就收起個窗 */
     this._renderImage(q);
 
     /* 圖片單字題：收起句子卡，改出「點圖聽聲」卡 */
