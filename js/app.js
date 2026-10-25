@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v128";
+const APP_VERSION = "v129";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -525,7 +525,7 @@ const App = {
       ensureEntryPokemonData(entry);
       const dexId = entryCurrentSpecies(entry)[0];
       const span = levelSpan(dexId, entry.level || 1);
-      expGain = Math.max(10, Math.round(span * (perfect ? 0.12 : 0.09)));
+      expGain = Math.max(10, Math.round(span * (perfect ? 0.50 : 0.09)));
     }
     /* 記憶光芒 Bonus XP：答對「抗忘記題目」（記憶曲線到期題）該題 EXP ×1.5
        即每題基本份額之外，再多半份 */
