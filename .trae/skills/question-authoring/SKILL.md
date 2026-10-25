@@ -5,7 +5,29 @@ description: Question-authoring rules for PokeEngmon. Read before adding or gene
 
 # PokeEngmon Question-Authoring Checklist
 
-Read this file FIRST, before adding, generating, or editing rows in `questions.csv` (sentence questions) or `picture_words.csv` (word/image questions). Format mistakes here break import silently or produce wrong arrows/hints in-game.
+Read this file FIRST, before adding, generating, or editing rows in any question CSV under `Q_folder/` (currently `questions/questions.csv` for sentence questions and `picture_words/picture_words.csv` for word/image questions). Format mistakes here break import silently or produce wrong arrows/hints in-game.
+
+## Rule 0 — All question files live under `Q_folder/`; one subfolder per question type
+
+All question data and their images are consolidated under a single top-level folder so new question types can be added consistently:
+
+```
+Q_folder/
+├── <type>/
+│   ├── <type>.csv            ← question data for this type
+│   └── <type>_images/        ← (optional) per-question images
+```
+
+Current types:
+- `questions/` — sentence (fill-in-the-blank) questions → `questions.csv` + `questions_images/`
+- `picture_words/` — word/image dictation questions → `picture_words.csv` + `picture_words_images/`
+
+**Adding a new question type:**
+1. Create `Q_folder/<newtype>/`
+2. Put `<newtype>.csv` inside (plus `<newtype>_images/` if it needs images)
+3. Wire it into `js/data.js`: add a `fetch("Q_folder/<newtype>/<newtype>.csv")` loader and a parser, mirroring `loadSiteQuestions()` / `loadPictureWords()`
+4. If the CSV carries an `Image` column, store the **full repo-root-relative path** in each row, e.g. `Q_folder/picture_words/picture_words_images/cat.webp` — not just the filename.
+5. Service Worker (`sw.js`): add `./Q_folder/<newtype>/<newtype>.csv` to the `ASSETS` array so the CSV works offline.
 
 ## Rule 1 — Sentence-question CSV has a fixed 8-column header
 
