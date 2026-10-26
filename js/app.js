@@ -1,9 +1,9 @@
-﻿/* ============================================================
+﻿﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v130";
+const APP_VERSION = "v131";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -1061,6 +1061,7 @@ const App = {
     /* 按鈕 */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
+    document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
     document.getElementById("btn-disclaimer").onclick = () => this.openDisclaimer();
     document.getElementById("topbar-name").onclick = () => this.openRename();
@@ -1164,6 +1165,7 @@ const App = {
     /* 先切 view（會中斷抽獎流程並結算），再 render 主頁，避免顯示舊鑽石/舊拍檔 */
     document.getElementById("btn-gacha-home").onclick = () => { this.showView("view-home"); this.renderHome(); };
     document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    document.getElementById("btn-lb-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-review-back").onclick = () => {
       /* 由結算入嚟 → 返結算；由日曆入嚟 → 返主頁 */

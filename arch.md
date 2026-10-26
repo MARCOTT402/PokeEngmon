@@ -1,7 +1,7 @@
 # PokeEngmon 架構文檔（ARCH）
 
 > 純前端 SPA + Supabase（PostgreSQL + Auth + REST）。無 Node、無 build step，直接 deploy 去 GitHub Pages。
-> 目前版本：**v116**（2026-10）
+> 目前版本：**v127**（2026-10）
 
 ---
 
@@ -12,7 +12,7 @@
 | 前端 | 原生 HTML/CSS/JS（無框架、無 build step） |
 | 動畫 | GSAP（快龍扭蛋）、Three.js（捕捉場景） |
 | 後端 | Supabase（PostgreSQL + PostgREST + GoTrue Auth） |
-| 圖鑑素材 | PokeAPI sprites + 本地 pre-download 嘅 151 個 pixel GIF + 官方 artwork |
+| 圖鑑素材 | PokeAPI sprites + 本地 649 個 pixel GIF（Gen 1 入 SW pre-cache；Gen 2–5 由 GenPack 解鎖後按需下載）+ 官方 artwork |
 | 音效 | 本地 BGM + 寶可夢叫聲 MP3 + Azure TTS（圖片題單字）+ 瀏覽器 speechSynthesis 兜底 |
 | 部署 | GitHub Pages（靜態，main branch root） |
 | PWA | Service Worker + manifest.json，容錯式逐個快取 |
@@ -34,7 +34,9 @@ PokeEngmon/
 ├── css/style.css
 ├── js/
 │   ├── app.js              # 主流程：路由、主畫面、結算、進化、modal、版本號
-│   ├── data.js             # EVOLUTION_CHAINS、SPECIES、GAME_CONFIG、RARITY、wordAudioURL()
+│   ├── data.js             # EVOLUTION_CHAINS、SPECIES、GAME_CONFIG、RARITY、wordAudioURL()、pullablePool
+│   ├── gens-data.js        # GENS（Gen 1–5 metadata）+ EVOLUTION_CHAINS_G25（tools/fetch_gen_data.py 生成）
+│   ├── genpack.js          # GenPack：世代資料包按需下載（manifest + 4 並發 + SW cache 持久化 + 續傳）
 │   ├── storage.js          # LocalStorage 層：loadState、saveState、obtainPokemon、deriveEntryFields、migrateEntries
 │   ├── quiz.js             # 答題邏輯 + _showFeedback（所有題型共用嘅回應入口）
 │   ├── powerup.js          # Power Up Zone（回合尾改錯）
@@ -48,11 +50,14 @@ PokeEngmon/
 │   ├── calendar.js         # 練習日曆
 │   └── explain.js          # 錯題解析（關鍵詞箭咀）
 ├── data/
-│   ├── pokemon-151.json    # 151 隻寶可夢資料（含 learnset）
-│   └── moves.json          # 技能資料（威力、命中、PP、屬性、效果）
+│   ├── pokemon-151.json    # Gen 1（151 隻）寶可夢資料（含 learnset），SW pre-cache
+│   ├── pokemon-gen2…5.json # Gen 2–5 資料（同 shape），GenPack 解鎖後先載入
+│   └── moves.json          # 技能資料（威力、命中、PP、屬性、效果；563 招）
 ├── assets/
-│   ├── animated/           # 1-151.gif（pixel 動畫，首頁拍檔顯示）
-│   ├── cries/              # 1-151.mp3（叫聲，僅首次解鎖播放）
+│   ├── animated/           # 1-649.gif（pixel 動畫；Gen 2–5 由 GenPack 下載）
+│   ├── cries/              # 1-649.mp3（叫聲；Gen 2–5 由 GenPack 下載）
+│   ├── gen-icons/          # 1-5.png 世代圖示（封面傳說 artwork）
+│   ├── gen-packs/          # gen2-5.json manifest（檔案清單 + size 校驗）
 │   ├── bgm/                # 背景音樂
 │   └── types/              # 屬性 icon
 ├── Q_folder/               # 所有考題集中放呢度，方便擴充新題型
@@ -65,6 +70,9 @@ PokeEngmon/
 │       └── picture_words_audio/   # 單字發音 mp3（<word>.mp3，Azure Jenny -10%）
 ├── tools/
 │   ├── gen_word_tts.py     # 離線生成圖片題 TTS mp3（用 Azure Speech）
+│   ├── fetch_gen_data.py   # 離線抓 PokeAPI → 生成 gens-data.js + pokemon-gen{2..5}.json（299 條鏈 + rarity）
+│   ├── fetch_gen_assets.py # 離線抓 Gen 2–5 GIF/叫聲/圖示/manifest（叫聲 OGG → ffmpeg → MP3）
+│   ├── gen_chain_sql.py    # 由 gens-data.js 生成世代 SQL 遷移（chain_rarity insert）
 │   └── git_commit_push.py  # 一鍵 git add/commit/push（見 .trae/documents/git-commit-push-guide.md）
 └── .trae/
     ├── documents/          # 歷次 plan / spec / 設計文檔
@@ -79,7 +87,9 @@ PokeEngmon/
 index.html
   └─ 載入所有 js（global functions / objects，無 module system）
      │
-     ├─ data.js ───────────── EVOLUTION_CHAINS / SPECIES / GAME_CONFIG / RARITY / wordAudioURL
+     ├─ data.js ───────────── EVOLUTION_CHAINS / SPECIES / GAME_CONFIG / RARITY / wordAudioURL / pullablePool
+     ├─ gens-data.js ──────── GENS / EVOLUTION_CHAINS_G25（Gen 1–5 鏈 + rarity，腳本生成）
+     ├─ genpack.js ────────── GenPack.status() / download() / resumePending()（世代資料包下載）
      ├─ storage.js ────────── loadState() / saveState() / obtainPokemon() / deriveEntryFields()
      ├─ pokemon.js ────────── expAtLevel() / addEntryExp() / entryCurrentSpecies() / initialMoves()
      ├─ sm2.js ────────────── SM2.computeBestQ() / updateCard() / buildSession()（只抽到期卡）
@@ -105,6 +115,7 @@ index.html
 ```
 pokeengmon_state_v1 = {
   device_id, playerName, diamonds,
+  unlockedGen,           # 目前最高已解鎖世代（v127，初始 1）
   entries: [{ uid, chainKey, stage, exp, level, ownedSpecies, ivs, evs, moves, candies, dupes, branch, ... }],
   activeUid, records: { "YYYY-MM-DD": [...] },
   customQuestions, totalSets, totalCorrect, bestStreak,
@@ -129,6 +140,7 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 | `user_history` | `id bigserial` | 答題記錄（q_score, response_ms, levenshtein_distance） |
 | `user_captures` | `id bigserial` | 捕捉記錄（每次捕捉無論成功失敗都寫一條） |
 | `user_imports` | `id bigserial` | import_state 審計記錄（v106 加） |
+| `chain_rarity` | `chain_key` | 全 498 條鏈嘅 `rarity` + `gen` + `stage1_dex`（捕捉池 = rarity='normal'；`gacha_pull` / `obtain_capture` 都查呢張表；v127 加 gen 欄） |
 
 ### 4.3 同步方向
 
@@ -188,8 +200,8 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 ### 5.5 稀有抽（v102 快龍扭蛋機）
 1. 主頁撳 💎 → 入快龍頁
 2. 用戶拖／撳 `#dm-arm` ≥ 72% → 觸發動畫
-3. **即時開動畫**（唔等 server），背景同時調用 `SupabaseAuth.gachaPull(initExp)` RPC
-4. RPC 返回：原子扣 💎3、server roll rarity（rare 80% / epic 15% / legend 5%）、roll chain、生成 entry row
+3. **即時開動畫**（唔等 server），背景同時調用 `SupabaseAuth.gachaPull(initExp, unlockedGen)` RPC
+4. RPC 返回：原子扣 💎3、server roll rarity（rare 80% / epic 15% / legend 5%）、按 `p_gen` 過濾 `chain_rarity` roll chain、生成 entry row（server 仲會用 `max_unlocked_gen(uid)` 驗證世代解鎖）
 5. 前端 `adoptServerEntry()` 落地 → 全屏稀有度爆發動畫 → 檢視卡
 6. 檢視卡兩個掣：「💎 ×3 TO GO!」（再抽）/「‹ Back to Home」
 7. 鑽石唔夠 → 按鈕 disabled + 顯示「Need 💎3 (you have N)」
@@ -210,6 +222,14 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
    - 優先揀 `en-*` 語音
    - `rate 0.85 / pitch 1 / volume 1`，講之前 `cancel()` 清隊列
 3. 完全失敗 → 顯示「🔇 Audio unavailable」常駐提示（唔係 3 秒 toast）
+
+### 5.8 世代解鎖 + GenPack 按需下載（v127）
+1. **解鎖判定**：`recomputeUnlockedGen()` 逐代檢查 `chainsOfGen(n)` 每條鏈都有 entry（`isGenComplete`）→ 全齊就解鎖下一代；`obtainPokemon()`（本地路徑）同 `adoptServerEntry()`（RPC 路徑）落地後都會 re-run
+2. **觸發點**：回合結算後（捕捉路徑，`App.onSetComplete` 尾延遲彈出）、稀有抽檢視卡關閉時（gacha 將 `newlyUnlockedGen` stash 入 `App._pendingGenUnlock` → `_goHome` / `_pullAgain` 調 `App.maybeShowGenUnlock()`）
+3. **慶祝窗 + 下載**：`showGenUnlock(gen)` 彈慶祝卡 → `GenPack.download(gen)` fetch `assets/gen-packs/gen{N}.json` manifest → 4 並發逐檔下載（經 SW cache-first 持久化）→ 進度條 → `ensureGenDataLoaded(gen)` fetch `data/pokemon-gen{N}.json` 併入 `POKEMON_DEX`
+4. **啟動還原**：`App.init()` 按 owned entries 嘅 gens 逐個 `ensureGenDataLoaded(g)` + `GenPack.resumePending()` 背景補下未完成包（done/partial 狀態記 localStorage）
+5. **池過濾**：前端 `pullablePool(unlockedGen, rarity)` 決定抽卡/捕捉池；server 端 `gacha_pull(p_gen)` / `obtain_capture` 用 `max_unlocked_gen(uid)`（SECURITY DEFINER，逐代查 `chain_rarity` vs `user_entries`）二次驗證
+6. **圖鑑**：未解鎖世代 cell 係純「?」DOM（`cell.disabled = true`），**唔生成任何 `<img>`** → 零圖片請求、零外形洩露；世代 hub 捲動收放（`_bindHubScroll`）
 
 ---
 
@@ -246,6 +266,10 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 8. **新增題型必須共用 `Quiz._showFeedback`**：唔好另起爐灶（v114 教訓）
 9. **Service Worker 用容錯式逐個快取**：`caches.addAll()` 一個 404 全盤失敗
 10. **圖片題 mp3 放 `Q_folder/picture_words/picture_words_audio/`**：唔好放返 `assets/tts/`
+11. **Gen 2–5 entry 在 Sync.pull derive 前要 `ensureGenDataLoaded(g)`**：否則 `initialMoves()` 讀唔到 POKEMON_DEX → 招式變空（v113 同款坑嘅世代版）
+12. **改 RPC 簽名必須先 `drop function` 舊版**：default 參數會撞 overload → PostgREST 300 ambiguous（v127 `gacha_pull` 加 `p_gen` 時教訓）
+13. **未解鎖世代圖鑑格係純「?」**：唔可以用剪影或者背後藏 `<img>`，否則洩露外形兼白耗流量
+14. **跨代進化鏈要截斷**：crobat / espeon / steelix 等喺自己世代做獨立 stage-1 鏈，Gen 1 鏈零改動（零遷移）
 
 ---
 
@@ -255,4 +279,4 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 2. `python tools/git_commit_push.py -m "vNN: ..."` 或手動 `git add / commit / push`
 3. GitHub Pages 自動部署（main branch root，幾十秒）
 4. Service Worker `CACHE_NAME` 改 → 瀏覽器下次開頁面自動安裝新 SW → `skipWaiting` 接管 → 前端 `controllerchange` 自動刷新
-5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）
+5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）；最新一個係 `supabase-migrate-20261026-gen-expansion.sql`（`chain_rarity` 加 gen + 299 條 insert + `max_unlocked_gen` + `gacha_pull(p_gen)` + `obtain_capture` 649）

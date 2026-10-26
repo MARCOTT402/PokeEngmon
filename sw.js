@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-v130";
+const CACHE_NAME = "pokeengmon-v131";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -22,6 +22,7 @@ const ASSETS = [
   "./js/powerup.js",
   "./js/gacha.js",
   "./js/pokedex.js",
+  "./js/leaderboard.js",
   "./js/calendar.js",
   "./js/app.js",
   "./js/capture.js",

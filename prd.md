@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**v116**（2026-10）
+> 目前版本：**v127**（2026-10）
 
 ---
 
@@ -58,15 +58,19 @@
 ### 3.3 寶可夢系統
 
 - **拍檔（Partner）**：答題 EXP 固定落入當前拍檔（唔係最新捕捉到嗰隻）
-- **圖鑑（Pokédex）**：1–151 全圖鑑，已擁有顯示，未擁有問號剪影
-- **進化**：線性進化（最多 3 階）+ 分支進化（伊貝隨機分支）
+- **圖鑑（Pokédex）**：1–649 全圖鑑（Gen 1–5），5 個世代分頁 + 頂部浮動世代 hub（捲落收起、捲上浮出）；世代圖示用封面傳說（Mewtwo / Ho-Oh / Groudon / Dialga / Reshiram）；未解鎖世代顯示純「?」佔位格（**零圖片請求、零外形洩露、零流量**）
+- **世代解鎖（v127）**：初始只有 Gen 1；擁有該代**全部進化鏈（連傳說）** → 自動解鎖下一代，彈慶祝窗
+- **GenPack 按需下載（v127）**：世代解鎖當刻先至下載該代資料包（GIF + 叫聲 + 數據 JSON，約 3–11 MB），解鎖前零流量零儲存；下載有進度條，SW cache-first 持久化，斷線下次啟動自動續傳
+- **進化**：線性進化（最多 3 階）+ 分支進化（伊貝隨機分支；wurmple / clamperl / tyrogue 等按原作分支）
 - **IV/EV**：每隻新抽嘅 IV 隨機 0–31；重複抽到 → +1 可自由分配 EV（單項上限 252、總和 510）
 - **等級／進度**：`level` 由 `exp` derive；`stage` 由 `chainKey + exp + dupes + branch` derive（v99 起改為 server-side 權威）
+- **稀有度（Gen 2–5 自動計算，v127）**：legend = 官方 legendary/mythical；epic = 最終階段 BST ≥ 600；rare = BST ≥ 500；normal = 其餘。Gen 1 維持手調不變
 
 ### 3.4 抽卡系統（Gacha）
 
 - **普通抽已永久移除**（v72）：唔再派普通抽券，回合獎勵只保留鑽石 + EXP
 - **稀有抽（唯一抽法）**：耗 💎3，機率 rare 80% / epic 15% / legend 5%
+- **世代池（v127）**：抽卡池只含目前最高已解鎖世代；`gacha_pull` RPC 加 `p_gen` 參數，server 用 `max_unlocked_gen(uid)` 二次驗證（防前端亂傳）
 - **快龍扭蛋機 UI（v102）**：
   - 主頁撳 💎 → 入快龍頁 → 拖／撳 `#dm-arm` ≥ 72% → 快龍肚仔開艙跌球 → 全屏稀有度爆發動畫 → 檢視卡
   - 檢視卡兩個掣：「💎 ×3 TO GO!」（唔夠鑽會 disabled + 顯示差額）、「‹ Back to Home」
@@ -77,6 +81,7 @@
 
 - Three.js 3D 場景，投精靈球捉野生寶可夢
 - 捕捉成功率 `0.80 + attempts × 0.05`（上限 0.95），server `settle_capture` RPC 決定（防金手指）
+- **世代池（v127）**：捕捉池只含目前最高已解鎖世代；`obtain_capture` RPC dex 上限放寬至 649 + server 端世代驗證
 - BGM：WARNING→草叢 0.55，第一下 400ms 內收到 0.32，第 3 下充電撳完拋出後 6.2 秒線性淡出至 0（iOS WebKit 長 ramp 有 bug，用 JS 定時逐格調 gain）
 - 捕捉成功唔會自動替換拍檔（避免數據混亂）；首次獲得寶可夢先自動設為拍檔
 
@@ -171,10 +176,15 @@
 | v114 | **統一答題回應**：所有題型必須經 `Quiz._showFeedback`，新增題型唔可以另起爐灶 |
 | v115 | 圖片題 TTS mp3 搬入 `Q_folder/picture_words/picture_words_audio/`，補返缺失嘅 `wordAudioURL()` |
 | v116 | **TTS 兜底**：mp3 缺失時自動用瀏覽器 speechSynthesis 讀出，保證唔會靜音 |
+| v117 | 內建 fallback 題（data.js QUESTION_BANK）全數遷移入 questions.csv，題目統一由 CSV 驅動 |
+| v119 | Settings 自訂題教學彈窗加「AI出題指引.md」超連結（新分頁打開） |
+| v120 | 全域 BGM 音量 0.4 → 0.25 |
+| v127 | **Gen 2–5 世代擴充**：+498 隻（#152–649）、世代解鎖制（儲齊全鏈開下一代）、GenPack 按需下載、圖鑑 5 代分頁 + 浮動 hub、未解鎖世代純「?」格、SQL 遷移（`chain_rarity.gen`、`gacha_pull(p_gen)`、`obtain_capture` 放寬 649） |
 
 ---
 
 ## 7. 未來方向（暫唔做，留記錄）
 
+- Gen 6–9 擴充：PokeAPI 官方動態 GIF 只覆蓋到 #649，Gen 1–5 已到位，Gen 6+ 要另搵素材來源先至做
 - 鑽石獎勵曲線調整、回合長度選擇（5/10/20）、未擁有物種加權抽獎（v72 UX review 否決）
 - `award_round_diamonds` 回合真實性驗證、`obtain_capture` 回合證明、`add_entry_exp` 速率限制（已記低，未排期）
