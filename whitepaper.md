@@ -138,11 +138,11 @@
 
 ### 6.2 家長（匯入自己嘅題）
 
-1. 用 `AI出題指引.md` 嘅 prompt 叫 AI 出題（貼俾 ChatGPT / Claude 等）
+1. 用 `Q_folder/AI出題指引.md` 嘅 prompt 叫 AI 出題（貼俾 ChatGPT / Claude 等）
 2. 將生成嘅 CSV 貼入 App 嘅「📥 IMPORT CSV QUESTIONS」
 3. 或者直接取代 `Q_folder/questions/questions.csv`，咁所有裝置開網站就有新題
 
-詳細規則睇 [question-authoring skill](.trae/skills/question-authoring/SKILL.md) 同 [AI出題指引.md](AI出題指引.md)。
+詳細規則睇 [question-authoring skill](.trae/skills/question-authoring/SKILL.md) 同 [AI出題指引.md](Q_folder/AI出題指引.md)。
 
 ---
 
@@ -194,7 +194,7 @@ PokeEngmon 係**非官方粉絲教育工具**，同任天堂、Game Freak、The 
 |------|------|
 | [prd.md](prd.md) | 產品需求（邊啲功能、點解咁設計） |
 | [arch.md](arch.md) | 技術架構（目錄、資料流、同步、防作弊） |
-| [AI出題指引.md](AI出題指引.md) | 家長貼俾 AI 出題嘅完整 prompt |
+| [AI出題指引.md](Q_folder/AI出題指引.md) | 家長貼俾 AI 出題嘅完整 prompt |
 | [.trae/skills/pokeengmon-preop-checklist/SKILL.md](.trae/skills/pokeengmon-preop-checklist/SKILL.md) | AI 助手喺呢個 repo 做嘢之前必讀嘅規則 |
 | [.trae/skills/question-authoring/SKILL.md](.trae/skills/question-authoring/SKILL.md) | 出題格式規則 |
 | [.trae/documents/git-commit-push-guide.md](.trae/documents/git-commit-push-guide.md) | AI 點樣幫手 commit + push |

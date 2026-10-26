@@ -27,10 +27,15 @@ PokeEngmon/
 ├── sw.js                   # Service Worker（CACHE_NAME 跟 APP_VERSION）
 ├── manifest.json           # PWA manifest
 ├── prd.md / arch.md        # 產品需求 / 架構（就係呢兩份）
-├── AI出題指引.md            # 家長貼俾 AI 出題嘅 prompt
-├── supabase-config.js      # Supabase URL + anon key（已 commit，公開金鑰）
-├── supabase-schema.sql     # 完整 schema + RPC + RLS（reference）
-├── supabase-migrate-*.sql  # 遷移腳本（按日期）
+├── supabase/               # Supabase 相關
+│   ├── supabase-config.js  # Supabase URL + anon key（已 commit，公開金鑰）
+│   ├── supabase-config.local.js  # 本地 config（已 .gitignore）
+│   ├── supabase-schema.sql       # 完整 schema + RPC + RLS（reference）
+│   └── migrations/          # 遷移腳本（按日期）
+├── Q_folder/               # 題庫資料
+│   ├── AI出題指引.md        # 家長貼俾 AI 出題嘅 prompt
+│   ├── questions/           # 句子題
+│   └── picture_words/      # 圖片單字題
 ├── css/style.css
 ├── js/
 │   ├── app.js              # 主流程：路由、主畫面、結算、進化、modal、版本號
@@ -293,4 +298,4 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 2. `python tools/git_commit_push.py -m "vNN: ..."` 或手動 `git add / commit / push`
 3. GitHub Pages 自動部署（main branch root，幾十秒）
 4. Service Worker `CACHE_NAME` 改 → 瀏覽器下次開頁面自動安裝新 SW → `skipWaiting` 接管 → 前端 `controllerchange` 自動刷新
-5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）；最新一個係 `supabase-migrate-20261026-gen-expansion.sql`（`chain_rarity` 加 gen + 299 條 insert + `max_unlocked_gen` + `gacha_pull(p_gen)` + `obtain_capture` 649）
+5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase/migrations/supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）；最新一個係 `supabase/migrations/supabase-migrate-20261026-gen-expansion.sql`（`chain_rarity` 加 gen + 299 條 insert + `max_unlocked_gen` + `gacha_pull(p_gen)` + `obtain_capture` 649）

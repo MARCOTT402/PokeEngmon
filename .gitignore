@@ -1,2 +1,2 @@
 # Supabase local config (contains anon public key — never commit)
-supabase-config.local.js
+supabase/supabase-config.local.js
