@@ -1,7 +1,7 @@
 # PokeEngmon 架構文檔（ARCH）
 
 > 純前端 SPA + Supabase（PostgreSQL + Auth + REST）。無 Node、無 build step，直接 deploy 去 GitHub Pages。
-> 目前版本：**v127**（2026-10）
+> 目前版本：**v131**（2026-10）
 
 ---
 
@@ -48,6 +48,7 @@ PokeEngmon/
 │   ├── pokedex.js          # 圖鑑 UI
 │   ├── pokemon.js          # 寶可夢數值：expAtLevel、levelSpan、IV/EV、進化、initialMoves、learnsetOf
 │   ├── calendar.js         # 練習日曆
+│   ├── leaderboard.js      # Leaderboard Top 50（v131 prototype）
 │   └── explain.js          # 錯題解析（關鍵詞箭咀）
 ├── data/
 │   ├── pokemon-151.json    # Gen 1（151 隻）寶可夢資料（含 learnset），SW pre-cache
