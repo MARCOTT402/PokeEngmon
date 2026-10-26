@@ -36,6 +36,7 @@ const Quiz = {
     }
     this.idx = 0;
     this.results = [];
+    this._hintUsed = new Set();   /* 記低邊啲題撳過 💡 Hint（結算 EXP 分級用） */
     this.startTime = Date.now();
     this._cancelAdvance();   /* 清掉上一個回合殘留嘅自動跳題 timer */
     App.showView("view-quiz");
@@ -271,6 +272,7 @@ const Quiz = {
       correct,
       topic: q.topic,
       memory: card.repetition > 0 && !card.is_mastered,
+      hint: this._hintUsed.has(this.idx),
       /* 額外資料 */
       _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target: judge.target }
     });
@@ -304,6 +306,7 @@ const Quiz = {
       fb.textContent = `💡 Starts with "${target[0].toUpperCase()}"… (${target.length} letter${target.length > 1 ? "s" : ""})`;
     }
     fb.className = "quiz-feedback warn";
+    this._hintUsed.add(this.idx);
     document.getElementById("btn-quiz-hint").disabled = true;
   },
 
@@ -339,6 +342,7 @@ const Quiz = {
       qid: q.id, chosen: "", correct: false, topic: q.topic,
       memory: card.repetition > 0 && !card.is_mastered,
       skipped: true,
+      hint: this._hintUsed.has(this.idx),
       _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target }
     });
 
@@ -415,7 +419,7 @@ const Quiz = {
       duration,
       score,
       total: this.set.length,
-      results: this.results.map(r => ({ qid: r.qid, chosen: r.chosen, correct: r.correct, memory: !!r.memory }))
+      results: this.results.map(r => ({ qid: r.qid, chosen: r.chosen, correct: r.correct, memory: !!r.memory, hint: !!r.hint }))
     });
   }
 };

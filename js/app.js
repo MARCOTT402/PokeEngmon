@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v129";
+const APP_VERSION = "v130";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -517,15 +517,28 @@ const App = {
   async onSetComplete(data) {
     const st = loadState();
 
-    /* 獎勵計算：經驗值按 PokéAPI 該等級所需經驗比例發放 */
+    /* 獎勵計算：經驗值按 PokéAPI 該等級所需經驗比例發放
+       v130 分級制：分數 × 有無用 hint 決定 span 百分比；
+       Lv.1–10 新手期保底 50% span（分級高過 50% 照攞高嗰個） */
     const entry = getActiveEntry();
     const perfect = data.score === data.total;
     let expGain = GAME_CONFIG.EXP_BASE;
     if (entry) {
       ensureEntryPokemonData(entry);
       const dexId = entryCurrentSpecies(entry)[0];
-      const span = levelSpan(dexId, entry.level || 1);
-      expGain = Math.max(10, Math.round(span * (perfect ? 0.50 : 0.09)));
+      const level = entry.level || 1;
+      const span = levelSpan(dexId, level);
+      const usedHint = data.results.some(r => r.hint);
+      const s = data.score;
+      let pct;
+      if (s >= 10)      pct = usedHint ? 0.50 : 1.00;
+      else if (s === 9) pct = usedHint ? 0.40 : 0.90;
+      else if (s === 8) pct = usedHint ? 0.30 : 0.80;
+      else if (s >= 5)  pct = usedHint ? 0.25 : 0.50;
+      else if (s >= 1)  pct = usedHint ? 0.15 : 0.30;
+      else              pct = 0.10;
+      if (level <= 10) pct = Math.max(0.50, pct);
+      expGain = Math.max(10, Math.round(span * pct));
     }
     /* 記憶光芒 Bonus XP：答對「抗忘記題目」（記憶曲線到期題）該題 EXP ×1.5
        即每題基本份額之外，再多半份 */
