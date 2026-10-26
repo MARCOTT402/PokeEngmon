@@ -226,7 +226,8 @@ const SupabaseAuth = {
         },
         body: JSON.stringify(payload || {})
       });
-      if (!res.ok) throw new Error(name + " RPC failed: " + res.status);
+      console.log("[_rpcTable]", name, "status:", res.status, "hasAuth:", !!this._session?.access_token);
+      if (!res.ok) throw new Error(name + " RPC failed: " + res.status + " " + await res.text());
       const data = await res.json();
       return data; /* 保留完整 array，唔 unwrap */
     } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
