@@ -42,13 +42,13 @@ PokeEngmon/
 │   ├── powerup.js          # Power Up Zone（回合尾改錯）
 │   ├── sm2.js              # SM-2 SRS：computeBestQ、updateCard、computeEF、buildSession（只抽到期卡）
 │   ├── sync.js             # 雲端同步：pushState（淨 trainer_name）、pull、queueUpsert、_flush
-│   ├── supabase-auth.js    # Google OAuth + 所有 RPC wrapper（awardRoundDiamonds、gachaPull、obtainCapture、addEntryExp、useEntryCandy、allocEv、importState、settleCapture、migrateAnonymous）
+│   ├── supabase-auth.js    # Google OAuth + 所有 RPC wrapper（awardRoundDiamonds、gachaPull、obtainCapture、addEntryExp、useEntryCandy、allocEv、importState、settleCapture、migrateAnonymous、getLeaderboard）
 │   ├── gacha.js            # 快龍扭蛋機 UI + 稀有度爆發動畫（v102）
 │   ├── capture.js          # Three.js 捕捉場景 + 音頻管理（Web Audio API）
 │   ├── pokedex.js          # 圖鑑 UI
 │   ├── pokemon.js          # 寶可夢數值：expAtLevel、levelSpan、IV/EV、進化、initialMoves、learnsetOf
 │   ├── calendar.js         # 練習日曆
-│   ├── leaderboard.js      # Leaderboard Top 50（v131 prototype）
+│   ├── leaderboard.js      # Leaderboard Top 50（v132 live RPC + mock fallback）
 │   └── explain.js          # 錯題解析（關鍵詞箭咀）
 ├── data/
 │   ├── pokemon-151.json    # Gen 1（151 隻）寶可夢資料（含 learnset），SW pre-cache
@@ -256,6 +256,7 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 | EXP / 糖果 / EV | `add_entry_exp` / `use_entry_candy` / `alloc_ev` RPC server 計算 |
 | 匯入進度 | `import_state` RPC 一次性鎖定（`user_account.imported_at`），鑽石固定派 20，server clamp 上限（entries ≤151, exp ≤1.25M, candies ≤99, dupes ≤100） |
 | Column-level grants | 收回 anon 對敏感欄（diamonds、entries.exp、entries.candies 等）嘅直寫權限 |
+| Leaderboard 讀取 | `get_leaderboard()` SECURITY DEFINER（繞過 RLS 讀跨用戶 active entry + total owned）；public/anon 權限已 revoke，只有 authenticated 可 call；匿名前端自動 fallback mock |
 | RPC 身份驗證 | 每個 SECURITY DEFINER RPC 內部用 `auth.uid()` 驗證 caller；`revoke execute from public, anon` + `grant execute to authenticated` |
 | Sign out | `clearGameProgress()` 清除 localStorage，防止離線改數再 sign in 上傳 |
 | RLS | anon 綁定 device_id；auth 綁定 auth.uid()；用戶只可讀寫自己數據 |
