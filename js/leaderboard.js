@@ -8,11 +8,13 @@
 const Leaderboard = {
   _resolvePartner(chainKey) {
     if (!chainKey) return [0, "—"];
+    console.log("[LB._resolvePartner] chainKey=", chainKey, "hasEVOLUTION_CHAINS=", typeof EVOLUTION_CHAINS !== "undefined", "SPECIES[1]=", typeof SPECIES !== "undefined" ? SPECIES[1]?.enName : "undef");
     if (chainKey.startsWith("dex_")) {
       const id = parseInt(chainKey.slice(4), 10);
       if (!isNaN(id) && SPECIES[id]) return [id, SPECIES[id].enName];
     }
     const chain = EVOLUTION_CHAINS[chainKey];
+    console.log("[LB._resolvePartner] direct lookup:", !!chain);
     if (chain) return [chain.stages[0][0], chain.stages[0][1]];
     for (const key in EVOLUTION_CHAINS) {
       const st = EVOLUTION_CHAINS[key].stages[0];
