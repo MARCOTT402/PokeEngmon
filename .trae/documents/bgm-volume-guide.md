@@ -11,7 +11,7 @@
 
 | 音樂 | 搜尋關鍵字 | 位置（大約） | 預設音量 |
 |---|---|---|---|
-| 主頁全域音樂（One Summer's Day） | `g.gain.value = 0.25` | `startTownBGM()` 入面，約第 556 行 | 0.25 |
+| 主頁全域音樂（Flat Water） | `g.gain.value = 0.1` | `startTownBGM()` 入面，約第 556 行 | 0.1 |
 | 捕捉場景戰鬥音樂（Wild Battle） | `g.gain.value = 0.55` | `startBGM()` 入面，約第 378 行 | 0.55 |
 
 音量數字規則：
@@ -27,7 +27,7 @@
 例如想全域音樂再細聲啲，將：
 
 ```js
-g.gain.value = 0.25;
+g.gain.value = 0.1;
 ```
 
 改成：

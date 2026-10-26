@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v143";
+const APP_VERSION = "v144";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -1019,7 +1019,7 @@ const App = {
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
 
         <h4>Music &amp; Sound Credits</h4>
-        <p>Background music: <i>One Summer's Day</i>, from the Studio Ghibli film <i>Spirited Away</i>, composed by Joe Hisaishi. © Studio Ghibli / Tokuma Japan Communications Co., Ltd. All rights belong to their respective owners.</p>
+        <p>Background music: <i>Flat Water</i> by BGM channel (official music video). All rights belong to their respective owners.</p>
         <p>Battle/jingle tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
         <p>Pokémon soundtrack resources referenced from <a href="https://downloads.khinsider.com" target="_blank" rel="noopener">KHInsider Video Game Music</a> (unofficial fan archive).</p>
 
@@ -1273,7 +1273,7 @@ const App = {
     this.renderHome();
     this.showView("view-home");
 
-    /* 全域 BGM（One Summer's Day）+ Entry Gate：
+    /* 全域 BGM（Flat Water）+ Entry Gate：
        1) 開頁即試播 —— PWA / 高互動用戶可直接出聲，唔彈窗
        2) Autoplay 被擋 → 彈 entry gate，撳 YES!（合法手勢）解鎖 + 播 BGM */
     const entryGate = document.getElementById("entry-gate");
