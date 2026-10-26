@@ -1,7 +1,8 @@
 /* ============================================================
-   PokeEngmon - Leaderboard（Top 50 prototype）
-   Mock data：deterministic seed，reload 一致
-   排名準則：持有 Pokémon 總數（desc）；partner = 每個用戶當前設定嘅拍檔
+   PokeEngmon - Leaderboard Top 50
+   v132：接 Supabase get_leaderboard() RPC，保留 mock fallback
+   排名準則：持有 Pokémon 總數（desc）；partner = 每個用戶當前設定嘅 active 拍檔
+   Migration：supabase-migrate-20261026a-leaderboard-rpc.sql 必須去 Supabase SQL Editor 執行
    ============================================================ */
 
 const Leaderboard = {
@@ -26,12 +27,55 @@ const Leaderboard = {
     "Diantha", "Leon", "Hop", "Marnie", "Bede", "Raihan", "Piers", "Allister"
   ],
 
-  open() {
-    App.showView("view-leaderboard");
-    this.render();
+  /* 將 chain_key（可能係 species name 或舊 dex_<id> 格式）解析返 [dexId, enName] */
+  _resolvePartner(chainKey) {
+    if (!chainKey) return [0, "—"];
+    // 舊 migrate 遺留：chain_key = "dex_<id>"
+    if (chainKey.startsWith("dex_")) {
+      const id = parseInt(chainKey.slice(4), 10);
+      if (!isNaN(id) && SPECIES[id]) return [id, SPECIES[id].enName];
+    }
+    // 正常 chain_key = species name（EVOLUTION_CHAINS 嘅 key）
+    const chain = EVOLUTION_CHAINS[chainKey];
+    if (chain) return [chain.stages[0][0], chain.stages[0][1]];
+    // 最後嘗試：當名係 species 時（唔一定係 chain key）
+    for (const key in EVOLUTION_CHAINS) {
+      const st = EVOLUTION_CHAINS[key].stages[0];
+      if (st[1] === chainKey) return [st[0], st[1]];
+    }
+    return [0, "—"];
   },
 
-  /* 50 個 mock 訓練員；partner = 佢哋當前設定嘅拍檔（mock 直接賦值） */
+  async open() {
+    App.showView("view-leaderboard");
+    await this.render();
+  },
+
+  /* ---------- 真 RPC：call get_leaderboard() ---------- */
+  async _rpcRows() {
+    if (!window.SupabaseAuth || !SupabaseAuth.isEnabled()) return null;
+    if (!SupabaseAuth.currentUser()) return null; /* 匿名用戶冇雲端帳戶 → 跳 RPC */
+    try {
+      const raw = await SupabaseAuth._rpc("get_leaderboard", {});
+      if (!Array.isArray(raw)) return null;
+      return raw.map(row => {
+        const [partnerDex, partnerName] = this._resolvePartner(row.partner_chain_key);
+        return {
+          name: row.trainer_name || "Anonymous Trainer",
+          partnerDex, partnerName,
+          partnerLevel: row.partner_level || 0,
+          totalOwned: row.total_owned || 0,
+          accountUuid: row.account_uuid || null,
+          fromRpc: true
+        };
+      });
+    } catch (e) {
+      console.warn("[Leaderboard] RPC failed, falling back to mock:", e);
+      return null;
+    }
+  },
+
+  /* ---------- 50 個 mock 訓練員；partner = 佢哋當前設定嘅拍檔（mock 直接賦值） ---------- */
   _mockRows() {
     const rnd = this._rng(20261026);
     const rows = [];
@@ -89,9 +133,26 @@ const Leaderboard = {
     </div>`;
   },
 
-  render() {
-    const all = this._mockRows();
-    all.push(this._playerRow());
+  async render() {
+    /* 先試 RPC，失敗或未登入 → mock */
+    let rows = await this._rpcRows();
+    if (!rows) rows = this._mockRows();
+
+    const all = rows.concat(this._playerRow());
+    /* 玩家已在 RPC 返回時要 dedup（account_uuid 唔係自己先加） */
+    const player = all[all.length - 1];
+    if (player.accountUuid) {
+      const dup = rows.find(r => r.accountUuid && r.accountUuid === player.accountUuid);
+      if (dup) { /* 用本地最新狀態覆蓋 RPC 版本 */
+        Object.assign(dup, {
+          name: player.name, partnerDex: player.partnerDex,
+          partnerName: player.partnerName, partnerLevel: player.partnerLevel,
+          totalOwned: player.totalOwned, isYou: true
+        });
+        all.pop(); /* 移除尾部重複玩家行 */
+      }
+    }
+
     all.sort((a, b) =>
       b.totalOwned - a.totalOwned ||
       b.partnerLevel - a.partnerLevel ||
