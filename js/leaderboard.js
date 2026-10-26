@@ -1,32 +1,39 @@
 /* ============================================================
    PokeEngmon - Leaderboard Top 50
-   v133：全球榜 anon 可讀；未登入彈 popup 提示 join
-   排名準則：持有 Pokémon 總數（desc）；partner = 每個用戶當前設定嘅 active 拍檔
-   Migration：supabase/migrations/supabase-migrate-20261026c-leaderboard-anon-read.sql
+   v134：修 _resolvePartner（EVOLUTION_CHAINS 係 array，要用 .find by key）
+   排名準則：持有 Pokémon 總數（desc）；partner = active 優先，否則最新 entry
+   Migration：supabase/migrations/supabase-migrate-20261026f-leaderboard-partner-exp.sql
    ============================================================ */
 
 const Leaderboard = {
-  _resolvePartner(chainKey) {
+  /* chain_key → [dexId, enName]。有 exp/branch 就 derive 正確進化形態。 */
+  _resolvePartner(chainKey, exp, branch) {
     if (!chainKey) return [0, "—"];
-    console.log("[LB._resolvePartner] chainKey=", chainKey, "hasEVOLUTION_CHAINS=", typeof EVOLUTION_CHAINS !== "undefined", "SPECIES[1]=", typeof SPECIES !== "undefined" ? SPECIES[1]?.enName : "undef");
-    if (chainKey.startsWith("dex_")) {
+    /* 舊 settle_capture 遺留：dex_<id> */
+    if (String(chainKey).startsWith("dex_")) {
       const id = parseInt(chainKey.slice(4), 10);
-      if (!isNaN(id) && SPECIES[id]) return [id, SPECIES[id].enName];
+      if (!isNaN(id) && SPECIES[id]) return [id, SPECIES[id].name];
     }
-    const chain = EVOLUTION_CHAINS[chainKey];
-    console.log("[LB._resolvePartner] direct lookup:", !!chain);
-    if (chain) return [chain.stages[0][0], chain.stages[0][1]];
-    for (const key in EVOLUTION_CHAINS) {
-      const st = EVOLUTION_CHAINS[key].stages[0];
-      if (st[1] === chainKey) return [st[0], st[1]];
+    /* EVOLUTION_CHAINS 係 array，唔係 object — 必須 .find(c => c.key === ...) */
+    const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
+    if (!chain) return [0, "—"];
+    /* 有 exp → 重推 stage 再攞當前物種；冇就 show stage-1（RPC 未升級時） */
+    if (exp != null && typeof deriveEntryFields === "function") {
+      const derived = deriveEntryFields({
+        chainKey,
+        exp: Number(exp) || 0,
+        branch: (branch === 0 || branch) ? branch : null,
+        dupes: 0
+      });
+      return entryCurrentSpecies(derived);
     }
-    return [0, "—"];
+    return [chain.stages[0][0], chain.stages[0][1]];
   },
 
   async open() {
     App.showView("view-leaderboard");
     await this.render();
-    // 未登入 → 彈 popup（一次性，localStorage 記住）
+    /* 未登入 → 彈 popup（一次性，localStorage 記住） */
     const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser());
     if (!loggedIn && !localStorage.getItem("lb_login_prompt_seen")) {
       this._showLoginPrompt();
@@ -37,10 +44,13 @@ const Leaderboard = {
     if (!window.SupabaseAuth || !SupabaseAuth.isEnabled()) return null;
     try {
       const raw = await SupabaseAuth._rpcTable("get_leaderboard", {});
-      console.log("[Leaderboard] _rpcTable raw:", raw, "isArray:", Array.isArray(raw), "len:", raw?.length);
       if (!Array.isArray(raw)) return null;
       return raw.map(row => {
-        const [partnerDex, partnerName] = this._resolvePartner(row.partner_chain_key);
+        const [partnerDex, partnerName] = this._resolvePartner(
+          row.partner_chain_key,
+          row.partner_exp,
+          row.partner_branch
+        );
         return {
           name: row.trainer_name || "Anonymous Trainer",
           partnerDex, partnerName,
@@ -113,7 +123,6 @@ const Leaderboard = {
     const top = rows.slice(0, 50);
 
     const list = document.getElementById("leaderboard-list");
-    // 有 RPC 數據 → 顯示；冇 RPC 數據（server 空 or RPC fail）→ 顯示空狀態
     const hasRpc = rows.some(r => r.fromRpc);
     if (!hasRpc && player.totalOwned === 0) {
       list.innerHTML = `
@@ -127,7 +136,6 @@ const Leaderboard = {
       list.innerHTML = top.map((r, i) => this._rowHTML(r, i + 1)).join("");
     }
 
-    // 玩家跌出 Top 50 先顯示 sticky youCard
     const youCard = document.getElementById("lb-you");
     if (youRank > 50) {
       youCard.hidden = false;
@@ -145,7 +153,7 @@ const Leaderboard = {
     const html = `
       <div class="lb-login-modal" id="lb-login-modal">
         <div class="lb-login-card">
-          <div class="lb-login-icon">�</div>
+          <div class="lb-login-icon">🏅</div>
           <div class="lb-login-title">Connect with Google to join the global leaderboard!</div>
           <div class="lb-login-sub">You can browse the board as a guest — sign in to save your rank and unlock cloud sync.</div>
           <div class="lb-login-actions">
