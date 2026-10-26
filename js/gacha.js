@@ -271,9 +271,11 @@ const Gacha = {
         candyGain = got.candyGain || 0;
         newlyUnlockedGen = got.newlyUnlockedGen || null;
 
-        /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳 */
+        /* 若有之前儲起嘅經驗值（第一次未有拍檔時），一次過入帳
+           v138：必須先 snapshot pending，再清零——舊碼清零後 RPC 永遠傳 0 */
         if (st.pendingExp > 0) {
-          const res = addEntryExp(entry, st.pendingExp);
+          const pending = st.pendingExp;
+          const res = addEntryExp(entry, pending);
           st.pendingExp = 0;
           (res.learned || []).forEach(m => {
             if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
@@ -281,7 +283,7 @@ const Gacha = {
           saveState();
           firstExpEvolve = res.evolvedTo;
           if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
-            SupabaseAuth.addEntryExp(entry.uid, st.pendingExp);
+            SupabaseAuth.addEntryExp(entry.uid, pending);
             if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
               Sync.patchEntry(entry.uid, { branch: entry.branch });
             }

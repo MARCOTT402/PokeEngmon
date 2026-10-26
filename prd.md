@@ -198,6 +198,7 @@
 | v135 | 捕捉：`obtain_capture` 傳 stage1 dex；SQL 參數改 `p_chain_key`/`p_dex_id` 修 42702 ambiguous |
 | v136 | 短 set EXP：`round(score/total×10)` 正規化，5/5 全對攞 100% span（唔再當 5 分落 50% 檔） |
 | v137 | Leaderboard：partner Lv 由 exp derive（唔再用 DB 舊 level）；YOU totalOwned 用鏈數，唔再用 collectedCount 灌水 |
+| v138 | Gacha fallback：`pendingExp` 先 snapshot 再清零，RPC 唔再永遠傳 0 |
 
 ---
 
