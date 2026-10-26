@@ -1780,26 +1780,31 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .lb-empty-title { font-size: 1.1rem; font-weight: 800; color: #5a6478; }
 .lb-empty-sub { font-size: .85rem; max-width: 300px; }
 
-/* Leaderboard 未登入 prompt */
-.lb-lock {
-  text-align: center; padding: 28px 20px 20px; margin: 12px 0;
-  background: linear-gradient(135deg, #eaf3fc, #f5ecfc);
-  border: 2px solid #2a75bb; border-radius: 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+/* Leaderboard 未登入 popup */
+.lb-login-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 24px;
 }
-.lb-lock-icon { font-size: 2rem; line-height: 1; }
-.lb-lock-title { font-size: 1.05rem; font-weight: 800; color: #2a75bb; }
-.lb-lock-sub { font-size: .82rem; color: #7a8299; max-width: 320px; line-height: 1.4; }
-.lb-lock-btn {
-  margin-top: 4px; padding: 10px 20px; font-size: .92rem; font-weight: 800;
-  background: #2a75bb; color: #fff; border: none; border-radius: 999px;
-  cursor: pointer;
+.lb-login-card {
+  background: #fff; border-radius: 20px; padding: 28px 24px;
+  max-width: 360px; width: 100%; text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  animation: lb-pop-in .2s ease-out;
 }
-.lb-lock-btn:hover { background: #1f5ea0; }
-.lb-lock-tag {
-  text-align: center; font-size: .72rem; font-weight: 800; letter-spacing: 1px;
-  color: #9aa5b1; text-transform: uppercase; margin: 8px 0 4px;
+@keyframes lb-pop-in { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.lb-login-icon { font-size: 2.5rem; margin-bottom: 8px; }
+.lb-login-title { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.lb-login-sub { font-size: .85rem; color: #7a8299; line-height: 1.4; margin-bottom: 20px; }
+.lb-login-actions { display: flex; gap: 10px; justify-content: center; }
+.lb-login-cancel, .lb-login-go {
+  padding: 10px 18px; font-size: .9rem; font-weight: 800;
+  border-radius: 999px; border: none; cursor: pointer;
 }
+.lb-login-cancel { background: #eef1f6; color: #5a6478; }
+.lb-login-cancel:hover { background: #e0e4ed; }
+.lb-login-go { background: #2a75bb; color: #fff; }
+.lb-login-go:hover { background: #1f5ea0; }
 
 @media (max-width: 360px) {
   .lb-row { grid-template-columns: 34px 42px 1fr auto; gap: 6px; padding: 6px 8px; }

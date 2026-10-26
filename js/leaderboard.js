@@ -1,12 +1,11 @@
 /* ============================================================
    PokeEngmon - Leaderboard Top 50
-   v132+：真 RPC get_leaderboard()，冇 mock fallback
+   v133：全球榜 anon 可讀；未登入彈 popup 提示 join
    排名準則：持有 Pokémon 總數（desc）；partner = 每個用戶當前設定嘅 active 拍檔
-   Migration：supabase/migrations/supabase-migrate-20261026a-leaderboard-rpc.sql
+   Migration：supabase/migrations/supabase-migrate-20261026c-leaderboard-anon-read.sql
    ============================================================ */
 
 const Leaderboard = {
-  /* 將 chain_key（可能係 species name 或舊 dex_<id> 格式）解析返 [dexId, enName] */
   _resolvePartner(chainKey) {
     if (!chainKey) return [0, "—"];
     if (chainKey.startsWith("dex_")) {
@@ -25,12 +24,15 @@ const Leaderboard = {
   async open() {
     App.showView("view-leaderboard");
     await this.render();
+    // 未登入 → 彈 popup（一次性，localStorage 記住）
+    const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser());
+    if (!loggedIn && !localStorage.getItem("lb_login_prompt_seen")) {
+      this._showLoginPrompt();
+    }
   },
 
-  /* ---------- 真 RPC：call get_leaderboard() ---------- */
   async _rpcRows() {
     if (!window.SupabaseAuth || !SupabaseAuth.isEnabled()) return null;
-    if (!SupabaseAuth.currentUser()) return null;
     try {
       const raw = await SupabaseAuth._rpc("get_leaderboard", {});
       if (!Array.isArray(raw)) return null;
@@ -87,14 +89,10 @@ const Leaderboard = {
   },
 
   async render() {
-    const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser());
-
     let rows = await this._rpcRows();
     if (!rows) rows = [];
 
     const player = this._playerRow();
-
-    // 玩家已喺 RPC 入面 → 用本地最新狀態覆蓋
     const myUuid = SupabaseAuth?.currentUser?.()?.id?.toLowerCase();
     const existing = rows.find(r => r.accountUuid && myUuid && r.accountUuid.toLowerCase() === myUuid);
     if (existing) {
@@ -112,23 +110,9 @@ const Leaderboard = {
     const top = rows.slice(0, 50);
 
     const list = document.getElementById("leaderboard-list");
-
-    // --- 未登入：顯示 login prompt，下方顯示玩家自己一行 ---
-    if (!loggedIn) {
-      list.innerHTML = `
-        <div class="lb-lock">
-          <div class="lb-lock-icon">🔒</div>
-          <div class="lb-lock-title">Connect with Google to see the global leaderboard</div>
-          <div class="lb-lock-sub">Your progress stays on this device — sign in to compete with other trainers!</div>
-          <button class="lb-lock-btn" id="lb-connect-btn">🔐 Connect with Google</button>
-        </div>
-        <div class="lb-lock-tag">Your local stats</div>
-        ${this._rowHTML(player, 1)}
-      `;
-      document.getElementById("lb-connect-btn").onclick = () => App.openLoginHub();
-    }
-    // --- 已登入但冇任何人（玩家冇 Pokémon）---
-    else if (!rows.some(r => r.fromRpc) && player.totalOwned === 0) {
+    // 有 RPC 數據 → 顯示；冇 RPC 數據（server 空 or RPC fail）→ 顯示空狀態
+    const hasRpc = rows.some(r => r.fromRpc);
+    if (!hasRpc && player.totalOwned === 0) {
       list.innerHTML = `
         <div class="lb-empty">
           <div class="lb-empty-icon">🏆</div>
@@ -136,17 +120,13 @@ const Leaderboard = {
           <div class="lb-empty-sub">Be the first to catch a Pokémon and get on the board!</div>
         </div>
       `;
-    }
-    // --- 正常：顯示 Top 50 ---
-    else {
+    } else {
       list.innerHTML = top.map((r, i) => this._rowHTML(r, i + 1)).join("");
     }
 
+    // 玩家跌出 Top 50 先顯示 sticky youCard
     const youCard = document.getElementById("lb-you");
-    if (!loggedIn) {
-      youCard.hidden = true;
-      youCard.innerHTML = "";
-    } else if (youRank > 50) {
+    if (youRank > 50) {
       youCard.hidden = false;
       youCard.innerHTML = `<div class="lb-you-rank">Your Rank: #${youRank}</div>` +
         this._rowHTML(rows[youRank - 1], youRank);
@@ -154,5 +134,31 @@ const Leaderboard = {
       youCard.hidden = true;
       youCard.innerHTML = "";
     }
+  },
+
+  /* 未登入 popup：一次性，localStorage 記住 */
+  _showLoginPrompt() {
+    localStorage.setItem("lb_login_prompt_seen", "1");
+    const html = `
+      <div class="lb-login-modal" id="lb-login-modal">
+        <div class="lb-login-card">
+          <div class="lb-login-icon">�</div>
+          <div class="lb-login-title">Connect with Google to join the global leaderboard!</div>
+          <div class="lb-login-sub">You can browse the board as a guest — sign in to save your rank and unlock cloud sync.</div>
+          <div class="lb-login-actions">
+            <button class="lb-login-cancel" id="lb-login-cancel">Maybe later</button>
+            <button class="lb-login-go" id="lb-login-go">🔐 Connect with Google</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", html);
+    const modal = document.getElementById("lb-login-modal");
+    document.getElementById("lb-login-cancel").onclick = () => modal.remove();
+    document.getElementById("lb-login-go").onclick = () => {
+      modal.remove();
+      App.openLoginHub();
+    };
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
   }
 };
