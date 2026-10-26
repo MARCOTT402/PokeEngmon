@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v138";
+const APP_VERSION = "v139";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -96,13 +96,14 @@ const App = {
   _confirmReset() {
     const st = loadState();
     const playerName = st.playerName || "The PokéEngmon Trainer";
+    const safeName = escapeHTML(playerName);
     this.showModal(`
       <div class="confirm-box">
         <p>Reset <b>all progress</b> and the Pokédex?<br><small>(Imported custom questions will also be deleted)</small></p>
-        <p class="reset-type-hint">Type your trainer name <b>${playerName}</b> to confirm:</p>
+        <p class="reset-type-hint">Type your trainer name <b>${safeName}</b> to confirm:</p>
         <input id="reset-name-input" class="quiz-answer-input" type="text"
                autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-               placeholder="${playerName}">
+               placeholder="${safeName}">
         <div class="confirm-row">
           <button id="cf-yes" class="btn-big btn-primary btn-danger" disabled>Delete everything</button>
           <button id="cf-no" class="btn-big btn-plain">Cancel</button>
@@ -558,13 +559,20 @@ const App = {
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
       serverRes = await SupabaseAuth.awardRoundDiamonds(data.score, data.total);
     }
+    /* v139：本地 fallback 跟 award_round_diamonds 相對門檻（score==total→3, >=total-2→2, >=total-3→1）
+       舊絕對門檻（>=8/>=7）令短 set 例如 4/5 變 0💎 */
+    const localDiamondBonus = (() => {
+      const sc = data.score, tot = data.total;
+      if (sc === tot) return GAME_CONFIG.PERFECT_DIAMOND;
+      if (sc >= tot - 2) return GAME_CONFIG.GREAT_DIAMOND;
+      if (sc >= tot - 3) return GAME_CONFIG.GOOD_DIAMOND;
+      return 0;
+    })();
     if (serverRes && typeof serverRes.bonus === "number") {
       rewards.diamonds = serverRes.bonus;
       st.diamonds = serverRes.balance;   // server 權威，唔係本地 +=
     } else {
-      if (perfect) rewards.diamonds = GAME_CONFIG.PERFECT_DIAMOND;
-      else if (data.score >= GAME_CONFIG.GREAT_THRESHOLD) rewards.diamonds = GAME_CONFIG.GREAT_DIAMOND;
-      else if (data.score >= GAME_CONFIG.GOOD_THRESHOLD) rewards.diamonds = GAME_CONFIG.GOOD_DIAMOND;
+      rewards.diamonds = localDiamondBonus;
       st.diamonds += rewards.diamonds;
     }
 
