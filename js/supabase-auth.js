@@ -212,6 +212,26 @@ const SupabaseAuth = {
     } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
   },
 
+  /* ---------- setof-rows RPC：例如 get_leaderboard() 返回 TABLE ---------- */
+  async _rpcTable(name, payload) {
+    if (!this._session?.access_token && !this.isEnabled()) return null;
+    try {
+      const res = await fetch(`${this.URL}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: {
+          Authorization: this._session?.access_token ? `Bearer ${this._session.access_token}` : undefined,
+          apikey: this.ANON_KEY,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify(payload || {})
+      });
+      if (!res.ok) throw new Error(name + " RPC failed: " + res.status);
+      const data = await res.json();
+      return data; /* 保留完整 array，唔 unwrap */
+    } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
+  },
+
   /* ---------- RPC：防金手指 diamonds server 計算 ----------
      回傳 {bonus, balance}（balance 係 server 權威）；失敗 return null */
   async awardRoundDiamonds(score, total) {

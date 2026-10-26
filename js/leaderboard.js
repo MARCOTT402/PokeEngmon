@@ -34,7 +34,7 @@ const Leaderboard = {
   async _rpcRows() {
     if (!window.SupabaseAuth || !SupabaseAuth.isEnabled()) return null;
     try {
-      const raw = await SupabaseAuth._rpc("get_leaderboard", {});
+      const raw = await SupabaseAuth._rpcTable("get_leaderboard", {});
       if (!Array.isArray(raw)) return null;
       return raw.map(row => {
         const [partnerDex, partnerName] = this._resolvePartner(row.partner_chain_key);
