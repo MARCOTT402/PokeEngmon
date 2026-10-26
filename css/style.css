@@ -1780,6 +1780,27 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .lb-empty-title { font-size: 1.1rem; font-weight: 800; color: #5a6478; }
 .lb-empty-sub { font-size: .85rem; max-width: 300px; }
 
+/* Leaderboard 未登入 prompt */
+.lb-lock {
+  text-align: center; padding: 28px 20px 20px; margin: 12px 0;
+  background: linear-gradient(135deg, #eaf3fc, #f5ecfc);
+  border: 2px solid #2a75bb; border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.lb-lock-icon { font-size: 2rem; line-height: 1; }
+.lb-lock-title { font-size: 1.05rem; font-weight: 800; color: #2a75bb; }
+.lb-lock-sub { font-size: .82rem; color: #7a8299; max-width: 320px; line-height: 1.4; }
+.lb-lock-btn {
+  margin-top: 4px; padding: 10px 20px; font-size: .92rem; font-weight: 800;
+  background: #2a75bb; color: #fff; border: none; border-radius: 999px;
+  cursor: pointer;
+}
+.lb-lock-btn:hover { background: #1f5ea0; }
+.lb-lock-tag {
+  text-align: center; font-size: .72rem; font-weight: 800; letter-spacing: 1px;
+  color: #9aa5b1; text-transform: uppercase; margin: 8px 0 4px;
+}
+
 @media (max-width: 360px) {
   .lb-row { grid-template-columns: 34px 42px 1fr auto; gap: 6px; padding: 6px 8px; }
   .lb-sprite { width: 42px; height: 42px; }

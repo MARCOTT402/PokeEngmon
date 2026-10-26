@@ -87,11 +87,11 @@ const Leaderboard = {
   },
 
   async render() {
-    // 登入用戶 call RPC；未登入或 RPC 失敗 → 空 list
+    const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser());
+
     let rows = await this._rpcRows();
     if (!rows) rows = [];
 
-    // 玩家自己嗰行（永遠加）
     const player = this._playerRow();
 
     // 玩家已喺 RPC 入面 → 用本地最新狀態覆蓋
@@ -103,7 +103,6 @@ const Leaderboard = {
       rows.push(player);
     }
 
-    // 排序 + 截取 Top 50
     rows.sort((a, b) =>
       b.totalOwned - a.totalOwned ||
       b.partnerLevel - a.partnerLevel ||
@@ -113,9 +112,23 @@ const Leaderboard = {
     const top = rows.slice(0, 50);
 
     const list = document.getElementById("leaderboard-list");
-    // 完全冇任何人（包括玩家冇任何 Pokémon）→ 空狀態
-    const anyRpc = rows.some(r => r.fromRpc);
-    if (!anyRpc && player.totalOwned === 0) {
+
+    // --- 未登入：顯示 login prompt，下方顯示玩家自己一行 ---
+    if (!loggedIn) {
+      list.innerHTML = `
+        <div class="lb-lock">
+          <div class="lb-lock-icon">🔒</div>
+          <div class="lb-lock-title">Connect with Google to see the global leaderboard</div>
+          <div class="lb-lock-sub">Your progress stays on this device — sign in to compete with other trainers!</div>
+          <button class="lb-lock-btn" id="lb-connect-btn">🔐 Connect with Google</button>
+        </div>
+        <div class="lb-lock-tag">Your local stats</div>
+        ${this._rowHTML(player, 1)}
+      `;
+      document.getElementById("lb-connect-btn").onclick = () => App.openLoginHub();
+    }
+    // --- 已登入但冇任何人（玩家冇 Pokémon）---
+    else if (!rows.some(r => r.fromRpc) && player.totalOwned === 0) {
       list.innerHTML = `
         <div class="lb-empty">
           <div class="lb-empty-icon">🏆</div>
@@ -123,12 +136,17 @@ const Leaderboard = {
           <div class="lb-empty-sub">Be the first to catch a Pokémon and get on the board!</div>
         </div>
       `;
-    } else {
+    }
+    // --- 正常：顯示 Top 50 ---
+    else {
       list.innerHTML = top.map((r, i) => this._rowHTML(r, i + 1)).join("");
     }
 
     const youCard = document.getElementById("lb-you");
-    if (youRank > 50) {
+    if (!loggedIn) {
+      youCard.hidden = true;
+      youCard.innerHTML = "";
+    } else if (youRank > 50) {
       youCard.hidden = false;
       youCard.innerHTML = `<div class="lb-you-rank">Your Rank: #${youRank}</div>` +
         this._rowHTML(rows[youRank - 1], youRank);
