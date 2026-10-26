@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v135";
+const APP_VERSION = "v136";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -532,7 +532,9 @@ const App = {
       const level = entry.level || 1;
       const span = levelSpan(dexId, level);
       const usedHint = data.results.some(r => r.hint);
-      const s = data.score;
+      /* v136：正規化到 /10 刻度（5/5→10、8/8→10），短 set 先至同 PRD 表對齊 */
+      const totalQ = Math.max(1, data.total || 1);
+      const s = Math.round((data.score / totalQ) * 10);
       let pct;
       if (s >= 10)      pct = usedHint ? 0.50 : 1.00;
       else if (s === 9) pct = usedHint ? 0.40 : 0.90;

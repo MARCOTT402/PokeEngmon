@@ -58,7 +58,7 @@
 ### 3.3 寶可夢系統
 
 - **拍檔（Partner）**：答題 EXP 固定落入當前拍檔（唔係最新捕捉到嗰隻）
-- **回合 EXP 分級制（v130）**：按分數 × 有無用 Hint（該回合任何一題撳過就算）對照当前拍檔 `levelSpan` 百分比表發放；記憶光芒 bonus（答對到期題 ×1.5）在此基礎上額外疊加
+- **回合 EXP 分級制（v130 / v136）**：按 `round(score/total×10)` × 有無用 Hint 對照百分比表發放（短 set 全對＝10/10 檔）；記憶光芒 bonus（答對到期題 ×1.5）在此基礎上額外疊加
 
 | 分數 | 無用 Hint | 有用過 Hint |
 |---|---|---|
@@ -195,6 +195,8 @@
 | v130 | 回合 EXP 分級制：按分數 × 有無用 Hint 對照百分比表；拍檔 Lv.1–10 保底 50% × levelSpan |
 | v131 | Leaderboard Top 50 prototype（主頁 chip 入口） |
 | v132 | Leaderboard live RPC：`get_leaderboard()` SECURITY DEFINER；登入用戶見真榜（partner = active entry）；匿名自動 fallback mock；chain_key → SPECIES 映射（含舊 `dex_<id>` 遺留）；public/anon 權限已 revoke |
+| v135 | 捕捉：`obtain_capture` 傳 stage1 dex；SQL 參數改 `p_chain_key`/`p_dex_id` 修 42702 ambiguous |
+| v136 | 短 set EXP：`round(score/total×10)` 正規化，5/5 全對攞 100% span（唔再當 5 分落 50% 檔） |
 
 ---
 
