@@ -107,10 +107,16 @@ const Quiz = {
     document.getElementById("btn-quiz-continue").classList.add("hidden");
     document.getElementById("btn-quiz-hint").disabled = false;
 
-    /* 句子題先自動聚焦彈鍵盤；圖片單字題要「睇圖→聽聲→先打字」，唔好遮住圖片 */
-    if (q.type !== "word") {
-      setTimeout(() => input.focus(), 300);
-    }
+    /* 每題（含圖片單字）自動 focus，鍵盤可連續打字／Enter 過題 */
+    this._focusAnswer();
+  },
+
+  _focusAnswer() {
+    const input = document.getElementById("quiz-answer");
+    if (!input || input.disabled) return;
+    const go = () => { try { input.focus({ preventScroll: true }); } catch (e) { try { input.focus(); } catch (e2) {} } };
+    go();
+    requestAnimationFrame(() => { go(); setTimeout(go, 50); });
   },
 
   /* 記憶光芒：SM-2 卡片 rep>0 且未畢業 → 彩色光芒 + 拍檔提醒 + Bonus XP

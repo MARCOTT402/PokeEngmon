@@ -95,8 +95,10 @@ const PowerUp = {
     fb.textContent = "";
     fb.className = "quiz-feedback";
 
-    /* 圖片單字題唔自動彈鍵盤（會遮住圖片），句子題先自動聚焦 */
-    if (item.q.type !== "word") setTimeout(() => input.focus(), 300);
+    /* 每題（含圖片單字）自動 focus，同 quiz 鍵盤流一致 */
+    const go = () => { try { input.focus({ preventScroll: true }); } catch (e) { try { input.focus(); } catch (e2) {} } };
+    go();
+    requestAnimationFrame(() => { go(); setTimeout(go, 50); });
   },
 
   /* 播圖片單字題嘅語音（mp3 缺失時自動用系統聲兜底） */

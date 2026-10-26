@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**v147**（2026-10）
+> 目前版本：**v148**（2026-10）
 
 ---
 
@@ -41,7 +41,8 @@
   - **Skip**：當答錯計，入 Power Up Zone
   - **✕ 退出**：任何時候可退出（會彈確認）
 - 計分：Perfect（10/10）→ 💎3；8–9 題 → 💎2；7 題 → 💎1；≤6 → 💎0
-- 答對後 **650ms 自動跳下一題**；答錯顯示答案解析，**手動撳 Continue**（唔會強制跳走）
+- 答對後 **650ms 自動跳下一題**；答錯顯示答案解析，**手動撳 Continue**（或 Enter；唔會強制跳走）
+- **鍵盤流（v148）**：每題（含圖片單字／Power Up）自動 focus 輸入框；Enter 提交／Continue 後可直接打下一題，唔使滑鼠再撳輸入位
 
 ### 3.2 Power Up Zone（改錯強制區，v93+）
 
@@ -218,6 +219,7 @@
 | v145 | Settings 連續滑動條調 Music／SFX（0–100%）；`pokeengmon_audio_v1` 本地持久化 |
 | v146 | SFX slider debounce preview：`obtained-pokemon.mp3`（停上一段防疊聲） |
 | v147 | 全部 UI 掣短 click SFX（`CaptureAudio.uiTap` + document capture 委派） |
+| v148 | 答題／Power Up 每題自動 focus 輸入框（含圖片題），鍵盤連續打字 |
 
 ---
 
