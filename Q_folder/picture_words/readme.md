@@ -81,6 +81,27 @@ book,1,Dictation,Noun,stationary,...
 pen,1,Dictation,Noun,stationary,...
 ```
 
+### ⚠️ 命名硬規則（全部必須全小寫）
+
+> **Windows 本機測試會掩蓋問題**（NTFS case-insensitive），但 GitHub Pages 係 Linux（case-sensitive），大細階唔一致會直接 404。
+
+| 資產 | 規則 | 正確例子 | 錯誤例子 |
+|---|---|---|---|
+| CSV `Word` 欄 | 全小寫，空格用正常 space | `monday`, `t-shirt`, `tv`, `mtr` | ~~`Monday`~~, ~~`T-shirt`~~, ~~`TV`~~, ~~`MTR`~~ |
+| `picture_words_images/*.webp` | 全小寫，空格→下劃線 | `monday.webp`, `t-shirt.webp` | ~~`Monday.webp`~~, ~~`TV.webp`~~ |
+| `picture_words_audio/*.mp3` | 全小寫，空格→下劃線 | `monday.mp3`, `t-shirt.mp3` | ~~`Monday.mp3`~~, ~~`Friday.mp3`~~ |
+
+三樣要對齊嘅對應表（以 `monday` 為例）：
+
+```
+CSV Word 欄：   monday
+CSV Image 欄：  Q_folder/picture_words/picture_words_images/monday.webp
+實際 webp 檔：   picture_words_images/monday.webp          ✅ 一致
+實際 mp3 檔：    picture_words_audio/monday.mp3            ✅ 一致
+```
+
+**Runtime 點樣搵 mp3**（[data.js wordAudioURL()](file:///c:/Users/user/Documents/trae_projects/PokeEngmon/js/data.js#L271-L276)）：自動對 Word 做 `toLowerCase()` → 空格換 `_` → 移走非法字符，所以只要 mp3 檔名跟足同一規則就會 match。
+
 ---
 
 ## 🛑 如何停止腳本
