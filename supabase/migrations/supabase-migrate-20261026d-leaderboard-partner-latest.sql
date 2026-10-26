@@ -30,7 +30,7 @@ begin
     select e.chain_key, e.level
     from user_entries e
     where e.account_id = ua.id
-    order by e.obtained_at desc nulls last, e.created_at desc nulls last
+    order by e.obtained_at desc nulls last
     limit 1
   ) pe on true
   left join lateral (
