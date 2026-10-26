@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v145";
+const APP_VERSION = "v147";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -854,6 +854,7 @@ const App = {
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
         <small class="settings-note">App version: ${APP_VERSION} (auto-updates)</small>
       </div>`);
+    if (this._sfxPreviewTimer) { clearTimeout(this._sfxPreviewTimer); this._sfxPreviewTimer = null; }
     const applyAudio = (which, pct) => {
       const v = Math.max(0, Math.min(100, pct | 0)) / 100;
       const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
@@ -870,7 +871,16 @@ const App = {
     const bgmEl = document.getElementById("set-bgm");
     const sfxEl = document.getElementById("set-sfx");
     bgmEl.oninput = () => applyAudio("bgm", +bgmEl.value);
-    sfxEl.oninput = () => applyAudio("sfx", +sfxEl.value);
+    sfxEl.oninput = () => {
+      applyAudio("sfx", +sfxEl.value);
+      /* debounce：停拖 ~180ms 先播 obtained-pokemon 作 reference */
+      if (this._sfxPreviewTimer) clearTimeout(this._sfxPreviewTimer);
+      this._sfxPreviewTimer = setTimeout(() => {
+        this._sfxPreviewTimer = null;
+        const audio = window.CaptureScene && CaptureScene.audio;
+        if (audio && audio.previewSfx) audio.previewSfx("assets/bgm/obtained-pokemon.mp3", 0.4);
+      }, 180);
+    };
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
     document.getElementById("btn-parent-guide").onclick = () => this.openParentGuide();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
@@ -1073,6 +1083,10 @@ const App = {
   },
 
   closeModal() {
+    if (this._sfxPreviewTimer) { clearTimeout(this._sfxPreviewTimer); this._sfxPreviewTimer = null; }
+    if (window.CaptureScene && CaptureScene.audio && CaptureScene.audio.stopPreviewSfx) {
+      CaptureScene.audio.stopPreviewSfx();
+    }
     document.getElementById("modal-root").innerHTML = "";
   },
 
@@ -1302,6 +1316,20 @@ const App = {
 
     this.renderHome();
     this.showView("view-home");
+
+    /* 全部 UI 掣短 click SFX（委派一次；跟 Settings SFX %） */
+    if (!this._uiTapBound) {
+      this._uiTapBound = true;
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest(
+          "button, [role=button], .chip-btn, .pd-menu-btn, .icon-btn, .entry-gate-btn, .footer-link, .guide-link, .reset-link, .move-choice"
+        );
+        if (!btn || btn.disabled || btn.getAttribute("aria-disabled") === "true") return;
+        if (window.CaptureScene && CaptureScene.audio && CaptureScene.audio.uiTap) {
+          CaptureScene.audio.uiTap();
+        }
+      }, true);
+    }
 
     /* 全域 BGM（Flat Water）+ Entry Gate：
        1) 開頁即試播 —— PWA / 高互動用戶可直接出聲，唔彈窗

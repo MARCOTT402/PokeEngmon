@@ -560,6 +560,13 @@ class CaptureAudio {
     } catch (e) { try { this.bgm.muted = false; } catch (e2) {} }
   }
 
+  /* ---------- UI button tap（短 click，跟 sfxBus） ---------- */
+  uiTap() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(880, { type: "triangle", dur: 0.05, gain: 0.1 });
+  }
+
   /* ---------- Quiz answer SFX ---------- */
   correct() {
     this.ensure();
@@ -649,6 +656,64 @@ class CaptureAudio {
       .then(ab => this.ctx.decodeAudioData(ab))
       .then(buf => { rec.buf = buf; rec.loading = false; rec.waiters.forEach(fn => { try { fn(buf); } catch (e) {} }); rec.waiters = []; })
       .catch(() => { rec.loading = false; rec.waiters = []; });
+  }
+
+  /* Settings SFX slider preview：停上一段再播，避免拖動疊聲；經 sfxBus 跟用戶倍率 */
+  previewSfx(url, volume = 0.4) {
+    this.ensure();
+    if (!this.ctx) return;
+    if (this._previewSrc) {
+      try { this._previewSrc.stop(); } catch (e) {}
+      try { this._previewSrc.disconnect(); } catch (e) {}
+      this._previewSrc = null;
+    }
+    if (this._previewGain) {
+      try { this._previewGain.disconnect(); } catch (e) {}
+      this._previewGain = null;
+    }
+    if (!this._oneShotBufs) this._oneShotBufs = {};
+    const start = (buf) => {
+      try {
+        if (this._previewSrc) {
+          try { this._previewSrc.stop(); } catch (e) {}
+          try { this._previewSrc.disconnect(); } catch (e) {}
+        }
+        const g = this.ctx.createGain();
+        g.gain.value = volume;
+        g.connect(this.sfxBus || this.master || this.ctx.destination);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(0);
+        this._previewSrc = src;
+        this._previewGain = g;
+        src.onended = () => {
+          try { src.disconnect(); g.disconnect(); } catch (e) {}
+          if (this._previewSrc === src) { this._previewSrc = null; this._previewGain = null; }
+        };
+      } catch (e) {}
+    };
+    const cached = this._oneShotBufs[url];
+    if (cached && cached.buf) { start(cached.buf); return; }
+    if (cached && cached.loading) { cached.waiters.push(start); return; }
+    const rec = { buf: null, loading: true, waiters: [start] };
+    this._oneShotBufs[url] = rec;
+    fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(buf => { rec.buf = buf; rec.loading = false; rec.waiters.forEach(fn => { try { fn(buf); } catch (e) {} }); rec.waiters = []; })
+      .catch(() => { rec.loading = false; rec.waiters = []; });
+  }
+  stopPreviewSfx() {
+    if (this._previewSrc) {
+      try { this._previewSrc.stop(); } catch (e) {}
+      try { this._previewSrc.disconnect(); } catch (e) {}
+      this._previewSrc = null;
+    }
+    if (this._previewGain) {
+      try { this._previewGain.disconnect(); } catch (e) {}
+      this._previewGain = null;
+    }
   }
 
   /* 圖片單字題：無限重播，重播會先停上一段（避免疊聲）。

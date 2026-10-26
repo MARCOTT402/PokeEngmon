@@ -34,6 +34,6 @@ python tools/git_commit_push.py --paths js/capture.js js/app.js sw.js index.html
 ## 驗證清單
 
 1. Settings 拖 Music → 主頁 BGM 即時變
-2. 拖 Sound Effects → 答對／錯 SFX、叫聲、jingle 變
+2. 拖 Sound Effects → 停 ~180ms 播 obtained-pokemon preview（跟新 %）；答對／錯／叫聲／jingle 亦跟倍率
 3. F5 後 slider 位置同音量仍在
 4. Reset Progress 後音量設定仍在
