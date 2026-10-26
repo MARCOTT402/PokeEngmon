@@ -1,23 +1,23 @@
 /* ============================================================
    PokeEngmon - Leaderboard Top 50
-   v134：修 _resolvePartner（EVOLUTION_CHAINS 係 array，要用 .find by key）
-   排名準則：持有 Pokémon 總數（desc）；partner = active 優先，否則最新 entry
+   v137：#3 partner level 由 exp derive；#4 totalOwned 用鏈數，同 server 對齊
+   排名準則：持有進化鏈數（desc）；partner = active 優先，否則最新 entry
    Migration：supabase/migrations/supabase-migrate-20261026f-leaderboard-partner-exp.sql
    ============================================================ */
 
 const Leaderboard = {
-  /* chain_key → [dexId, enName]。有 exp/branch 就 derive 正確進化形態。 */
+  /* chain_key → [dexId, enName, level]。有 exp/branch 就 derive 形態 + 等級。 */
   _resolvePartner(chainKey, exp, branch) {
-    if (!chainKey) return [0, "—"];
+    if (!chainKey) return [0, "—", 0];
     /* 舊 settle_capture 遺留：dex_<id> */
     if (String(chainKey).startsWith("dex_")) {
       const id = parseInt(chainKey.slice(4), 10);
-      if (!isNaN(id) && SPECIES[id]) return [id, SPECIES[id].name];
+      if (!isNaN(id) && SPECIES[id]) return [id, SPECIES[id].name, 1];
     }
     /* EVOLUTION_CHAINS 係 array，唔係 object — 必須 .find(c => c.key === ...) */
     const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
-    if (!chain) return [0, "—"];
-    /* 有 exp → 重推 stage 再攞當前物種；冇就 show stage-1（RPC 未升級時） */
+    if (!chain) return [0, "—", 0];
+    /* 有 exp → 重推 stage／level；冇就 show stage-1 Lv.1 */
     if (exp != null && typeof deriveEntryFields === "function") {
       const derived = deriveEntryFields({
         chainKey,
@@ -25,9 +25,10 @@ const Leaderboard = {
         branch: (branch === 0 || branch) ? branch : null,
         dupes: 0
       });
-      return entryCurrentSpecies(derived);
+      const cur = entryCurrentSpecies(derived);
+      return [cur[0], cur[1], derived.level || 1];
     }
-    return [chain.stages[0][0], chain.stages[0][1]];
+    return [chain.stages[0][0], chain.stages[0][1], 1];
   },
 
   async open() {
@@ -46,7 +47,7 @@ const Leaderboard = {
       const raw = await SupabaseAuth._rpcTable("get_leaderboard", {});
       if (!Array.isArray(raw)) return null;
       return raw.map(row => {
-        const [partnerDex, partnerName] = this._resolvePartner(
+        const [partnerDex, partnerName, derivedLv] = this._resolvePartner(
           row.partner_chain_key,
           row.partner_exp,
           row.partner_branch
@@ -54,7 +55,7 @@ const Leaderboard = {
         return {
           name: row.trainer_name || "Anonymous Trainer",
           partnerDex, partnerName,
-          partnerLevel: row.partner_level || 0,
+          partnerLevel: derivedLv || row.partner_level || 0,
           totalOwned: row.total_owned || 0,
           accountUuid: row.account_uuid || null,
           fromRpc: true
@@ -76,10 +77,11 @@ const Leaderboard = {
       partnerName = cur[1];
       partnerLevel = entry.level || 1;
     }
+    /* 用進化鏈數（entries.length），唔用 collectedCount（進化形態會灌水） */
     return {
       name: st.playerName || "You",
       partnerDex, partnerName, partnerLevel,
-      totalOwned: collectedCount(),
+      totalOwned: (st.entries || []).length,
       isYou: true
     };
   },
@@ -109,7 +111,9 @@ const Leaderboard = {
     const myUuid = SupabaseAuth?.currentUser?.()?.id?.toLowerCase();
     const existing = rows.find(r => r.accountUuid && myUuid && r.accountUuid.toLowerCase() === myUuid);
     if (existing) {
-      Object.assign(existing, { ...player, isYou: true });
+      /* 保留 server totalOwned 做排名；本地只覆蓋名／partner 顯示 */
+      const serverOwned = existing.totalOwned;
+      Object.assign(existing, { ...player, isYou: true, totalOwned: serverOwned, fromRpc: true });
     } else {
       rows.push(player);
     }
