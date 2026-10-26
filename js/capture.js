@@ -65,8 +65,13 @@ if (_IS_DEV) {
 class CaptureAudio {
   constructor() {
     this.ctx = null;
-    this.master = null;
+    this.master = null;   /* alias → sfxBus（合成音效） */
+    this.sfxBus = null;
+    this.bgmBus = null;
     this._noise = null;
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    this._bgmScale = prefs.bgm;
+    this._sfxScale = prefs.sfx;
   }
 
   ensure() {
@@ -75,13 +80,34 @@ class CaptureAudio {
       if (!AC) return;
       if (!this.ctx) {
         this.ctx = new AC();
-        this.master = this.ctx.createGain();
-        this.master.gain.value = 1;
-        this.master.connect(this.ctx.destination);
+        this.sfxBus = this.ctx.createGain();
+        this.bgmBus = this.ctx.createGain();
+        this.sfxBus.gain.value = this._sfxScale;
+        this.bgmBus.gain.value = this._bgmScale;
+        this.sfxBus.connect(this.ctx.destination);
+        this.bgmBus.connect(this.ctx.destination);
+        this.master = this.sfxBus;   /* 舊 _tone／noise 路徑繼續連 master */
       }
       if (this.ctx.state === "suspended") this.ctx.resume();
       if (!this._noise) this._noise = this._makeNoise(2.2);
     } catch (e) { /* audio unavailable */ }
+  }
+
+  /* Settings slider：0–1 倍率，乘喺設計基數之上（town 0.1／battle 0.15 等） */
+  setBgmScale(s) {
+    this._bgmScale = Math.max(0, Math.min(1, Number(s) || 0));
+    if (this.bgmBus) this.bgmBus.gain.value = this._bgmScale;
+    if (this.bgm) {
+      try {
+        /* element fallback：保持設計基數 × 用戶倍率 */
+        const base = (this._elDesignedVol != null) ? this._elDesignedVol : 0.15;
+        this.bgm.volume = Math.max(0, Math.min(1, base * this._bgmScale));
+      } catch (e) {}
+    }
+  }
+  setSfxScale(s) {
+    this._sfxScale = Math.max(0, Math.min(1, Number(s) || 0));
+    if (this.sfxBus) this.sfxBus.gain.value = this._sfxScale;
   }
 
   _makeNoise(seconds) {
@@ -375,8 +401,8 @@ class CaptureAudio {
     if (this.ctx && this._bgmBuf) {
       try {
         const g = this.ctx.createGain();
-        g.gain.value = 0.15;
-        g.connect(this.ctx.destination);  /* bypass master — gain values match old element volumes */
+        g.gain.value = 0.15;   /* 設計基數；用戶倍率喺 bgmBus */
+        g.connect(this.bgmBus || this.ctx.destination);
         const src = this.ctx.createBufferSource();
         src.buffer = this._bgmBuf;
         src.loop = true;
@@ -462,26 +488,34 @@ class CaptureAudio {
     try {
       this.bgm = new Audio("assets/bgm/wild-battle.mp3");
       this.bgm.loop = true;
-      this.bgm.volume = 0.15;
+      this._elDesignedVol = 0.15;
+      this.bgm.volume = Math.max(0, Math.min(1, 0.15 * this._bgmScale));
       this.bgm.preload = "auto";
     } catch (e) { this.bgm = null; }
   }
   _elStart() {
     this._ensureEl();
     if (!this.bgm || !this.bgm.paused) return;
-    try { this.bgm.currentTime = 0; this.bgm.play().catch(() => {}); } catch (e) {}
+    try {
+      this._elDesignedVol = 0.15;
+      this.bgm.volume = Math.max(0, Math.min(1, 0.15 * this._bgmScale));
+      this.bgm.currentTime = 0;
+      this.bgm.play().catch(() => {});
+    } catch (e) {}
   }
   _elDuck(target, ms) {
     if (!this.bgm) return;
     if (this._bgmFadeTimer) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
     const from = this.bgm.volume;
+    const to = Math.max(0, Math.min(1, target * this._bgmScale));
+    this._elDesignedVol = target;
     const steps = Math.max(1, Math.round(ms / 50));
     let i = 0;
     this._bgmFadeTimer = setInterval(() => {
       i++;
       if (!this.bgm) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; return; }
       const k = Math.min(1, i / steps);
-      try { this.bgm.volume = from + (target - from) * k; } catch (e) {}
+      try { this.bgm.volume = from + (to - from) * k; } catch (e) {}
       if (k >= 1) { clearInterval(this._bgmFadeTimer); this._bgmFadeTimer = null; }
     }, 50);
   }
@@ -498,7 +532,12 @@ class CaptureAudio {
       try { this.bgm.volume = vol * Math.max(0, 1 - i / steps); } catch (e) {}
       if (i < steps) setTimeout(step, 55);
       else {
-        try { this.bgm.pause(); this.bgm.currentTime = 0; this.bgm.volume = 0.15; } catch (e) {}
+        try {
+          this.bgm.pause();
+          this.bgm.currentTime = 0;
+          this._elDesignedVol = 0.15;
+          this.bgm.volume = Math.max(0, Math.min(1, 0.15 * this._bgmScale));
+        } catch (e) {}
         this._bgmFading = false;
       }
     };
@@ -553,8 +592,8 @@ class CaptureAudio {
     if (!this._townBuf) { this._townPending = true; this._loadTownBuffer(); return; }
     try {
       const g = this.ctx.createGain();
-      g.gain.value = 0.1;
-      g.connect(this.ctx.destination);
+      g.gain.value = 0.1;   /* 設計基數；用戶倍率喺 bgmBus */
+      g.connect(this.bgmBus || this.ctx.destination);
       const src = this.ctx.createBufferSource();
       src.buffer = this._townBuf;
       src.loop = true;
@@ -593,7 +632,7 @@ class CaptureAudio {
       try {
         const g = this.ctx.createGain();
         g.gain.value = volume;
-        g.connect(this.ctx.destination);
+        g.connect(this.sfxBus || this.master || this.ctx.destination);
         const src = this.ctx.createBufferSource();
         src.buffer = buf;
         src.connect(g);
@@ -634,7 +673,7 @@ class CaptureAudio {
         if (this._wordSrc) { try { this._wordSrc.stop(); } catch (e) {} this._wordSrc = null; }
         const g = this.ctx.createGain();
         g.gain.value = 1.0;
-        g.connect(this.ctx.destination);
+        g.connect(this.sfxBus || this.master || this.ctx.destination);
         const src = this.ctx.createBufferSource();
         src.buffer = buf;
         src.connect(g);

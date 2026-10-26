@@ -95,6 +95,19 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .settings-title { margin: 0 0 6px; }
 .settings-sub { margin: 0 0 14px; color: #7a8299; font-size: .9rem; font-weight: 700; line-height: 1.45; }
 .settings-note { display: block; margin: 10px 0 0; color: #9aa5b1; font-size: .78rem; line-height: 1.4; }
+.settings-audio {
+  display: flex; flex-direction: column; gap: 10px;
+  margin: 0 0 14px; text-align: left;
+}
+.settings-vol { display: flex; flex-direction: column; gap: 4px; }
+.settings-vol-label {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: .85rem; font-weight: 700; color: var(--ink);
+}
+.settings-vol-label b { font-variant-numeric: tabular-nums; color: #5b6578; font-weight: 800; }
+.settings-vol input[type="range"] {
+  width: 100%; accent-color: var(--blue); cursor: pointer;
+}
 
 .rename-box { text-align: center; }
 .rename-title { margin: 0 0 6px; }

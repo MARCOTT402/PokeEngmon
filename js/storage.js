@@ -3,6 +3,38 @@
    ============================================================ */
 
 const STORAGE_KEY = "pokeengmon_state_v1";
+/* 音量偏好獨立 key：refresh／關網再開都 keep；清進度／sign out 唔抹 */
+const AUDIO_PREFS_KEY = "pokeengmon_audio_v1";
+
+function defaultAudioPrefs() {
+  return { bgm: 1, sfx: 1 };   /* 1 = 100% of designed volumes */
+}
+
+function _clamp01(n) {
+  n = Number(n);
+  if (!isFinite(n)) return 1;
+  return Math.max(0, Math.min(1, n));
+}
+
+function loadAudioPrefs() {
+  try {
+    const raw = localStorage.getItem(AUDIO_PREFS_KEY);
+    if (!raw) return defaultAudioPrefs();
+    const o = JSON.parse(raw) || {};
+    return { bgm: _clamp01(o.bgm == null ? 1 : o.bgm), sfx: _clamp01(o.sfx == null ? 1 : o.sfx) };
+  } catch (e) {
+    return defaultAudioPrefs();
+  }
+}
+
+function saveAudioPrefs(prefs) {
+  const p = {
+    bgm: _clamp01(prefs && prefs.bgm),
+    sfx: _clamp01(prefs && prefs.sfx)
+  };
+  try { localStorage.setItem(AUDIO_PREFS_KEY, JSON.stringify(p)); } catch (e) {}
+  return p;
+}
 
 /* 預設狀態 */
 function defaultState() {

@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**v144**（2026-10）
+> 目前版本：**v145**（2026-10）
 
 ---
 
@@ -139,7 +139,8 @@
 
 ### 3.11 音效與無障礙
 
-- 全域 BGM：Flat Water（BGM channel），音量 0.1，捕捉場景暫停、結算 jingle 完後恢復
+- 全域 BGM：Flat Water（BGM channel），設計基數音量 0.1，捕捉場景暫停、結算 jingle 完後恢復
+- **音量設定（v145）**：Settings 兩個連續滑動條（Music／Sound Effects，0–100%）；`localStorage` `pokeengmon_audio_v1` 持久化（refresh／關網再開都 keep；清進度唔抹）
 - 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）
 - 圖片題 TTS：Azure `en-US-JennyNeural` rate -10%，本地 mp3 + **v116 起 speechSynthesis 兜底**（mp3 缺失都唔會靜音）
 - 寶可夢叫聲：本地 1-151 mp3，僅首次解鎖播放
@@ -213,6 +214,7 @@
 | v140 | 登入 RPC fail 唔再 silent 本地派寵／加鑽；Sync.pull 先 normalize dex_ 再 load gen；ownedSpecies null 自動 repair |
 | v141 | RARITY fallback 改 `|| RARITY.normal`（舊 `"common"` key 唔存在會白屏） |
 | v144 | 全域 BGM 換 *Flat Water*（BGM channel），音量 0.1；移除 One Summer's Day |
+| v145 | Settings 連續滑動條調 Music／SFX（0–100%）；`pokeengmon_audio_v1` 本地持久化 |
 
 ---
 

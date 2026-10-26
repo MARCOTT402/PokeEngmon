@@ -1,7 +1,7 @@
 # PokeEngmon 架構文檔（ARCH）
 
 > 純前端 SPA + Supabase（PostgreSQL + Auth + REST）。無 Node、無 build step，直接 deploy 去 GitHub Pages。
-> 目前版本：**v141**（2026-10）
+> 目前版本：**v145**（2026-10）
 
 ---
 
@@ -132,9 +132,10 @@ pokeengmon_state_v1 = {
 pokeengmon_sm2_cards_v2  → { cardId: { card_id, card_type, next_review_at, interval_days, ease_factor, ... } }
 pokeengmon_sm2_history_v2 → [ { card_id, ts, q_score, response_ms, levenshtein_distance, is_typo } ]
 pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
+pokeengmon_audio_v1       → { bgm: 0–1, sfx: 0–1 }   # Settings 滑動條；唔跟 clearGameProgress（v145）
 ```
 
-**關鍵**：`level / stage / ownedSpecies / moves / stars` 係 `(chainKey, exp, dupes, branch)` 嘅 **deterministic derived 欄位**，由 `deriveEntryFields()` 重推；server row 經 `localEntryFromServer()` / `adoptServerEntry()` 落地。
+**關鍵**：`level / stage / ownedSpecies / moves / stars` 係 `(chainKey, exp, dupes, branch)` 嘅 **deterministic derived 欄位**，由 `deriveEntryFields()` 重推；server row 經 `localEntryFromServer()` / `adoptServerEntry()` 落地。音量經 `CaptureAudio.bgmBus`／`sfxBus` 倍率，設計基數（town 0.1／battle 0.15）硬編碼。
 
 ### 4.2 雲端資料模型（Supabase）
 

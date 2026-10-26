@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v144";
+const APP_VERSION = "v145";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -832,15 +832,45 @@ const App = {
     const saveNote = loggedIn
       ? `<p class="settings-sub">✅ Cloud sync is on — your progress follows your account.</p>`
       : `<p class="settings-sub">Your progress is saved in this browser only. Sign in (🔐) to back up to the cloud.</p>`;
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    const bgmPct = Math.round(prefs.bgm * 100);
+    const sfxPct = Math.round(prefs.sfx * 100);
     this.showModal(`
       <div class="settings-box">
         <h3 class="settings-title">⚙️ Settings</h3>
         ${saveNote}
+        <div class="settings-audio">
+          <label class="settings-vol">
+            <span class="settings-vol-label">Music <b id="set-bgm-pct">${bgmPct}%</b></span>
+            <input id="set-bgm" type="range" min="0" max="100" step="1" value="${bgmPct}" aria-label="Music volume">
+          </label>
+          <label class="settings-vol">
+            <span class="settings-vol-label">Sound Effects <b id="set-sfx-pct">${sfxPct}%</b></span>
+            <input id="set-sfx" type="range" min="0" max="100" step="1" value="${sfxPct}" aria-label="Sound effects volume">
+          </label>
+        </div>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
         <button id="btn-parent-guide" class="guide-link">📖 How to create your own questions</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
         <small class="settings-note">App version: ${APP_VERSION} (auto-updates)</small>
       </div>`);
+    const applyAudio = (which, pct) => {
+      const v = Math.max(0, Math.min(100, pct | 0)) / 100;
+      const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+      if (which === "bgm") cur.bgm = v; else cur.sfx = v;
+      if (typeof saveAudioPrefs === "function") saveAudioPrefs(cur);
+      const audio = window.CaptureScene && CaptureScene.audio;
+      if (audio) {
+        if (which === "bgm") audio.setBgmScale(v);
+        else audio.setSfxScale(v);
+      }
+      const pctEl = document.getElementById(which === "bgm" ? "set-bgm-pct" : "set-sfx-pct");
+      if (pctEl) pctEl.textContent = `${Math.round(v * 100)}%`;
+    };
+    const bgmEl = document.getElementById("set-bgm");
+    const sfxEl = document.getElementById("set-sfx");
+    bgmEl.oninput = () => applyAudio("bgm", +bgmEl.value);
+    sfxEl.oninput = () => applyAudio("sfx", +sfxEl.value);
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
     document.getElementById("btn-parent-guide").onclick = () => this.openParentGuide();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();

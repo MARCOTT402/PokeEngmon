@@ -363,7 +363,8 @@ const Pokedex = {
     try {
       const src = this._ctx.createBufferSource();
       const gain = this._ctx.createGain();
-      gain.gain.value = 0.8;
+      const sfx = (typeof loadAudioPrefs === "function") ? loadAudioPrefs().sfx : 1;
+      gain.gain.value = 0.8 * sfx;
       src.buffer = buffer;
       src.connect(gain);
       gain.connect(this._ctx.destination);
@@ -373,7 +374,8 @@ const Pokedex = {
 
   _playHTML(dexId) {
     const a = this._audio || (this._audio = new Audio());
-    a.volume = 0.75;
+    const sfx = (typeof loadAudioPrefs === "function") ? loadAudioPrefs().sfx : 1;
+    a.volume = Math.max(0, Math.min(1, 0.75 * sfx));
     a.src = cryURL(dexId);
     a.play().catch(() => {});
   }
