@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v134";
+const APP_VERSION = "v135";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -480,14 +480,17 @@ const App = {
             onCaught: () => {
               const res = obtainPokemon(chainKey, "normal");
               const cur = entryCurrentSpecies(res.entry);
+              /* obtain_capture 要求 dex_id === chain_rarity.stage1_dex；
+                 dupe 已進化 entry 時 cur[0] 係最終形態 → 必須傳 scene 嘅 stage1 dexId */
+              const stage1Dex = dexId;
               this.lastCapture = { dexId: cur[0], name: cur[1], isDupe: res.isDupe, caught: true };
               /* 世代解鎖：儲起喺結算後彈慶祝窗 + 背景下載新代資料包 */
               if (res.newlyUnlockedGen) this._pendingGenUnlock = res.newlyUnlockedGen;
               /* 防金手指：server 記錄捕捉 + server 權威派寵（fire-and-forget，唔阻動畫）
                  obtain_capture 回傳後用 server 行覆蓋本地 entry（IV/dupes/candies 以 server 為準） */
               if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
-                SupabaseAuth.settleCapture(cur[0]);
-                SupabaseAuth.obtainCapture(chainKey, cur[0]).then(r => {
+                SupabaseAuth.settleCapture(stage1Dex);
+                SupabaseAuth.obtainCapture(chainKey, stage1Dex).then(r => {
                   if (r && r.entry) {
                     const before = loadState().unlockedGen || 1;
                     adoptServerEntry(r.entry);

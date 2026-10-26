@@ -206,7 +206,10 @@ const SupabaseAuth = {
         },
         body: JSON.stringify(payload || {})
       });
-      if (!res.ok) throw new Error(name + " RPC failed: " + res.status);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(name + " RPC failed: " + res.status + " " + body);
+      }
       const data = await res.json();
       return Array.isArray(data) ? data[0] : data;
     } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
@@ -257,7 +260,8 @@ const SupabaseAuth = {
      回傳 {entry, is_dupe}；失敗 return null */
   async obtainCapture(chainKey, dexId) {
     if (!this.currentUser()) return null;
-    return this._rpc("obtain_capture", { chain_key: chainKey, dex_id: dexId });
+    /* v135：p_chain_key / p_dex_id（避開 plpgsql 同 column 撞名 42702） */
+    return this._rpc("obtain_capture", { p_chain_key: chainKey, p_dex_id: dexId });
   },
 
   /* ---------- RPC：加 EXP（回傳新 exp 總值） ---------- */
