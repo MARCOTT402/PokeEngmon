@@ -56,15 +56,17 @@ The sync queue flush (`_flush()` in `js/sync.js`) must POST user_cards to `/user
 
 Since v99, `Sync.pushState()` only pushes non-sensitive data (trainer_name; SM-2 cards/history go via the background queue). Diamonds, entries, exp, IVs/EVs, and candies are server-authoritative — direct writes are blocked by column-level grants, and `pull()` overwrites local values with cloud data on next load.
 
-State-changing actions MUST call the matching RPC wrapper in `js/supabase-auth.js` (keep the local mutation for instant UI, then fire-and-forget the RPC; on failure the next `Sync.pull()` rolls back):
+State-changing actions MUST call the matching RPC wrapper in `js/supabase-auth.js`:
 - Quiz round diamonds → `awardRoundDiamonds(score, total)` (server returns the authoritative balance — use it, don't `+=`)
-- Rare pull → `gachaPull(initExp)` (server deducts diamonds atomically, rolls rarity/chain itself, returns the entry row → `adoptServerEntry()`)
-- Capture success → `obtainCapture(chainKey, dexId)` (+ `settleCapture(dexId)` for logging)
+- Rare pull → `gachaPull(initExp, unlockedGen)` (server deducts diamonds atomically, rolls rarity/chain itself, returns the entry row → `adoptServerEntry()`)
+- Capture success → `obtainCapture(chainKey, stage1Dex)` (+ `settleCapture(stage1Dex)` for logging) — **always stage1**, never evolved form dex
 - EXP gains (quiz settle / Power Up batch) → `addEntryExp(entryId, delta)`
 - Candy feed → `useEntryCandy(entryId, count, expDelta)`
 - EV allocation → `allocEv(entryId, stat)`
 - Partner switch / Eevee branch evolution → `Sync.patchEntry(entryId, { active | branch })`
 - New Google account first-time import → `importState(payload)` (one-shot guard server-side)
+
+**Logged-in RPC fail (v140):** if the user is signed in and the RPC was attempted but failed, **abort** (toast / try again) — do NOT silently fall back to local fake diamonds / fake gacha rewards. Local fallback is only for anonymous / truly offline. Silent fallback masks broken RPCs (v108 lesson) and desyncs cloud state.
 
 Never re-add a direct diamonds/exp/entries write to `pushState()` — it will 403 once the migration SQL is applied.
 
@@ -104,8 +106,9 @@ Postgres defaults `plpgsql.variable_conflict = error`: if an identifier in a SQL
 Real incident (v99→v108): `gacha_pull` had `where rarity = rarity` (variable `rarity` vs column `chain_rarity.rarity`) → **every rare-pull RPC 400'd for days**; the frontend's offline fallback silently masked it (pulls "worked" locally, Supabase never updated). Fixed in `supabase-migrate-20261024f-fix-gacha-pull-ambiguous.sql` by renaming the variable to `v_rarity` and qualifying the column (`cr.rarity = v_rarity`).
 
 Prevention when writing/editing any RPC:
-- Prefix declared variables with `v_` (e.g. `v_rarity`), or ALWAYS qualify columns with a table alias (`cr.rarity`, like `obtain_capture` does).
-- **Smoke-test every new/modified RPC with a real authenticated call against live Supabase** — browser DevTools Network tab must show `200` from `/rest/v1/rpc/<name>`. Do NOT trust in-browser flow testing alone: the local fallback makes a broken RPC look "working".
+- Prefix declared variables with `v_` and **parameters with `p_`** (e.g. `p_chain_key`, `p_dex_id`) — v135 `obtain_capture` hit 42702 again when bare `chain_key`/`dex_id` collided with columns.
+- ALWAYS qualify columns with a table alias (`cr.rarity`).
+- **Smoke-test every new/modified RPC with a real authenticated call against live Supabase** — browser DevTools Network tab must show `200` from `/rest/v1/rpc/<name>`. Do NOT trust in-browser flow testing alone.
 - If the user reports "Supabase didn't update after action X", FIRST check the console for `[Auth RPC] ... failed: 400` before debugging sync logic.
 
 ## Rule 10 — Service Worker fetch handler must skip non-http(s) schemes
@@ -134,3 +137,18 @@ Checklist:
 5. If the asset introduces a NEW rights holder (non-Pokémon), say so explicitly in the disclaimer with its own © line.
 
 Current music credits baseline (v121): global BGM = *One Summer's Day* (Spirited Away, Joe Hisaishi, © Studio Ghibli / Tokuma Japan Communications); battle/jingles = Pokémon RGBY soundtracks (© Nintendo / Creatures Inc. / GAME FREAK inc., via KHInsider); cries = Pokémon Showdown community; data/sprites = PokéAPI.
+
+## Rule 13 — `EVOLUTION_CHAINS` is an array
+
+Lookup with `.find(c => c.key === key)`, NEVER `EVOLUTION_CHAINS[key]` (undefined → leaderboard `?` sprites, v134).
+
+## Rule 14 — Sync.pull: normalize `dex_*` BEFORE collecting gens
+
+`pull()` must rewrite legacy `dex_<id>` chain keys first, then walk entries to `ensureGenDataLoaded(g)`. Skipping `dex_` entries during gen collect leaves Gen2+ moves empty (v140).
+
+## Rule 15 — Defensive defaults that have bitten us
+
+- `ownedSpecies` may be null → repair / guard before `.includes` / `collectedCount` (v140).
+- `RARITY[x]` — there is no `"common"` key; use `RARITY[x] || RARITY.normal` (v141).
+- Short quiz sets: EXP uses `round(score/total×10)` against the /10 tier table; diamond offline fallback uses relative thresholds vs `total` (v136/v139).
+- Gacha: snapshot `pendingExp` into a local const BEFORE clearing it when calling RPC (v138).

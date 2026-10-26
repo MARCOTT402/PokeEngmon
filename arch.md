@@ -1,7 +1,7 @@
 # PokeEngmon 架構文檔（ARCH）
 
 > 純前端 SPA + Supabase（PostgreSQL + Auth + REST）。無 Node、無 build step，直接 deploy 去 GitHub Pages。
-> 目前版本：**v131**（2026-10）
+> 目前版本：**v141**（2026-10）
 
 ---
 
@@ -53,7 +53,7 @@ PokeEngmon/
 │   ├── pokedex.js          # 圖鑑 UI
 │   ├── pokemon.js          # 寶可夢數值：expAtLevel、levelSpan、IV/EV、進化、initialMoves、learnsetOf
 │   ├── calendar.js         # 練習日曆
-│   ├── leaderboard.js      # Leaderboard Top 50（v132 live RPC + mock fallback）
+│   ├── leaderboard.js      # Leaderboard Top 50（v132+ live RPC；partner Lv/exp derive；anon 可讀）
 │   └── explain.js          # 錯題解析（關鍵詞箭咀）
 ├── data/
 │   ├── pokemon-151.json    # Gen 1（151 隻）寶可夢資料（含 learnset），SW pre-cache
@@ -187,10 +187,10 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 6. Toast 顯示實際登入嘅 email（俾用戶核對係咪預期帳戶）
 
 ### 5.3 答題結算
-1. `onSetComplete(data)` 計算 score + EXP（v130 分級制）
-2. EXP 分級表（% of 当前拍檔 `levelSpan`）：
+1. `onSetComplete(data)` 計算 score + EXP（v130 分級制；**v136** 用 `s = round(score/total×10)` 正規化短 set）
+2. EXP 分級表（% of 当前拍檔 `levelSpan`；表係 **/10 刻度**）：
 
-| 分數 | 無用 Hint | 有用過 Hint（該回合任何一題撳過就算） |
+| 分數（正規化後） | 無用 Hint | 有用過 Hint（該回合任何一題撳過就算） |
 |---|---|---|
 | 10/10 | 100% | 50% |
 | 9/10 | 90% | 40% |
@@ -202,7 +202,9 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 3. **新手期保底**：拍檔 Lv.1–10 期間 `pct = max(0.50, 分級結果)`，低分回合墊高到 50%，全對無 hint 照攞 100%。每回合下限 10 EXP。
 4. 如有錯題 → 入 Power Up Zone，**全部改啱先至結算**
 5. 調用 `SupabaseAuth.awardRoundDiamonds(score, total)` RPC → server 返回權威餘額，前端採用（**唔好本地 `+=`**）
-6. RPC 失敗 → fallback 本地計算（離線可用）
+6. RPC 失敗：
+   - **匿名／離線** → 本地相對門檻（`score==total→3` / `≥total-2→2` / `≥total-3→1`，v139）
+   - **已登入** → **唔本地加鑽**（v140，避免同雲端脫節）；toast 提示下回合再試
 7. `addEntryExp(entryId, delta)` RPC 更新拍檔等級／進化
 8. SM-2 卡片背景 `queueUpsert`（唔阻塞 UI）
 
@@ -223,13 +225,15 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 5. 前端 `adoptServerEntry()` 落地 → 全屏稀有度爆發動畫 → 檢視卡
 6. 檢視卡兩個掣：「💎 ×3 TO GO!」（再抽）/「‹ Back to Home」
 7. 鑽石唔夠 → 按鈕 disabled + 顯示「Need 💎3 (you have N)」
-8. RPC 失敗 → fallback 本地 `obtainPokemon(chainKey, "rare")`（離線可用）
+8. RPC 失敗：
+   - **已登入且已發起 RPC** → **中止**（「Something went wrong — try again」），**唔**本地假派寵／扣鑽（v140）
+   - **匿名／真離線** → fallback 本地 `obtainPokemon`；`pendingExp` 必須先 `const pending = …` 再清零（v138）
 9. 快龍頁揭示時每次播叫聲（覆蓋「僅首次解鎖播放」嘅一般規則）
 
 ### 5.6 捕捉
-1. Three.js 場景 → `onCaught` callback
-2. `SupabaseAuth.obtainCapture(chainKey, dexId)` RPC 生成 server 端 entry（server 決定 IV 等）
-3. `SupabaseAuth.settleCapture(dexId)` RPC 記錄 `user_captures`（每次捕捉必寫，無論成功失敗）
+1. Three.js 場景 → `onCaught` callback（場景永遠顯示 **stage1**）
+2. `SupabaseAuth.obtainCapture(chainKey, stage1Dex)` — 參數名 `p_chain_key` / `p_dex_id`（v135）；**必須傳 stage1**，dupe 已進化時唔好傳 `entryCurrentSpecies` 嘅最終形態
+3. `SupabaseAuth.settleCapture(stage1Dex)` 記錄 `user_captures`
 4. 捕捉成功唔會自動替換拍檔
 5. BGM 音量曲線：WARNING→草叢 0.55 → 第一下 400ms 收到 0.32 → 拋出後 6.2 秒線性淡出到 0（**用 JS setInterval 逐格調 gain.value**，唔好用 AudioParam 長 ramp — iOS WebKit 有 bug）
 
@@ -249,6 +253,11 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 5. **池過濾**：前端 `pullablePool(unlockedGen, rarity)` 決定抽卡/捕捉池；server 端 `gacha_pull(p_gen)` / `obtain_capture` 用 `max_unlocked_gen(uid)`（SECURITY DEFINER，逐代查 `chain_rarity` vs `user_entries`）二次驗證
 6. **圖鑑**：未解鎖世代 cell 係純「?」DOM（`cell.disabled = true`），**唔生成任何 `<img>`** → 零圖片請求、零外形洩露；世代 hub 捲動收放（`_bindHubScroll`）
 
+### 5.9 Leaderboard（v132–v137）
+1. `SupabaseAuth._rpcTable("get_leaderboard")` → rows（anon／auth 都可）
+2. `_resolvePartner(chainKey, exp, branch)`：`EVOLUTION_CHAINS.find` + `deriveEntryFields` → dex／名／**level**
+3. YOU merge：覆蓋名／拍檔顯示，**保留 server `total_owned`** 做排名
+
 ---
 
 ## 6. 防金手指設計（v99 起）
@@ -261,11 +270,12 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 | EXP / 糖果 / EV | `add_entry_exp` / `use_entry_candy` / `alloc_ev` RPC server 計算 |
 | 匯入進度 | `import_state` RPC 一次性鎖定（`user_account.imported_at`），鑽石固定派 20，server clamp 上限（entries ≤151, exp ≤1.25M, candies ≤99, dupes ≤100） |
 | Column-level grants | 收回 anon 對敏感欄（diamonds、entries.exp、entries.candies 等）嘅直寫權限 |
-| Leaderboard 讀取 | `get_leaderboard()` SECURITY DEFINER（繞過 RLS 讀跨用戶 active entry + total owned）；public/anon 權限已 revoke，只有 authenticated 可 call；匿名前端自動 fallback mock |
-| RPC 身份驗證 | 每個 SECURITY DEFINER RPC 內部用 `auth.uid()` 驗證 caller；`revoke execute from public, anon` + `grant execute to authenticated` |
+| Leaderboard 讀取 | `get_leaderboard()` SECURITY DEFINER；**anon + authenticated** 可 execute；partner Lv 前端由 exp derive |
+| RPC 身份驗證 | 每個 SECURITY DEFINER RPC 內部用 `auth.uid()` 驗證 caller；敏感寫 RPC `revoke … from public, anon` + `grant … to authenticated` |
 | Sign out | `clearGameProgress()` 清除 localStorage，防止離線改數再 sign in 上傳 |
 | RLS | anon 綁定 device_id；auth 綁定 auth.uid()；用戶只可讀寫自己數據 |
-| plpgsql 變數 | `v_` 前綴命名，避免同 column 撞名（42702 ambiguous） |
+| plpgsql 變數／參數 | `v_`／`p_` 前綴，避免同 column 撞名（42702；v108 gacha、v135 obtain_capture 教訓） |
+| 登入 RPC fail | 抽卡／鑽石：**唔** silent 本地假成功（v140）；匿名／離線先至 fallback |
 
 **已知暫緩**（記低咗但未做）：`award_round_diamonds` 無回合真實性檢查、`obtain_capture` 無回合證明、`add_entry_exp` 無速率限制。
 
@@ -289,6 +299,12 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 12. **改 RPC 簽名必須先 `drop function` 舊版**：default 參數會撞 overload → PostgREST 300 ambiguous（v127 `gacha_pull` 加 `p_gen` 時教訓）
 13. **未解鎖世代圖鑑格係純「?」**：唔可以用剪影或者背後藏 `<img>`，否則洩露外形兼白耗流量
 14. **跨代進化鏈要截斷**：crobat / espeon / steelix 等喺自己世代做獨立 stage-1 鏈，Gen 1 鏈零改動（零遷移）
+15. **`EVOLUTION_CHAINS` 係 array**：lookup 用 `.find(c => c.key === …)`，唔好 `EVOLUTION_CHAINS[key]`（v134 leaderboard 教訓）
+16. **`obtain_capture` 傳 stage1 dex + `p_chain_key`/`p_dex_id`**：進化形態 dex → `chain not capturable`；參數撞名 → 42702（v135）
+17. **Sync.pull 先 normalize `dex_*` 再 collect gens**：舊碼跳過 `dex_` 會漏 Gen2+ load（v140）
+18. **`ownedSpecies` 可能 null**：`ensureEntryPokemonData`／`collectedCount` 要 repair／guard（v140）
+19. **`RARITY` 無 `"common"` key**：用 `RARITY[x] || RARITY.normal`（v141）
+20. **短 set EXP／鑽石用比例門檻**：`round(score/total×10)`、鑽石跟 server 相對規則（v136／v139）
 
 ---
 
@@ -298,4 +314,6 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 2. `python tools/git_commit_push.py -m "vNN: ..."` 或手動 `git add / commit / push`
 3. GitHub Pages 自動部署（main branch root，幾十秒）
 4. Service Worker `CACHE_NAME` 改 → 瀏覽器下次開頁面自動安裝新 SW → `skipWaiting` 接管 → 前端 `controllerchange` 自動刷新
-5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase/migrations/supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）；最新一個係 `supabase/migrations/supabase-migrate-20261026-gen-expansion.sql`（`chain_rarity` 加 gen + 299 條 insert + `max_unlocked_gen` + `gacha_pull(p_gen)` + `obtain_capture` 649）
+5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase/migrations/supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）。Leaderboard／捕捉相關最近遷移：
+   - `…20261026f-leaderboard-partner-exp.sql` — `get_leaderboard` 回傳 `partner_exp`／`partner_branch`
+   - `…20261026g-fix-obtain-capture-ambiguous.sql` — `obtain_capture(p_chain_key, p_dex_id)` 修 42702

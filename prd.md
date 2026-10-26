@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**v132**（2026-10）
+> 目前版本：**v141**（2026-10）
 
 ---
 
@@ -87,6 +87,7 @@
   - 主頁撳 💎 → 入快龍頁 → 拖／撳 `#dm-arm` ≥ 72% → 快龍肚仔開艙跌球 → 全屏稀有度爆發動畫 → 檢視卡
   - 檢視卡兩個掣：「💎 ×3 TO GO!」（唔夠鑽會 disabled + 顯示差額）、「‹ Back to Home」
 - **服務端權威（v99+）**：`gachaPull` RPC 由 server 原子扣鑽 + roll rarity / chain，前端唔改數值
+- **RPC fail（v140）**：已登入且 RPC 已發起但失敗 → **中止**（「try again」），唔本地假派寵；匿名／真離線先至本地 fallback。pendingExp 入帳必須先 snapshot（v138）
 - 重複處理：首次解鎖新種 → 拍檔；重複 → EV+1 或糖果+1（視乎稀有度）
 
 ### 3.5 捕捉系統（Capture）
@@ -94,6 +95,7 @@
 - Three.js 3D 場景，投精靈球捉野生寶可夢
 - 捕捉成功率 `0.80 + attempts × 0.05`（上限 0.95），server `settle_capture` RPC 決定（防金手指）
 - **世代池（v127）**：捕捉池只含目前最高已解鎖世代；`obtain_capture` RPC dex 上限放寬至 649 + server 端世代驗證
+- **dex 契約（v135）**：`obtain_capture(p_chain_key, p_dex_id)` 必須傳 **stage1 dex**（場景顯示嗰隻），唔好傳已進化形態；參數用 `p_` 前綴避免 plpgsql 同 column 撞名（42702）
 - BGM：WARNING→草叢 0.55，第一下 400ms 內收到 0.32，第 3 下充電撳完拋出後 6.2 秒線性淡出至 0（iOS WebKit 長 ramp 有 bug，用 JS 定時逐格調 gain）
 - 捕捉成功唔會自動替換拍檔（避免數據混亂）；首次獲得寶可夢先自動設為拍檔
 
@@ -122,13 +124,20 @@
 - 顯示每日答題量（顏色深淺）
 - 連續練習日數 `bestStreak`
 
-### 3.9 家長功能
+### 3.9 Leaderboard（v131–v137）
+
+- 主頁 badge chip → Top 50（按持有**進化鏈數** desc）
+- `get_leaderboard()` SECURITY DEFINER；anon／authenticated 都可讀
+- Partner：sprite + 名由 `partner_exp`／`branch` **derive**（唔信 DB 舊 `level`）；優先 active entry
+- YOU 行：本地覆蓋名／拍檔顯示，**排名用 server `total_owned`**（唔用 `collectedCount` 灌水）
+
+### 3.10 家長功能
 
 - CSV 匯入自訂題目（存 `customQuestions`，跨帳戶登出都保留）
 - 內建詞庫：`Q_folder/questions/questions.csv`（句子題）、`Q_folder/picture_words/picture_words.csv`（圖片單字題）
-- Settings 頁：重置進度（要輸入正確訓練員名先 confirm）、查看版本、匯入 CSV
+- Settings 頁：重置進度（要輸入正確訓練員名先 confirm；名要 `escapeHTML`）、查看版本、匯入 CSV
 
-### 3.10 音效與無障礙
+### 3.11 音效與無障礙
 
 - 全域 BGM：One Summer's Day（Spirited Away / Joe Hisaishi），音量 0.25，捕捉場景暫停、結算 jingle 完後恢復
 - 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）
@@ -142,7 +151,7 @@
 
 | 資源 | 獲得 | 消耗 | 邊個控制 |
 |------|------|------|----------|
-| 💎 鑽石 | 答題獎勵（server RPC 計算） | 稀有抽 💎3 | server |
+| 💎 鑽石 | 答題獎勵（server RPC；匿名／離線 fallback 用相對門檻 `==total→3 / ≥total-2→2 / ≥total-3→1`） | 稀有抽 💎3 | server（登入 RPC fail 唔本地假加鑽） |
 | ⭐ 星星 | 重複抽到同種（每 5 次 +1⭐） | — | server derive |
 | 🍬 糖果 | rare 重複 | 進化 | server |
 | EXP | 答題 + Power Up 改錯 | 升級／進化 | server derive |
@@ -194,7 +203,8 @@
 | v127 | **Gen 2–5 世代擴充**：+498 隻（#152–649）、世代解鎖制（儲齊全鏈開下一代）、GenPack 按需下載、圖鑑 5 代分頁 + 浮動 hub、未解鎖世代純「?」格、SQL 遷移（`chain_rarity.gen`、`gacha_pull(p_gen)`、`obtain_capture` 放寬 649） |
 | v130 | 回合 EXP 分級制：按分數 × 有無用 Hint 對照百分比表；拍檔 Lv.1–10 保底 50% × levelSpan |
 | v131 | Leaderboard Top 50 prototype（主頁 chip 入口） |
-| v132 | Leaderboard live RPC：`get_leaderboard()` SECURITY DEFINER；登入用戶見真榜（partner = active entry）；匿名自動 fallback mock；chain_key → SPECIES 映射（含舊 `dex_<id>` 遺留）；public/anon 權限已 revoke |
+| v132 | Leaderboard live RPC：`get_leaderboard()` SECURITY DEFINER；anon 可讀 |
+| v133–v134 | Leaderboard：partner sprite（`EVOLUTION_CHAINS.find`）；RPC 回傳 `partner_exp`／`branch` |
 | v135 | 捕捉：`obtain_capture` 傳 stage1 dex；SQL 參數改 `p_chain_key`/`p_dex_id` 修 42702 ambiguous |
 | v136 | 短 set EXP：`round(score/total×10)` 正規化，5/5 全對攞 100% span（唔再當 5 分落 50% 檔） |
 | v137 | Leaderboard：partner Lv 由 exp derive（唔再用 DB 舊 level）；YOU totalOwned 用鏈數，唔再用 collectedCount 灌水 |

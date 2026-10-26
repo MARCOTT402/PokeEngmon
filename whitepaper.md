@@ -1,7 +1,7 @@
 # PokeEngmon 白皮書
 
 > 用寶可夢養成遊戲，令小朋友主動温英文。
-> 版本 v131 · 2026 年 10 月
+> 版本 v141 · 2026 年 10 月
 
 ---
 
@@ -161,14 +161,16 @@
 
 ## 8. 發展藍圖
 
-### 已完成（v1–v131）
+### 已完成（v1–v141）
 - 完整答題 + SM-2 + Power Up Zone
 - 快龍扭蛋機抽卡
 - Google 帳戶同步
 - 安全硬化（防作弊）
 - 圖片題 TTS + 系統聲兜底
 - Gen 2–5 世代擴充（649 隻 + 世代解鎖 + 按需下載）
-- 回合 EXP 分級制 + 新手期保底
+- 回合 EXP 分級制 + 新手期保底 + 短 set 正規化
+- Leaderboard Top 50（live RPC；partner Lv/exp derive）
+- 捕捉／抽卡 RPC 硬化（stage1 dex、ambiguous 修補、登入 fail 唔 silent 假成功）
 
 ### 短期（計劃中）
 - 更多題型（聽音選字、配對）
