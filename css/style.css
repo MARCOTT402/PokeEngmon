@@ -1772,6 +1772,14 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .lb-you-card .lb-row { border-radius: 0 0 14px 14px; }
 
+.lb-empty {
+  text-align: center; padding: 48px 24px 32px; color: #7a8299;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.lb-empty-icon { font-size: 3rem; line-height: 1; }
+.lb-empty-title { font-size: 1.1rem; font-weight: 800; color: #5a6478; }
+.lb-empty-sub { font-size: .85rem; max-width: 300px; }
+
 @media (max-width: 360px) {
   .lb-row { grid-template-columns: 34px 42px 1fr auto; gap: 6px; padding: 6px 8px; }
   .lb-sprite { width: 42px; height: 42px; }
