@@ -133,7 +133,7 @@ const Pokedex = {
       if (!sp) continue;   // 理論上唔會（腳本已保證全覆蓋）
       const isOwned = owned.has(id);
       cell.className = "dex-cell" + (isOwned ? " owned" : "");
-      const rz = RARITY[sp.rarity];
+      const rz = RARITY[sp.rarity] || RARITY.normal;
       cell.innerHTML = `
         <img src="${spriteURL(sp.dexId)}" alt="${isOwned ? sp.name : "??"}" loading="lazy">
         <span class="dex-name">${isOwned ? sp.name : "???"}</span>
@@ -158,7 +158,7 @@ const Pokedex = {
     const st = loadState();
     const chain = EVOLUTION_CHAINS.find(c => c.key === sp.chainKey);
     const entry = st.entries.find(e => e.chainKey === sp.chainKey);
-    const rz = RARITY[sp.rarity];
+    const rz = RARITY[sp.rarity] || RARITY.normal;
 
     /* Evolution chain (linear + Eevee branches) */
     const nodes = [];
