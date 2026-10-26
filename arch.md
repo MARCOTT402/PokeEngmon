@@ -182,12 +182,24 @@ pokeengmon_auth_session   → { access_token, refresh_token, expires_at, user }
 6. Toast 顯示實際登入嘅 email（俾用戶核對係咪預期帳戶）
 
 ### 5.3 答題結算
-1. `onSetComplete(data)` 計算 score + EXP
-2. 如有錯題 → 入 Power Up Zone，**全部改啱先至結算**
-3. 調用 `SupabaseAuth.awardRoundDiamonds(score, total)` RPC → server 返回權威餘額，前端採用（**唔好本地 `+=`**）
-4. RPC 失敗 → fallback 本地計算（離線可用）
-5. `addEntryExp(entryId, delta)` RPC 更新拍檔等級／進化
-6. SM-2 卡片背景 `queueUpsert`（唔阻塞 UI）
+1. `onSetComplete(data)` 計算 score + EXP（v130 分級制）
+2. EXP 分級表（% of 当前拍檔 `levelSpan`）：
+
+| 分數 | 無用 Hint | 有用過 Hint（該回合任何一題撳過就算） |
+|---|---|---|
+| 10/10 | 100% | 50% |
+| 9/10 | 90% | 40% |
+| 8/10 | 80% | 30% |
+| 5–7/10 | 50% | 25% |
+| 1–4/10 | 30% | 15% |
+| 0/10 | 10% | 10% |
+
+3. **新手期保底**：拍檔 Lv.1–10 期間 `pct = max(0.50, 分級結果)`，低分回合墊高到 50%，全對無 hint 照攞 100%。每回合下限 10 EXP。
+4. 如有錯題 → 入 Power Up Zone，**全部改啱先至結算**
+5. 調用 `SupabaseAuth.awardRoundDiamonds(score, total)` RPC → server 返回權威餘額，前端採用（**唔好本地 `+=`**）
+6. RPC 失敗 → fallback 本地計算（離線可用）
+7. `addEntryExp(entryId, delta)` RPC 更新拍檔等級／進化
+8. SM-2 卡片背景 `queueUpsert`（唔阻塞 UI）
 
 ### 5.4 Power Up Zone（v93 起）
 1. 答題 set 完成後，錯題進入 `PowerUp.start(wrongList, onDone)`
