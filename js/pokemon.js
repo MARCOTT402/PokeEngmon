@@ -302,5 +302,12 @@ function ensureEntryPokemonData(entry) {
     entry.stars = Math.min(5, 1 + Math.floor(entry.dupes / 5));
     changed = true;
   }
+  /* v140：ownedSpecies null／非陣列 → derive 重推，避免 forEach crash */
+  if (!Array.isArray(entry.ownedSpecies) || entry.ownedSpecies.length === 0) {
+    const derived = deriveEntryFields(entry);
+    entry.ownedSpecies = derived.ownedSpecies || [dexId];
+    if (derived.stage) entry.stage = derived.stage;
+    changed = true;
+  }
   return changed;
 }

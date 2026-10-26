@@ -79,7 +79,10 @@ const Pokedex = {
     const [lo, hi] = genRange(gen);
 
     const owned = new Set();
-    st.entries.forEach(e => e.ownedSpecies.forEach(id => owned.add(id)));
+    st.entries.forEach(e => {
+      if (!Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);
+      (e.ownedSpecies || []).forEach(id => owned.add(id));
+    });
 
     /* 標題列：Gen II · Johto · 45/100 owned */
     let ownedInGen = 0;

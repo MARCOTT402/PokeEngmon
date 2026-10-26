@@ -185,27 +185,26 @@ window.Sync = (() => {
          所以喺 derive 之前一定要等 POKEMON_DEX 就緒。 */
       await loadPokemonDex();
       if (Array.isArray(entries)) {
-        /* Gen 2-5：雲端還原嘅 entry 可能屬未載入嘅世代，
-           deriveEntryFields 前必須先 ensureGenDataLoaded，否則 moves 會變空 */
+        /* v140：先把 dex_<id> 轉成 chain key，再 collect gens —— 舊碼跳過 dex_ 會漏 Gen2+ load */
+        const normalized = entries.map(e => {
+          if (e.chain_key && e.chain_key.startsWith("dex_")) {
+            const dexId = parseInt(e.chain_key.slice(4), 10);
+            const sp = SPECIES[dexId];
+            if (sp) return { ...e, chain_key: sp.chainKey };
+          }
+          return e;
+        });
         const gensNeeded = new Set();
-        entries.forEach(e => {
-          if (e.chain_key && !e.chain_key.startsWith("dex_")) gensNeeded.add(genOfChain(e.chain_key));
+        normalized.forEach(e => {
+          if (e.chain_key) gensNeeded.add(genOfChain(e.chain_key));
         });
         for (const g of gensNeeded) {
           if (g > 1) await ensureGenDataLoaded(g);
         }
         const st = loadState();
-        st.entries = entries.map(e => {
-          /* 舊版 settle_capture RPC 用過 'dex_<id>' 做 chain_key，要轉返正確 chain key */
-          if (e.chain_key && e.chain_key.startsWith("dex_")) {
-            const dexId = parseInt(e.chain_key.slice(4), 10);
-            const sp = SPECIES[dexId];
-            if (sp) e = { ...e, chain_key: sp.chainKey };
-          }
-          return localEntryFromServer(e);
-        });
-        /* activeUid：邊個 entry.active = true */
-        const activeEntry = entries.find(e => e.active === true);
+        st.entries = normalized.map(e => localEntryFromServer(e));
+        /* activeUid：邊個 entry.active = true（用未 map 前 id，同 server row） */
+        const activeEntry = normalized.find(e => e.active === true);
         st.activeUid = activeEntry ? activeEntry.id : (st.entries.length > 0 ? st.entries[0].uid : null);
         saveState();
       }

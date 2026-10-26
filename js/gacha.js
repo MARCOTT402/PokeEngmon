@@ -254,7 +254,16 @@ const Gacha = {
           }
         }
       } else {
-        /* 本地 fallback（離線 / 未登入 / RPC 失敗） */
+        /* v140：已登入且 RPC 已試過但失敗 → 唔好本地假成功（否則 pull 會打回頭，寵／鑽「消失」）
+           匿名／真離線（冇發起 RPC）先至走本地 fallback */
+        const attemptedRpc = !!flow.rpc;
+        const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isLoggedIn && SupabaseAuth.isLoggedIn());
+        if (loggedIn && attemptedRpc) {
+          flow.settled = true;
+          flow.settlement = null;
+          return null;
+        }
+        /* 本地 fallback（匿名／離線） */
         rarity = this.rollRarity(this.mode);
         chainKey = this.pickChain(rarity);
         if (!chainKey) {

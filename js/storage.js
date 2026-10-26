@@ -371,7 +371,10 @@ function getActiveEntry() {
 function collectedCount() {
   const st = loadState();
   const set = new Set();
-  st.entries.forEach(e => e.ownedSpecies.forEach(id => set.add(id)));
+  st.entries.forEach(e => {
+    if (!Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);
+    (e.ownedSpecies || []).forEach(id => set.add(id));
+  });
   return set.size;
 }
 

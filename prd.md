@@ -200,6 +200,7 @@
 | v137 | Leaderboard：partner Lv 由 exp derive（唔再用 DB 舊 level）；YOU totalOwned 用鏈數，唔再用 collectedCount 灌水 |
 | v138 | Gacha fallback：`pendingExp` 先 snapshot 再清零，RPC 唔再永遠傳 0 |
 | v139 | 鑽石 offline fallback 跟 server 相對門檻；reset modal escapeHTML 防 XSS |
+| v140 | 登入 RPC fail 唔再 silent 本地派寵／加鑽；Sync.pull 先 normalize dex_ 再 load gen；ownedSpecies null 自動 repair |
 
 ---
 

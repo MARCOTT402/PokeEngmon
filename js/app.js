@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "v139";
+const APP_VERSION = "v140";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -571,9 +571,14 @@ const App = {
     if (serverRes && typeof serverRes.bonus === "number") {
       rewards.diamonds = serverRes.bonus;
       st.diamonds = serverRes.balance;   // server 權威，唔係本地 +=
-    } else {
+    } else if (!(window.SupabaseAuth && SupabaseAuth.isLoggedIn())) {
+      /* 匿名／離線：本地計鑽 */
       rewards.diamonds = localDiamondBonus;
       st.diamonds += rewards.diamonds;
+    } else {
+      /* v140：已登入但 RPC 失敗 → 唔本地加鑽（避免同雲端脫節後 pull 打回） */
+      rewards.diamonds = 0;
+      this.toast("Cloud sync hiccup — diamond reward will retry next round");
     }
 
     addPracticeRecord(data);
