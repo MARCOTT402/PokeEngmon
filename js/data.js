@@ -432,6 +432,94 @@ async function clearCustomQuestionsAndImages() {
   }
 }
 
+/* 更新一條自訂題（去重排除自身） */
+async function updateCustomQuestion(id, patch = {}) {
+  const st = loadState();
+  const list = st.customQuestions || [];
+  const idx = list.findIndex(q => q && q.id === id);
+  if (idx < 0) return { ok: false, error: "Question not found" };
+  const cur = list[idx];
+  const isWord = cur.type === "word";
+
+  if (isWord) {
+    const w = String(patch.word != null ? patch.word : cur.word || "").trim();
+    if (!w || !/^[A-Za-z'\- ]+$/.test(w)) {
+      return { ok: false, error: "Answer must be English letters (spaces / ' / - OK)" };
+    }
+    const next = Object.assign({}, cur, {
+      word: w,
+      answer: w,
+      course: String(patch.course != null ? patch.course : cur.course || "Custom").trim() || "Custom",
+      topic: String(patch.topic != null ? patch.topic : cur.topic || "Custom Pictures").trim() || "Custom Pictures",
+      level: Math.min(9, Math.max(1, parseInt(patch.level != null ? patch.level : cur.level, 10) || 1))
+    });
+    const seen = new Set(
+      getAllQuestions().filter(q => q.id !== id).map(questionKey)
+    );
+    if (seen.has(questionKey(next))) return { ok: false, error: "That word already exists in the bank" };
+
+    if (patch.file) {
+      const file = patch.file;
+      if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+        return { ok: false, error: "Upload a JPG, PNG, or WebP image" };
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        return { ok: false, error: "Image must be under 2 MB" };
+      }
+      if (typeof QImgDB === "undefined") return { ok: false, error: "Image storage unavailable" };
+      const imageId = cur.imageId || `cimg-${Date.now().toString(36)}`;
+      try {
+        await QImgDB.put(imageId, file);
+      } catch (e) {
+        console.warn(e);
+        return { ok: false, error: "Could not save the image" };
+      }
+      next.imageId = imageId;
+    }
+    list[idx] = next;
+    saveState();
+    return { ok: true, question: next };
+  }
+
+  const sent = String(patch.sentence != null ? patch.sentence : cur.sentence || "").trim();
+  if (!sent || !sent.includes("___")) return { ok: false, error: "Sentence must include ___ (blank)" };
+  const answerRaw = patch.answer != null ? patch.answer : [cur.answer].concat(cur.accept || []).join(" / ");
+  const answers = String(answerRaw ?? "").split(/[|/]/).map(s => s.trim()).filter(Boolean);
+  const expl = cur.explain || {};
+  const next = Object.assign({}, cur, {
+    sentence: sent,
+    answer: answers[0] || "",
+    accept: answers.slice(1),
+    course: String(patch.course != null ? patch.course : cur.course || "Custom").trim() || "Custom",
+    topic: String(patch.topic != null ? patch.topic : cur.topic || "Custom Sentences").trim() || "Custom Sentences",
+    level: Math.min(9, Math.max(1, parseInt(patch.level != null ? patch.level : cur.level, 10) || 1)),
+    explain: {
+      keyword: String(patch.keyword != null ? patch.keyword : expl.keyword || "").trim(),
+      hint: String(patch.hint != null ? patch.hint : expl.hint || "").trim()
+    }
+  });
+  const seen = new Set(
+    getAllQuestions().filter(q => q.id !== id).map(questionKey)
+  );
+  if (seen.has(questionKey(next))) return { ok: false, error: "That question already exists" };
+  list[idx] = next;
+  saveState();
+  return { ok: true, question: next };
+}
+
+async function deleteCustomQuestion(id) {
+  const st = loadState();
+  const list = st.customQuestions || [];
+  const idx = list.findIndex(q => q && q.id === id);
+  if (idx < 0) return { ok: false, error: "Question not found" };
+  const [removed] = list.splice(idx, 1);
+  saveState();
+  if (removed && removed.imageId && typeof QImgDB !== "undefined" && QImgDB.remove) {
+    try { await QImgDB.remove(removed.imageId); } catch (e) { console.warn(e); }
+  }
+  return { ok: true };
+}
+
 /* 用 qid 搵題目（錯題回顧 / Power Up Zone / 日曆用） */
 function findQuestion(qid) {
   const w = PICTURE_WORDS.find(x => x.id === qid);

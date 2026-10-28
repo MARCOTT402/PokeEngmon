@@ -6,7 +6,7 @@
 |------|----------|
 | 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`, `sw.js` |
 | 題庫 / 答題 / feedback | `js/quiz.js`, `Q_folder/` |
-| 自訂題（CSV／App 內加句／加圖） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
+| 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session | `js/sm2.js` |
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔 | `js/storage.js` |

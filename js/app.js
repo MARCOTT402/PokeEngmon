@@ -374,6 +374,187 @@ const App = {
     };
   },
 
+  /* ---------- 瀏覽／編輯／刪除自訂題 ---------- */
+  openMyQuestions() {
+    const list = (loadState().customQuestions || []).slice();
+    const esc = (s) => escapeHTML(String(s ?? ""));
+    const rows = list.length === 0
+      ? `<p class="my-q-empty">No custom questions yet.</p>`
+      : `<div class="my-q-list">${list.map((q, i) => {
+          const isWord = q.type === "word";
+          const thumb = isWord && q.imageId && typeof QImgDB !== "undefined"
+            ? (QImgDB.urlSync(q.imageId) || "")
+            : "";
+          const meta = `${q.course || "Custom"} / ${q.topic || ""}`;
+          const main = isWord ? (q.word || q.answer || "") : (q.sentence || "");
+          const ans = isWord ? "" : (q.answer || "(empty)");
+          return `<div class="my-q-row">
+            ${thumb ? `<img class="my-q-thumb" src="${esc(thumb)}" alt="">` : (isWord ? `<div class="my-q-thumb my-q-thumb-empty"></div>` : "")}
+            <div class="my-q-body">
+              <div class="my-q-meta">${esc(meta)}</div>
+              <div class="my-q-main">${esc(main)}</div>
+              ${ans !== "" ? `<div class="my-q-ans">→ ${esc(ans)}</div>` : ""}
+            </div>
+            <div class="my-q-actions">
+              <button type="button" class="btn-small btn-secondary my-q-edit" data-i="${i}">Edit</button>
+              <button type="button" class="btn-small btn-plain my-q-del" data-i="${i}">Delete</button>
+            </div>
+          </div>`;
+        }).join("")}</div>`;
+
+    this.showModal(`
+      <div class="import-box my-q-box">
+        <h3>📋 My questions (${list.length})</h3>
+        ${rows}
+        <div class="confirm-row">
+          ${list.length ? `<button id="btn-myq-clear" class="btn-big btn-plain">🗑 Delete all</button>` : ""}
+          <button id="btn-myq-close" class="btn-big btn-primary">Close</button>
+        </div>
+      </div>`, true);
+
+    document.getElementById("btn-myq-close").onclick = () => this.closeModal();
+    const clearBtn = document.getElementById("btn-myq-clear");
+    if (clearBtn) {
+      clearBtn.onclick = async () => {
+        if (!confirm("Delete ALL custom questions? This cannot be undone.")) return;
+        await clearCustomQuestionsAndImages();
+        this.renderSetup();
+        this.toast("Custom questions deleted (site questions are kept)");
+        this.openMyQuestions();
+      };
+    }
+    document.querySelectorAll("#modal-root .my-q-edit").forEach(btn => {
+      btn.onclick = () => {
+        const q = list[+btn.dataset.i];
+        if (q) this.openEditCustomQuestion(q.id);
+      };
+    });
+    document.querySelectorAll("#modal-root .my-q-del").forEach(btn => {
+      btn.onclick = async () => {
+        const q = list[+btn.dataset.i];
+        if (!q) return;
+        if (!confirm("Delete this question?")) return;
+        const r = await deleteCustomQuestion(q.id);
+        if (!r.ok) { this.toast(r.error || "Delete failed"); return; }
+        this.renderSetup();
+        this.toast("Question deleted");
+        this.openMyQuestions();
+      };
+    });
+  },
+
+  openEditCustomQuestion(id) {
+    const q = (loadState().customQuestions || []).find(x => x && x.id === id);
+    if (!q) { this.toast("Question not found"); this.openMyQuestions(); return; }
+    const escAttr = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    const isWord = q.type === "word";
+
+    if (isWord) {
+      const thumb = q.imageId && typeof QImgDB !== "undefined" ? (QImgDB.urlSync(q.imageId) || "") : "";
+      this.showModal(`
+        <div class="import-box">
+          <h3>✏️ Edit picture question</h3>
+          <div id="edit-pic-preview-wrap" class="add-pic-preview${thumb ? "" : " hidden"}">
+            <img id="edit-pic-preview" alt="Preview"${thumb ? ` src="${escAttr(thumb)}"` : ""}>
+          </div>
+          <label class="import-label">Replace picture (optional)</label>
+          <input type="file" id="edit-pic-file" accept="image/webp,image/jpeg,image/png" class="import-file">
+          <label class="import-label">Answer (the word)</label>
+          <input id="edit-pic-word" class="import-file" type="text" value="${escAttr(q.word || q.answer || "")}" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <label class="import-label">Course</label>
+          <input id="edit-pic-course" class="import-file" type="text" value="${escAttr(q.course || "Custom")}">
+          <label class="import-label">Topic</label>
+          <input id="edit-pic-topic" class="import-file" type="text" value="${escAttr(q.topic || "Custom Pictures")}">
+          <label class="import-label">Level 1–9</label>
+          <input id="edit-pic-level" class="import-file" type="number" min="1" max="9" value="${escAttr(q.level || 1)}">
+          <div class="confirm-row">
+            <button id="btn-edit-save" class="btn-big btn-primary">Save</button>
+            <button id="btn-edit-back" class="btn-big btn-plain">Back</button>
+          </div>
+        </div>`, true);
+      const fileEl = document.getElementById("edit-pic-file");
+      const wrap = document.getElementById("edit-pic-preview-wrap");
+      const img = document.getElementById("edit-pic-preview");
+      let previewUrl = "";
+      fileEl.onchange = () => {
+        if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} previewUrl = ""; }
+        const f = fileEl.files && fileEl.files[0];
+        if (!f) return;
+        previewUrl = URL.createObjectURL(f);
+        img.src = previewUrl;
+        wrap.classList.remove("hidden");
+      };
+      document.getElementById("btn-edit-back").onclick = () => {
+        if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} }
+        this.openMyQuestions();
+      };
+      document.getElementById("btn-edit-save").onclick = async () => {
+        const file = fileEl.files && fileEl.files[0];
+        const r = await updateCustomQuestion(id, {
+          word: document.getElementById("edit-pic-word").value,
+          course: document.getElementById("edit-pic-course").value,
+          topic: document.getElementById("edit-pic-topic").value,
+          level: document.getElementById("edit-pic-level").value,
+          file: file || undefined
+        });
+        if (!r.ok) { this.toast(r.error); return; }
+        if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} }
+        this.selectedTopics = new Set(this._allTopicKeys());
+        this.renderSetup();
+        this.toast("Question updated");
+        this.openMyQuestions();
+      };
+      return;
+    }
+
+    const expl = q.explain || {};
+    const answerVal = [q.answer].concat(q.accept || [])
+      .filter((a, i) => i === 0 || (a != null && String(a).length))
+      .map(a => (a == null ? "" : String(a)))
+      .join(" / ");
+    this.showModal(`
+      <div class="import-box">
+        <h3>✏️ Edit sentence question</h3>
+        <p class="settings-sub" style="text-align:left;margin:0">Put <code>___</code> where the blank should be.</p>
+        <label class="import-label">Sentence</label>
+        <textarea id="edit-sent-sentence" class="import-paste" rows="3"></textarea>
+        <label class="import-label">Answer</label>
+        <input id="edit-sent-answer" class="import-file" type="text" value="${escAttr(answerVal)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <label class="import-label">Course</label>
+        <input id="edit-sent-course" class="import-file" type="text" value="${escAttr(q.course || "Custom")}">
+        <label class="import-label">Topic</label>
+        <input id="edit-sent-topic" class="import-file" type="text" value="${escAttr(q.topic || "Custom Sentences")}">
+        <label class="import-label">Level 1–9</label>
+        <input id="edit-sent-level" class="import-file" type="number" min="1" max="9" value="${escAttr(q.level || 1)}">
+        <label class="import-label">Keywords (optional)</label>
+        <input id="edit-sent-keyword" class="import-file" type="text" value="${escAttr(expl.keyword || "")}">
+        <label class="import-label">Hint (optional)</label>
+        <input id="edit-sent-hint" class="import-file" type="text" value="${escAttr(expl.hint || "")}">
+        <div class="confirm-row">
+          <button id="btn-edit-save" class="btn-big btn-primary">Save</button>
+          <button id="btn-edit-back" class="btn-big btn-plain">Back</button>
+        </div>
+      </div>`, true);
+    document.getElementById("edit-sent-sentence").value = q.sentence || "";
+    document.getElementById("btn-edit-back").onclick = () => this.openMyQuestions();
+    document.getElementById("btn-edit-save").onclick = async () => {
+      const r = await updateCustomQuestion(id, {
+        sentence: document.getElementById("edit-sent-sentence").value,
+        answer: document.getElementById("edit-sent-answer").value,
+        course: document.getElementById("edit-sent-course").value,
+        topic: document.getElementById("edit-sent-topic").value,
+        level: document.getElementById("edit-sent-level").value,
+        keyword: document.getElementById("edit-sent-keyword").value,
+        hint: document.getElementById("edit-sent-hint").value
+      });
+      if (!r.ok) { this.toast(r.error); return; }
+      this.selectedTopics = new Set(this._allTopicKeys());
+      this.renderSetup();
+      this.toast("Question updated");
+      this.openMyQuestions();
+    };
+  },
+
   /* ---------- CSV 匯入（含指引） ---------- */
   openImport() {
     this.showModal(`
@@ -482,7 +663,7 @@ const App = {
           <ol>
             <li><b>Settings → ✏️ Add sentence question</b> — type a sentence with <code>___</code> and the answer.</li>
             <li><b>Settings → 🖼️ Add picture question</b> — upload a WebP/JPG/PNG and type the word.</li>
-            <li>Custom questions stay in this browser. Delete them all via <b>Import CSV → 🗑 Delete all imported questions</b>.</li>
+            <li>Custom questions stay in this browser. Edit or delete them via <b>Settings → 📋 View my questions</b> (or delete all there / in Import CSV).</li>
           </ol>
         </div>
 
@@ -528,7 +709,7 @@ const App = {
 
         <div class="guide-section">
           <h4>Where do imported questions live?</h4>
-          <p>Custom questions (CSV import + in-app add) are saved in this browser (<code>customQuestions</code>; picture blobs in IndexedDB) and merged with the built-in bank. They are kept after sign-out, and show under their Course/Topic in the picker. Delete them any time via <b>🗑 Delete all imported questions</b> in the Import window.</p>
+          <p>Custom questions (CSV import + in-app add) are saved in this browser (<code>customQuestions</code>; picture blobs in IndexedDB) and merged with the built-in bank. They are kept after sign-out, and show under their Course/Topic in the picker. Open <b>Settings → 📋 View my questions</b> to edit or delete individual items, or delete all there / via <b>🗑 Delete all imported questions</b> in the Import window.</p>
         </div>
 
         <button id="guide-close" class="btn-big btn-primary">Got it!</button>
@@ -960,6 +1141,7 @@ const App = {
         <button id="btn-add-sentence" class="btn-big btn-secondary">✏️ Add sentence question</button>
         <button id="btn-add-picture" class="btn-big btn-secondary">🖼️ Add picture question</button>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
+        <button id="btn-view-my-q" class="btn-big btn-secondary">📋 View my questions</button>
         <button id="btn-parent-guide" class="guide-link">📖 How to create your own questions</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
         <small class="settings-note">App version: ${APP_VERSION} (auto-updates)</small>
@@ -994,6 +1176,7 @@ const App = {
     document.getElementById("btn-add-sentence").onclick = () => this.openAddSentence();
     document.getElementById("btn-add-picture").onclick = () => this.openAddPicture();
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
+    document.getElementById("btn-view-my-q").onclick = () => this.openMyQuestions();
     document.getElementById("btn-parent-guide").onclick = () => this.openParentGuide();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
   },

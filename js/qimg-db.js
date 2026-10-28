@@ -80,6 +80,26 @@ const QImgDB = (() => {
     }
   }
 
+  async function remove(id) {
+    if (!id) return;
+    const prev = urlCache.get(id);
+    if (prev) {
+      try { URL.revokeObjectURL(prev); } catch (e) {}
+      urlCache.delete(id);
+    }
+    const db = await open();
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(STORE).delete(id);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
   /* Hydrate object URLs for every custom question that has imageId */
   async function hydrateFromState(customQuestions) {
     const list = customQuestions || [];
@@ -90,5 +110,5 @@ const QImgDB = (() => {
     }));
   }
 
-  return { put, get, clear, urlSync, hydrateFromState };
+  return { put, get, clear, remove, urlSync, hydrateFromState };
 })();
