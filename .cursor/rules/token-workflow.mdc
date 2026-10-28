@@ -1,0 +1,11 @@
+---
+description: Prefer CODEBASE_INDEX over blind full-repo scan
+alwaysApply: true
+---
+
+# Token / 精準定位
+
+- 使用者未 `@` 具體檔案時：先讀 `CODEBASE_INDEX.md`（必要時再睇 `arch.md`），鎖定相關檔再動手。
+- 禁止一開始就全 repo 盲掃；只有索引無覆蓋、或 cross-cutting bug 先擴大搜尋（Grep/Glob）。
+- 使用者直接下修改指令時：查完 index 後自行讀取並改相關檔，唔使叫使用者開新對話再 `@`。
+- 改碼只動相關區塊；唔主動加測試／長註解／長解釋（除非使用者要求）。
