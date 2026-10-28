@@ -4,7 +4,8 @@
 PokeEngmon — 一鍵 git add / commit / push
 
 用法（喺 repo 內任何位置執行）：
-  python tools/git_commit_push.py -m "v117: add new picture words"
+  python tools/git_commit_push.py -m "feat: add new picture words"
+  python tools/git_commit_push.py -m "fix: typo in quiz feedback"
   python tools/git_commit_push.py                         # 自動產生 chore(vNN): update N files
   python tools/git_commit_push.py --dry-run               # 只印出會做咩，唔會真做
   python tools/git_commit_push.py --paths Q_folder js/app.js
@@ -247,8 +248,21 @@ def main():
     version = app_version(root) or "v?"
     if args.message:
         subject = args.message.strip()
-        # 已經有 prefix（例：fix(v117): / v117:）就唔再加
-        if not re.match(r"^([a-z]+\([^)]*\):|v\d+:)", subject, re.I):
+        # 唔再加 prefix 嘅情況（semantic-release 要讀到開頭 type）：
+        #   Conventional Commits: feat: / fix(scope): / chore!: …
+        #   舊式: fix(v117): / v117:
+        # 其他（純中文／無 type）先 prepend APP_VERSION:
+        already_typed = re.match(
+            r"^(?:"
+            r"(?:build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)"
+            r"(?:\([^)]*\))?(!)?:\s"
+            r"|v\d+:"
+            r"|[a-z]+\([^)]*\):"
+            r")",
+            subject,
+            re.I,
+        )
+        if not already_typed:
             subject = f"{version}: {subject}"
     else:
         subject = f"chore({version}): update {len(staged)} file(s)"
