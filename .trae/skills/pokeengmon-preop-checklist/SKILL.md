@@ -7,24 +7,18 @@ description: Pre-operation checklist for PokeEngmon. Read this before every edit
 
 Read this file FIRST, before performing any task in this project (code edits, version bumps, releases, file changes). Treat it as a mandatory pre-flight check.
 
-## Rule 1 — Version bump must touch three files together
+## Rule 1 — SemVer + semantic-release (do NOT hand-bump for releases)
 
-When bumping the app version, ALWAYS update all three files in the same change, using the SAME version number:
+Source of truth: `package.json` `"version"` (`MAJOR.MINOR.PATCH`).
 
-1. `js/app.js` — `const APP_VERSION = "vNN";` (shown in footer and Settings)
-2. `sw.js` — `const CACHE_NAME = "pokeengmon-vNN";`
-3. `index.html` — every `?v=NN` query param on CSS/JS `<link>` and `<script>` tags
-
-Why (1+2): the browser only installs a new Service Worker when `sw.js` bytes change. Bumping `APP_VERSION` alone means no new SW installs, the old cache keeps serving the old `app.js`, and users still see the old version forever.
-
-Why (3): `index.html`'s `?v=NN` cache-busts each asset. If you bump `app.js`/`sw.js` but forget `index.html`, the browser may still load the old cached JS files.
-
-Never bump one without the others.
-
-PowerShell one-liner (run from repo root):
-```powershell
-(Get-Content index.html) -replace 'v=OLD', 'v=NEW' | Set-Content index.html; (Get-Content js/app.js) -replace 'APP_VERSION = "vOLD"', 'APP_VERSION = "vNEW"' | Set-Content js/app.js; (Get-Content sw.js) -replace 'pokeengmon-vOLD', 'pokeengmon-vNEW' | Set-Content sw.js
-```
+- Commits on `main` must be [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, …). CI runs `semantic-release` (`.github/workflows/release.yml`): bumps version, updates `CHANGELOG.md`, tags, GitHub Release.
+- Release prepare runs `python tools/sync_app_version.py`, which writes the same SemVer into:
+  1. `js/app.js` — `const APP_VERSION = "X.Y.Z";`
+  2. `sw.js` — `const CACHE_NAME = "pokeengmon-X.Y.Z";`
+  3. `index.html` — every `?v=X.Y.Z`
+  4. `prd.md` header version line
+- Local preview only: edit `package.json` version → `npm run sync-version`. Do **not** invent a parallel `vNN` scheme.
+- Prefer `CHANGELOG.md` when answering “what changed in release X”.
 
 ## Rule 2 — Supabase upsert requires `Prefer: resolution=merge-duplicates`
 
@@ -70,21 +64,14 @@ State-changing actions MUST call the matching RPC wrapper in `js/supabase-auth.j
 
 Never re-add a direct diamonds/exp/entries write to `pushState()` — it will 403 once the migration SQL is applied.
 
-## Rule 6 — Every change must be committed AND pushed
+## Rule 6 — Commit when asked; Conventional Commits; release via CI
 
-The live site is deployed from GitHub (github.com/MARCOTT402/PokeEngmon → GitHub Pages). Local edits do NOTHING until they are committed and pushed to `main`.
+The live site is GitHub Pages from `main`. Local edits do nothing until committed and pushed.
 
-After finishing ANY change in this repo:
-
-1. `git add` the specific changed files (never `git add -A` blindly)
-2. `git commit` with the version prefix, e.g. `v93: ...`
-3. `git push`
-
-Note: this shell is Windows PowerShell 5 — `&&` is NOT supported. Chain commands with `;` instead.
-
-**Fast path**: `python tools/git_commit_push.py -m "vNN: ..."` does add + commit + push in one shot (commit message fed via stdin, so no Windows mojibake). Full usage, gotchas and troubleshooting: `.trae/documents/git-commit-push-guide.md`. Note its default staging behaves like `git add -A`; pass `--paths <files...>` when only specific files changed.
-
-If the user reports "the site still shows the old version", check `git status`/`git log` first — most likely the change was never pushed.
+- Wait for an explicit user commit/push request (Cursor user rule). Then use Conventional Commits, e.g. `feat(quiz): autofocus answer input`.
+- **Fast path**: `python tools/git_commit_push.py --paths <files...> -m "feat(scope): ..."`. PowerShell 5: no `&&`, use `;`. Guide: `.trae/documents/git-commit-push-guide.md`.
+- Version bumps / tags / `CHANGELOG.md` for releases are owned by **semantic-release on push to `main`**, not by hand-editing `APP_VERSION`.
+- If the site shows an old build: check `git status` / whether CI release ran / SW cache name.
 
 ## Rule 7 — SM-2 sessions only pull DUE cards
 

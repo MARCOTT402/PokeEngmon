@@ -1,0 +1,13 @@
+---
+description: SemVer, Conventional Commits, and semantic-release for PokeEngmon
+alwaysApply: true
+---
+
+# Versioning and release
+
+- Version format: `MAJOR.MINOR.PATCH` in `package.json` (source of truth).
+- Commits: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, …). `feat` → MINOR, `fix` → PATCH, `BREAKING CHANGE` / `type!` → MAJOR.
+- Do **not** hand-bump `js/app.js` / `sw.js` / `index.html` for releases. CI (`semantic-release` on `main`) bumps `package.json`, runs `python tools/sync_app_version.py`, updates `CHANGELOG.md`, tags, and creates the GitHub Release.
+- Local preview only: change `package.json` version then `npm run sync-version`.
+- When asked about past releases, prefer `CHANGELOG.md` over scanning full git history.
+- Commit/push still require an explicit user request unless they say otherwise; release commits are created by CI (`[skip ci]`).

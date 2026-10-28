@@ -1,0 +1,13 @@
+---
+description: PokeEngmon hard invariants (RPC, sync, audio prefs)
+alwaysApply: true
+---
+
+# PokeEngmon core
+
+- Sensitive values (diamonds, entries, exp, candies) go through Supabase RPC wrappers in `js/supabase-auth.js`. Logged-in RPC failure must **not** silently fall back to local fake success.
+- plpgsql: prefix vars `v_`, params `p_`; qualify columns with aliases.
+- Capture: always pass **stage1** dex to `obtainCapture` / `settleCapture`.
+- `EVOLUTION_CHAINS` is an array — use `.find(c => c.key === …)`, never `EVOLUTION_CHAINS[key]`.
+- Audio prefs live in `pokeengmon_audio_v1` (not cleared by progress reset).
+- PowerShell: no `&&`; prefer Python for UTF-8 file edits. Use `python tools/git_commit_push.py --paths …` when the user asks to commit/push.

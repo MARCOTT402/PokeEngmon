@@ -1,2 +1,7 @@
 # Supabase local config (contains anon public key — never commit)
 supabase/supabase-config.local.js
+
+# Node / semantic-release
+node_modules/
+.npm/
+*.log
