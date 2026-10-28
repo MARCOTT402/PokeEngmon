@@ -326,12 +326,21 @@ async function loadPictureWords() {
   }
 }
 
-/* 全部題目＝網站題庫 + 家長匯入嘅自訂題目 + 圖片單字題（自動去重） */
+/* Resolve custom picture imageId → blob URL (runtime only; never persist image) */
+function withResolvedImage(q) {
+  if (!q || !q.imageId || typeof QImgDB === "undefined") return q;
+  const url = QImgDB.urlSync(q.imageId);
+  if (!url) return q;
+  return Object.assign({}, q, { image: url });
+}
+
+/* 全部題目＝網站題庫 + 家長匯入／App 內新增嘅自訂題目 + 圖片單字題（自動去重） */
 function getAllQuestions() {
   const st = typeof loadState === "function" ? loadState() : { customQuestions: [] };
   const seen = new Set();
   const out = [];
-  [SITE_QUESTIONS, st.customQuestions || [], PICTURE_WORDS].forEach(list => {
+  const custom = (st.customQuestions || []).map(withResolvedImage);
+  [SITE_QUESTIONS, custom, PICTURE_WORDS].forEach(list => {
     list.forEach(q => {
       q = normalizeQuestion(q);
       const k = questionKey(q);
@@ -341,11 +350,94 @@ function getAllQuestions() {
   return out;
 }
 
+/* App 內新增句子填空題 → customQuestions */
+function addCustomSentenceQuestion({ sentence, answer, course, topic, level, keyword, hint } = {}) {
+  const sent = String(sentence || "").trim();
+  if (!sent || !sent.includes("___")) return { ok: false, error: "Sentence must include ___ (blank)" };
+  const answers = String(answer ?? "").split(/[|/]/).map(s => s.trim()).filter(Boolean);
+  const stamp = Date.now().toString(36);
+  const q = {
+    id: `c${stamp}-0`,
+    no: "",
+    course: String(course || "Custom").trim() || "Custom",
+    topic: String(topic || "Custom Sentences").trim() || "Custom Sentences",
+    level: Math.min(9, Math.max(1, parseInt(level, 10) || 1)),
+    sentence: sent,
+    answer: answers[0] || "",
+    accept: answers.slice(1),
+    custom: true,
+    explain: { keyword: String(keyword || "").trim(), hint: String(hint || "").trim() }
+  };
+  const st = loadState();
+  const seen = new Set(getAllQuestions().map(questionKey));
+  if (seen.has(questionKey(q))) return { ok: false, error: "That question already exists" };
+  (st.customQuestions = st.customQuestions || []).push(q);
+  saveState();
+  return { ok: true, question: q };
+}
+
+/* App 內新增圖片單字題：blob → IndexedDB；metadata → customQuestions */
+async function addCustomPictureQuestion({ word, file, course, topic, level } = {}) {
+  const w = String(word || "").trim();
+  if (!w || !/^[A-Za-z'\- ]+$/.test(w)) {
+    return { ok: false, error: "Answer must be English letters (spaces / ' / - OK)" };
+  }
+  if (!file || !/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+    return { ok: false, error: "Upload a JPG, PNG, or WebP image" };
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    return { ok: false, error: "Image must be under 2 MB" };
+  }
+  if (typeof QImgDB === "undefined") return { ok: false, error: "Image storage unavailable" };
+
+  const stamp = Date.now().toString(36);
+  const imageId = `cimg-${stamp}`;
+  const q = {
+    type: "word",
+    id: `cw${stamp}`,
+    word: w,
+    course: String(course || "Custom").trim() || "Custom",
+    topic: String(topic || "Custom Pictures").trim() || "Custom Pictures",
+    category: "",
+    level: Math.min(9, Math.max(1, parseInt(level, 10) || 1)),
+    sentence: "___",
+    answer: w,
+    accept: [],
+    imageId,
+    source: "custom",
+    custom: true,
+    explain: { keyword: "", hint: "" }
+  };
+  const seen = new Set(getAllQuestions().map(questionKey));
+  if (seen.has(questionKey(q))) return { ok: false, error: "That word already exists in the bank" };
+
+  try {
+    await QImgDB.put(imageId, file);
+  } catch (e) {
+    console.warn(e);
+    return { ok: false, error: "Could not save the image" };
+  }
+  const st = loadState();
+  (st.customQuestions = st.customQuestions || []).push(q);
+  saveState();
+  return { ok: true, question: q };
+}
+
+async function clearCustomQuestionsAndImages() {
+  const st = loadState();
+  st.customQuestions = [];
+  saveState();
+  if (typeof QImgDB !== "undefined") {
+    try { await QImgDB.clear(); } catch (e) { console.warn(e); }
+  }
+}
+
 /* 用 qid 搵題目（錯題回顧 / Power Up Zone / 日曆用） */
 function findQuestion(qid) {
   const w = PICTURE_WORDS.find(x => x.id === qid);
   if (w) return w;
-  return getAllQuestions().find(q => q.id === qid) || null;
+  const q = getAllQuestions().find(x => x.id === qid) || null;
+  return q ? withResolvedImage(q) : null;
 }
 
 /* 課題一覽：[{ course, count, topics: [{ key, topic, count }] }]，按題庫出現次序 */

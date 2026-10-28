@@ -278,8 +278,100 @@ const App = {
     const customN = (st.customQuestions || []).length;
     const parts = [];
     if (siteN > 0) parts.push(`Site questions: ${siteN}`);
-    if (customN > 0) parts.push(`Imported: ${customN}`);
+    if (customN > 0) parts.push(`Custom: ${customN}`);
     document.getElementById("custom-q-count").textContent = parts.join(" ・ ");
+  },
+
+  /* ---------- App 內新增句子題 ---------- */
+  openAddSentence() {
+    this.showModal(`
+      <div class="import-box">
+        <h3>✏️ Add sentence question</h3>
+        <p class="settings-sub" style="text-align:left;margin:0">Put <code>___</code> where the blank should be.</p>
+        <label class="import-label">Sentence</label>
+        <textarea id="add-sent-sentence" class="import-paste" rows="3" placeholder="Excuse me, what ___ your name?"></textarea>
+        <label class="import-label">Answer</label>
+        <input id="add-sent-answer" class="import-file" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your">
+        <label class="import-label">Course (optional)</label>
+        <input id="add-sent-course" class="import-file" type="text" value="Custom" placeholder="Custom">
+        <label class="import-label">Topic (optional)</label>
+        <input id="add-sent-topic" class="import-file" type="text" value="Custom Sentences" placeholder="Custom Sentences">
+        <label class="import-label">Level 1–9 (optional)</label>
+        <input id="add-sent-level" class="import-file" type="number" min="1" max="9" value="1">
+        <div class="confirm-row">
+          <button id="btn-add-sent-save" class="btn-big btn-primary">Save</button>
+          <button id="btn-add-sent-cancel" class="btn-big btn-plain">Cancel</button>
+        </div>
+      </div>`, true);
+    document.getElementById("btn-add-sent-cancel").onclick = () => this.closeModal();
+    document.getElementById("btn-add-sent-save").onclick = () => {
+      const r = addCustomSentenceQuestion({
+        sentence: document.getElementById("add-sent-sentence").value,
+        answer: document.getElementById("add-sent-answer").value,
+        course: document.getElementById("add-sent-course").value,
+        topic: document.getElementById("add-sent-topic").value,
+        level: document.getElementById("add-sent-level").value
+      });
+      if (!r.ok) { this.toast(r.error); return; }
+      this.closeModal();
+      this.selectedTopics = new Set(this._allTopicKeys());
+      this.renderSetup();
+      this.toast("Sentence question added");
+    };
+  },
+
+  /* ---------- App 內新增圖片單字題 ---------- */
+  openAddPicture() {
+    this.showModal(`
+      <div class="import-box">
+        <h3>🖼️ Add picture question</h3>
+        <label class="import-label">Picture (WebP / JPG / PNG)</label>
+        <input type="file" id="add-pic-file" accept="image/webp,image/jpeg,image/png" class="import-file">
+        <div id="add-pic-preview-wrap" class="add-pic-preview hidden">
+          <img id="add-pic-preview" alt="Preview">
+        </div>
+        <label class="import-label">Answer (the word)</label>
+        <input id="add-pic-word" class="import-file" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Chemistry">
+        <label class="import-label">Course (optional)</label>
+        <input id="add-pic-course" class="import-file" type="text" value="Custom" placeholder="Custom">
+        <label class="import-label">Topic (optional)</label>
+        <input id="add-pic-topic" class="import-file" type="text" value="Custom Pictures" placeholder="Custom Pictures">
+        <div class="confirm-row">
+          <button id="btn-add-pic-save" class="btn-big btn-primary">Save</button>
+          <button id="btn-add-pic-cancel" class="btn-big btn-plain">Cancel</button>
+        </div>
+      </div>`, true);
+    const fileEl = document.getElementById("add-pic-file");
+    const wrap = document.getElementById("add-pic-preview-wrap");
+    const img = document.getElementById("add-pic-preview");
+    let previewUrl = "";
+    fileEl.onchange = () => {
+      if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} previewUrl = ""; }
+      const f = fileEl.files && fileEl.files[0];
+      if (!f) { wrap.classList.add("hidden"); img.removeAttribute("src"); return; }
+      previewUrl = URL.createObjectURL(f);
+      img.src = previewUrl;
+      wrap.classList.remove("hidden");
+    };
+    document.getElementById("btn-add-pic-cancel").onclick = () => {
+      if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} }
+      this.closeModal();
+    };
+    document.getElementById("btn-add-pic-save").onclick = async () => {
+      const file = fileEl.files && fileEl.files[0];
+      const r = await addCustomPictureQuestion({
+        word: document.getElementById("add-pic-word").value,
+        file,
+        course: document.getElementById("add-pic-course").value,
+        topic: document.getElementById("add-pic-topic").value
+      });
+      if (!r.ok) { this.toast(r.error); return; }
+      if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} }
+      this.closeModal();
+      this.selectedTopics = new Set(this._allTopicKeys());
+      this.renderSetup();
+      this.toast("Picture question added");
+    };
   },
 
   /* ---------- CSV 匯入（含指引） ---------- */
@@ -325,13 +417,11 @@ const App = {
 
     document.getElementById("btn-do-import").onclick = () => this._doImport();
     document.getElementById("btn-import-cancel").onclick = () => this.closeModal();
-    document.getElementById("btn-clear-custom").onclick = () => {
-      const st = loadState();
-      st.customQuestions = [];
-      saveState();
+    document.getElementById("btn-clear-custom").onclick = async () => {
+      await clearCustomQuestionsAndImages();
       this.closeModal();
       this.renderSetup();
-      this.toast("Imported questions deleted (site questions are kept)");
+      this.toast("Custom questions deleted (site questions are kept)");
     };
   },
 
@@ -385,10 +475,19 @@ const App = {
     this.showModal(`
       <div class="guide-box">
         <h3>📖 How to Create Your Own Questions</h3>
-        <p class="guide-lead">You can add your own English questions for your child — no coding needed. There are two ways:</p>
+        <p class="guide-lead">You can add your own English questions for your child — no coding needed.</p>
 
         <div class="guide-section">
-          <h4>Method A — Ask AI to generate questions (easiest)</h4>
+          <h4>In the app (quickest for one question)</h4>
+          <ol>
+            <li><b>Settings → ✏️ Add sentence question</b> — type a sentence with <code>___</code> and the answer.</li>
+            <li><b>Settings → 🖼️ Add picture question</b> — upload a WebP/JPG/PNG and type the word.</li>
+            <li>Custom questions stay in this browser. Delete them all via <b>Import CSV → 🗑 Delete all imported questions</b>.</li>
+          </ol>
+        </div>
+
+        <div class="guide-section">
+          <h4>Method A — Ask AI to generate questions (easiest for many)</h4>
           <ol>
             <li>Copy the full prompt from <a href="Q_folder/AI%E5%87%BA%E9%A1%8C%E6%8C%87%E5%BC%95.md" target="_blank" rel="noopener">📄 AI出題指引.md</a> (opens in a new tab).</li>
             <li>Paste it to ChatGPT / Claude / Gemini, and add what you want, e.g.<br><i>"Generate 30 P.3 questions on Past Tense, split into 2 courses, 2–3 topics each, level 1–4."</i></li>
@@ -429,7 +528,7 @@ const App = {
 
         <div class="guide-section">
           <h4>Where do imported questions live?</h4>
-          <p>Imported questions are saved in this browser's storage (<code>customQuestions</code>) and merged with the built-in question bank. They are kept even after sign-out, and will appear under their own Course/Topic in the course picker. You can delete them any time via <b>🗑 Delete all imported questions</b> in the Import window.</p>
+          <p>Custom questions (CSV import + in-app add) are saved in this browser (<code>customQuestions</code>; picture blobs in IndexedDB) and merged with the built-in bank. They are kept after sign-out, and show under their Course/Topic in the picker. Delete them any time via <b>🗑 Delete all imported questions</b> in the Import window.</p>
         </div>
 
         <button id="guide-close" class="btn-big btn-primary">Got it!</button>
@@ -858,6 +957,8 @@ const App = {
             <input id="set-sfx" type="range" min="0" max="100" step="1" value="${sfxPct}" aria-label="Sound effects volume">
           </label>
         </div>
+        <button id="btn-add-sentence" class="btn-big btn-secondary">✏️ Add sentence question</button>
+        <button id="btn-add-picture" class="btn-big btn-secondary">🖼️ Add picture question</button>
         <button id="btn-import-csv2" class="btn-big btn-secondary">📥 Import CSV Questions</button>
         <button id="btn-parent-guide" class="guide-link">📖 How to create your own questions</button>
         <button id="btn-reset-progress" class="reset-link danger">🗑 Reset Progress</button>
@@ -890,6 +991,8 @@ const App = {
         if (audio && audio.previewSfx) audio.previewSfx("assets/bgm/obtained-pokemon.mp3", 0.4);
       }, 180);
     };
+    document.getElementById("btn-add-sentence").onclick = () => this.openAddSentence();
+    document.getElementById("btn-add-picture").onclick = () => this.openAddPicture();
     document.getElementById("btn-import-csv2").onclick = () => this.openImport();
     document.getElementById("btn-parent-guide").onclick = () => this.openParentGuide();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
@@ -1323,6 +1426,10 @@ const App = {
 
     /* 載入網站題庫（questions.csv）＋本地 PokéAPI 資料，先畫主畫面 */
     await Promise.all([loadSiteQuestions(), loadPictureWords(), loadPokemonDex()]);
+    /* 自訂圖片題：從 IndexedDB hydrate blob URL 入 memory cache */
+    if (typeof QImgDB !== "undefined") {
+      try { await QImgDB.hydrateFromState(loadState().customQuestions); } catch (e) { console.warn(e); }
+    }
 
     /* 世代系統（v127+）：
        1) 舊玩家可能已儲齊 Gen 1 → 啟動時重算 unlockedGen（靜默，唔彈慶祝窗）

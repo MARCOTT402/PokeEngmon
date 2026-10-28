@@ -381,6 +381,13 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   border: 2px solid #dbe2ee; border-radius: 12px; padding: 10px;
   font-family: inherit; font-size: .9rem; resize: vertical; width: 100%;
 }
+.add-pic-preview {
+  text-align: center; border: 2px solid #e2e7ef; border-radius: 12px; padding: 10px;
+  background: #f6f8fc;
+}
+.add-pic-preview img {
+  max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px;
+}
 
 /* ---------- 家長自訂題教學 Modal ---------- */
 .guide-link {

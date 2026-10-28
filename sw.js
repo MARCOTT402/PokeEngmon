@@ -13,6 +13,7 @@ const ASSETS = [
   "./data/moves.json",
   "./css/style.css",
   "./js/data.js",
+  "./js/qimg-db.js",
   "./js/gens-data.js",
   "./js/pokemon.js",
   "./js/genpack.js",
