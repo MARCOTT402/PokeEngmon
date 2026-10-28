@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.1.0...v1.2.0) (2026-10-28)
+
+
+### Features
+
+* view, edit, and delete custom questions ([3e0a212](https://github.com/MARCOTT402/PokeEngmon/commit/3e0a21229a6372a5818f7c92eaf1b521f4894605))
+
 # [1.1.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.0.0...v1.1.0) (2026-10-28)
 
 
