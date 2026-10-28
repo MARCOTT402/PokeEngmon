@@ -1,0 +1,11 @@
+---
+description: Keep local repo synced; agent runs git pull for the user
+alwaysApply: true
+---
+
+# Git sync（用戶唔使自己開 CMD）
+
+- 用戶問版本、CHANGELOG、release 有冇出、定話「同步／pull」時：先 `git pull`（或 `git fetch` + 報告 behind），再答。
+- 啱啱幫用戶 `push` 去 `main` 之後：提醒可能有 semantic-release 會寫返 commit；若用戶話要睇最新版本／CHANGELOG，代佢 `git pull`。
+- 唔好 force pull / hard reset；有 local 未 commit 變更先講清楚再處理。
+- PowerShell：唔用 `&&`。
