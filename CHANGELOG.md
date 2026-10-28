@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.0.0...v1.1.0) (2026-10-28)
+
+
+### Bug Fixes
+
+* do not prefix SemVer onto conventional commit subjects ([4446bdf](https://github.com/MARCOTT402/PokeEngmon/commit/4446bdf1ed6d8d7f3ed87da1de0c98ab315b0853))
+
+
+### Features
+
+* gym challenge, pokedex back, and in-app custom questions ([714bcae](https://github.com/MARCOTT402/PokeEngmon/commit/714bcae40ac597d58c0db01095434f5f53f94e31))
+
 # 1.0.0 (2026-10-28)
 
 
