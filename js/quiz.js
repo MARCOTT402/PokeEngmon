@@ -11,9 +11,13 @@ const Quiz = {
   timerId: null,
   locked: false,
   _advanceTimer: null,
+  mode: null,             /* null | "gym" */
+  gymMilestone: 0,
 
   /* topics: 揀咗嘅題型（空陣列＝全部）；圖片單字題會混合抽 */
   start(topics) {
+    this.mode = null;
+    this.gymMilestone = 0;
     this.set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
     if (this.set.length === 0) {
       /* 冇到期卡 + 冇新題：toast 太易錯過，用彈窗明確提示（介面文字統一英文） */
@@ -39,6 +43,31 @@ const Quiz = {
     this._hintUsed = new Set();   /* 記低邊啲題撳過 💡 Hint（結算 EXP 分級用） */
     this.startTime = Date.now();
     this._cancelAdvance();   /* 清掉上一個回合殘留嘅自動跳題 timer */
+    App.showView("view-quiz");
+    clearInterval(this.timerId);
+    this.timerId = setInterval(() => this._tickTimer(), 500);
+    this._renderQuestion();
+  },
+
+  /* Gym：全題庫隨機 10 題；Hint／Power Up 照常；結算先判有無用 hint */
+  startGym(milestone) {
+    const all = (typeof getAllQuestions === "function" ? getAllQuestions() : []).slice();
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = all[i]; all[i] = all[j]; all[j] = t;
+    }
+    this.set = all.slice(0, GAME_CONFIG.SET_SIZE);
+    if (this.set.length === 0) {
+      App.toast("No questions available for Gym Challenge.");
+      return;
+    }
+    this.mode = "gym";
+    this.gymMilestone = milestone || 0;
+    this.idx = 0;
+    this.results = [];
+    this._hintUsed = new Set();
+    this.startTime = Date.now();
+    this._cancelAdvance();
     App.showView("view-quiz");
     clearInterval(this.timerId);
     this.timerId = setInterval(() => this._tickTimer(), 500);
@@ -375,6 +404,10 @@ const Quiz = {
       this._cancelAdvance();   /* 唔好俾答對後嘅 650ms 自動跳題喺退出後仍然執行 */
       this.locked = true;
       this._onContinue = null;
+      this.mode = null;
+      this.gymMilestone = 0;
+      if (typeof Gym !== "undefined") Gym._activeMilestone = 0;
+      if (App._gymSettleData) App._gymSettleData = null;
       App.closeModal();
       App.renderHome();
       App.showView("view-home");
@@ -425,6 +458,8 @@ const Quiz = {
       duration,
       score,
       total: this.set.length,
+      mode: this.mode,
+      gymMilestone: this.gymMilestone || 0,
       results: this.results.map(r => ({ qid: r.qid, chosen: r.chosen, correct: r.correct, memory: !!r.memory, hint: !!r.hint }))
     });
   }

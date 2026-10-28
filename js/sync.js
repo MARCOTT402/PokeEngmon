@@ -151,14 +151,15 @@ window.Sync = (() => {
       /* 匿名：RLS 用 current_setting('app.device_id')，PostgREST set 唔到 → 拉唔到嘢，直接跳過 */
       if (!ref.isAuth) return null;
 
-      /* 一齊拉：account（鑽石+統計）、entries（寶可夢）、cards（SM-2） */
-      const [accountRows, entries, cards] = await Promise.all([
+      /* 一齊拉：account、entries、cards、practice days */
+      const [accountRows, entries, cards, practiceDays] = await Promise.all([
         _api("GET", `/user_account?select=*`),
         _api("GET", `/user_entries?select=*&order=obtained_at.asc`),
-        _api("GET", `/user_cards?select=*`)
+        _api("GET", `/user_cards?select=*`),
+        _api("GET", `/user_practice_days?select=day,sets&order=day.asc`).catch(() => [])
       ]);
 
-      /* ---- 1. 還原 account：diamonds / 統計 / trainer name ---- */
+      /* ---- 1. 還原 account：diamonds / 統計 / trainer name / gym badges ---- */
       if (accountRows && accountRows[0]) {
         const acct = accountRows[0];
         const st = loadState();
@@ -166,11 +167,20 @@ window.Sync = (() => {
         st.totalSets = acct.total_sets ?? st.totalSets;
         st.totalCorrect = acct.total_correct ?? st.totalCorrect;
         st.totalQuestions = acct.total_questions ?? st.totalQuestions;
+        if (acct.best_streak != null) st.bestStreak = Math.max(st.bestStreak || 0, acct.best_streak | 0);
+        if (Array.isArray(acct.gym_badges)) {
+          const local = Array.isArray(st.gymBadges) ? st.gymBadges : [];
+          st.gymBadges = Array.from(new Set([...local, ...acct.gym_badges.map(Number)]));
+        }
         if (acct.trainer_name && acct.trainer_name !== st.playerName) {
           st.playerName = acct.trainer_name;
           st.nameCustomized = true;
         }
         saveState();
+      }
+
+      if (Array.isArray(practiceDays) && typeof mergePracticeDaysFromCloud === "function") {
+        mergePracticeDaysFromCloud(practiceDays);
       }
 
       /* ---- 2. 還原 entries：寶可夢 ----

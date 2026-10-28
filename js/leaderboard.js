@@ -57,6 +57,7 @@ const Leaderboard = {
           partnerDex, partnerName,
           partnerLevel: derivedLv || row.partner_level || 0,
           totalOwned: row.total_owned || 0,
+          gymBadges: Array.isArray(row.gym_badges) ? row.gym_badges : [],
           accountUuid: row.account_uuid || null,
           fromRpc: true
         };
@@ -82,6 +83,7 @@ const Leaderboard = {
       name: st.playerName || "You",
       partnerDex, partnerName, partnerLevel,
       totalOwned: (st.entries || []).length,
+      gymBadges: Array.isArray(st.gymBadges) ? st.gymBadges.slice() : [],
       isYou: true
     };
   },
@@ -92,11 +94,17 @@ const Leaderboard = {
       ? `<img class="lb-sprite" src="${animatedURL(r.partnerDex)}" alt="" loading="lazy"
               onerror="this.onerror=null;this.src='${spriteURL(r.partnerDex)}'">`
       : `<span class="lb-sprite lb-none">?</span>`;
+    const badges = (r.gymBadges || []).slice().sort((a, b) => a - b);
+    const badgeHTML = badges.length && typeof gymBadgeSpriteURL === "function"
+      ? `<span class="lb-badges">${badges.map(m =>
+          `<img src="${gymBadgeSpriteURL(m)}" alt="×${m}" title="Gym ×${m}" loading="lazy"
+                onerror="this.remove()">`).join("")}</span>`
+      : "";
     return `<div class="lb-row${r.isYou ? " lb-you" : ""}${rank <= 3 ? " lb-top" + rank : ""}">
       <div class="lb-rank">${medal}</div>
       ${img}
       <div class="lb-mid">
-        <div class="lb-name">${escapeHTML(r.name)}${r.isYou ? ' <span class="lb-you-tag">YOU</span>' : ""}</div>
+        <div class="lb-name">${escapeHTML(r.name)}${badgeHTML}${r.isYou ? ' <span class="lb-you-tag">YOU</span>' : ""}</div>
         <div class="lb-partner">${escapeHTML(r.partnerName)} · Lv.${r.partnerLevel}</div>
       </div>
       <div class="lb-count"><b>${r.totalOwned}</b><span>Pokémon</span></div>
@@ -113,7 +121,8 @@ const Leaderboard = {
     if (existing) {
       /* 保留 server totalOwned 做排名；本地只覆蓋名／partner 顯示 */
       const serverOwned = existing.totalOwned;
-      Object.assign(existing, { ...player, isYou: true, totalOwned: serverOwned, fromRpc: true });
+      const mergedBadges = Array.from(new Set([...(existing.gymBadges || []), ...(player.gymBadges || [])]));
+      Object.assign(existing, { ...player, isYou: true, totalOwned: serverOwned, gymBadges: mergedBadges.length ? mergedBadges : existing.gymBadges, fromRpc: true });
     } else {
       rows.push(player);
     }

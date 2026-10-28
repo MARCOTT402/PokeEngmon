@@ -64,7 +64,15 @@
           <nav class="pd-menu">
             <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
             <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
-            <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
+            <div class="home-cal-row">
+              <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
+              <div id="home-streak-wrap" class="home-streak-wrap" hidden>
+                <canvas id="home-streak-bolt" class="home-streak-bolt" width="28" height="36" aria-hidden="true"></canvas>
+                <span id="home-streak-label" class="home-streak-label">x0 days</span>
+              </div>
+            </div>
+            <div id="home-gym-badges" class="home-gym-badges" hidden></div>
+            <button id="btn-gym-challenge" class="pd-menu-btn pd-menu-gym" type="button" hidden>⚔ GYM CHALLENGE</button>
           </nav>
         </div>
 
@@ -359,6 +367,7 @@
   <script src="js/powerup.js?v=1.0.0"></script>
   <script src="js/gacha.js?v=1.0.0"></script>
   <script src="js/pokedex.js?v=1.0.0"></script>
+  <script src="js/gym.js?v=1.0.0"></script>
   <script src="js/leaderboard.js?v=1.0.0"></script>
   <script src="js/calendar.js?v=1.0.0"></script>
   <script src="js/app.js?v=1.0.0"></script>

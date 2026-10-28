@@ -90,6 +90,7 @@ const App = {
       <span>Day streak <b>${calcStreak()}</b></span>`;
     const verEl = document.getElementById("app-version");
     if (verEl) verEl.textContent = APP_VERSION;
+    if (typeof Gym !== "undefined" && Gym.refreshHomeUI) Gym.refreshHomeUI();
   },
 
   /* ---------- 重設進度（Settings 內，要輸入訓練員名先撳得） ---------- */
@@ -619,6 +620,14 @@ const App = {
     /* 世代解鎖慶祝：等進化/結算動畫行完先彈（levelRes 有進化就再遲啲） */
     const unlockDelay = levelRes && levelRes.evolvedTo ? 2200 : 900;
     setTimeout(() => this.maybeShowGenUnlock(), unlockDelay);
+
+    /* Gym：結算畫面之後返主頁先判 badge（Hint／錯題已計入 results） */
+    if (Quiz.mode === "gym" || data.mode === "gym") {
+      this._gymSettleData = data;
+      if (typeof Gym !== "undefined" && data.gymMilestone) Gym._activeMilestone = data.gymMilestone;
+    } else {
+      this._gymSettleData = null;
+    }
   },
 
   _renderSettlement(data, rewards) {
@@ -1088,6 +1097,7 @@ const App = {
       CaptureScene.audio.stopPreviewSfx();
     }
     document.getElementById("modal-root").innerHTML = "";
+    if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
   },
 
   /* 同步狀態 banner：唔會靜靜消失，要俾用戶自己 dismiss */
@@ -1116,7 +1126,7 @@ const App = {
     if (window.Sync && Sync.isEnabled()) {
       /* 非阻塞拉雲端進度；有新卡拉返嚟就刷新主畫面 */
       Sync.pull()
-        .then(cards => { if (Array.isArray(cards) && cards.length > 0) this.renderHome(); })
+        .then(() => this.renderHome())
         .catch(() => {});
     }
 
@@ -1125,6 +1135,8 @@ const App = {
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
     document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
+    const gymBtn = document.getElementById("btn-gym-challenge");
+    if (gymBtn) gymBtn.onclick = () => { if (typeof Gym !== "undefined") Gym.startChallenge(); };
     document.getElementById("btn-disclaimer").onclick = () => this.openDisclaimer();
     document.getElementById("topbar-name").onclick = () => this.openRename();
     document.getElementById("btn-settings").onclick = () => this.openSettings();
@@ -1222,11 +1234,24 @@ const App = {
     /* btn-top-pull hidden since v48 — skip binding */
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();
-    document.getElementById("btn-settle-home").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    document.getElementById("btn-settle-home").onclick = () => {
+      if (this._gymSettleData && typeof Gym !== "undefined") {
+        const d = this._gymSettleData;
+        this._gymSettleData = null;
+        Quiz.mode = null;
+        Gym.conclude(d);
+        return;
+      }
+      this.renderHome();
+      this.showView("view-home");
+    };
     document.getElementById("btn-do-pull").onclick = () => Gacha.pull();
     /* 先切 view（會中斷抽獎流程並結算），再 render 主頁，避免顯示舊鑽石/舊拍檔 */
     document.getElementById("btn-gacha-home").onclick = () => { this.showView("view-home"); this.renderHome(); };
-    document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
+    else {
+      document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    }
     document.getElementById("btn-lb-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-review-back").onclick = () => {

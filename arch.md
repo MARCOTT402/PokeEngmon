@@ -53,7 +53,8 @@ PokeEngmon/
 │   ├── pokedex.js          # 圖鑑 UI
 │   ├── pokemon.js          # 寶可夢數值：expAtLevel、levelSpan、IV/EV、進化、initialMoves、learnsetOf
 │   ├── calendar.js         # 練習日曆
-│   ├── leaderboard.js      # Leaderboard Top 50（v132+ live RPC；partner Lv/exp derive；anon 可讀）
+│   ├── gym.js              # Streak UI + Gym Challenge + PokéAPI badge sprites
+│   ├── leaderboard.js      # Leaderboard Top 50（v132+ live RPC；partner Lv/exp derive；anon 可讀；gym_badges）
 │   └── explain.js          # 錯題解析（關鍵詞箭咀）
 ├── data/
 │   ├── pokemon-151.json    # Gen 1（151 隻）寶可夢資料（含 learnset），SW pre-cache
@@ -141,12 +142,13 @@ pokeengmon_audio_v1       → { bgm: 0–1, sfx: 0–1 }   # Settings 滑動條�
 
 | Table | PK | 說明 |
 |-------|----|------|
-| `user_account` | `id uuid` | 鑽石、統計、trainer name、`imported_at`（一次性 import 鎖） |
+| `user_account` | `id uuid` | 鑽石、統計、trainer name、`imported_at`、`best_streak`、`gym_badges int[]` |
 | `user_entries` | `id uuid` | 擁有嘅寶可夢（chain_key, exp, dupes, branch, candies, ivs, evs） |
 | `user_cards` | `(account_id, card_id)` | SM-2 卡片狀態（句子題 + `w:` 前綴嘅圖片題共用） |
 | `user_history` | `id bigserial` | 答題記錄（q_score, response_ms, levenshtein_distance） |
 | `user_captures` | `id bigserial` | 捕捉記錄（每次捕捉無論成功失敗都寫一條） |
 | `user_imports` | `id bigserial` | import_state 審計記錄（v106 加） |
+| `user_practice_days` | `(account_id, day)` | 每日練習組數；`upsert_practice_day`；Sync.pull 合併 |
 | `chain_rarity` | `chain_key` | 全 498 條鏈嘅 `rarity` + `gen` + `stage1_dex`（捕捉池 = rarity='normal'；`gacha_pull` / `obtain_capture` 都查呢張表；v127 加 gen 欄） |
 
 ### 4.3 同步方向
@@ -154,17 +156,18 @@ pokeengmon_audio_v1       → { bgm: 0–1, sfx: 0–1 }   # Settings 滑動條�
 ```
 本地（localStorage）──敏感操作──▶ 雲端 RPC（server 權威）
 本地（localStorage）──pushState──▶ 雲端（淨 trainer_name）
-本地（localStorage）◀──pull────── 雲端（完整還原 account/entries/cards）
+本地（localStorage）◀──pull────── 雲端（完整還原 account/entries/cards/practice_days）
 ```
 
 **v99 起嘅規則**：
 - **敏感數值**（diamonds、entries、exp、IVs/EVs、candies）→ 全部行 server RPC，前端直寫會被 column-level grants 擋（403）
 - **非敏感**（trainer_name）→ `Sync.pushState()`
 - **SM-2 cards/history** → `Sync.queueUpsert()` / `queueHistory()`，背景 queue 1s debounce + `beforeunload` flush
+- **練習日／Gym**：`upsert_practice_day`／`claim_gym_badge`／`report_best_streak`；badge 本地可暫存，claim 後以 RPC 回傳 `int[]` 為準
 
 **觸發時機**：
 - `pushState`：trainer name 改變
-- RPC：答題結算（`awardRoundDiamonds`）、稀有抽（`gachaPull`）、捕捉（`obtainCapture`）、EXP（`addEntryExp`）、糖果（`useEntryCandy`）、EV（`allocEv`）、import（`importState`）
+- RPC：答題結算（`awardRoundDiamonds`）、稀有抽（`gachaPull`）、捕捉（`obtainCapture`）、EXP（`addEntryExp`）、糖果（`useEntryCandy`）、EV（`allocEv`）、import（`importState`）、練習日／Gym badge
 - `pull`：page load（已登入）、登入後、import 後
 
 ---
@@ -255,9 +258,15 @@ pokeengmon_audio_v1       → { bgm: 0–1, sfx: 0–1 }   # Settings 滑動條�
 6. **圖鑑**：未解鎖世代 cell 係純「?」DOM（`cell.disabled = true`），**唔生成任何 `<img>`** → 零圖片請求、零外形洩露；世代 hub 捲動收放（`_bindHubScroll`）
 
 ### 5.9 Leaderboard（v132–v137）
-1. `SupabaseAuth._rpcTable("get_leaderboard")` → rows（anon／auth 都可）
+1. `SupabaseAuth._rpcTable("get_leaderboard")` → rows（anon／auth 都可；含 `gym_badges`）
 2. `_resolvePartner(chainKey, exp, branch)`：`EVOLUTION_CHAINS.find` + `deriveEntryFields` → dex／名／**level**
-3. YOU merge：覆蓋名／拍檔顯示，**保留 server `total_owned`** 做排名
+3. YOU merge：覆蓋名／拍檔顯示，**保留 server `total_owned`** 做排名；名旁渲染 badge sprites
+
+### 5.10 Gym Challenge + streak
+1. `addPracticeRecord` → 本地 `practiceDays` + `upsert_practice_day` / `report_best_streak`
+2. `calcStreak()`：今日無記錄則由昨日起計（streak 仍存活）
+3. `Gym.nextAvailableMilestone`：最小未領嘅 10-multiple ≤ streak
+4. `Quiz.startGym` → 全題庫洗牌 10 題；結算後 `btn-settle-home` → `Gym.conclude`（全對且無 hint 先 claim）
 
 ---
 
@@ -315,6 +324,7 @@ pokeengmon_audio_v1       → { bgm: 0–1, sfx: 0–1 }   # Settings 滑動條�
 2. `python tools/git_commit_push.py -m "vNN: ..."` 或手動 `git add / commit / push`
 3. GitHub Pages 自動部署（main branch root，幾十秒）
 4. Service Worker `CACHE_NAME` 改 → 瀏覽器下次開頁面自動安裝新 SW → `skipWaiting` 接管 → 前端 `controllerchange` 自動刷新
-5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase/migrations/supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）。Leaderboard／捕捉相關最近遷移：
+5. Supabase schema 變更：Dashboard → SQL Editor 跑對應日期嘅 `supabase/migrations/supabase-migrate-*.sql`（**唔好跑成個 schema 檔**，會同已存在嘅 policy / function 衝突）。相關最近遷移：
    - `…20261026f-leaderboard-partner-exp.sql` — `get_leaderboard` 回傳 `partner_exp`／`partner_branch`
    - `…20261026g-fix-obtain-capture-ambiguous.sql` — `obtain_capture(p_chain_key, p_dex_id)` 修 42702
+   - `…20261028-practice-streak-gym.sql` — `user_practice_days`、`gym_badges`、`upsert_practice_day`／`claim_gym_badge`／`report_best_streak`、LB `gym_badges`

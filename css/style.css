@@ -180,6 +180,50 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   box-shadow: 0 2px 0 #58852c;
 }
 .pd-menu-start span { font-size: .82rem; font-weight: 700; opacity: .8; }
+.home-cal-row {
+  display: flex; align-items: stretch; gap: 8px;
+}
+.home-cal-row > .pd-menu-btn { flex: 1; min-width: 0; }
+.home-streak-wrap {
+  display: inline-flex; align-items: center; gap: 4px;
+  flex-shrink: 0; padding: 0 8px; border-radius: 9px;
+  border: 2px solid #c9a227;
+  background: linear-gradient(180deg, #fff8d6, #ffe9a0);
+  color: #5a4208; font-weight: 800; font-size: .82rem;
+  box-shadow: 0 2px 0 #d4b24a;
+}
+.home-streak-wrap[hidden] { display: none !important; }
+.home-streak-bolt { width: 22px; height: 28px; display: block; }
+.home-streak-label { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-gym-badges {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  padding: 4px 2px;
+}
+.home-gym-badges[hidden] { display: none !important; }
+.gym-badge-icon {
+  width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.2));
+}
+.pd-menu-gym {
+  border-color: #c9a227 !important;
+  background: linear-gradient(180deg, #ffe566, #f0c020) !important;
+  color: #4a3808 !important;
+  box-shadow: 0 2px 0 #b8860b !important;
+  justify-content: center;
+}
+.pd-menu-gym[hidden] { display: none !important; }
+.gym-claim { text-align: center; }
+.gym-claim-title { font-size: 1.15rem; margin-bottom: 8px; }
+.gym-claim-art {
+  width: 64px; height: 64px; object-fit: contain; image-rendering: pixelated;
+  margin: 4px auto 10px; display: block;
+}
+.lb-badges {
+  display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: middle;
+}
+.lb-badges img {
+  width: 16px; height: 16px; object-fit: contain; image-rendering: pixelated;
+}
 .pd-bottom {
   margin-top: 8px; background: linear-gradient(180deg, #666, #4f4f4f);
   border: 2.5px solid #2f2f2f; border-radius: 10px; padding: 7px 8px 8px;

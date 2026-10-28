@@ -302,6 +302,21 @@ const SupabaseAuth = {
     return this._rpc("migrate_anonymous_to_auth", { old_device_id: deviceId });
   },
 
+  async upsertPracticeDay(day, setsDelta) {
+    if (!this.currentUser()) return null;
+    return this._rpc("upsert_practice_day", { p_day: day, p_sets_delta: setsDelta == null ? 1 : setsDelta });
+  },
+
+  async claimGymBadge(milestone) {
+    if (!this.currentUser()) return null;
+    return this._rpc("claim_gym_badge", { p_milestone: milestone });
+  },
+
+  async reportBestStreak(streak) {
+    if (!this.currentUser()) return null;
+    return this._rpc("report_best_streak", { p_streak: streak | 0 });
+  },
+
   /* ---------- 通用 fetch wrapper（附 auth header） ---------- */
   async fetch(path, options = {}) {
     const headers = {

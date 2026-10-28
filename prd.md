@@ -120,17 +120,19 @@
   - **非敏感**（trainer name、SM-2 cards / history）→ 背景 queue 非阻塞同步（1s debounce + beforeunload flush）
   - **pull**：page load + 登入後，以本地 `updated_at` 較新為準合併
 
-### 3.8 練習日曆（Calendar）
+### 3.8 練習日曆（Calendar）＋ Streak ＋ Gym Challenge
 
-- 顯示每日答題量（顏色深淺）
-- 連續練習日數 `bestStreak`
+- 顯示每日答題量（顏色深淺）；雲端表 `user_practice_days`（`upsert_practice_day`）
+- 連續練習日數：今日未練則由昨日起計仍存活；主頁 ⚡ `xN days`；`bestStreak` 上雲 `report_best_streak`
+- **Gym Challenge**：每未領嘅 10 日 milestone（≤ 當前 streak）主頁出按鈕；全題庫隨機 10 題；Hint／Power Up 可用，但**全對且無 hint** 先可 `claim_gym_badge`；徽章用 PokéAPI item sprite（boulder→rising 循環）
+- 圖鑑 detail：底欄「Back to Pokédex」關 modal；grid 先返主頁
 
 ### 3.9 Leaderboard（v131–v137）
 
 - 主頁 badge chip → Top 50（按持有**進化鏈數** desc）
-- `get_leaderboard()` SECURITY DEFINER；anon／authenticated 都可讀
+- `get_leaderboard()` SECURITY DEFINER；anon／authenticated 都可讀；回傳 `gym_badges int[]`
 - Partner：sprite + 名由 `partner_exp`／`branch` **derive**（唔信 DB 舊 `level`）；優先 active entry
-- YOU 行：本地覆蓋名／拍檔顯示，**排名用 server `total_owned`**（唔用 `collectedCount` 灌水）
+- YOU 行：本地覆蓋名／拍檔顯示，**排名用 server `total_owned`**（唔用 `collectedCount` 灌水）；名旁顯示 Gym 徽章 icon
 
 ### 3.10 家長功能
 

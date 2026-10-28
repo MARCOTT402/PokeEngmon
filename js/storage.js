@@ -48,11 +48,13 @@ function defaultState() {
     totalCorrect: 0,
     totalQuestions: 0,
     bestStreak: 0,           // 連續練習日數
+    practiceDays: {},        // "YYYY-MM-DD" -> sets count（雲端 user_practice_days）
     entries: [],             // 擁有嘅 Pokemon { uid, chainKey, stage, exp, branch?, ownedSpecies:[dexId], obtainedAt }
     activeUid: null,         // 目前拍檔（練經驗目標）
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
     customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
-    unlockedGen: 1           // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
+    unlockedGen: 1,          // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
+    gymBadges: []            // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
 }
@@ -442,17 +444,36 @@ function addPracticeRecord(record) {
   st.totalSets += 1;
   st.totalCorrect += record.score;
   st.totalQuestions += record.total;
+  /* 日曆色階：確保當日至少有一筆「有練習」標記（雲端合併用） */
+  if (!st.practiceDays) st.practiceDays = {};
+  st.practiceDays[key] = (st.practiceDays[key] || 0) + 1;
+  const streak = calcStreak();
+  if (streak > (st.bestStreak || 0)) st.bestStreak = streak;
   saveState();
+  if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+    if (SupabaseAuth.upsertPracticeDay) {
+      SupabaseAuth.upsertPracticeDay(key, 1).catch(e => console.warn("[practice] upsert day:", e));
+    }
+    if (SupabaseAuth.reportBestStreak) {
+      SupabaseAuth.reportBestStreak(st.bestStreak || streak).catch(() => {});
+    }
+  }
 }
 
-/* 計算連續練習日數 */
+/* 計算連續練習日數（今日未練則由昨日起計，streak 仍存活） */
 function calcStreak() {
   const st = loadState();
+  const hasDay = (key) => {
+    if (st.records[key] && st.records[key].length > 0) return true;
+    if (st.practiceDays && st.practiceDays[key] > 0) return true;
+    return false;
+  };
   let streak = 0;
   const d = new Date();
+  if (!hasDay(dateKey(d.getTime()))) d.setDate(d.getDate() - 1);
   for (;;) {
     const key = dateKey(d.getTime());
-    if (st.records[key] && st.records[key].length > 0) {
+    if (hasDay(key)) {
       streak++;
       d.setDate(d.getDate() - 1);
     } else break;
@@ -460,10 +481,36 @@ function calcStreak() {
   return streak;
 }
 
+/* 合併雲端 practice days（只補「有練習」日，唔覆寫本地 set 詳情） */
+function mergePracticeDaysFromCloud(rows) {
+  if (!Array.isArray(rows) || !rows.length) return;
+  const st = loadState();
+  if (!st.practiceDays) st.practiceDays = {};
+  rows.forEach(r => {
+    const day = r.day || r.Day;
+    const sets = Number(r.sets || r.Sets || 0);
+    if (!day || sets <= 0) return;
+    const key = String(day).slice(0, 10);
+    st.practiceDays[key] = Math.max(st.practiceDays[key] || 0, sets);
+    if (!st.records[key]) st.records[key] = [];
+    /* 日曆 dayLevel 靠 records.length；若本地無 set 詳情，塞 placeholder 令色階非灰 */
+    if (st.records[key].length === 0) {
+      for (let i = 0; i < Math.min(sets, 5); i++) {
+        st.records[key].push({ ts: Date.parse(key + "T12:00:00Z") || Date.now(), duration: 0, score: 0, total: 0, results: [], _cloud: true });
+      }
+    }
+  });
+  const streak = calcStreak();
+  if (streak > (st.bestStreak || 0)) st.bestStreak = streak;
+  saveState();
+}
+
 /* 某日組數 → 日曆顏色等級 0灰 1黃 2綠 3藍 */
 function dayLevel(key) {
   const st = loadState();
-  const n = st.records[key] ? st.records[key].length : 0;
+  const nRec = st.records[key] ? st.records[key].length : 0;
+  const nDay = (st.practiceDays && st.practiceDays[key]) || 0;
+  const n = Math.max(nRec, nDay);
   if (n <= 0) return 0;
   if (n <= 2) return 1;
   if (n <= 4) return 2;

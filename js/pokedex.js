@@ -23,6 +23,20 @@ const Pokedex = {
     App.showView("view-pokedex");
     this.render();
     this._bindHubScroll();
+    this._setDexBackMode("grid");
+  },
+
+  /* detail：底欄「Back to Pokédex」關 modal；grid：返主頁 */
+  _setDexBackMode(mode) {
+    const btn = document.getElementById("btn-dex-back");
+    if (!btn) return;
+    if (mode === "detail") {
+      btn.textContent = "Back to Pokédex";
+      btn.onclick = () => App.closeModal();
+    } else {
+      btn.textContent = "Back to Home";
+      btn.onclick = () => { App.renderHome(); App.showView("view-home"); };
+    }
   },
 
   _genRoman(n) {
@@ -248,6 +262,7 @@ const Pokedex = {
         ${extraHTML}
       </div>
     `);
+    this._setDexBackMode("detail");
     if (keepScroll) document.querySelector(".modal-card").scrollTop = scrollTop;
 
     const art = document.getElementById("dex-art");
