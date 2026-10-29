@@ -1189,6 +1189,90 @@ const App = {
     btn.title = "Connected — tap to manage";
   },
 
+  /* OAuth redirect 返嚟之後嘅雲端合併。一定要等首屏 render 完、loading 淡出後才跑：
+     舊版喺 init() 內 await 呢段，一旦彈出「Overwrite local progress?」確認窗，
+     modal（z-index 50）會被 loading overlay（99999）完全遮住 → 撳唔到掣
+     → promise 永遠 pending → init() 唔 resolve → 卡死喺 loading 頁。
+     改為非阻塞：首屏照出，確認窗浮喺正常畫面上面，用戶一定撳得到。 */
+  async _postLogin(st) {
+    try {
+      await SupabaseAuth.ensureFreshSession();
+      if (!st._googleMigrated) {
+        const deviceId = ensureDeviceId();
+        const isNewAccount = await SupabaseAuth.migrateAnonymous(deviceId);
+        console.log("[OAuth] migrate result — isNewAccount:", isNewAccount);
+        if (isNewAccount === true) {
+          /* 新帳戶：本地進度經 import_state 一次性上傳（v106 server 收緊：
+             diamonds 唔過界——固定派 20 粒 welcome bonus；entries ≤151、
+             exp ≤1.25M、candies ≤99、dupes ≤100；每帳戶一生一次
+             imported_at 鎖 + user_imports audit log），之後 pull 正規化
+             （server 行先係權威） */
+          const payload = {
+            diamonds: st.diamonds || 0,
+            total_sets: st.totalSets || 0,
+            total_correct: st.totalCorrect || 0,
+            total_questions: st.totalQuestions || 0,
+            trainer_name: st.playerName || "The PokéEngmon Trainer",
+            entries: (st.entries || []).map(e => ({
+              id: e.uid,
+              chain_key: e.chainKey,
+              exp: Number(e.exp ?? 0),
+              ivs: e.ivs || {},
+              evs: e.evs || {},
+              ev_points: e.evPoints ?? 0,
+              candies: e.candies ?? 0,
+              dupes: e.dupes ?? 0,
+              branch: (e.branch === 0 || e.branch) ? e.branch : null,
+              active: e.uid === st.activeUid,
+              obtained_at: e.obtainedAt || Date.now()
+            }))
+          };
+          const imported = await SupabaseAuth.importState(payload);
+          console.log("[OAuth] importState result:", imported);
+          /* SM-2 cards/history 維持直推（非敏感學習數據） */
+          await Sync.pushState();
+          await Sync.pull();
+          console.log("[OAuth] ✅ Local progress imported to new Google account");
+          st._googleMigrated = true;
+          saveState();
+        } else if (isNewAccount === false) {
+          /* 舊帳戶：從雲端拉下來；本地有進度先問用戶（呢個窗而家一定撳得到） */
+          const hasLocalProgress = this._localHasProgress();
+          if (hasLocalProgress) {
+            const confirmed = await this._confirmOverwrite();
+            if (!confirmed) {
+              /* 用戶拒絕 → sign out，保留本地進度 */
+              await SupabaseAuth.signOut();
+              st._googleMigrated = false;
+              saveState();
+              this.renderHome();
+              this.toast("Sign-in cancelled — your local progress is kept.");
+              return;
+            }
+          }
+          await Sync.pull();
+          console.log("[OAuth] ✅ Existing account data pulled from cloud");
+          st._googleMigrated = true;
+          saveState();
+        } else {
+          /* migrate 失敗 / 未知狀態：保守起見 pull（雲端有就用雲端） */
+          try { await Sync.pull(); } catch (e) {}
+          st._googleMigrated = true;
+          saveState();
+        }
+      } else {
+        /* 已 migrate 過（之前登入過）：拉雲端最新數據 */
+        try { await Sync.pull(); } catch (e) {}
+      }
+      this.renderHome();
+      /* 顯示實際登入嘅 email，萬一 Google 選錯帳戶用戶可以即刻發現 */
+      const signedEmail = SupabaseAuth.currentUser()?.email;
+      this.toast(signedEmail
+        ? `✅ Signed in as ${signedEmail}`
+        : "✅ Signed in! Your progress is cloud-synced.");
+    } catch (e) { console.warn("[OAuth] post-login failed:", e.message); }
+  },
+
   /* 檢查本地係咪有遊玩進度（用嚟決定 connect 舊帳戶時使唔使彈 overwrite 警告） */
   _localHasProgress() {
     const st = loadState();
@@ -1428,87 +1512,12 @@ const App = {
     document.getElementById("btn-settings").onclick = () => this.openSettings();
     document.getElementById("btn-login").onclick = () => this.openLoginHub();
 
-    /* OAuth 登入完成：Supabase redirect 返嚟時 SupabaseAuth.init() 已經 parse hash → save session */
-    /* 呢度 detect 到 isLoggedIn() 就做 migrate + refresh */
+    /* OAuth redirect 返嚟時 SupabaseAuth.init() 已經 parse hash → save session。
+       呢度只同步更新登入 UI；雲端合併（migrate / import / pull / overwrite 確認窗）
+       全部延後到首屏出咗、loading 收走之後才跑 —— 見 _postLogin。 */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
       this._markLoggedIn();
-      try {
-        await SupabaseAuth.ensureFreshSession();
-        if (!st._googleMigrated) {
-          const deviceId = ensureDeviceId();
-          const isNewAccount = await SupabaseAuth.migrateAnonymous(deviceId);
-          console.log("[OAuth] migrate result — isNewAccount:", isNewAccount);
-          if (isNewAccount === true) {
-            /* 新帳戶：本地進度經 import_state 一次性上傳（v106 server 收緊：
-               diamonds 唔過界——固定派 20 粒 welcome bonus；entries ≤151、
-               exp ≤1.25M、candies ≤99、dupes ≤100；每帳戶一生一次
-               imported_at 鎖 + user_imports audit log），之後 pull 正規化
-               （server 行先係權威） */
-            const payload = {
-              diamonds: st.diamonds || 0,
-              total_sets: st.totalSets || 0,
-              total_correct: st.totalCorrect || 0,
-              total_questions: st.totalQuestions || 0,
-              trainer_name: st.playerName || "The PokéEngmon Trainer",
-              entries: (st.entries || []).map(e => ({
-                id: e.uid,
-                chain_key: e.chainKey,
-                exp: Number(e.exp ?? 0),
-                ivs: e.ivs || {},
-                evs: e.evs || {},
-                ev_points: e.evPoints ?? 0,
-                candies: e.candies ?? 0,
-                dupes: e.dupes ?? 0,
-                branch: (e.branch === 0 || e.branch) ? e.branch : null,
-                active: e.uid === st.activeUid,
-                obtained_at: e.obtainedAt || Date.now()
-              }))
-            };
-            const imported = await SupabaseAuth.importState(payload);
-            console.log("[OAuth] importState result:", imported);
-            /* SM-2 cards/history 維持直推（非敏感學習數據） */
-            await Sync.pushState();
-            await Sync.pull();
-            console.log("[OAuth] ✅ Local progress imported to new Google account");
-            st._googleMigrated = true;
-            saveState();
-          } else if (isNewAccount === false) {
-            /* 舊帳戶：從雲端拉下來 */
-            /* 但如果本地有進度，要先警告用戶會覆蓋 */
-            const hasLocalProgress = this._localHasProgress();
-            if (hasLocalProgress) {
-              const confirmed = await this._confirmOverwrite();
-              if (!confirmed) {
-                /* 用戶拒絕 → sign out，保留本地進度 */
-                await SupabaseAuth.signOut();
-                st._googleMigrated = false;
-                saveState();
-                this.renderHome();
-                this.toast("Sign-in cancelled — your local progress is kept.");
-                return;
-              }
-            }
-            await Sync.pull();
-            console.log("[OAuth] ✅ Existing account data pulled from cloud");
-            st._googleMigrated = true;
-            saveState();
-          } else {
-            /* migrate 失敗 / 未知狀態：保守起見 pull（雲端有就用雲端） */
-            try { await Sync.pull(); } catch (e) {}
-            st._googleMigrated = true;
-            saveState();
-          }
-        } else {
-          /* 已 migrate 過（之前登入過）：拉雲端最新數據 */
-          try { await Sync.pull(); } catch (e) {}
-        }
-        this.renderHome();
-        /* 顯示實際登入嘅 email，萬一 Google 選錯帳戶用戶可以即刻發現 */
-        const signedEmail = SupabaseAuth.currentUser()?.email;
-        this.toast(signedEmail
-          ? `✅ Signed in as ${signedEmail}`
-          : "✅ Signed in! Your progress is cloud-synced.");
-      } catch (e) { console.warn("[OAuth] post-login failed:", e.message); }
+      this._needPostLogin = true;
     } else if (window.__oauthError) {
       /* OAuth 失敗 → 明確話俾用戶知，唔好靜靜地乜都冇發生 */
       console.warn("[OAuth] ❌", window.__oauthError);
@@ -1631,6 +1640,13 @@ const App = {
 
     this.renderHome();
     this.showView("view-home");
+
+    /* 首屏已 render：等 loading 淡出走完（400ms）才做 OAuth 雲端合併，
+       確保「Overwrite local progress?」確認窗浮喺正常畫面上，一定撳得到。 */
+    if (this._needPostLogin) {
+      this._needPostLogin = false;
+      setTimeout(() => { this._postLogin(st); }, 600);
+    }
 
     /* 全部 UI 掣短 click SFX（委派一次；跟 Settings SFX %） */
     if (!this._uiTapBound) {
