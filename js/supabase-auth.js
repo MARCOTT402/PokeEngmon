@@ -307,6 +307,19 @@ const SupabaseAuth = {
     return this._rpc("upsert_practice_day", { p_day: day, p_sets_delta: setsDelta == null ? 1 : setsDelta });
   },
 
+  /* 上傳一組練習明細（日曆換裝置後可以完整還原） */
+  async savePracticeRecord(rec) {
+    if (!this.currentUser()) return null;
+    return this._rpc("save_practice_record", {
+      p_ts: rec.ts,
+      p_day: rec.day,
+      p_duration: rec.duration || 0,
+      p_score: rec.score || 0,
+      p_total: rec.total || 0,
+      p_results: rec.results || []
+    });
+  },
+
   async claimGymBadge(milestone) {
     if (!this.currentUser()) return null;
     return this._rpc("claim_gym_badge", { p_milestone: milestone });

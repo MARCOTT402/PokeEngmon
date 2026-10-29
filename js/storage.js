@@ -458,6 +458,17 @@ function addPracticeRecord(record) {
     if (SupabaseAuth.upsertPracticeDay) {
       SupabaseAuth.upsertPracticeDay(key, 1).catch(e => console.warn("[practice] upsert day:", e));
     }
+    /* 上傳整組明細，換裝置／換帳戶後日曆可以完整還原 */
+    if (SupabaseAuth.savePracticeRecord) {
+      SupabaseAuth.savePracticeRecord({
+        ts: record.ts,
+        day: key,
+        duration: record.duration || 0,
+        score: record.score || 0,
+        total: record.total || 0,
+        results: record.results || []
+      }).catch(e => console.warn("[practice] save record:", e));
+    }
     if (SupabaseAuth.reportBestStreak) {
       SupabaseAuth.reportBestStreak(st.bestStreak || streak).catch(() => {});
     }
@@ -507,6 +518,46 @@ function mergePracticeDaysFromCloud(rows) {
   const streak = calcStreak();
   if (streak > (st.bestStreak || 0)) st.bestStreak = streak;
   saveState();
+}
+
+/* 合併雲端練習明細（user_practice_records）：換裝置／換帳戶後還原日曆詳情。
+   以 ts 去重；同日有真明細時，舊嘅 _cloud placeholder 會被移除避免重複。 */
+function mergeRecordsFromCloud(rows) {
+  if (!Array.isArray(rows) || !rows.length) return 0;
+  const st = loadState();
+  if (!st.records) st.records = {};
+  let added = 0;
+  rows.forEach(r => {
+    const ts = Number(r.ts);
+    if (!ts || !isFinite(ts)) return;
+    const key = r.day ? String(r.day).slice(0, 10) : dateKey(ts);
+    if (!Array.isArray(st.records[key])) st.records[key] = [];
+    if (st.records[key].some(x => Number(x.ts) === ts)) return;
+    st.records[key].push({
+      ts,
+      duration: Number(r.duration || 0),
+      score: Number(r.score || 0),
+      total: Number(r.total || 0),
+      results: Array.isArray(r.results) ? r.results : [],
+      _cloud: true
+    });
+    added++;
+  });
+  if (!added) return 0;
+  Object.keys(st.records).forEach(key => {
+    const list = st.records[key];
+    if (!Array.isArray(list) || !list.length) return;
+    const hasReal = list.some(x => !x._cloud || x.total > 0 || (x.results && x.results.length));
+    if (hasReal) {
+      st.records[key] = list.filter(x =>
+        !(x._cloud && x.total === 0 && (!x.results || !x.results.length)));
+      st.records[key].sort((a, b) => Number(a.ts) - Number(b.ts));
+    }
+    if (!st.practiceDays) st.practiceDays = {};
+    st.practiceDays[key] = Math.max(st.practiceDays[key] || 0, st.records[key].length);
+  });
+  saveState();
+  return added;
 }
 
 /* 某日組數 → 日曆顏色等級 0灰 1黃 2綠 3藍 */

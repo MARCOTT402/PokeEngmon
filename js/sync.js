@@ -151,12 +151,13 @@ window.Sync = (() => {
       /* 匿名：RLS 用 current_setting('app.device_id')，PostgREST set 唔到 → 拉唔到嘢，直接跳過 */
       if (!ref.isAuth) return null;
 
-      /* 一齊拉：account、entries、cards、practice days */
-      const [accountRows, entries, cards, practiceDays] = await Promise.all([
+      /* 一齊拉：account、entries、cards、practice days、practice records */
+      const [accountRows, entries, cards, practiceDays, practiceRecords] = await Promise.all([
         _api("GET", `/user_account?select=*`),
         _api("GET", `/user_entries?select=*&order=obtained_at.asc`),
         _api("GET", `/user_cards?select=*`),
-        _api("GET", `/user_practice_days?select=day,sets&order=day.asc`).catch(() => [])
+        _api("GET", `/user_practice_days?select=day,sets&order=day.asc`).catch(() => []),
+        _api("GET", `/user_practice_records?select=day,ts,duration,score,total,results&order=ts.asc`).catch(() => [])
       ]);
 
       /* ---- 1. 還原 account：diamonds / 統計 / trainer name / gym badges ---- */
@@ -181,6 +182,16 @@ window.Sync = (() => {
 
       if (Array.isArray(practiceDays) && typeof mergePracticeDaysFromCloud === "function") {
         mergePracticeDaysFromCloud(practiceDays);
+      }
+      /* 完整明細（記得每組分數）優先過「只有組數」的占位 */
+      let recordsAdded = 0;
+      if (Array.isArray(practiceRecords) && typeof mergeRecordsFromCloud === "function") {
+        recordsAdded = mergeRecordsFromCloud(practiceRecords);
+      }
+      if (recordsAdded && typeof Calendar !== "undefined") {
+        /* 日曆開住嘅話即刻重畫，唔使等用戶手動返回再入 */
+        const calView = document.getElementById("view-calendar");
+        if (calView && !calView.hidden) { try { Calendar.render(); } catch (e) {} }
       }
 
       /* ---- 2. 還原 entries：寶可夢 ----

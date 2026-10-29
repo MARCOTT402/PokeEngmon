@@ -36,8 +36,12 @@ const Calendar = {
       const level = dayLevel(key);
       const cell = document.createElement("button");
       cell.className = `cal-cell lv${level}` + (key === todayKey ? " today" : "");
+      /* 組數：本地明細同雲端「每日組數」取大者；records 可能未有該 key，唔可以直讀 .length */
+      const st = loadState();
+      const recs = (st.records && st.records[key]) || [];
+      const setsN = Math.max(recs.length, (st.practiceDays && st.practiceDays[key]) || 0);
       cell.innerHTML = `<span class="cal-day">${d}</span>` +
-        (level > 0 ? `<span class="cal-count">${loadState().records[key].length} sets</span>` : "");
+        (level > 0 ? `<span class="cal-count">${setsN} sets</span>` : "");
       if (level > 0) cell.onclick = () => this.showDay(key);
       grid.appendChild(cell);
     }
@@ -68,22 +72,30 @@ const Calendar = {
     const sets = st.records[key] || [];
     if (sets.length === 0) return;
 
-    const totalScore = sets.reduce((s, r) => s + r.score, 0);
-    const totalQ = sets.reduce((s, r) => s + r.total, 0);
+    const detailed = sets.filter(r => Array.isArray(r.results) && r.results.length);
+    const totalScore = detailed.reduce((s, r) => s + r.score, 0);
+    const totalQ = detailed.reduce((s, r) => s + r.total, 0);
+    const summary = detailed.length
+      ? `${sets.length} sets done ・ Total score ${totalScore}/${totalQ}`
+      : `${sets.length} sets done ・ detailed answers were not saved for these sets`;
 
     const setBlocks = sets.map((r, idx) => {
+      const results = Array.isArray(r.results) ? r.results : [];
+      const noDetail = results.length === 0;
       const time = new Date(r.ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-      const mm = Math.floor(r.duration / 60), ss = r.duration % 60;
-      const wrongs = r.results.filter(x => !x.correct);
-      const wrongHTML = wrongs.length === 0
-        ? `<div class="day-allright">All correct — nice! 🌟</div>`
-        : `<div class="day-wrongs" id="day-wrongs-${idx}"></div>`;
+      const mm = Math.floor((r.duration || 0) / 60), ss = (r.duration || 0) % 60;
+      const wrongs = results.filter(x => !x.correct);
+      const wrongHTML = noDetail
+        ? `<div class="day-allright">Answers not synced to this device</div>`
+        : (wrongs.length === 0
+            ? `<div class="day-allright">All correct — nice! 🌟</div>`
+            : `<div class="day-wrongs" id="day-wrongs-${idx}"></div>`);
       return `
         <div class="day-set">
           <div class="day-set-head">
             <b>Set ${idx + 1}</b>
             <span>${time}</span>
-            <span class="${r.score === r.total ? "score-perfect" : ""}">${r.score}/${r.total}</span>
+            <span class="${!noDetail && r.score === r.total ? "score-perfect" : ""}">${noDetail ? "—" : `${r.score}/${r.total}`}</span>
             <span>⏱ ${mm}:${String(ss).padStart(2, "0")}</span>
           </div>
           ${wrongHTML}
@@ -93,7 +105,7 @@ const Calendar = {
     App.showModal(`
       <div class="day-detail">
         <h3>${key.replace(/-/g, "/")} Practice record</h3>
-        <div class="day-summary">${sets.length} sets done ・ Total score ${totalScore}/${totalQ}</div>
+        <div class="day-summary">${summary}</div>
         ${setBlocks}
       </div>
     `);
@@ -102,7 +114,7 @@ const Calendar = {
     sets.forEach((r, idx) => {
       const box = document.getElementById(`day-wrongs-${idx}`);
       if (!box) return;
-      r.results.filter(x => !x.correct).forEach(w => {
+      (Array.isArray(r.results) ? r.results : []).filter(x => !x.correct).forEach(w => {
         const q = findQuestion(w.qid);
         if (q) Explain.render(box, q, w.chosen);
       });
