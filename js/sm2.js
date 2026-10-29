@@ -243,6 +243,35 @@ window.SM2 = (() => {
     try { if (window.Sync && window.Sync.isEnabled()) Sync.queueHistory(rec); } catch (e) {}
   }
 
+  /* 由雲端還原答題歷史：以 ts + card_id 去重；唔會再 queue 返上 server（避免回音） */
+  function mergeHistory(rows) {
+    if (!Array.isArray(rows) || !rows.length) return 0;
+    const hist = _loadHistory();
+    const seen = new Set(hist.map(h => Number(h.ts) + "|" + h.card_id));
+    let added = 0;
+    rows.forEach(r => {
+      const ts = Number(r.ts);
+      if (!ts || !isFinite(ts) || !r.card_id) return;
+      const k = ts + "|" + r.card_id;
+      if (seen.has(k)) return;
+      seen.add(k);
+      hist.push({
+        card_id: r.card_id,
+        ts,
+        q_score: Number(r.q_score ?? 0),
+        response_ms: Number(r.response_ms ?? 0),
+        levenshtein_distance: Number(r.levenshtein_distance ?? 0),
+        is_typo: !!r.is_typo
+      });
+      added++;
+    });
+    if (added) {
+      hist.sort((a, b) => Number(a.ts) - Number(b.ts));
+      _saveHistory(hist);
+    }
+    return added;
+  }
+
   /* ============ Session Pool Builder ============ */
   /* allQuestions: getAllQuestions() 結果
      topicKeys: Set of topic keys（null 表示全選）
@@ -297,7 +326,7 @@ window.SM2 = (() => {
     levenshtein, isPrefix, expectedTime,
     computeQ, computeBestQ, computeEF, nextInterval, nextRepetition, updateCard,
     /* Storage adapter */
-    getOrCreateCard, upsertCard, listDue, listNew, listAll, listHistory, appendHistory,
+    getOrCreateCard, upsertCard, listDue, listNew, listAll, listHistory, appendHistory, mergeHistory,
     /* Session */
     buildSession,
     /* 常量 */

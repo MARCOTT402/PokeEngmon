@@ -151,13 +151,15 @@ window.Sync = (() => {
       /* 匿名：RLS 用 current_setting('app.device_id')，PostgREST set 唔到 → 拉唔到嘢，直接跳過 */
       if (!ref.isAuth) return null;
 
-      /* 一齊拉：account、entries、cards、practice days、practice records */
-      const [accountRows, entries, cards, practiceDays, practiceRecords] = await Promise.all([
+      /* 一齊拉：account、entries、cards、practice days、practice records、答題歷史 */
+      const [accountRows, entries, cards, practiceDays, practiceRecords, historyRows] = await Promise.all([
         _api("GET", `/user_account?select=*`),
         _api("GET", `/user_entries?select=*&order=obtained_at.asc`),
         _api("GET", `/user_cards?select=*`),
         _api("GET", `/user_practice_days?select=day,sets&order=day.asc`).catch(() => []),
-        _api("GET", `/user_practice_records?select=day,ts,duration,score,total,results&order=ts.asc`).catch(() => [])
+        _api("GET", `/user_practice_records?select=day,ts,duration,score,total,results&order=ts.asc`).catch(() => []),
+        /* 只拉最近 300 條：history 存喺 localStorage，全量拉會撞 5MB 配額 */
+        _api("GET", `/user_history?select=card_id,ts,q_score,response_ms,levenshtein_distance,is_typo&order=ts.desc&limit=300`).catch(() => [])
       ]);
 
       /* ---- 1. 還原 account：diamonds / 統計 / trainer name / gym badges ---- */
@@ -177,6 +179,8 @@ window.Sync = (() => {
           st.playerName = acct.trainer_name;
           st.nameCustomized = true;
         }
+        /* 明確記住「用家改過名」，避免之後新裝置再判定錯誤 */
+        if (acct.name_customized === true) st.nameCustomized = true;
         saveState();
       }
 
@@ -192,6 +196,11 @@ window.Sync = (() => {
         /* 日曆開住嘅話即刻重畫，唔使等用戶手動返回再入 */
         const calView = document.getElementById("view-calendar");
         if (calView && !calView.hidden) { try { Calendar.render(); } catch (e) {} }
+      }
+      /* 答題歷史：以前只推唔拉，換機後睇唔到舊紀錄 */
+      if (Array.isArray(historyRows) && typeof SM2 !== "undefined" && SM2.mergeHistory) {
+        const restored = SM2.mergeHistory(historyRows);
+        if (restored) console.info("[Sync] history restored:", restored);
       }
 
       /* ---- 2. 還原 entries：寶可夢 ----
@@ -268,16 +277,30 @@ window.Sync = (() => {
     console.log("[Sync] pushState start — account:", ref.account_id,
       "cards:", (typeof SM2!=="undefined"&&SM2.listAll)?SM2.listAll().length:0);
 
-    /* ---- 1. Patch user_account（淨 trainer_name —— diamonds/totals 係 RPC-only）---- */
+    /* ---- 1. Patch user_account（淨 trainer_name + name_customized —— diamonds/totals 係 RPC-only）---- */
     try {
       const acctPayload = {
         trainer_name: st.playerName || "The PokéEngmon Trainer",
+        name_customized: !!st.nameCustomized,
         updated_at: Date.now()
       };
       await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, acctPayload);
-      console.log("[Sync] ✅ user_account patch ok (trainer_name only)");
+      console.log("[Sync] ✅ user_account patch ok (trainer_name + name_customized)");
     } catch (e) {
-      console.warn("[Sync] ❌ patch account failed:", e.message);
+      /* 未執行 entry-nature / name migration 時後端未有 name_customized 欄
+         → 退化為只推 trainer_name，避免連改名都同步唔到 */
+      const msg = String(e.message || "");
+      if (msg.indexOf("name_customized") >= 0 || msg.indexOf("schema cache") >= 0) {
+        try {
+          await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, {
+            trainer_name: st.playerName || "The PokéEngmon Trainer",
+            updated_at: Date.now()
+          });
+          console.log("[Sync] ✅ user_account patch ok (trainer_name only, legacy schema)");
+        } catch (e2) { console.warn("[Sync] ❌ patch account failed:", e2.message); }
+      } else {
+        console.warn("[Sync] ❌ patch account failed:", e.message);
+      }
     }
 
     /* ---- 2. Push 所有 SM-2 cards ---- */
