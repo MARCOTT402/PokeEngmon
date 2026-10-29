@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.2.0...v1.3.0) (2026-10-29)
+
+
+### Features
+
+* add boot loading overlay so first paint is never a white screen ([f366c01](https://github.com/MARCOTT402/PokeEngmon/commit/f366c01238908be3615b45744b5952bdcf5d4413))
+
 # [1.2.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.1.0...v1.2.0) (2026-10-28)
 
 
