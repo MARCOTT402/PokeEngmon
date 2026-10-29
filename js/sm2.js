@@ -1,161 +1,138 @@
 /* ============================================================
-   PokeEngmon — SM-2 Spaced Repetition Core
-   （P.2 校準版，藍圖演算法完整實作）
+   PokeEngmon — SM-2 Spaced Repetition Core (v3)
 
    演算法層（純函數，零副作用）：
-     levenshtein / isPrefix / expectedTime / computeQ
-     computeEF / nextInterval / nextRepetition
+     efForClean / efForHint / efForCheckFail
+     intervalForClean
+     applyClean / applyHint / applyCheckFail   （卡片更新）
 
    Storage 層（LocalStorage adapter，之後換 Dexie/Supabase
               只需改這一節，上層 code 唔使改）：
      getOrCreateCard / upsertCard / listDue / listNew / listAll
-     appendHistory
+     appendHistory / mergeHistory
 
    Session Pool Builder：
      buildSession(allQuestions, topicKeys, size) → 最多 10 題
        只抽到期卡：過期最耐未見優先 → 全新題隨機補尾 → Fisher-Yates 洗牌
        未到期卡一律唔抽（唔夠就出細 set，逼用戶揀其他課題）
+
+   v3 校準（2026-10）：
+     - 取消速度分流：無提示答對 q=5、✓ 錯誤 q=3（只扣 EF）、用提示 q=0
+     - EF0 = 2.5，下限 1.8，上限 3.0
+     - 無提示答對：EF +0.15、interval = round(上次 interval × 新 EF × 0.6)，1–60 天
+     - 用提示：EF 第 1 次 −0.2、同一次第 2 次再 −0.3；interval = 1 天、rep = 0
+     - ✓ 錯誤：只扣 EF −0.14，不動 rep / interval / next_review
+     - 新增 last_review_at（chip 顯示實際經過時間）
    ============================================================ */
 
 window.SM2 = (() => {
 
   /* ============ 參數常量 ============ */
-  const LADDER          = [1, 3, 7, 15, 30];   // 答對後遞增（天）
-  const MAX_REP         = 5;                    // repetition = 5 畢業
-  const INITIAL_EF      = 2.50;
-  const MIN_EF          = 1.30;
-  const SET_SIZE        = 10;
+  const INITIAL_EF        = 2.50;
+  const MIN_EF            = 1.80;
+  const MAX_EF            = 3.00;
+  const MAX_INTERVAL_DAYS = 60;
+  const MAX_REP           = 5;          // repetition = 5 畢業
+  const SET_SIZE          = 10;
+  const DAY               = 24 * 60 * 60 * 1000;
 
-  /* ============ 演算法 1：Levenshtein Distance（DP 矩陣）============ */
-  function levenshtein(a, b) {
-    if (a === b) return 0;
-    if (!a.length) return b.length;
-    if (!b.length) return a.length;
-    const n = a.length, m = b.length;
-    const dp = new Array(n + 1);
-    for (let i = 0; i <= n; i++) {
-      dp[i] = new Array(m + 1);
-      dp[i][0] = i;
-    }
-    for (let j = 0; j <= m; j++) dp[0][j] = j;
-    for (let i = 1; i <= n; i++) {
-      for (let j = 1; j <= m; j++) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,        // delete
-          dp[i][j - 1] + 1,        // insert
-          dp[i - 1][j - 1] + cost  // substitute
-        );
-      }
-    }
-    return dp[n][m];
+  const CLEAN_Q       = 5;   // 無提示答對
+  const CHECK_FAIL_Q  = 3;   // ✓ 錯誤（只扣 EF，唔寫 history）
+  const HINT_Q        = 0;   // 用提示答對
+
+  /* ============ 小工具 ============ */
+  function _round2(n) { return Math.round(n * 100) / 100; }
+  function _clampEF(ef) {
+    const v = Number(ef);
+    const base = isFinite(v) && v > 0 ? v : INITIAL_EF;
+    return _round2(Math.min(MAX_EF, Math.max(MIN_EF, base)));
+  }
+  function _clampInterval(days) {
+    const v = Math.round(Number(days) || 0);
+    return Math.min(MAX_INTERVAL_DAYS, Math.max(1, v));
   }
 
-  /* ============ 演算法 2：前綴檢查（過早提交保護用）============ */
-  function isPrefix(input, target) {
-    if (input.length === 0) return true;
-    return target.toLowerCase().substring(0, input.length) === input.toLowerCase();
+  /* ============ 演算法 1：EF ============ */
+  function efForClean(ef)      { return _clampEF((Number(ef) || INITIAL_EF) + 0.15); }
+  function efForHint(ef, hintCount) {
+    let v = Number(ef) || INITIAL_EF;
+    if (hintCount >= 1) v -= 0.20;
+    if (hintCount >= 2) v -= 0.30;
+    return _clampEF(v);
+  }
+  function efForCheckFail(ef)  { return _clampEF((Number(ef) || INITIAL_EF) - 0.14); }
+
+  /* ============ 演算法 2：間隔（天）============ */
+  function intervalForClean(prevIntervalDays, ef) {
+    const prev = Math.max(0, Number(prevIntervalDays) || 0);
+    const efv = Number(ef) || INITIAL_EF;
+    /* 新卡 prev=0 → round(0)=0 → 最少 1 天 */
+    return _clampInterval(Math.round(prev * efv * 0.6));
   }
 
-  /* ============ 演算法 3：動態時間期望（ms）============ */
-  function expectedTime(target) {
-    return 3500 + target.length * 1200;   // 3.5s base + 1.2s/char
-  }
-
-  /* ============ 演算法 4：Q 值完整分支判定 ============
-     回傳 { q, reason, dist, lenRatio, premature }
-     （efDelta 由 computeEF 再計，避免死欄位） */
-  function computeQ(input, target, response_ms) {
-    const normInput = String(input || "").trim().toLowerCase();
-    const normTarget = String(target || "").trim().toLowerCase();
-    const dist = levenshtein(normInput, normTarget);
-    const lenRatio = normTarget.length > 0 ? normInput.length / normTarget.length : 0;
-
-    /* 過早提交保護（優先檢查）：
-       Dist>=1 + 長度 < 50% + 輸入係正確前綴 */
-    if (dist >= 1 && lenRatio < 0.5 && isPrefix(normInput, normTarget)) {
-      return { q: 1, reason: "premature_submit", dist, lenRatio, premature: true };
-    }
-
-    if (dist === 0) {
-      const exp = expectedTime(normTarget);
-      if (response_ms <= 0.5 * exp)
-        return { q: 5, reason: "perfect_fast", dist, lenRatio, premature: false };
-      if (response_ms <= 1.5 * exp)
-        return { q: 4, reason: "good_normal",  dist, lenRatio, premature: false };
-      return { q: 3, reason: "hard_slow",     dist, lenRatio, premature: false };
-    }
-
-    if (dist === 1)
-      return { q: 2, reason: "soft_fail_typo", dist, lenRatio, premature: false };
-
-    /* dist >= 2：一律 Hard Fail，唔加保護 */
-    return { q: 1, reason: "hard_fail", dist, lenRatio, premature: false };
-  }
-
-  /* ============ 多個可接受答案：逐個計分，取最高 Q ============
-     同分時取較短編輯距離；回傳值附加 target 方便記錄實際命中嘅答案 */
-  function computeBestQ(input, targets, response_ms) {
-    const list = (Array.isArray(targets) ? targets : [targets]).filter(t => t != null);
-    const pool = list.length ? list : [""];
-    let best = null;
-    pool.forEach(t => {
-      const j = computeQ(input || "", t || "", response_ms);
-      if (!best || j.q > best.q || (j.q === best.q && j.dist < best.dist)) {
-        best = { ...j, target: t };
-      }
-    });
-    return best;
-  }
-
-  /* ============ 演算法 5：Ease Factor ============ */
-  function computeEF(oldEF, reason) {
-    /* 保護例外：premature_submit / soft_fail_typo / good_normal 唔扣 EF */
-    if (reason === "premature_submit" || reason === "soft_fail_typo" || reason === "good_normal")
-      return oldEF;
-    if (reason === "perfect_fast")  return Math.min(3.0, oldEF + 0.10);
-    if (reason === "hard_slow")     return Math.max(MIN_EF, oldEF - 0.14);
-    if (reason === "hard_fail")     return Math.max(MIN_EF, oldEF - 0.20);
-    return oldEF;
-  }
-
-  /* ============ 演算法 6：下次間隔（天）============ */
-  function nextInterval(repetition, q) {
-    if (q >= 3) {
-      if (repetition <= 0) return 1;
-      if (repetition <= MAX_REP) return LADDER[repetition - 1];
-      return 30;
-    }
-    /* 答錯後統一 1 天後 */
-    return 1;
-  }
-
-  /* ============ 演算法 7：repetition 狀態轉換 ============ */
-  function nextRepetition(currentRep, q) {
-    if (q >= 3) return Math.min(MAX_REP, currentRep + 1);
-    /* 答錯 */
-    if (currentRep === 0) return 0;        /* 未學過保持 0 */
-    if (currentRep >= MAX_REP) return 4;   /* 畢業後答錯降級到 4 */
-    return 1;                              /* 其餘重置到 1 */
-  }
-
-  /* ============ SM-2 完整卡片更新（包裝函數）============ */
-  function updateCard(card, q, response_ms) {
-    const newRep = nextRepetition(card.repetition, q);
-    const newEF  = computeEF(card.ease_factor, card._lastReason || (q >= 3 ? "good_normal" : "hard_fail"));
-    const newInt = nextInterval(newRep, q);
-    const now = Date.now();
+  /* ============ 演算法 3：卡片更新 ============ */
+  function applyClean(card, now) {
+    const t = now || Date.now();
+    const newEF = efForClean(card.ease_factor);
+    const newInterval = intervalForClean(card.interval_days, newEF);
+    const newRep = Math.min(MAX_REP, (Number(card.repetition) || 0) + 1);
     return {
       ...card,
       repetition: newRep,
       ease_factor: newEF,
-      interval_days: newInt,
-      next_review_at: now + newInt * 24 * 60 * 60 * 1000,
-      lapse_count: q <= 2 ? (card.lapse_count || 0) + 1 : (card.lapse_count || 0),
+      interval_days: newInterval,
+      next_review_at: t + newInterval * DAY,
+      last_review_at: t,
       is_mastered: newRep >= MAX_REP,
-      updated_at: now,
-      _lastReason: card._lastReason || null    /* 清除 temporary */
+      updated_at: t
     };
+  }
+
+  function applyHint(card, hintCount, now) {
+    const t = now || Date.now();
+    return {
+      ...card,
+      repetition: 0,
+      ease_factor: efForHint(card.ease_factor, Math.max(1, hintCount || 1)),
+      interval_days: 1,
+      next_review_at: t + DAY,
+      last_review_at: t,
+      is_mastered: false,
+      updated_at: t
+    };
+  }
+
+  /* ✓ 錯誤確認：只扣 EF，其他一律不動（亦唔會寫 history）*/
+  function applyCheckFail(card, now) {
+    return {
+      ...card,
+      ease_factor: efForCheckFail(card.ease_factor),
+      updated_at: now || Date.now()
+    };
+  }
+
+  /* ============ 顯示用：實際經過時間 ============ */
+  /* 舊卡冇 last_review_at → 用 next_review_at − interval_days 推算 */
+  function lastReviewedMs(card) {
+    if (!card) return 0;
+    const direct = Number(card.last_review_at || 0);
+    if (direct > 0) return direct;
+    const next = Number(card.next_review_at || 0);
+    const iv = Number(card.interval_days || 0);
+    if (next > 0 && iv > 0) return next - iv * DAY;
+    return 0;
+  }
+
+  /* < 1 小時 → 分鐘；<= 2 天 → 小時；> 2 天 → 天 */
+  function formatSpan(ms) {
+    const value = Math.max(0, Number(ms) || 0);
+    if (value < 60 * 60 * 1000) {
+      return { value: Math.max(1, Math.round(value / (60 * 1000))), unit: "minute" };
+    }
+    if (value <= 2 * DAY) {
+      return { value: Math.max(1, Math.round(value / (60 * 60 * 1000))), unit: "hour" };
+    }
+    return { value: Math.max(1, Math.round(value / DAY)), unit: "day" };
   }
 
   /* ============ Storage 層（LocalStorage adapter）============ */
@@ -197,6 +174,7 @@ window.SM2 = (() => {
       repetition: 0,
       lapse_count: 0,
       is_mastered: false,
+      last_review_at: 0,
       updated_at: Date.now()
     };
     cards[key] = card;
@@ -208,7 +186,6 @@ window.SM2 = (() => {
     const cards = _loadCards();
     const key = card._key || card.card_id;
     const { _key, ...clean } = card;
-    delete clean._lastReason;
     cards[key] = clean;
     _saveCards(cards);
     /* 背景同步去 Supabase（有 config 先啟動）*/
@@ -272,6 +249,61 @@ window.SM2 = (() => {
     return added;
   }
 
+  /* ============ 一次性遷移（v3 校準）============
+     - 先備份玩家 state / cards / history
+     - EF 夾到 1.8–3.0
+     - interval 用新乘數重算（以推算嘅 last_review_at 為基準）
+     - 補 last_review_at                                                  */
+  const MIGRATE_MARK = "pokeengmon_sm2_v3_migrated";
+  const BACKUP_KEY   = "pokeengmon_sm2_v3_backup";
+
+  function migrateV3() {
+    try {
+      if (localStorage.getItem(MIGRATE_MARK)) return false;
+
+      const cards = _loadCards();
+      const ids = Object.keys(cards);
+
+      /* 無論有冇卡都做備份（玩家 state 係最重要嗰份） */
+      try {
+        localStorage.setItem(BACKUP_KEY, JSON.stringify({
+          ts: Date.now(),
+          state: localStorage.getItem("pokeengmon_state_v1"),
+          cards,
+          history: _loadHistory()
+        }));
+      } catch (e) {}
+
+      let changed = false;
+      const migratedAt = Date.now();
+      ids.forEach(k => {
+        const c = cards[k];
+        const ef = _clampEF(c.ease_factor);
+        const last = lastReviewedMs(c);
+        let interval = Math.max(0, Number(c.interval_days) || 0);
+        if (interval > 0) interval = intervalForClean(interval, ef);
+        const rec = {
+          ...c,
+          ease_factor: ef,
+          interval_days: interval,
+          last_review_at: last > 0 ? last : 0,
+          next_review_at: last > 0 ? last + interval * DAY : (Number(c.next_review_at) || 0),
+          is_mastered: (Number(c.repetition) || 0) >= MAX_REP,
+          /* 用遷移時間做 updated_at，令重算結果喺 pull 時贏過舊雲端卡，再推返上雲 */
+          updated_at: migratedAt
+        };
+        cards[k] = rec;
+        changed = true;
+      });
+
+      _saveCards(cards);
+      localStorage.setItem(MIGRATE_MARK, String(Date.now()));
+      return changed;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /* ============ Session Pool Builder ============ */
   /* allQuestions: getAllQuestions() 結果
      topicKeys: Set of topic keys（null 表示全選）
@@ -323,13 +355,17 @@ window.SM2 = (() => {
   /* ============ Public API ============ */
   return {
     /* 演算法（純函數，方便測試）*/
-    levenshtein, isPrefix, expectedTime,
-    computeQ, computeBestQ, computeEF, nextInterval, nextRepetition, updateCard,
+    efForClean, efForHint, efForCheckFail, intervalForClean,
+    applyClean, applyHint, applyCheckFail,
+    lastReviewedMs, formatSpan,
     /* Storage adapter */
     getOrCreateCard, upsertCard, listDue, listNew, listAll, listHistory, appendHistory, mergeHistory,
+    /* 一次性遷移 */
+    migrateV3,
     /* Session */
     buildSession,
     /* 常量 */
-    LADDER, INITIAL_EF, MIN_EF, MAX_REP, SET_SIZE
+    INITIAL_EF, MIN_EF, MAX_EF, MAX_INTERVAL_DAYS, MAX_REP, SET_SIZE,
+    CLEAN_Q, CHECK_FAIL_Q, HINT_Q
   };
 })();
