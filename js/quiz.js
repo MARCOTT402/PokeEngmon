@@ -87,6 +87,8 @@ const Quiz = {
   _renderQuestion() {
     const q = this.set[this.idx];
     this.locked = false;
+    /* 每次轉題都換 token，令上一題排緊隊嘅自動播音失效 */
+    const wordToken = (this._wordToken = (this._wordToken || 0) + 1);
 
     document.getElementById("quiz-progress").textContent = `${this.idx + 1} / ${this.set.length}`;
     document.getElementById("quiz-bar").style.width = `${(this.idx / this.set.length) * 100}%`;
@@ -112,6 +114,7 @@ const Quiz = {
       img.src = q.image;
       document.getElementById("quiz-word-status").textContent = "🔊 Tap the picture to hear the word";
       document.getElementById("quiz-word-status").className = "word-status";
+      this._autoPlayWord(wordToken);
     } else {
       document.getElementById("quiz-card").style.display = "";
       wordCard.classList.remove("show");
@@ -201,6 +204,19 @@ const Quiz = {
     const target = q.type === "word" ? q.word : q.answer;
     if (mine === norm(target)) return true;
     return (q.accept || []).some(a => norm(a) === mine);
+  },
+
+  /* 圖片單字題：出題時自動播一次（唔阻 DOM 渲染，延 350ms 等圖片接上）
+     音頻未解鎖（ctx 未 running）就唔強播，留住「Tap the picture」提示 */
+  _autoPlayWord(token) {
+    const audio = window.CaptureScene && CaptureScene.audio;
+    if (!audio) return;
+    if (!audio.ctx || audio.ctx.state !== "running") return;
+    setTimeout(() => {
+      if (token !== this._wordToken) return;   // 已經轉咗題
+      if (this.locked) return;                 // 已經答完（等緊跳下一題）
+      this.playWordAudio();
+    }, 350);
   },
 
   /* 圖片單字題：點圖播聲（Web Audio，無限重播，重播會打斷上一段） */
