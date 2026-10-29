@@ -181,6 +181,14 @@ window.Sync = (() => {
         }
         /* 明確記住「用家改過名」，避免之後新裝置再判定錯誤 */
         if (acct.name_customized === true) st.nameCustomized = true;
+        /* 背包：雲端 null = 未上過雲 → 保留本機（首次 backfill 靠呢條規則） */
+        if (acct.items_food != null || acct.items_premium != null || acct.items_revive != null) {
+          const bag = (st.items && typeof st.items === "object") ? st.items : { food: 0, premium: 0, revive: 0 };
+          if (acct.items_food != null) bag.food = Math.max(0, Number(acct.items_food) || 0);
+          if (acct.items_premium != null) bag.premium = Math.max(0, Number(acct.items_premium) || 0);
+          if (acct.items_revive != null) bag.revive = Math.max(0, Number(acct.items_revive) || 0);
+          st.items = bag;
+        }
         saveState();
       }
 
@@ -379,6 +387,64 @@ window.Sync = (() => {
     } catch (e) { console.warn("[Sync] pushActive failed:", e.message); }
   }
 
+  /* ---------- 伺服器時間校正（寵物結算用 UTC+8 基準）----------
+     讀 PostgREST 回應嘅 Date header；失敗就保留本機 offset，唔會拋錯。 */
+  async function syncClock() {
+    const c = cfg();
+    if (!c || !c.restUrl || !window.Pet) return null;
+    try {
+      const res = await fetch(`${c.restUrl}/user_account?select=account_id&limit=1`, {
+        headers: {
+          "apikey": c.anonKey,
+          "Authorization": "Bearer " + (window.SupabaseAuth && SupabaseAuth.currentToken
+            ? SupabaseAuth.currentToken() : c.anonKey)
+        }
+      });
+      const hdr = res.headers.get("date");
+      if (!hdr) return null;
+      const serverTs = Date.parse(hdr);
+      if (!isFinite(serverTs)) return null;
+      return Pet.setClockOffset(serverTs);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ---------- 寵物狀態 / 背包（B 方案：前端結算，雲端只做備份）---------- */
+  function petPayload(p) {
+    if (!p) return null;
+    return {
+      pet_health: Math.max(0, Math.min(100, Number(p.health) || 0)),
+      pet_streak: Number(p.streak) || 0,
+      pet_last_fed_day: p.lastFedDay || null,
+      pet_settled_day: p.settledDay || null,
+      pet_decay_day: p.decayDay || null,
+      pet_updated_at: p.updatedAt || new Date().toISOString()
+    };
+  }
+
+  async function pushPet(entryId, pet) {
+    const ref = _accountRef();
+    if (!ref.isAuth || !entryId || !pet) return false;
+    try {
+      await _api("PATCH", `/user_entries?id=eq.${entryId}`, petPayload(pet));
+      return true;
+    } catch (e) { console.warn("[Sync] pushPet failed:", e.message); return false; }
+  }
+
+  async function pushItems(items) {
+    const ref = _accountRef();
+    if (!ref.isAuth || !items) return false;
+    try {
+      await _api("PATCH", `/user_account?account_id=eq.${ref.account_id}`, {
+        items_food: Math.max(0, Number(items.food) || 0),
+        items_premium: Math.max(0, Number(items.premium) || 0),
+        items_revive: Math.max(0, Number(items.revive) || 0)
+      });
+      return true;
+    } catch (e) { console.warn("[Sync] pushItems failed:", e.message); return false; }
+  }
+
   return {
     queueUpsert,
     queueHistory,
@@ -387,6 +453,9 @@ window.Sync = (() => {
     pushState,
     patchEntry,
     pushActive,
+    syncClock,
+    pushPet,
+    pushItems,
     flush: () => _flush(),
     isEnabled: () => !!(cfg() && cfg().anonKey && (window.SupabaseAuth ? SupabaseAuth.isEnabled() : true))
   };

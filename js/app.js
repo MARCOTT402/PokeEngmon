@@ -67,12 +67,14 @@ const App = {
           wrap.classList.toggle("mid", petSt.health > 25 && petSt.health <= 50);
           wrap.classList.toggle("low", petSt.health <= 25);
           sprite.classList.toggle("fainted", petSt.faint);
-          if (petSt.faint) {
+          if (petSt.frozen) {
+            hpNote.textContent = "Time check needed — reconnect to sync";
+          } else if (petSt.faint) {
             hpNote.textContent = "Fainted — open Partner Care to use a Revival";
-          } else if (petSt.fed) {
-            hpNote.textContent = `Health ${petSt.health}/100 ・ Fed today ・ 🔥 ${petSt.streak}`;
+          } else if (petSt.health >= 100) {
+            hpNote.textContent = `Health ${petSt.health}/100 ・ Decay −50 at 15:00 HKT${petSt.streak ? ` ・ 🔥 ${petSt.streak}` : ""}`;
           } else if (!petSt.windowOpen) {
-            hpNote.textContent = `Health ${petSt.health}/100 ・ Feeding 15:00–20:59`;
+            hpNote.textContent = `Health ${petSt.health}/100 ・ Feeding 15:00–20:59 (HKT)`;
           } else {
             hpNote.textContent = `Health ${petSt.health}/100 ・ Hungry — tap to feed`;
           }
@@ -190,6 +192,7 @@ const App = {
             <div class="pc-hpbar" id="pc-hpbar"><i id="pc-hpfill"></i></div>
             <div class="pc-hptext" id="pc-hptext">Health 100 / 100</div>
           </div>
+          <div class="pc-decay">Daily decay −50 · 15:00 HKT</div>
           <div class="pc-floatwrap" id="pc-float"></div>
         </div>
         <div class="pc-state" id="pc-state"></div>
@@ -211,8 +214,8 @@ const App = {
         <div class="pc-tip">Drag an item onto your partner — or tap an item, then tap the stage.</div>
 
         <div class="pc-rosterhead"><span>Your Pokémon</span><span>Tap to bring it to the stage</span></div>
-        <div class="pc-roster" id="pc-roster"></div>
-      </div>`, true);
+        <div class="partner-list" id="pc-roster"></div>
+      </div>`);
 
     const modal = document.getElementById("modal-root");
     modal.querySelector(".pc-close").onclick = () => this.closeModal();
@@ -260,6 +263,23 @@ const App = {
     });
 
     this._syncPetCare();
+
+    /* 開啟時即時結算：跨過 15:00 就即刻反映，並顯示扣血浮字 */
+    const before = Pet.healthOf(getActiveEntry());
+    Pet.runDailyCheck();
+    this._syncPetCare();
+    if (Pet.healthOf(getActiveEntry()) < before) {
+      this._pcFloat("−50", "decay");
+      this._syncPetCloud();
+    }
+    this.renderHome();
+  },
+
+  _pcFloat(text, cls) {
+    const box = document.getElementById("pc-float");
+    if (!box) return;
+    box.innerHTML = `<div class="pc-float ${cls || ""}">${escapeHTML(text)}</div>`;
+    setTimeout(() => { box.innerHTML = ""; }, 1200);
   },
 
   _pcUse(kind) {
@@ -267,16 +287,22 @@ const App = {
     const res = Pet.useItem(kind, entry);
     this._pcSel = null;
     if (res.ok) {
-      const box = document.getElementById("pc-float");
-      if (box) {
-        box.innerHTML = `<div class="pc-float">${res.msg}</div>`;
-        setTimeout(() => { box.innerHTML = ""; }, 1100);
-      }
+      this._pcFloat(res.msg, "good");
       this._syncPetCare();
       this.renderHome();
+      this._syncPetCloud();
     } else {
       this._pcToast(res.msg);
     }
+  },
+
+  /* 寵物狀態 + 背包 → 雲端備份（只對已登入用戶；失敗靜默，下次操作再試） */
+  _syncPetCloud() {
+    if (!window.Sync || !Sync.isEnabled || !Sync.isEnabled()) return;
+    if (!Sync.pushPet || !Sync.pushItems) return;
+    const entry = getActiveEntry();
+    if (entry && entry.pet) Sync.pushPet(entry.uid, entry.pet);
+    Sync.pushItems(Pet.items());
   },
 
   _pcToast(msg) {
@@ -331,17 +357,15 @@ const App = {
         state.textContent = `${cur[1]} has fainted — answers still count but earn 0 EXP. Use a Revival to wake it.`;
       } else if (p.health >= 100) {
         state.classList.add("full");
-        state.textContent = p.lastFedDay === dayQ
-          ? `Health is full — Streak ${p.streak}. Come back tomorrow.`
-          : "Health is full — no need to feed.";
+        state.textContent = "Health is full — daily decay (−50) happens at 15:00 HKT.";
       } else if (!Pet.inWindow()) {
         state.classList.add("closed");
-        state.textContent = new Date().getHours() < 15
-          ? "Zzz… feeding starts at 15:00"
-          : "Kitchen closed for today — feeding resumes 15:00 tomorrow";
+        state.textContent = Pet.minuteOfDay() < Pet.LIMITS.FEED_START
+          ? "Zzz… feeding opens at 15:00 HKT (decay −50 at the same time)"
+          : "Feeding closed for today — resumes 15:00 HKT tomorrow";
       } else {
         state.classList.add("hungry");
-        state.textContent = `${cur[1]} is hungry! Keep feeding until health is full (15:00–20:59).`;
+        state.textContent = `${cur[1]} is hungry — keep feeding until health is full. Daily decay −50 at 15:00 HKT.`;
       }
     }
 
@@ -357,31 +381,41 @@ const App = {
       tile.draggable = usable;
     });
 
-    /* 全部寶可夢 */
+    /* 全部寶可夢：沿用原本 Switch Partner 的 dex-cell 外觀 */
     const roster = document.getElementById("pc-roster");
     if (roster) {
       roster.innerHTML = st.entries.map(e => {
         ensureEntryPokemonData(e);
+        const chain = EVOLUTION_CHAINS.find(c => c.key === e.chainKey);
         const c = entryCurrentSpecies(e);
+        const rz = RARITY[chain?.baseRarity] || RARITY.normal;
         const faint = Pet.isFaint(e);
         const active = e.uid === st.activeUid;
-        return `<button class="pc-pick ${active ? "active" : ""} ${faint ? "faint" : ""}" data-uid="${e.uid}">
-          <img src="${spriteURL(c[0])}" alt="${c[1]}"
-               onerror="this.onerror=null;this.src='${animatedURL(c[0])}'">
-          ${active ? '<span class="pc-tag">PARTNER</span>' : ""}
+        return `<button class="dex-cell owned ${active ? "current" : ""} ${faint ? "pc-faint" : ""}" data-uid="${e.uid}">
+          <img src="${spriteURL(c[0])}" alt="${c[1]}">
+          <span class="dex-name">${c[1]}</span>
+          <span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
+          <span class="p-stage">Lv.${e.level || 1} ・ ${"★".repeat(e.stars || 1)}${active ? " ・ Active" : ""}</span>
         </button>`;
       }).join("");
-      roster.querySelectorAll(".pc-pick").forEach(cell => {
+      roster.querySelectorAll(".dex-cell").forEach(cell => {
         cell.onclick = () => {
           const st2 = loadState();
           const uid = cell.dataset.uid;
           if (!uid || uid === st2.activeUid) return;
+          const prevUid = st2.activeUid;
           st2.activeUid = uid;
           saveState();
           if (window.Sync && Sync.isEnabled()) Sync.pushActive(uid);
+          /* 換走嘅拍檔：佢嘅 pet 狀態要保持上雲（否則首次 backfill 會漏） */
+          const prevEntry = st2.entries.find(x => x.uid === prevUid);
+          if (prevEntry && prevEntry.pet && window.Sync && Sync.pushPet) {
+            Sync.pushPet(prevUid, prevEntry.pet);
+          }
           this._pcSel = null;
           this._syncPetCare();
           this.renderHome();
+          this._syncPetCloud();
         };
       });
     }
@@ -1054,6 +1088,10 @@ const App = {
     /* 電子寵物掉落：10/10 → 復活藥 1 + 高級食物 1（另有 10% 額外復活藥）；
        1–9 題 → 普通食物 1（另有 10% 復活藥） */
     rewards.drops = window.Pet ? Pet.rollDrops(data.score === data.total) : [];
+    /* 掉落即時備份上雲（換機／清 cache 都唔會失去道具） */
+    if (window.Pet && window.Sync && Sync.isEnabled && Sync.isEnabled() && Sync.pushItems) {
+      Sync.pushItems(Pet.items());
+    }
     /* Diamonds：防金手指走 RPC（登入時由 server 計算 + 權威 balance）
        RPC 失敗（null）→ fallback 本地計算，離線都唔會變 0 粒 */
     let serverRes = null;
@@ -1862,6 +1900,38 @@ const App = {
     migrateEntries();
     /* 電子寵物：補算漏餵日子（只扣當前拍檔），要在首屏 render 之前完成 */
     if (window.Pet) Pet.runDailyCheck();
+    /* 伺服器時間校正（失敗就沿用本機 offset，唔阻塞首屏） */
+    if (window.Pet && window.Sync && Sync.syncClock) {
+      Sync.syncClock().then((offset) => {
+        if (offset === null || offset === undefined) return;
+        Pet.runDailyCheck();
+        this.renderHome();
+      }).catch(() => {});
+    }
+    /* 15:00 HKT 即時更新：單一 timer（零輪詢）＋切返頁面補位 */
+    if (window.Pet && !this._petTimerBound) {
+      this._petTimerBound = true;
+      const tickPet = () => {
+        const before = Pet.healthOf(getActiveEntry());
+        Pet.runDailyCheck();
+        this.renderHome();
+        const entry = getActiveEntry();
+        if (entry && Pet.healthOf(entry) < before && document.getElementById("pc-stage")) {
+          this._pcFloat("−50", "decay");
+          this._syncPetCare();
+        }
+        if (entry && Pet.healthOf(entry) < before) this._syncPetCloud();
+        schedulePetDecay();
+      };
+      const schedulePetDecay = () => {
+        clearTimeout(this._petTimer);
+        this._petTimer = setTimeout(tickPet, Math.max(1000, Pet.msUntilNextDecay() + 1000));
+      };
+      schedulePetDecay();
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") tickPet();
+      });
+    }
     /* 背景補下未完嘅世代資料包（斷點續傳） */
     if (window.GenPack) GenPack.resumePending(loadState().unlockedGen || 1);
 

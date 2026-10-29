@@ -318,7 +318,7 @@ function deriveEntryFields(entry) {
 
 /* server 行 → 本地 entry 形狀（v99：gacha_pull / obtain_capture 回傳嘅 row 用） */
 function localEntryFromServer(e) {
-  return deriveEntryFields({
+  const out = deriveEntryFields({
     uid: e.id,
     chainKey: e.chain_key,
     exp: Number(e.exp ?? 0),
@@ -331,6 +331,29 @@ function localEntryFromServer(e) {
     nature: e.nature || null,
     obtainedAt: e.obtained_at
   });
+  /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0 */
+  out.pet = (e.pet_health == null) ? null : {
+    health: Number(e.pet_health) || 0,
+    streak: Number(e.pet_streak) || 0,
+    lastFedDay: e.pet_last_fed_day || "",
+    settledDay: e.pet_settled_day || "",
+    decayDay: e.pet_decay_day || "",
+    updatedAt: e.pet_updated_at || null
+  };
+  return out;
+}
+
+/* 合併 pet：較新 updatedAt 為準；decayDay 只可前進（防倒撥重扣） */
+function mergePet(localPet, serverPet) {
+  if (!serverPet) return localPet || null;
+  if (!localPet) return serverPet;
+  const lt = localPet.updatedAt ? Date.parse(localPet.updatedAt) : 0;
+  const st = serverPet.updatedAt ? Date.parse(serverPet.updatedAt) : 0;
+  const base = (lt && lt > st) ? localPet : serverPet;
+  const day = (localPet.decayDay && serverPet.decayDay && localPet.decayDay > serverPet.decayDay)
+    ? localPet.decayDay
+    : serverPet.decayDay;
+  return Object.assign({}, base, { decayDay: day || base.decayDay });
 }
 
 /* 採用 server entry：按 chainKey 搵本地 entry，存在就以 server 值覆蓋（uid 都換 —
@@ -343,8 +366,8 @@ function adoptServerEntry(serverRow) {
     const old = st.entries[idx];
     /* nature 已上雲（v1.4.1）：以 server 為準；server 未有（舊資料）才沿用本地性格 */
     if (!mapped.nature) mapped.nature = old.nature;
-    /* pet 狀態目前唔上雲：以 server 為準覆蓋時要保留本地健康值／streak，否則每次 pull 都變滿血 */
-    if (old.pet) mapped.pet = old.pet;
+    /* pet 已上雲：較新 updatedAt 為準；雲端未上過（null）就保留本機，避免清空進度 */
+    mapped.pet = mergePet(old.pet, mapped.pet);
     if (st.activeUid === old.uid) st.activeUid = mapped.uid;
     st.entries[idx] = mapped;
   } else {
