@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.4.0...v1.5.0) (2026-10-29)
+
+
+### Features
+
+* sync Pokemon nature to Supabase so stats stay identical across devices ([5437631](https://github.com/MARCOTT402/PokeEngmon/commit/5437631268a2109e8358641457791a107b87961a))
+
 # [1.4.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.3.1...v1.4.0) (2026-10-29)
 
 
