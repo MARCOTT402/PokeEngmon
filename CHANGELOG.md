@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.6.0...v1.7.0) (2026-10-29)
+
+
+### Features
+
+* auto-play the word audio once when a picture word question appears ([45b0e2c](https://github.com/MARCOTT402/PokeEngmon/commit/45b0e2ccec06e69974c8bbb34f4f08c72154d04d))
+
 # [1.6.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.5.0...v1.6.0) (2026-10-29)
 
 
