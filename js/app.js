@@ -966,7 +966,7 @@ const App = {
     document.getElementById("guide-close").onclick = () => this.closeModal();
   },
 
-  /* ---------- 完成一組 → （有錯題先入 Power Up Zone）→ 捕捉場景 → 結算 ---------- */
+  /* ---------- 完成一組 → 捕捉場景 → 結算 ---------- */
   async onQuizFinished(data) {
     this.lastCapture = null;
 
@@ -975,16 +975,6 @@ const App = {
     await new Promise(r => setTimeout(r, 320));
     quizView.classList.remove("is-fading");
 
-    /* 回合尾錯題清算：有錯題 → 先入 ⚡ Power Up Zone 重做至全對，
-       全部改啱後先清零錯題 SRS stage，再跳入 WARNING 捕捉頁 */
-    const wrongs = data.results
-      .filter(r => !r.correct)
-      .map(r => ({ q: findQuestion(r.qid), chosen: r.chosen }))
-      .filter(x => x.q);
-    if (wrongs.length > 0) {
-      PowerUp.start(wrongs, () => this._captureThenSettle(data));
-      return;
-    }
     await this._captureThenSettle(data);
   },
 
@@ -1052,7 +1042,7 @@ const App = {
     const st = loadState();
 
     /* 獎勵計算：經驗值按 PokéAPI 該等級所需經驗比例發放
-       v130 分級制：分數 × 有無用 hint 決定 span 百分比；
+       v3 單一維度：只計「無提示清題數」→ 換算到 /10 刻度 → span 百分比；
        Lv.1–10 新手期保底 50% span（分級高過 50% 照攞高嗰個） */
     const entry = getActiveEntry();
     const perfect = data.score === data.total;
@@ -1062,27 +1052,19 @@ const App = {
       const dexId = entryCurrentSpecies(entry)[0];
       const level = entry.level || 1;
       const span = levelSpan(dexId, level);
-      const usedHint = data.results.some(r => r.hint);
-      /* v136：正規化到 /10 刻度（5/5→10、8/8→10），短 set 先至同 PRD 表對齊 */
       const totalQ = Math.max(1, data.total || 1);
       const s = Math.round((data.score / totalQ) * 10);
       let pct;
-      if (s >= 10)      pct = usedHint ? 0.50 : 1.00;
-      else if (s === 9) pct = usedHint ? 0.40 : 0.90;
-      else if (s === 8) pct = usedHint ? 0.30 : 0.80;
-      else if (s >= 5)  pct = usedHint ? 0.25 : 0.50;
-      else if (s >= 1)  pct = usedHint ? 0.15 : 0.30;
-      else              pct = 0.10;
+      if (s >= 10)      pct = 1.00;
+      else if (s === 9)  pct = 0.90;
+      else if (s === 8)  pct = 0.80;
+      else if (s >= 5)   pct = 0.50;
+      else if (s >= 1)   pct = 0.30;
+      else               pct = 0.10;
       if (level <= 10) pct = Math.max(0.50, pct);
       expGain = Math.max(10, Math.round(span * pct));
     }
-    /* 記憶光芒 Bonus XP：答對「抗忘記題目」（記憶曲線到期題）該題 EXP ×1.5
-       即每題基本份額之外，再多半份 */
-    const memoryCorrect = data.results.filter(r => r.correct && r.memory).length;
-    const memoryBonus = memoryCorrect > 0
-      ? Math.round((expGain / data.total) * 0.5 * memoryCorrect)
-      : 0;
-    const rewards = { ticket: 0, diamonds: 0, exp: expGain + memoryBonus, memoryBonus };
+    const rewards = { ticket: 0, diamonds: 0, exp: expGain };
     /* 電子寵物：拍檔 Faint → 本回合 EXP 0（提示留喺結算畫面） */
     if (entry && window.Pet && Pet.isFaint(entry)) {
       rewards.exp = 0;
@@ -1212,7 +1194,7 @@ const App = {
 
     document.getElementById("settle-rewards").innerHTML = capHTML + `
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
-      <div class="reward-chip">⭐ EXP +${rewards.exp}${rewards.memoryBonus > 0 && !rewards.fainted ? ` <small>(+${rewards.memoryBonus} memory bonus ✨)</small>` : ""}</div>
+      <div class="reward-chip">⭐ EXP +${rewards.exp}</div>
       ${rewards.fainted ? `<div class="reward-chip pet-warn">Your partner has fainted — no EXP this round. Feed it a Revival in Partner Care.</div>` : ""}
       ${dropChips}`;
 
@@ -1758,6 +1740,11 @@ const App = {
     const st = loadState();
     ensureDeviceId();   /* 確保匿名裝置 ID 存在（供 SM-2 history + Supabase 用）*/
 
+    /* SM-2 v3 一次性重算：先備份玩家 state，再補 last_review_at／新 interval */
+    if (window.SM2 && SM2.migrateV3) {
+      try { SM2.migrateV3(); } catch (e) { console.warn("[SM2] migrateV3 failed:", e); }
+    }
+
     /* Supabase pull（背景 async，唔阻塞主流程）*/
     if (window.Sync && Sync.isEnabled()) {
       /* 非阻塞拉雲端進度；有新卡拉返嚟就刷新主畫面 */
@@ -1834,44 +1821,23 @@ const App = {
     };
     document.getElementById("btn-setup-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
 
-    /* 做題：鍵盤輸入提交 */
-    document.getElementById("btn-quiz-submit").onclick = () => {
-      if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
-      Quiz.submit();
-    };
-    document.getElementById("quiz-answer").addEventListener("keydown", (e) => {
-      if (e.key !== "Enter") return;
-      if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
-      if (Quiz.locked && Quiz._onContinue) Quiz._continue();  /* 答錯後 Enter = Continue */
-      else if (!Quiz.locked) Quiz.submit();
-    });
-    /* 答錯／Skip 後輸入框會被 disable（收唔到 keydown），
-       用 document 層接住 Enter 繼續，兌現「Enter 亦可 Continue」 */
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter") return;
-      const quizView = document.getElementById("view-quiz");
-      if (!quizView || !quizView.classList.contains("active")) return;
-      if (Quiz.locked && Quiz._onContinue) {
-        e.preventDefault();
-        Quiz._continue();
-      }
-    });
-    /* 退出 / Hint / Skip / Continue */
-    document.getElementById("btn-quiz-exit").onclick = () => Quiz.quit();
+    /* 做題：✓ 確認 / Hint / 下一題 / 齒輪設定 */
+    document.getElementById("btn-quiz-check").onclick = () => Quiz.check();
     document.getElementById("btn-quiz-hint").onclick = () => Quiz.hint();
-    document.getElementById("btn-quiz-skip").onclick = () => Quiz.skip();
-    document.getElementById("btn-quiz-continue").onclick = () => Quiz._continue();
+    document.getElementById("btn-quiz-next").onclick = () => Quiz.next();
+    document.getElementById("btn-quiz-settings").onclick = () => Quiz.openSettings();
     /* 圖片單字題：點圖聽聲（可無限重播） */
     document.getElementById("quiz-word-image-btn").onclick = () => {
       if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
       Quiz.playWordAudio();
     };
 
-    /* Power Up Zone：回合尾改錯提交 */
-    document.getElementById("btn-powerup-submit").onclick = () => PowerUp.submit();
-    document.getElementById("btn-powerup-exit").onclick = () => PowerUp.quit();
-    document.getElementById("powerup-answer").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") PowerUp.submit();
+    /* 答完後 Enter 亦可按 Next（輸入格已 disable，唔會再觸發 submit）*/
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const qv = document.getElementById("view-quiz");
+      if (!qv || !qv.classList.contains("active")) return;
+      if (Quiz.answered) { e.preventDefault(); Quiz.next(); }
     });
 
     /* 日曆 */
