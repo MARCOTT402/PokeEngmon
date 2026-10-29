@@ -68,6 +68,7 @@ class CaptureAudio {
     this.master = null;   /* alias → sfxBus（合成音效） */
     this.sfxBus = null;
     this.bgmBus = null;
+    this.wordBus = null;  /* 圖片單字題語音：固定 1.0，唔受 Settings BGM／SFX 影響 */
     this._noise = null;
     const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
     this._bgmScale = prefs.bgm;
@@ -82,10 +83,13 @@ class CaptureAudio {
         this.ctx = new AC();
         this.sfxBus = this.ctx.createGain();
         this.bgmBus = this.ctx.createGain();
+        this.wordBus = this.ctx.createGain();
         this.sfxBus.gain.value = this._sfxScale;
         this.bgmBus.gain.value = this._bgmScale;
+        this.wordBus.gain.value = 1.0;
         this.sfxBus.connect(this.ctx.destination);
         this.bgmBus.connect(this.ctx.destination);
+        this.wordBus.connect(this.ctx.destination);
         this.master = this.sfxBus;   /* 舊 _tone／noise 路徑繼續連 master */
       }
       if (this.ctx.state === "suspended") this.ctx.resume();
@@ -738,7 +742,7 @@ class CaptureAudio {
         if (this._wordSrc) { try { this._wordSrc.stop(); } catch (e) {} this._wordSrc = null; }
         const g = this.ctx.createGain();
         g.gain.value = 1.0;
-        g.connect(this.sfxBus || this.master || this.ctx.destination);
+        g.connect(this.wordBus || this.ctx.destination);
         const src = this.ctx.createBufferSource();
         src.buffer = buf;
         src.connect(g);
