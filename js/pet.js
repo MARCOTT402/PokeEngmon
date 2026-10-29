@@ -101,7 +101,8 @@ const Pet = (() => {
 
   function touch(p) { p.updatedAt = new Date().toISOString(); }
 
-  /* 補齊/遷移 pet 狀態（舊存檔默認滿血，唔會追溯扣血） */
+  /* 補齊/遷移 pet 狀態（舊存檔默認滿血，唔會追溯扣血）
+     首次建立嘅日子當日「唔追討」：新捉返嚟唔應該即刻 −50 */
   function ensure(entry) {
     if (!entry) return null;
     if (!entry.pet || typeof entry.pet !== "object") entry.pet = {};
@@ -109,8 +110,28 @@ const Pet = (() => {
     if (typeof p.health !== "number" || !isFinite(p.health)) p.health = DEFAULT_HEALTH;
     if (typeof p.streak !== "number") p.streak = 0;
     if (typeof p.lastFedDay !== "string") p.lastFedDay = "";
-    if (typeof p.settledDay !== "string" || !p.settledDay) p.settledDay = shiftDay(dayKey(), -1);
-    if (typeof p.decayDay !== "string" || !p.decayDay) p.decayDay = shiftDay(dayKey(), -1);
+    if (typeof p.settledDay !== "string" || !p.settledDay) p.settledDay = dayKey();
+    if (typeof p.decayDay !== "string" || !p.decayDay) {
+      /* 今日已過 15:00 → 當今日已結算；未過 → 當昨日已結算，等下一個 15:00 再扣 */
+      p.decayDay = minuteOfDay() >= DECAY_START ? dayKey() : shiftDay(dayKey(), -1);
+    }
+    return p;
+  }
+
+  /* 換入成為拍檔：由今日起計，唔追討放喺盒子期間嘅自然消耗 */
+  function adoptActive(entry) {
+    const p = ensure(entry);
+    if (!p) return null;
+    const today = dayKey();
+    const yesterday = shiftDay(today, -1);
+    p.settledDay = today;
+    if (minuteOfDay() >= DECAY_START) {
+      if (p.decayDay < today) p.decayDay = today;   // 今日扣血點已過 → 唔追討
+    } else if (p.decayDay < yesterday) {
+      p.decayDay = yesterday;                        // 今日未到 15:00 → 只補到昨日
+    }
+    touch(p);
+    saveState();
     return p;
   }
 
@@ -290,7 +311,7 @@ const Pet = (() => {
   }
 
   return {
-    ensure, healthOf, isFaint, inWindow, fedToday, status,
+    ensure, adoptActive, healthOf, isFaint, inWindow, fedToday, status,
     runDailyCheck, msUntilNextDecay, items, addItem, countOf, canUse, useItem, rollDrops,
     dayKey, minuteOfDay,
     setClockOffset, clockOffset, clockSuspicious,

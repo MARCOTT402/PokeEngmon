@@ -405,6 +405,9 @@ const App = {
           if (!uid || uid === st2.activeUid) return;
           const prevUid = st2.activeUid;
           st2.activeUid = uid;
+          /* 換入嘅寶可夢由今日起計：唔追討盒子期間嘅自然消耗（唔會一換入就 −50） */
+          const nextEntry = st2.entries.find(x => x.uid === uid);
+          if (nextEntry && window.Pet) Pet.adoptActive(nextEntry);
           saveState();
           if (window.Sync && Sync.isEnabled()) Sync.pushActive(uid);
           /* 換走嘅拍檔：佢嘅 pet 狀態要保持上雲（否則首次 backfill 會漏） */
