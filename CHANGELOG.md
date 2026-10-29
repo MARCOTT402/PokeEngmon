@@ -1,3 +1,16 @@
+# [1.8.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.7.1...v1.8.0) (2026-10-29)
+
+
+### Bug Fixes
+
+* open Partner Care from the home sprite even with a single Pokemon ([df4090e](https://github.com/MARCOTT402/PokeEngmon/commit/df4090eb49a67fd2559facbc94256d2ad33d788a))
+
+
+### Features
+
+* add partner pet care system (feeding, health, items, faint) ([f3219c5](https://github.com/MARCOTT402/PokeEngmon/commit/f3219c5a61aba1f2fb00682e6189a8632f4dfa62))
+* **pet:** 15:00 HKT decay, server clock offset, cloud backup for pet state and items ([79f9378](https://github.com/MARCOTT402/PokeEngmon/commit/79f9378bc877aedc990868959d0a0201569d1ce2))
+
 ## [1.7.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.7.0...v1.7.1) (2026-10-29)
 
 
