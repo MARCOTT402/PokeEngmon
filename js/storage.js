@@ -327,6 +327,7 @@ function localEntryFromServer(e) {
     candies: e.candies ?? 0,
     dupes: e.dupes ?? 0,
     branch: (e.branch === 0 || e.branch) ? e.branch : null,
+    nature: e.nature || null,
     obtainedAt: e.obtained_at
   });
 }
@@ -339,7 +340,8 @@ function adoptServerEntry(serverRow) {
   const idx = st.entries.findIndex(e => e.chainKey === mapped.chainKey);
   if (idx >= 0) {
     const old = st.entries[idx];
-    mapped.nature = old.nature;   // nature 唔上雲，保留本地
+    /* nature 已上雲（v1.4.1）：以 server 為準；server 未有（舊資料）才沿用本地性格 */
+    if (!mapped.nature) mapped.nature = old.nature;
     if (st.activeUid === old.uid) st.activeUid = mapped.uid;
     st.entries[idx] = mapped;
   } else {
@@ -347,6 +349,10 @@ function adoptServerEntry(serverRow) {
     if (!st.entries.some(e => e.uid === st.activeUid)) st.activeUid = mapped.uid;
   }
   saveState();
+  /* server 未有 nature（舊存檔 / 新捕捉）→ 用本地性格補寫，之後換裝置都保持一致 */
+  if (!serverRow.nature && mapped.nature && window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+    try { Sync.patchEntry(mapped.uid, { nature: mapped.nature }); } catch (e) {}
+  }
   /* server 派寵（gacha_pull / obtain_capture RPC）落地後都要檢查世代解鎖 */
   recomputeUnlockedGen();
   return mapped;

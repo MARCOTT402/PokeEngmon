@@ -339,6 +339,8 @@ window.Sync = (() => {
     const body = { updated_at: Date.now() };
     if (typeof fields.active === "boolean") body.active = fields.active;
     if (fields.branch !== undefined && fields.branch !== null) body.branch = fields.branch;
+    /* nature 由 v1.4.1 起可以直寫（column-level grant 只開放呢一欄，非經濟數值） */
+    if (typeof fields.nature === "string" && fields.nature) body.nature = fields.nature;
     try {
       await _api("PATCH", `/user_entries?id=eq.${entryId}`, body);
     } catch (e) { console.warn("[Sync] patchEntry failed:", e.message); }

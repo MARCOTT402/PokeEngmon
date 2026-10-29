@@ -283,7 +283,14 @@ function ensureEntryPokemonData(entry) {
   let changed = false;
   if (!entry.ivs) { entry.ivs = emptyIvs(); changed = true; }
   if (!entry.evs) { entry.evs = emptyEvs(); changed = true; }
-  if (!entry.nature) { entry.nature = randomNature(); changed = true; }
+  if (!entry.nature) {
+    entry.nature = randomNature();
+    changed = true;
+    /* 新補的性格要即刻上雲，否則換裝置／重新登入又會再抽一次 */
+    if (window.Sync && Sync.isEnabled && Sync.isEnabled() && entry.uid) {
+      try { Sync.patchEntry(entry.uid, { nature: entry.nature }); } catch (e) {}
+    }
+  }
   if (typeof entry.level !== "number") {
     const lv = levelFromExp(dexId, entry.exp || 0);
     const stageMin = [0, 5, 16, 32][entry.stage] || 1;
