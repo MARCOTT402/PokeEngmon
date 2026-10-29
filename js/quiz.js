@@ -1,26 +1,31 @@
 /* ============================================================
-   PokeEngmon - 做題流程
-   10 題一組 · 計時 · 鍵盤輸入答案 · 即時對錯 → 結算
+   PokeEngmon - 做題流程（v2：句子內逐詞空格）
+   10 題一組 · 逐格自動轉綠 · L1/L2 提示 · 同回合重排 · SM-2 v3
    ============================================================ */
 
 const Quiz = {
-  set: [],
-  idx: 0,
-  results: [],        // {qid, chosen, correct, topic}
-  startTime: 0,
-  timerId: null,
-  locked: false,
-  _advanceTimer: null,
+  set: [],            // 初始題目（固定分母）
+  queue: [],          // 工作佇列：{ q, requeued, dueAt }
+  total: 0,
+  seenQids: new Set(),
+  answers: new Map(), // key → { hintCount, hintEver, clean, chosen }
+  cells: [],
+  currentCell: 0,
+  answered: false,
   mode: null,             /* null | "gym" */
   gymMilestone: 0,
+  startTime: 0,
+  _curCard: null,
+  _curQuestionStart: 0,
+  _wordToken: 0,
+  _imgToken: 0,
 
   /* topics: 揀咗嘅題型（空陣列＝全部）；圖片單字題會混合抽 */
   start(topics) {
     this.mode = null;
     this.gymMilestone = 0;
-    this.set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
-    if (this.set.length === 0) {
-      /* 冇到期卡 + 冇新題：toast 太易錯過，用彈窗明確提示（介面文字統一英文） */
+    const set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
+    if (set.length === 0) {
       App.showModal(`
         <div class="confirm-box">
           <p>🎉 <b>All caught up!</b><br>
@@ -34,80 +39,100 @@ const Quiz = {
       document.getElementById("caughtup-ok").onclick = () => App.closeModal();
       return;
     }
-    /* 唔夠 10 題＝呢個課題範圍今日嘅到期題就快做完，提示玩家擴闊課題 */
-    if (this.set.length < GAME_CONFIG.SET_SIZE) {
-      App.toast(`Only ${this.set.length} question${this.set.length > 1 ? "s" : ""} left here — pick more courses next round for a full set!`);
+    if (set.length < GAME_CONFIG.SET_SIZE) {
+      App.toast(`Only ${set.length} question${set.length > 1 ? "s" : ""} left here — pick more courses next round for a full set!`);
     }
-    this.idx = 0;
-    this.results = [];
-    this._hintUsed = new Set();   /* 記低邊啲題撳過 💡 Hint（結算 EXP 分級用） */
-    this.startTime = Date.now();
-    this._cancelAdvance();   /* 清掉上一個回合殘留嘅自動跳題 timer */
-    App.showView("view-quiz");
-    clearInterval(this.timerId);
-    this.timerId = setInterval(() => this._tickTimer(), 500);
-    this._renderQuestion();
+    this._begin(set);
   },
 
-  /* Gym：全題庫隨機 10 題；Hint／Power Up 照常；結算先判有無用 hint */
+  /* Gym：全題庫隨機 10 題 */
   startGym(milestone) {
     const all = (typeof getAllQuestions === "function" ? getAllQuestions() : []).slice();
     for (let i = all.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const t = all[i]; all[i] = all[j]; all[j] = t;
     }
-    this.set = all.slice(0, GAME_CONFIG.SET_SIZE);
-    if (this.set.length === 0) {
+    const set = all.slice(0, GAME_CONFIG.SET_SIZE);
+    if (set.length === 0) {
       App.toast("No questions available for Gym Challenge.");
       return;
     }
     this.mode = "gym";
     this.gymMilestone = milestone || 0;
-    this.idx = 0;
-    this.results = [];
-    this._hintUsed = new Set();
+    this._begin(set);
+  },
+
+  _begin(set) {
+    this.set = set;
+    this.total = set.length;
+    this.queue = set.map(q => ({ q, requeued: false, dueAt: 0 }));
+    this.seenQids = new Set();
+    this.answers = new Map();
+    this.cells = [];
+    this.currentCell = 0;
+    this.answered = false;
     this.startTime = Date.now();
-    this._cancelAdvance();
     App.showView("view-quiz");
-    clearInterval(this.timerId);
-    this.timerId = setInterval(() => this._tickTimer(), 500);
     this._renderQuestion();
   },
 
-  _elapsedSec() {
-    return Math.floor((Date.now() - this.startTime) / 1000);
+  /* ---------- 題目 key ---------- */
+  _key(q) {
+    if (q.type === "word") return "w:" + String(q.word || "").toLowerCase();
+    return `${q.no || ""}|${q.sentence || ""}|${q.answer || ""}`;
   },
 
-  _tickTimer() {
-    const el = document.getElementById("quiz-timer");
-    const s = this._elapsedSec();
-    el.textContent = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  _answerFor(q) {
+    const k = this._key(q);
+    if (!this.answers.has(k)) {
+      this.answers.set(k, { hintCount: 0, hintEver: false, clean: false, chosen: "" });
+    }
+    return this.answers.get(k);
   },
 
+  /* ---------- 進度 ---------- */
+  _updateProgress() {
+    const shown = this.answered
+      ? this.seenQids.size
+      : Math.min(this.total, this.seenQids.size + 1);
+    document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
+    document.getElementById("quiz-bar").style.width = `${this.total ? (this.seenQids.size / this.total) * 100 : 0}%`;
+  },
+
+  /* ---------- 渲染 ---------- */
   _renderQuestion() {
-    const q = this.set[this.idx];
-    this.locked = false;
-    /* 每次轉題都換 token，令上一題排緊隊嘅自動播音失效 */
+    const item = this.queue[0];
+    if (!item) { this.finish(); return; }
+    const q = item.q;
+
+    this.answered = false;
+    this.currentCell = 0;
+    this._curQuestionStart = Date.now();
+    this._curCard = SM2.getOrCreateCard(q);
     const wordToken = (this._wordToken = (this._wordToken || 0) + 1);
 
-    document.getElementById("quiz-progress").textContent = `${this.idx + 1} / ${this.set.length}`;
-    document.getElementById("quiz-bar").style.width = `${(this.idx / this.set.length) * 100}%`;
-    /* 答題畫面唔顯示課題／題型，只顯示難度星星 */
-    const level = Math.max(1, q.level || 1);
-    document.getElementById("quiz-topic").innerHTML =
-      `<span class="quiz-level" aria-label="Level ${level}">${"★".repeat(level)}</span>`;
+    /* 每次出現都係新一次提示計算（hintEver 保留，clean 保留）*/
+    const a = this._answerFor(q);
+    a.hintCount = 0;
+    a.chosen = "";
 
-    /* 記憶光芒：呢題係記憶曲線到期嘅複習題（stage > 0）→ 彩色光芒 + 拍檔提醒 */
-    this._renderMemoryLight(q);
+    this._updateProgress();
 
-    /* 題目圖片（Q_folder/questions/questions_images/<編號>.png）；冇圖片就收起個窗 */
-    this._renderImage(q);
-
-    /* 圖片單字題：收起句子卡，改出「點圖聽聲」卡 */
+    /* 題目卡只顯示英文句子；圖片題保留 word card */
     const wordCard = document.getElementById("quiz-word-card");
-    if (q.type === "word") {
-      document.getElementById("quiz-card").style.display = "none";
-      document.getElementById("quiz-image-box").classList.remove("show");
+    const isWord = q.type === "word";
+    const cardEl = document.getElementById("quiz-card");
+    const imageBox = document.getElementById("quiz-image-box");
+
+    /* 圖片題：清走上一題殘留嘅句子圖 */
+    if (!isWord) {
+      imageBox.classList.remove("show");
+      document.getElementById("quiz-image").removeAttribute("src");
+    }
+    cardEl.classList.remove("memory-glow");
+    cardEl.style.display = "";
+
+    if (isWord) {
       wordCard.classList.add("show");
       const img = document.getElementById("quiz-word-image");
       img.onerror = () => { img.onerror = null; img.src = "icons/icon-192.png"; };
@@ -116,367 +141,484 @@ const Quiz = {
       document.getElementById("quiz-word-status").className = "word-status";
       this._autoPlayWord(wordToken);
     } else {
-      document.getElementById("quiz-card").style.display = "";
       wordCard.classList.remove("show");
+      wordCard.classList.remove("correct", "wrong");
     }
 
-    /* 句子（空位藍色） */
-    document.getElementById("quiz-sentence").innerHTML =
-      escapeHTML(q.sentence).replace(/___/, `<span class="quiz-blank">&nbsp;___&nbsp;</span>`);
+    /* 圖片（句子題專用）*/
+    this._renderImage(q);
 
-    /* 鍵盤輸入 */
-    const input = document.getElementById("quiz-answer");
-    input.value = "";
-    input.disabled = false;
-    input.className = "quiz-answer-input";
-    const btn = document.getElementById("btn-quiz-submit");
-    btn.disabled = false;
+    /* 空格格數＝第一個答案寫法嘅字數 */
+    this.cells = this._buildCells(q);
+    this._renderCells(q);
 
+    /* 工具列／確認 */
+    document.getElementById("quiz-toolbar-before").classList.remove("hidden");
+    document.getElementById("quiz-toolbar-after").classList.add("hidden");
+    document.getElementById("btn-quiz-check").classList.remove("hidden");
     document.getElementById("quiz-feedback").textContent = "";
     document.getElementById("quiz-feedback").className = "quiz-feedback";
-    /* 清除上一題遺留喺圖片卡嘅答題回應狀態 */
-    document.getElementById("quiz-word-card").classList.remove("correct", "wrong");
-    document.getElementById("btn-quiz-continue").classList.add("hidden");
-    document.getElementById("btn-quiz-hint").disabled = false;
 
-    /* 每題（含圖片單字）自動 focus，鍵盤可連續打字／Enter 過題 */
-    this._focusAnswer();
+    /* Chip：未答前顯示實際經過時間 */
+    this._renderChip(q, null);
+
+    this._focusCurrent();
   },
 
-  _focusAnswer() {
-    const input = document.getElementById("quiz-answer");
-    if (!input || input.disabled) return;
-    const go = () => { try { input.focus({ preventScroll: true }); } catch (e) { try { input.focus(); } catch (e2) {} } };
+  /* 空格資料：primary 答案 split 空白；accept 只有同字數先納入逐格比對 */
+  _buildCells(q) {
+    const primaryRaw = q.type === "word" ? String(q.word || "") : String(q.answer || "");
+    const trimmed = primaryRaw.trim();
+    const tokens = trimmed ? trimmed.split(/\s+/) : [];
+    if (tokens.length === 0) tokens.push("");   // 空答案 → 1 格留空
+
+    const variants = (q.type === "word" ? [] : (q.accept || [])).map(v => String(v).trim()).filter(Boolean);
+
+    return tokens.map((t, i) => {
+      const accepted = new Set([t.toLowerCase()]);
+      variants.forEach(v => {
+        const parts = v.split(/\s+/);
+        if (parts.length === tokens.length && parts[i]) accepted.add(parts[i].toLowerCase());
+      });
+      return {
+        primary: t,
+        tokens: [...accepted],
+        value: "",
+        green: false,
+        ghost: "",
+        empty: t === "",
+        cellEl: null,
+        textEl: null,
+        ghostEl: null,
+        input: null
+      };
+    });
+  },
+
+  _renderCells(q) {
+    const host = document.getElementById("quiz-sentence");
+    host.innerHTML = "";
+
+    if (q.type !== "word" && q.sentence) {
+      host.classList.remove("word-blank-line");
+      const idx = q.sentence.indexOf("___");
+      const pre = idx >= 0 ? q.sentence.slice(0, idx) : q.sentence;
+      const post = idx >= 0 ? q.sentence.slice(idx + 3) : "";
+      if (pre) host.appendChild(document.createTextNode(pre));
+      this.cells.forEach((c, i) => host.appendChild(this._makeCell(c, i)));
+      if (post) host.appendChild(document.createTextNode(post));
+    } else {
+      /* 圖片單字題：卡身只放空格 */
+      host.classList.add("word-blank-line");
+      this.cells.forEach((c, i) => host.appendChild(this._makeCell(c, i)));
+    }
+  },
+
+  _makeCell(c, i) {
+    const span = document.createElement("span");
+    span.className = "qb-cell" + (c.empty ? " empty-answer" : "");
+    span.dataset.i = String(i);
+
+    const ghost = document.createElement("span");
+    ghost.className = "qb-ghost";
+    const text = document.createElement("span");
+    text.className = "qb-text";
+    const input = document.createElement("input");
+    input.className = "qb-input";
+    input.type = "text";
+    input.autocomplete = "off";
+    input.autocapitalize = "off";
+    input.autocorrect = "off";
+    input.spellcheck = false;
+    input.dataset.i = String(i);
+
+    span.appendChild(ghost);
+    span.appendChild(text);
+    span.appendChild(input);
+
+    c.cellEl = span;
+    c.ghostEl = ghost;
+    c.textEl = text;
+    c.input = input;
+
+    input.addEventListener("input", () => this._onInput(i));
+    input.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      if (this.answered) this.next();
+      else this.check();
+    });
+    input.addEventListener("focus", () => {
+      /* 只准焦點落喺當前格 */
+      if (i !== this.currentCell) this._focusCurrent();
+    });
+    span.addEventListener("click", () => this._focusCurrent());
+
+    return span;
+  },
+
+  _focusCurrent() {
+    if (this.answered) return;
+    this.cells.forEach((c, i) => {
+      if (c.input) c.input.disabled = (i !== this.currentCell) || c.green;
+    });
+    const c = this.cells[this.currentCell];
+    if (!c || !c.input || c.input.disabled) return;
+    const go = () => { try { c.input.focus({ preventScroll: true }); } catch (e) { try { c.input.focus(); } catch (e2) {} } };
     go();
     requestAnimationFrame(() => { go(); setTimeout(go, 50); });
   },
 
-  /* 記憶光芒：SM-2 卡片 rep>0 且未畢業 → 彩色光芒 + 拍檔提醒 + Bonus XP
-     同時記錄本題開始時間（供 computeQ response_ms 用）*/
-  _renderMemoryLight(q) {
-    const card = SM2.getOrCreateCard(q);
-    this._curCard = card;
-    this._curQuestionStart = Date.now();
-    const memEl = document.getElementById("quiz-memory");
-    const cardEl = document.getElementById("quiz-card");
-    if (card.repetition > 0 && !card.is_mastered) {
-      const entry = getActiveEntry();
-      let spriteHTML = "";
-      let textHTML;
-      if (entry) {
-        const dexId = entryCurrentSpecies(entry)[0];
-        spriteHTML = `<img class="quiz-memory-sprite" src="${animatedURL(dexId)}" alt="partner" onerror="this.onerror=null;this.src='${artworkURL(dexId)}'">`;
-        textHTML = `<b>${escapeHTML(entryCurrentSpecies(entry)[1])}</b> remembers this ${card.interval_days} day${card.interval_days !== 1 ? "s" : ""} ago!<br><small>Bonus XP ×1.5 · Keep it strong!</small>`;
-      } else {
-        textHTML = `✨ Time to refresh your brain!<br><small>Bonus XP ×1.5 for this one!</small>`;
-      }
-      memEl.innerHTML = spriteHTML + `<div class="quiz-memory-text">${textHTML}</div>`;
-      memEl.classList.add("show");
-      cardEl.classList.add("memory-glow");
-      document.getElementById("quiz-word-card").classList.add("memory-glow");
+  /* ---------- 輸入 / 提示 ---------- */
+  _norm(s) {
+    return String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " ");
+  },
+
+  _cellMatch(c, val) {
+    return c.tokens.indexOf(val) >= 0;
+  },
+
+  _applyGhost(c) {
+    if (!c.ghostEl) return;
+    c.ghostEl.textContent = c.ghost || "";
+    c.ghostEl.style.display = (c.ghost && !c.value) ? "" : "none";
+  },
+
+  _onInput(i) {
+    if (this.answered) return;
+    const c = this.cells[i];
+    if (!c) return;
+
+    c.value = c.input.value;
+    c.textEl.textContent = c.value;
+
+    /* 打字後 ghost 消失 */
+    if (c.value.length > 0 && c.ghost) {
+      c.ghost = "";
+      this._applyGhost(c);
+    }
+    /* 清走 ✓ 錯誤嘅紅狀態 */
+    c.cellEl.classList.remove("bad");
+    const bang = c.cellEl.querySelector(".qb-bang");
+    if (bang) bang.remove();
+
+    const val = this._norm(c.value);
+    if (val !== "" && this._cellMatch(c, val)) this._greenCell(i);
+  },
+
+  _greenCell(i) {
+    const c = this.cells[i];
+    if (!c || c.green) return;
+    c.green = true;
+    c.cellEl.classList.add("good");
+    c.cellEl.classList.remove("bad");
+    const bang = c.cellEl.querySelector(".qb-bang");
+    if (bang) bang.remove();
+    if (c.input) c.input.disabled = true;
+
+    const next = this.cells.findIndex(x => !x.green);
+    if (next === -1) {
+      this._complete();
     } else {
-      memEl.classList.remove("show");
-      cardEl.classList.remove("memory-glow");
-      document.getElementById("quiz-word-card").classList.remove("memory-glow");
+      this.currentCell = next;
+      this._focusCurrent();
     }
   },
 
-  /* 顯示題目圖片：搵到先開個固定大細嘅窗，搵唔到就收起 */
+  /* 震動（提示 ghost 仍在 / 錯誤）*/
+  _vibrate(ms) {
+    try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {}
+  },
+
+  hint() {
+    if (this.answered) return;
+    const item = this.queue[0];
+    if (!item) return;
+    const a = this._answerFor(item.q);
+    const c = this.cells[this.currentCell];
+    if (!c) return;
+
+    if (c.empty) { this._vibrate(20); return; }
+
+    if (a.hintCount === 0) {
+      /* L1：首兩個字母 */
+      a.hintCount = 1;
+      c.ghost = c.primary.slice(0, 2);
+      this._applyGhost(c);
+      return;
+    }
+
+    /* ghost 仍然顯示 → 只震一下 */
+    if (c.ghost && !c.value) {
+      this._vibrate(30);
+      return;
+    }
+
+    /* ghost 已消失 → 重出 L2，並清空該格 */
+    a.hintCount = 2;
+    c.ghost = c.primary;
+    c.value = "";
+    if (c.input) c.input.value = "";
+    c.textEl.textContent = "";
+    c.cellEl.classList.remove("bad");
+    const bang = c.cellEl.querySelector(".qb-bang");
+    if (bang) bang.remove();
+    this._applyGhost(c);
+    this._focusCurrent();
+  },
+
+  /* 完整答案變體（處理 accept 同 primary 字數不同嘅情況，例如 were not / weren't）*/
+  _fullAnswerVariants(q) {
+    const raw = q.type === "word"
+      ? [q.word || ""].concat(q.accept || [])
+      : [q.answer || ""].concat(q.accept || []);
+    return raw.map(v => this._norm(v)).filter(Boolean);
+  },
+
+  /* ✓ 確認（保留）：不符 → 紅驚嘆號 + 微紅底 + EF −0.14 */
+  check() {
+    if (this.answered) return;
+    const item = this.queue[0];
+    if (!item) return;
+    try { if (window.CaptureScene) { CaptureScene.primeAudio(); CaptureScene.bgmPrime(); } } catch (e) {}
+
+    const c = this.cells[this.currentCell];
+    if (!c) return;
+    const val = this._norm(c.value);
+
+    if (this._cellMatch(c, val)) {
+      this._greenCell(this.currentCell);
+      return;
+    }
+
+    /* 變體字數不同：逐格比對唔到，但整句拼埋啱 → 當全對 */
+    const joined = this._norm(this._joinedAnswer());
+    if (joined && this._fullAnswerVariants(item.q).indexOf(joined) >= 0) {
+      this.cells.forEach(x => {
+        x.green = true;
+        x.cellEl.classList.add("good");
+        x.cellEl.classList.remove("bad");
+        if (x.input) x.input.disabled = true;
+      });
+      this._complete();
+      return;
+    }
+
+    /* 錯誤：只扣 EF，不重排、不清題、不寫 history */
+    c.cellEl.classList.add("bad");
+    if (!c.cellEl.querySelector(".qb-bang")) {
+      const bang = document.createElement("span");
+      bang.className = "qb-bang";
+      bang.textContent = "!";
+      c.cellEl.appendChild(bang);
+    }
+    this._vibrate(50);
+
+    const card = SM2.applyCheckFail(this._curCard || SM2.getOrCreateCard(item.q));
+    this._curCard = SM2.upsertCard(card);
+  },
+
+  /* ---------- 完成 / 下一題 ---------- */
+  _complete() {
+    if (this.answered) return;
+    this.answered = true;
+
+    const item = this.queue[0];
+    const q = item.q;
+    const a = this._answerFor(q);
+    const usedHint = a.hintCount > 0;
+    const now = Date.now();
+    const responseMs = Math.max(0, now - (this._curQuestionStart || now));
+
+    let card = SM2.getOrCreateCard(q);
+    card = usedHint ? SM2.applyHint(card, a.hintCount, now) : SM2.applyClean(card, now);
+    this._curCard = SM2.upsertCard(card);
+
+    SM2.appendHistory({
+      card_id: card.card_id,
+      ts: now,
+      q_score: usedHint ? SM2.HINT_Q : SM2.CLEAN_Q,
+      response_ms: responseMs,
+      levenshtein_distance: 0,
+      is_typo: false
+    });
+
+    a.hintEver = a.hintEver || usedHint;
+    if (!usedHint) a.clean = true;
+    if (!a.chosen) a.chosen = this._joinedAnswer();
+    this.seenQids.add(this._key(q));
+
+    /* 用提示 → 排入重排佇列（最後一題豁免，保證回合終止）*/
+    let requeued = false;
+    if (usedHint && this.queue.length > 1) {
+      this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
+      requeued = true;
+    }
+
+    /* UI：鎖格、換工具列 */
+    this.cells.forEach(c => {
+      if (c.input) c.input.disabled = true;
+      this._applyGhost(c);
+    });
+    document.getElementById("btn-quiz-check").classList.add("hidden");
+    document.getElementById("quiz-toolbar-before").classList.add("hidden");
+    document.getElementById("quiz-toolbar-after").classList.remove("hidden");
+
+    const fb = document.getElementById("quiz-feedback");
+    fb.textContent = usedHint ? "Correct — hint used." : this._praise();
+    fb.className = "quiz-feedback good";
+
+    /* Chip：重排維持「Review in 5 minutes」原字眼 */
+    if (requeued) {
+      this._renderChip(q, "Review in 5 minutes");
+    } else {
+      this._renderChip(q, this._nextReviewLabel(card.interval_days));
+    }
+
+    this._updateProgress();
+  },
+
+  _joinedAnswer() {
+    return this.cells.map(c => c.value).join(" ");
+  },
+
+  _praise() {
+    const list = ["Well done!", "Nice one!", "Perfect!", "Great job!", "Exactly right!"];
+    return list[Math.floor(Math.random() * list.length)];
+  },
+
+  _nextReviewLabel(days) {
+    const n = Number(days) || 1;
+    if (n === 1) return "Review in 1 day";
+    const span = SM2.formatSpan(n * 24 * 60 * 60 * 1000);
+    return `Review in ${span.value} ${span.unit}${span.value === 1 ? "" : "s"}`;
+  },
+
+  next() {
+    if (!this.answered) return;
+    this.queue.shift();
+    this.answered = false;
+    if (this.queue.length === 0) { this.finish(); return; }
+    this._renderQuestion();
+  },
+
+  /* ---------- Chip ---------- */
+  _renderChip(q, nextText) {
+    const el = document.getElementById("quiz-chip");
+    if (!el) return;
+    if (nextText) {
+      el.textContent = nextText;
+      el.classList.add("show", "next");
+      return;
+    }
+    el.classList.remove("next");
+    const card = this._curCard || SM2.getOrCreateCard(q);
+    const last = SM2.lastReviewedMs(card);
+    if (!last || last <= 0) {
+      el.textContent = "";
+      el.classList.remove("show");
+      return;
+    }
+    const span = SM2.formatSpan(Date.now() - last);
+    el.textContent = `Last practised ${span.value} ${span.unit}${span.value === 1 ? "" : "s"} ago`;
+    el.classList.add("show");
+  },
+
+  /* ---------- 圖片單字題 ---------- */
   _renderImage(q) {
     const box = document.getElementById("quiz-image-box");
     const img = document.getElementById("quiz-image");
     const token = (this._imgToken = (this._imgToken || 0) + 1);
     box.classList.remove("show");
     img.removeAttribute("src");
-    if (!q.no) return;
+    if (!q.no || q.type === "word") return;
     findQuestionImage(q.no).then(url => {
-      if (!url || token !== this._imgToken) return;   // 已經轉咗題就唔好再顯示
+      if (!url || token !== this._imgToken) return;
       img.src = url;
       box.classList.add("show");
     });
   },
 
-  /* 比對答案：trim + 不分大小寫；accept 列表都接受；答案留空＝要留空
-     圖片單字題比對 q.word */
-  _isCorrect(q, text) {
-    const norm = s => String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " ");
-    const mine = norm(text);
-    const target = q.type === "word" ? q.word : q.answer;
-    if (mine === norm(target)) return true;
-    return (q.accept || []).some(a => norm(a) === mine);
-  },
-
-  /* 圖片單字題：出題時自動播一次（唔阻 DOM 渲染，延 350ms 等圖片接上）
-     音頻未解鎖（ctx 未 running）就唔強播，留住「Tap the picture」提示 */
   _autoPlayWord(token) {
     const audio = window.CaptureScene && CaptureScene.audio;
     if (!audio) return;
     if (!audio.ctx || audio.ctx.state !== "running") return;
     setTimeout(() => {
-      if (token !== this._wordToken) return;   // 已經轉咗題
-      if (this.locked) return;                 // 已經答完（等緊跳下一題）
+      if (token !== this._wordToken) return;
+      if (this.answered) return;
       this.playWordAudio();
     }, 350);
   },
 
-  /* 圖片單字題：點圖播聲（Web Audio，無限重播，重播會打斷上一段） */
   playWordAudio() {
-    const q = this.set[this.idx];
-    if (!q || q.type !== "word") return;
+    const cur = (this.queue[0] && this.queue[0].q) || null;
+    if (!cur || cur.type !== "word") return;
     const status = document.getElementById("quiz-word-status");
     const audio = window.CaptureScene && CaptureScene.audio;
     if (!audio) { status.textContent = "🔇 Audio unavailable"; return; }
-    audio.ensure();
-    const url = wordAudioURL(q.word);
+    if (audio.ensure) audio.ensure();
+    const url = wordAudioURL(cur.word);
     status.textContent = "🔊 Playing… tap again to replay";
     status.className = "word-status playing";
     audio.playWord(url, (usedSpeech) => {
       if (usedSpeech) {
-        /* 正式錄音未生成 → 系統聲頂住（好過靜音） */
         status.textContent = "🔊 Playing (system voice — recording coming soon)";
         status.className = "word-status playing";
       } else {
-        status.textContent = "🔇 No recording yet for \"" + q.word + "\"";
+        status.textContent = "🔇 No recording yet for \"" + cur.word + "\"";
         status.className = "word-status missing";
       }
     });
   },
 
-  /* ---------- 統一答題回應（所有題型共用） ----------
-     任何題型（句子題 / 圖片單字題 / 日後新增題型）答對答錯都必須經呢個函數，
-     唔可以自己另外寫一套回饋，否則玩家會見到唔一致的「回應」。
-     kind: "correct" | "warn" | "wrong"
-     句子題：輸入框綠/紅 + 對錯音效 + #quiz-feedback 文字
-     圖片單字題：喺同一組元素上顯示同一段文字，另外將回應搬上圖片卡
-                 （因為圖片題冇句子卡，唔同步就會睇落同句子題唔一樣） */
-  _showFeedback(kind, text) {
-    const input = document.getElementById("quiz-answer");
-    input.classList.remove("correct", "wrong");
-    if (kind === "correct") input.classList.add("correct");
-    else if (kind === "wrong") input.classList.add("wrong");
-
-    /* 對錯音效 */
-    if (window.CaptureScene && CaptureScene.audio) {
-      if (kind === "correct") CaptureScene.audio.correct();
-      else if (kind === "wrong") CaptureScene.audio.wrong();
-    }
-
-    const fb = document.getElementById("quiz-feedback");
-    fb.textContent = text;
-    fb.className = "quiz-feedback " + (kind === "correct" ? "good" : kind === "warn" ? "warn" : "bad");
-
-    const q = this.set[this.idx];
-    if (q && q.type === "word") {
-      const status = document.getElementById("quiz-word-status");
-      if (status) {
-        status.textContent = text;
-        status.className = "word-status " + (kind === "correct" ? "good" : kind === "warn" ? "warn" : "bad");
-      }
-      const card = document.getElementById("quiz-word-card");
-      if (card) {
-        card.classList.remove("correct", "wrong");
-        if (kind === "correct") card.classList.add("correct");
-        else if (kind === "wrong") card.classList.add("wrong");
-      }
-    }
-  },
-
-  submit() {
-    if (this.locked) return;
-    const input = document.getElementById("quiz-answer");
-    const text = input.value;
-    this.locked = true;
-    const q = this.set[this.idx];
-    const target = q.type === "word" ? q.word : q.answer;
-    const response_ms = Date.now() - (this._curQuestionStart || Date.now());
-
-    /* SM-2 完整評分（Levenshtein + 過早提交保護 + 動態時間期望 + Q 值）
-       多個可接受答案（q.accept）一併評分，取最高 Q */
-    const targets = q.type === "word" ? [q.word] : [q.answer || "", ...(q.accept || [])];
-    const judge = SM2.computeBestQ(text || "", targets, response_ms);
-    /* 答對：q >= 3（q=3 答得慢但仍算答對；SM-2 原版設計）*/
-    const correct = judge.q >= 3;
-
-    /* 更新 SM-2 卡片 + 寫 history */
-    const card = SM2.getOrCreateCard(q);
-    const judgeForCard = { ...judge };
-    judgeForCard.reason = judge.reason;   /* 保留供 computeEF 用 */
-    const updatedCard = SM2.updateCard(card, judge.q, response_ms);
-    /* 用 judge.reason 更新 EF（computeEF 根據 reason 決定保護）*/
-    updatedCard.ease_factor = SM2.computeEF(card.ease_factor, judge.reason);
-    SM2.upsertCard(updatedCard);
-
-    SM2.appendHistory({
-      device_id: (loadState && loadState().device_id) || "unknown",
-      card_id: card.card_id,
-      ts: Date.now(),
-      q_score: judge.q,
-      response_ms,
-      levenshtein_distance: judge.dist,
-      is_typo: judge.reason === "soft_fail_typo"
-    });
-
-    /* 保留舊 results 結構（供 PowerUpZone + settlement 用），加 SM-2 資料 */
-    this.results.push({
-      qid: q.id,
-      chosen: text.trim(),
-      correct,
-      topic: q.topic,
-      memory: card.repetition > 0 && !card.is_mastered,
-      hint: this._hintUsed.has(this.idx),
-      /* 額外資料 */
-      _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target: judge.target }
-    });
-
-    input.disabled = true;
-    document.getElementById("btn-quiz-submit").disabled = true;
-
-    /* 統一答題回應：句子題 / 圖片單字題 / 日後新題型一律經 _showFeedback */
-    if (correct) {
-      this._showFeedback("correct", ["Well done!", "Correct!", "Nice!", "Excellent!"][Math.floor(Math.random() * 4)]);
-    } else if (judge.reason === "premature_submit") {
-      this._showFeedback("wrong", "You stopped halfway — go back and finish the whole word.");
-    } else if (judge.reason === "soft_fail_typo") {
-      this._showFeedback("warn", "Almost! One tiny typo — fix it in the Power Up Zone.");
-    } else {
-      this._showFeedback("wrong", target ? `The answer is "${target}"` : `The answer is "(blank)"`);
-    }
-
-    this._advance(correct);
-  },
-
-  /* ---------- Hint：顯示首字母 + 字數（免費，edu 優先） ---------- */
-  hint() {
-    if (this.locked) return;
-    const q = this.set[this.idx];
-    const target = q.type === "word" ? q.word : q.answer;
-    const fb = document.getElementById("quiz-feedback");
-    if (!target) {
-      fb.textContent = "💡 Maybe no word is needed here — try leaving it blank!";
-    } else {
-      fb.textContent = `💡 Starts with "${target[0].toUpperCase()}"… (${target.length} letter${target.length > 1 ? "s" : ""})`;
-    }
-    fb.className = "quiz-feedback warn";
-    this._hintUsed.add(this.idx);
-    document.getElementById("btn-quiz-hint").disabled = true;
-  },
-
-  /* ---------- Skip：當答錯計（入 Power Up Zone） ---------- */
-  skip() {
-    if (this.locked) return;
-    document.getElementById("btn-quiz-hint").disabled = true;
-    this.locked = true;
-    const q = this.set[this.idx];
-    const target = q.type === "word" ? q.word : q.answer;
-    const response_ms = Date.now() - (this._curQuestionStart || Date.now());
-
-    /* SM-2：空答案 = 完全唔識 → Q 值自然最低
-       零冠詞題（target 為空）唔可以用空字串比空字串，否則會變 dist=0 當答對 */
-    const judge = target
-      ? SM2.computeQ("", target, response_ms)
-      : { q: 1, reason: "hard_fail", dist: 0, lenRatio: 1, premature: false };
-    const card = SM2.getOrCreateCard(q);
-    const updatedCard = SM2.updateCard(card, judge.q, response_ms);
-    updatedCard.ease_factor = SM2.computeEF(card.ease_factor, judge.reason);
-    SM2.upsertCard(updatedCard);
-    SM2.appendHistory({
-      device_id: (loadState && loadState().device_id) || "unknown",
-      card_id: card.card_id,
-      ts: Date.now(),
-      q_score: judge.q,
-      response_ms,
-      levenshtein_distance: judge.dist,
-      is_typo: false
-    });
-
-    this.results.push({
-      qid: q.id, chosen: "", correct: false, topic: q.topic,
-      memory: card.repetition > 0 && !card.is_mastered,
-      skipped: true,
-      hint: this._hintUsed.has(this.idx),
-      _sm2: { q_score: judge.q, reason: judge.reason, dist: judge.dist, response_ms, target }
-    });
-
-    this._showFeedback("wrong", target
-      ? `Skipped — the answer is "${target}"`
-      : `Skipped — the answer is "(blank)"`);
-    document.getElementById("quiz-answer").disabled = true;
-    document.getElementById("btn-quiz-submit").disabled = true;
-    this._advance(false);
-  },
-
-  /* ---------- 離開回合（確認彈窗） ---------- */
-  quit() {
+  /* ---------- 設定 / 退出 ---------- */
+  openSettings() {
     App.showModal(`
       <div class="confirm-box">
-        <p>Quit this set?<br><small>Progress in this round will be lost.</small></p>
+        <p><b>Quiz Settings</b><br><small>Leaving now will lose this set's progress.</small></p>
         <div class="confirm-row">
-          <button id="quiz-quit-yes" class="btn-big btn-danger">Quit</button>
-          <button id="quiz-quit-no" class="btn-big btn-plain">Keep Going</button>
+          <button id="quiz-settings-quit" class="btn-big btn-danger">Quit this set</button>
+          <button id="quiz-settings-close" class="btn-big btn-plain">Keep going</button>
         </div>
       </div>`, true);
-    document.getElementById("quiz-quit-yes").onclick = () => {
-      clearInterval(this.timerId);
-      this._cancelAdvance();   /* 唔好俾答對後嘅 650ms 自動跳題喺退出後仍然執行 */
-      this.locked = true;
-      this._onContinue = null;
-      this.mode = null;
-      this.gymMilestone = 0;
-      if (typeof Gym !== "undefined") Gym._activeMilestone = 0;
-      if (App._gymSettleData) App._gymSettleData = null;
+    document.getElementById("quiz-settings-quit").onclick = () => {
       App.closeModal();
-      App.renderHome();
-      App.showView("view-home");
+      this.quit();
     };
-    document.getElementById("quiz-quit-no").onclick = () => App.closeModal();
+    document.getElementById("quiz-settings-close").onclick = () => App.closeModal();
   },
 
-  /* ---------- 前進：答對自動快跳；答錯手動 Continue ---------- */
-  _cancelAdvance() {
-    if (this._advanceTimer) {
-      clearTimeout(this._advanceTimer);
-      this._advanceTimer = null;
-    }
+  quit() {
+    this.queue = [];
+    this.set = [];
+    this.cells = [];
+    this.answered = true;
+    App.renderHome();
+    App.showView("view-home");
   },
 
-  _advance(correct) {
-    const go = () => {
-      this._advanceTimer = null;
-      this.idx++;
-      if (this.idx < this.set.length) this._renderQuestion();
-      else this.finish();
-    };
-    if (correct) {
-      this._advanceTimer = setTimeout(go, 650);
-    } else {
-      /* 答錯：俾玩家自己睇清楚答案先過（Continue 或 Enter） */
-      document.getElementById("btn-quiz-continue").classList.remove("hidden");
-      this._onContinue = go;
-    }
-  },
-
-  _continue() {
-    const go = this._onContinue;
-    this._onContinue = null;
-    document.getElementById("btn-quiz-continue").classList.add("hidden");
-    if (go) go();
-  },
-
+  /* ---------- 結算 ---------- */
   finish() {
-    clearInterval(this.timerId);
-    this._cancelAdvance();
-    this._onContinue = null;   /* 防止殘留狀態喺之後誤觸 Continue */
-    document.getElementById("quiz-bar").style.width = "100%";
-    const score = this.results.filter(r => r.correct).length;
-    const duration = this._elapsedSec();
-    App.onQuizFinished({
-      ts: Date.now(),
-      duration,
-      score,
-      total: this.set.length,
-      mode: this.mode,
-      gymMilestone: this.gymMilestone || 0,
-      results: this.results.map(r => ({ qid: r.qid, chosen: r.chosen, correct: r.correct, memory: !!r.memory, hint: !!r.hint }))
+    const results = this.set.map(q => {
+      const a = this._answerFor(q);
+      return {
+        qid: q.id,
+        chosen: a.chosen || "",
+        correct: !!a.clean,
+        hint: !!a.hintEver,
+        memory: false,
+        topic: q.topic
+      };
     });
+    const score = results.filter(r => r.correct).length;
+    const data = {
+      results,
+      score,
+      total: this.total,
+      duration: Math.floor((Date.now() - this.startTime) / 1000),
+      mode: this.mode || null,
+      gymMilestone: this.gymMilestone || 0
+    };
+    App.onQuizFinished(data);
   }
 };

@@ -21,7 +21,6 @@ const ASSETS = [
   "./js/pet.js",
   "./js/explain.js",
   "./js/quiz.js",
-  "./js/powerup.js",
   "./js/gacha.js",
   "./js/pokedex.js",
   "./js/leaderboard.js",
