@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.3.0...v1.3.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* defer OAuth post-login merge until after first paint so the overwrite modal is not hidden behind the boot loading overlay ([1527955](https://github.com/MARCOTT402/PokeEngmon/commit/1527955305e311c467a4e79562fdb5805d7b49e8))
+
 # [1.3.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.2.0...v1.3.0) (2026-10-29)
 
 
