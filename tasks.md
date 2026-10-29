@@ -39,7 +39,7 @@
   - 用 browser 子代理開本地預覽，逐項核對 spec §6。
   - 特別測：`human race` 2 格、`wasn't` 1 格、空答案題、hint L1/L2、重排、最後一題不再排、chip 單位。
 
-- [ ] **T8. Commit + push 分支**
+- [x] **T8. Commit + push 分支**
   - 按 spec §7 五個 commit（`--paths` 限定）。
   - push `feat/inline-blank-quiz`；**不 merge**。
   - 回報 commit 清單與驗收重點。
