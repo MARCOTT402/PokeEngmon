@@ -393,7 +393,7 @@ window.Sync = (() => {
     const c = cfg();
     if (!c || !c.restUrl || !window.Pet) return null;
     try {
-      const res = await fetch(`${c.restUrl}/user_account?select=account_id&limit=1`, {
+      const res = await fetch(`${c.restUrl}/user_account?select=id&limit=1`, {
         headers: {
           "apikey": c.anonKey,
           "Authorization": "Bearer " + (window.SupabaseAuth && SupabaseAuth.currentToken
@@ -436,7 +436,7 @@ window.Sync = (() => {
     const ref = _accountRef();
     if (!ref.isAuth || !items) return false;
     try {
-      await _api("PATCH", `/user_account?account_id=eq.${ref.account_id}`, {
+      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, {
         items_food: Math.max(0, Number(items.food) || 0),
         items_premium: Math.max(0, Number(items.premium) || 0),
         items_revive: Math.max(0, Number(items.revive) || 0)
