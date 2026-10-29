@@ -50,6 +50,7 @@ create table if not exists user_cards (
   repetition int not null default 0,
   lapse_count int not null default 0,
   is_mastered boolean not null default false,
+  last_review_at bigint not null default 0,
   updated_at bigint not null,
   primary key (account_id, card_id)
 );
