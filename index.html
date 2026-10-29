@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -19,9 +19,79 @@
       }
     }
   </script>
+  <!-- 首屏 Loading：內聯樣式 + 純 CSS 精靈球，零外部依賴。
+       必須排喺 style.css 之前 —— stylesheet 係 render-blocking，
+       排後面就要等 CSS 下載完先畫得出（2G/3G 下會變白屏）。 -->
+  <style>
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 99999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 26px;
+      background-color: #ffcb05;
+      background-image:
+        radial-gradient(circle at 18% 16%, rgba(238, 21, 21, .5) 0 6px, transparent 7px),
+        radial-gradient(circle at 80% 24%, rgba(238, 21, 21, .4) 0 5px, transparent 6px),
+        radial-gradient(circle at 32% 38%, rgba(238, 21, 21, .3) 0 4px, transparent 5px),
+        radial-gradient(circle at 66% 64%, rgba(255, 255, 255, .65) 0 5px, transparent 6px),
+        radial-gradient(circle at 14% 78%, rgba(255, 255, 255, .5) 0 4px, transparent 5px),
+        radial-gradient(circle at 88% 84%, rgba(255, 255, 255, .45) 0 4px, transparent 5px);
+    }
+    .ld-ball {
+      position: relative; width: 80px; height: 80px;
+      border-radius: 50%; border: 4px solid #1a1a1a;
+      background: linear-gradient(to bottom,
+        #ee1515 0 45%, #1a1a1a 45% 55%, #ffffff 55% 100%);
+      box-shadow:
+        0 6px 20px rgba(0, 0, 0, .25),
+        inset 0 -3px 8px rgba(0, 0, 0, .18),
+        inset 0 3px 6px rgba(255, 255, 255, .25);
+      animation: ld-spin 1.2s linear infinite;
+    }
+    .ld-ball::after {
+      content: ""; position: absolute; top: 50%; left: 50%;
+      width: 22px; height: 22px; transform: translate(-50%, -50%);
+      border-radius: 50%; background: #ffffff; border: 4px solid #1a1a1a;
+      box-shadow: inset 0 -1px 3px rgba(0, 0, 0, .2);
+    }
+    .ld-ball::before {
+      content: ""; position: absolute; top: 6px; left: 14px;
+      width: 18px; height: 10px; border-radius: 50%;
+      background: rgba(255, 255, 255, .35); transform: rotate(-30deg);
+    }
+    .ld-text {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 20px; font-weight: 700; color: #1a1a1a;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .ld-sub {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px; font-weight: 500; color: rgba(26, 26, 26, .62);
+      margin-top: -12px; letter-spacing: .04em;
+      text-align: center; padding: 0 24px;
+    }
+    @keyframes ld-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    #loading-screen.ld-out { animation: ld-fade .4s ease-out forwards; }
+    @keyframes ld-fade {
+      to { opacity: 0; visibility: hidden; pointer-events: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ld-ball { animation: none; }
+      #loading-screen.ld-out { animation-duration: .01s; }
+    }
+  </style>
   <link rel="stylesheet" href="css/style.css?v=1.2.0">
 </head>
 <body>
+  <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
+  <div id="loading-screen" aria-live="polite">
+    <div class="ld-ball" aria-hidden="true"></div>
+    <div class="ld-text">Loading...</div>
+    <div class="ld-sub" id="loading-sub">Setting up your adventure</div>
+  </div>
+
   <div id="app">
 
     <!-- ============ 主畫面 ============ -->

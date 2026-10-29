@@ -1,4 +1,4 @@
-﻿/* ============================================================
+﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
@@ -1697,4 +1697,31 @@ const App = {
   },
 };
 
-document.addEventListener("DOMContentLoaded", () => App.init());
+/* 首屏 Loading overlay：載入完成後淡出移除。
+   失敗或超時都一定要收走，唔可以永遠轉精靈球。 */
+let _loadingDone = false;
+function dismissLoading() {
+  if (_loadingDone) return;
+  _loadingDone = true;
+  const el = document.getElementById("loading-screen");
+  if (!el) return;
+  el.classList.add("ld-out");
+  setTimeout(() => el.remove(), 420);
+}
+function armLoadingWatchdog() {
+  setTimeout(() => {
+    if (_loadingDone) return;
+    const sub = document.getElementById("loading-sub");
+    if (sub) sub.textContent = "Still loading… tap here to retry";
+    const el = document.getElementById("loading-screen");
+    if (el) el.addEventListener("click", () => location.reload(), { once: true });
+  }, 20000);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  armLoadingWatchdog();
+  App.init().then(dismissLoading).catch((err) => {
+    console.error("[boot] init failed", err);
+    dismissLoading();
+  });
+});
