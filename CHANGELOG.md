@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.3.1...v1.4.0) (2026-10-29)
+
+
+### Features
+
+* store full practice set details in cloud so the calendar restores history across devices ([389f849](https://github.com/MARCOTT402/PokeEngmon/commit/389f849f482b3e9e485cb3f38bbf4b1127f8d48b))
+
 ## [1.3.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.3.0...v1.3.1) (2026-10-29)
 
 
