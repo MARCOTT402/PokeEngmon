@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.5.0...v1.6.0) (2026-10-29)
+
+
+### Features
+
+* sync name_customized flag and restore review history from Supabase ([fed9de6](https://github.com/MARCOTT402/PokeEngmon/commit/fed9de67010a0dd918de71fdd6519f4ed306b6aa))
+
 # [1.5.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.4.0...v1.5.0) (2026-10-29)
 
 
