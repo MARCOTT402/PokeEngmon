@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.1...v1.8.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* **pet:** new or switched-in partner no longer loses 50 HP instantly ([e7643da](https://github.com/MARCOTT402/PokeEngmon/commit/e7643dae0c66ae28a8ddae7ef3239b94f6041b40))
+
 ## [1.8.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.0...v1.8.1) (2026-10-29)
 
 
