@@ -54,7 +54,8 @@ function defaultState() {
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
     customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
     unlockedGen: 1,          // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
-    gymBadges: []            // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges
+    gymBadges: [],           // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges
+    items: { food: 0, premium: 0, revive: 0 }   // 電子寵物背包（目前只存本機，未上雲）
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
 }
@@ -342,6 +343,8 @@ function adoptServerEntry(serverRow) {
     const old = st.entries[idx];
     /* nature 已上雲（v1.4.1）：以 server 為準；server 未有（舊資料）才沿用本地性格 */
     if (!mapped.nature) mapped.nature = old.nature;
+    /* pet 狀態目前唔上雲：以 server 為準覆蓋時要保留本地健康值／streak，否則每次 pull 都變滿血 */
+    if (old.pet) mapped.pet = old.pet;
     if (st.activeUid === old.uid) st.activeUid = mapped.uid;
     st.entries[idx] = mapped;
   } else {

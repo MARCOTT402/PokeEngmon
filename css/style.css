@@ -2027,3 +2027,124 @@ body.capture-mode { overflow: hidden; background: #07110d; }
     transition-duration: .01ms !important;
   }
 }
+
+/* ===== 電子寵物：首頁健康條 ===== */
+.hero-petbar{
+  height:8px;width:100%;max-width:240px;margin:6px auto 2px;border-radius:999px;
+  background:#1a2138;border:1px solid #2f3960;overflow:hidden;
+}
+.hero-petbar > i{
+  display:block;height:100%;width:100%;
+  background:linear-gradient(90deg,#38d39f,#7ff0c1);transition:width .45s ease-out;
+}
+.hero-petbar.mid > i{background:linear-gradient(90deg,#ffb340,#ffd98a)}
+.hero-petbar.low > i{background:linear-gradient(90deg,#ff5c6c,#ff9aa6)}
+.hero-pet-note{font-size:11px;color:#8b93ad;margin:0 0 8px;line-height:1.4}
+.hero-sprite.fainted{filter:grayscale(1) brightness(.75)}
+
+/* ===== 育成彈窗（Partner Care） ===== */
+.petcare{text-align:left;max-height:76vh;overflow-y:auto;overflow-x:hidden;padding-right:2px}
+.pc-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px 10px}
+.pc-head h3{margin:0;font-size:16px;font-weight:800}
+.pc-close{
+  background:transparent;border:0;color:#8b93ad;cursor:pointer;
+  font-size:18px;min-width:36px;min-height:36px;border-radius:10px;
+}
+.pc-close:hover{color:#dfe4f4}
+
+.pc-stage{
+  position:relative;height:170px;border-radius:14px;overflow:hidden;
+  background:linear-gradient(#1b2545,#141c33 70%,#101628);border:1px solid #343d5e;
+}
+.pc-stage.drop-hint{border-color:#ffcb05;box-shadow:0 0 0 3px rgba(255,203,5,.18) inset}
+.pc-ground{
+  position:absolute;left:8%;right:8%;bottom:36px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,#3d4a72,#5c6ba0,#3d4a72);
+}
+.pc-walker{
+  position:absolute;bottom:36px;left:8%;--travel:190px;
+  animation:pcWalk 5.2s ease-in-out infinite alternate;
+}
+.pc-walker img{display:block;width:84px;image-rendering:pixelated;animation:pcHop .85s ease-in-out infinite}
+.pc-stage.faint .pc-walker img{filter:grayscale(1) brightness(.75)}
+@keyframes pcWalk{from{transform:translateX(0)}to{transform:translateX(var(--travel))}}
+@keyframes pcHop{0%,100%{transform:translateY(0)}45%{transform:translateY(-11px)}}
+@media (max-width:400px){.pc-walker{--travel:140px}}
+
+.pc-pills{
+  position:absolute;top:8px;left:10px;right:10px;display:flex;justify-content:space-between;
+  gap:8px;font-size:10px;
+}
+.pc-pill{background:#2b3452;color:#cfd6ec;border-radius:999px;padding:3px 9px}
+.pc-pill.streak{background:#2a4a3b;color:#7ff0c1}
+
+.pc-hpwrap{position:absolute;left:10px;right:10px;bottom:8px}
+.pc-hpbar{
+  height:9px;border-radius:999px;background:#151a2b;border:1px solid #343d5e;overflow:hidden;
+}
+.pc-hpbar > i{
+  display:block;height:100%;width:100%;
+  background:linear-gradient(90deg,#38d39f,#7ff0c1);transition:width .45s ease-out;
+}
+.pc-hpbar.mid > i{background:linear-gradient(90deg,#ffb340,#ffd98a)}
+.pc-hpbar.low > i{background:linear-gradient(90deg,#ff5c6c,#ff9aa6)}
+.pc-hptext{font-size:10px;color:#8b93ad;margin-top:3px}
+
+.pc-floatwrap{
+  position:absolute;left:0;right:0;bottom:96px;display:grid;place-items:center;pointer-events:none;
+}
+.pc-float{font-size:14px;font-weight:800;color:#9df3cc;animation:pcFloat 1.1s ease-out both}
+.pc-float.bad{color:#ffb0ba}
+@keyframes pcFloat{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-26px)}}
+
+.pc-state{
+  margin:10px 0 0;padding:8px 11px;border-radius:10px;font-size:12px;line-height:1.4;
+  background:#2b3452;color:#d6dcf0;
+}
+.pc-state.hungry{background:#4a3a16;color:#ffd27a}
+.pc-state.closed{background:#2a3049;color:#9aa3bf}
+.pc-state.full{background:#25423a;color:#9df3cc}
+.pc-state.faint{background:#4a2330;color:#ffb0ba}
+
+.pc-items{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.pc-item{
+  position:relative;width:78px;border-radius:12px;background:#1b2238;border:1px solid #343d5e;
+  padding:8px 4px 6px;text-align:center;cursor:grab;user-select:none;touch-action:manipulation;
+  transition:transform .12s cubic-bezier(.25,1,.5,1);
+}
+.pc-item img{width:36px;height:36px;object-fit:contain;pointer-events:none}
+.pc-item span{display:block;font-size:10px;color:#8b93ad;pointer-events:none}
+.pc-count{
+  position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:999px;
+  background:#ffcb05;color:#2b2300;font-size:11px;font-weight:800;
+  display:grid;place-items:center;padding:0 5px;
+}
+.pc-item.disabled{opacity:.35;cursor:not-allowed}
+.pc-item.selected{outline:2px solid #ffcb05;outline-offset:2px}
+
+.pc-tip{font-size:11px;color:#8b93ad;text-align:center;margin-top:6px;line-height:1.4}
+.pc-rosterhead{display:flex;justify-content:space-between;gap:8px;margin:12px 0 6px;font-size:11px;color:#8b93ad}
+.pc-roster{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pc-pick{
+  position:relative;background:#1b2238;border:1px solid #343d5e;border-radius:12px;
+  padding:8px 4px;cursor:pointer;transition:transform .12s cubic-bezier(.25,1,.5,1);
+}
+.pc-pick img{width:46px;image-rendering:pixelated}
+.pc-pick.active{border-color:#ffcb05;box-shadow:0 0 0 2px rgba(255,203,5,.2) inset}
+.pc-pick.faint{opacity:.45}
+.pc-pick.faint img{filter:grayscale(1)}
+.pc-tag{
+  position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+  font-size:8px;font-weight:800;background:#ffcb05;color:#2b2300;border-radius:999px;padding:1px 6px;
+}
+
+.reward-chip.pet-drop{background:#2a4a3b;color:#7ff0c1}
+.reward-chip.pet-warn{background:#4a2330;color:#ffb0ba}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-item:hover:not(.disabled),
+  .pc-pick:hover,
+  .pc-close:hover {
+    transform: scale(1.05);
+  }
+}

@@ -55,6 +55,32 @@ const App = {
       sprite.style.visibility = "visible";
       nameEl.textContent = cur[1];
       stageEl.innerHTML = `<span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span> Lv.${level} <span class="hero-stars">${stars}</span>`;
+
+      /* 電子寵物狀態：只跟當前拍檔，其他寶可夢唔受影響 */
+      const petSt = window.Pet ? Pet.status(entry) : null;
+      const hpBar = document.getElementById("hero-hpbar");
+      const hpNote = document.getElementById("hero-pet-note");
+      if (hpBar && hpNote) {
+        if (petSt) {
+          hpBar.style.width = Math.max(0, petSt.health) + "%";
+          const wrap = hpBar.parentElement;
+          wrap.classList.toggle("mid", petSt.health > 25 && petSt.health <= 50);
+          wrap.classList.toggle("low", petSt.health <= 25);
+          sprite.classList.toggle("fainted", petSt.faint);
+          if (petSt.faint) {
+            hpNote.textContent = "Fainted — open Partner Care to use a Revival";
+          } else if (petSt.fed) {
+            hpNote.textContent = `Health ${petSt.health}/100 ・ Fed today ・ 🔥 ${petSt.streak}`;
+          } else if (!petSt.windowOpen) {
+            hpNote.textContent = `Health ${petSt.health}/100 ・ Feeding 15:00–20:59`;
+          } else {
+            hpNote.textContent = `Health ${petSt.health}/100 ・ Hungry — tap to feed`;
+          }
+        } else {
+          hpBar.style.width = "0%";
+          hpNote.textContent = "";
+        }
+      }
       if (level >= MAX_LEVEL) {
         bar.style.width = "100%";
         expText.textContent = `Lv.MAX ・ Fully evolved 🎉`;
@@ -67,10 +93,19 @@ const App = {
       }
     } else {
       sprite.style.visibility = "hidden";
+      sprite.classList.remove("fainted");
       nameEl.textContent = "No Pokémon yet";
       stageEl.textContent = "";
       bar.style.width = "0%";
       expText.textContent = "Answer questions → pull a Pokémon!";
+      /* 冇拍檔時清空健康條 */
+      const hpBar0 = document.getElementById("hero-hpbar");
+      const hpNote0 = document.getElementById("hero-pet-note");
+      if (hpBar0) {
+        hpBar0.style.width = "0%";
+        hpBar0.parentElement.classList.remove("mid", "low");
+      }
+      if (hpNote0) hpNote0.textContent = "";
     }
 
     /* 點圖片換拍檔（只可換已抽到嘅） */
@@ -135,44 +170,225 @@ const App = {
   /* ---------- 換拍檔（只限已抽到嘅） ---------- */
   openPartnerPicker() {
     const st = loadState();
-    const rows = st.entries.map(entry => {
-      ensureEntryPokemonData(entry);
-      const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
-      const cur = entryCurrentSpecies(entry);
-      const rz = RARITY[chain?.baseRarity] || RARITY.normal;
-      const active = entry.uid === st.activeUid;
-      return `
-        <button class="dex-cell owned ${active ? "current" : ""}" data-uid="${entry.uid}">
-          <img src="${spriteURL(cur[0])}" alt="${cur[1]}">
-          <span class="dex-name">${cur[1]}</span>
-          <span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-          <span class="p-stage">Lv.${entry.level} ・ ${"★".repeat(entry.stars || 1)}${active ? " ・ Active" : ""}</span>
-        </button>`;
-    }).join("");
+    if (!st.entries.length) { this.toast("No Pokémon yet — finish a set to pull one!"); return; }
+    const entry = getActiveEntry();
+    if (!entry) return;
+    Pet.ensure(entry);
+    this._pcSel = null;
 
     this.showModal(`
-      <div class="partner-box">
-        <h3 class="partner-title">🔄 Switch Partner</h3>
-        <p class="partner-sub">Tap a Pokémon you own to make it your partner</p>
-        <div class="partner-list">${rows}</div>
+      <div class="petcare">
+        <div class="pc-head">
+          <h3>Partner Care</h3>
+          <button class="pc-close" type="button" aria-label="Close">✕</button>
+        </div>
+
+        <div class="pc-stage" id="pc-stage">
+          <div class="pc-ground"></div>
+          <div class="pc-walker"><img id="pc-sprite" alt="partner"></div>
+          <div class="pc-pills">
+            <span class="pc-pill" id="pc-fed">Not fed today</span>
+            <span class="pc-pill streak" id="pc-streak">🔥 0</span>
+          </div>
+          <div class="pc-hpwrap">
+            <div class="pc-hpbar" id="pc-hpbar"><i id="pc-hpfill"></i></div>
+            <div class="pc-hptext" id="pc-hptext">Health 100 / 100</div>
+          </div>
+          <div class="pc-floatwrap" id="pc-float"></div>
+        </div>
+        <div class="pc-state" id="pc-state"></div>
+
+        <div class="pc-items">
+          <div class="pc-item" data-kind="food">
+            <img src="assets/items/food.png" alt="Food"><span>Food +25</span>
+            <b class="pc-count" data-count="food">0</b>
+          </div>
+          <div class="pc-item" data-kind="premium">
+            <img src="assets/items/premium.png" alt="Premium Food"><span>Premium +50</span>
+            <b class="pc-count" data-count="premium">0</b>
+          </div>
+          <div class="pc-item" data-kind="revive">
+            <img src="assets/items/revive.png" alt="Revival"><span>Revival</span>
+            <b class="pc-count" data-count="revive">0</b>
+          </div>
+        </div>
+        <div class="pc-tip">Drag an item onto your partner — or tap an item, then tap the stage.</div>
+
+        <div class="pc-rosterhead"><span>Your Pokémon</span><span>Tap to bring it to the stage</span></div>
+        <div class="pc-roster" id="pc-roster"></div>
       </div>`, true);
 
-    document.querySelectorAll("#modal-root .partner-list .dex-cell").forEach(btn => {
-      btn.onclick = () => {
-        const uid = btn.dataset.uid;
-        const target = st.entries.find(e => e.uid === uid);
-        if (!target) { this.closeModal(); return; }
-        if (uid === st.activeUid) { this.closeModal(); return; }
-        st.activeUid = uid;
-        saveState();
-        /* 雲端同步拍檔切換（active 係 column grant 開放嘅非敏感欄位） */
-        if (window.Sync && Sync.isEnabled()) Sync.pushActive(uid);
-        this.closeModal();
-        this.renderHome();
-        const cur = entryCurrentSpecies(target);
-        this.toast(`Partner changed to ${cur[1]}!`);
-      };
+    const modal = document.getElementById("modal-root");
+    modal.querySelector(".pc-close").onclick = () => this.closeModal();
+
+    /* 道具：點擊選取（手機）＋ 桌面拖放 */
+    modal.querySelectorAll(".pc-item").forEach(tile => {
+      const kind = tile.dataset.kind;
+      tile.addEventListener("click", () => {
+        if (!Pet.canUse(kind, getActiveEntry())) {
+          const res = Pet.useItem(kind, getActiveEntry());   /* 借用佢嘅錯誤訊息 */
+          if (res && !res.ok) this._pcToast(res.msg);
+          return;
+        }
+        this._pcSel = this._pcSel === kind ? null : kind;
+        this._syncPetCare();
+      });
+      tile.addEventListener("dragstart", e => {
+        this._pcSel = kind;
+        try { e.dataTransfer.setData("text/plain", kind); } catch (err) {}
+        this._syncPetCare();
+      });
+      tile.addEventListener("dragend", () => {
+        this._pcSel = null;
+        const stage = document.getElementById("pc-stage");
+        if (stage) stage.classList.remove("drop-hint");
+        this._syncPetCare();
+      });
     });
+
+    const stage = document.getElementById("pc-stage");
+    stage.addEventListener("dragover", e => {
+      if (!this._pcSel) return;
+      e.preventDefault();
+      stage.classList.add("drop-hint");
+    });
+    stage.addEventListener("dragleave", () => stage.classList.remove("drop-hint"));
+    stage.addEventListener("drop", e => {
+      e.preventDefault();
+      stage.classList.remove("drop-hint");
+      const kind = this._pcSel || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+      if (kind) this._pcUse(kind);
+    });
+    stage.addEventListener("click", () => {
+      if (this._pcSel) this._pcUse(this._pcSel);
+    });
+
+    this._syncPetCare();
+  },
+
+  _pcUse(kind) {
+    const entry = getActiveEntry();
+    const res = Pet.useItem(kind, entry);
+    this._pcSel = null;
+    if (res.ok) {
+      const box = document.getElementById("pc-float");
+      if (box) {
+        box.innerHTML = `<div class="pc-float">${res.msg}</div>`;
+        setTimeout(() => { box.innerHTML = ""; }, 1100);
+      }
+      this._syncPetCare();
+      this.renderHome();
+    } else {
+      this._pcToast(res.msg);
+    }
+  },
+
+  _pcToast(msg) {
+    const box = document.getElementById("pc-float");
+    if (!box) return;
+    box.innerHTML = `<div class="pc-float bad">${escapeHTML(msg)}</div>`;
+    setTimeout(() => { box.innerHTML = ""; }, 1200);
+  },
+
+  /* 同步育成彈窗三層內容（唔重建 DOM，避免動畫閃） */
+  _syncPetCare() {
+    const st = loadState();
+    const entry = getActiveEntry();
+    if (!entry) return;
+    const p = Pet.ensure(entry);
+    const cur = entryCurrentSpecies(entry);
+    const dayQ = Pet.dayKey();
+
+    const sprite = document.getElementById("pc-sprite");
+    if (sprite) {
+      const want = animatedURL(cur[0]);
+      if (sprite.dataset.src !== want) {
+        sprite.dataset.src = want;
+        sprite.onerror = () => { sprite.onerror = null; sprite.src = spriteURL(cur[0]); };
+        sprite.src = want;
+      }
+    }
+    const stage = document.getElementById("pc-stage");
+    if (stage) stage.classList.toggle("faint", p.health <= 0);
+
+    const bar = document.getElementById("pc-hpbar");
+    if (bar) {
+      bar.classList.toggle("mid", p.health > 25 && p.health <= 50);
+      bar.classList.toggle("low", p.health <= 25);
+    }
+    const fill = document.getElementById("pc-hpfill");
+    if (fill) fill.style.width = Math.max(0, p.health) + "%";
+    const hpText = document.getElementById("pc-hptext");
+    if (hpText) hpText.textContent = `Health ${Math.max(0, p.health)} / 100`;
+
+    const fed = document.getElementById("pc-fed");
+    if (fed) fed.textContent = p.lastFedDay === dayQ ? "Fed today" : "Not fed today";
+    const streak = document.getElementById("pc-streak");
+    if (streak) streak.textContent = "🔥 " + p.streak;
+
+    /* 狀態文案 */
+    const state = document.getElementById("pc-state");
+    if (state) {
+      state.className = "pc-state";
+      if (p.health <= 0) {
+        state.classList.add("faint");
+        state.textContent = `${cur[1]} has fainted — answers still count but earn 0 EXP. Use a Revival to wake it.`;
+      } else if (p.health >= 100) {
+        state.classList.add("full");
+        state.textContent = p.lastFedDay === dayQ
+          ? `Health is full — Streak ${p.streak}. Come back tomorrow.`
+          : "Health is full — no need to feed.";
+      } else if (!Pet.inWindow()) {
+        state.classList.add("closed");
+        state.textContent = new Date().getHours() < 15
+          ? "Zzz… feeding starts at 15:00"
+          : "Kitchen closed for today — feeding resumes 15:00 tomorrow";
+      } else {
+        state.classList.add("hungry");
+        state.textContent = `${cur[1]} is hungry! Keep feeding until health is full (15:00–20:59).`;
+      }
+    }
+
+    /* 道具數量 + 可用狀態 */
+    document.querySelectorAll("#modal-root .pc-item").forEach(tile => {
+      const kind = tile.dataset.kind;
+      const n = Pet.countOf(kind);
+      const badge = tile.querySelector(".pc-count");
+      if (badge) badge.textContent = n;
+      const usable = Pet.canUse(kind, entry);
+      tile.classList.toggle("disabled", !usable);
+      tile.classList.toggle("selected", this._pcSel === kind && usable);
+      tile.draggable = usable;
+    });
+
+    /* 全部寶可夢 */
+    const roster = document.getElementById("pc-roster");
+    if (roster) {
+      roster.innerHTML = st.entries.map(e => {
+        ensureEntryPokemonData(e);
+        const c = entryCurrentSpecies(e);
+        const faint = Pet.isFaint(e);
+        const active = e.uid === st.activeUid;
+        return `<button class="pc-pick ${active ? "active" : ""} ${faint ? "faint" : ""}" data-uid="${e.uid}">
+          <img src="${spriteURL(c[0])}" alt="${c[1]}"
+               onerror="this.onerror=null;this.src='${animatedURL(c[0])}'">
+          ${active ? '<span class="pc-tag">PARTNER</span>' : ""}
+        </button>`;
+      }).join("");
+      roster.querySelectorAll(".pc-pick").forEach(cell => {
+        cell.onclick = () => {
+          const st2 = loadState();
+          const uid = cell.dataset.uid;
+          if (!uid || uid === st2.activeUid) return;
+          st2.activeUid = uid;
+          saveState();
+          if (window.Sync && Sync.isEnabled()) Sync.pushActive(uid);
+          this._pcSel = null;
+          this._syncPetCare();
+          this.renderHome();
+        };
+      });
+    }
   },
 
   /* ---------- 題型選擇（做題前）：先揀課題，再展開揀個別題型 ---------- */
@@ -834,6 +1050,14 @@ const App = {
       ? Math.round((expGain / data.total) * 0.5 * memoryCorrect)
       : 0;
     const rewards = { ticket: 0, diamonds: 0, exp: expGain + memoryBonus, memoryBonus };
+    /* 電子寵物：拍檔 Faint → 本回合 EXP 0（提示留喺結算畫面） */
+    if (entry && window.Pet && Pet.isFaint(entry)) {
+      rewards.exp = 0;
+      rewards.fainted = true;
+    }
+    /* 電子寵物掉落：10/10 → 復活藥 1 + 高級食物 1（另有 10% 額外復活藥）；
+       1–9 題 → 普通食物 1（另有 10% 復活藥） */
+    rewards.drops = window.Pet ? Pet.rollDrops(data.score === data.total) : [];
     /* Diamonds：防金手指走 RPC（登入時由 server 計算 + 權威 balance）
        RPC 失敗（null）→ fallback 本地計算，離線都唔會變 0 粒 */
     let serverRes = null;
@@ -946,9 +1170,14 @@ const App = {
       }
     }
 
+    const dropChips = (rewards.drops || [])
+      .map(d => `<div class="reward-chip pet-drop">${d.label}</div>`).join("");
+
     document.getElementById("settle-rewards").innerHTML = capHTML + `
       ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
-      <div class="reward-chip">⭐ EXP +${rewards.exp}${rewards.memoryBonus > 0 ? ` <small>(+${rewards.memoryBonus} memory bonus ✨)</small>` : ""}</div>`;
+      <div class="reward-chip">⭐ EXP +${rewards.exp}${rewards.memoryBonus > 0 && !rewards.fainted ? ` <small>(+${rewards.memoryBonus} memory bonus ✨)</small>` : ""}</div>
+      ${rewards.fainted ? `<div class="reward-chip pet-warn">Your partner has fainted — no EXP this round. Feed it a Revival in Partner Care.</div>` : ""}
+      ${dropChips}`;
 
     /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!" */
     if (cap && window.CaptureScene && CaptureScene.audio) {
@@ -1635,6 +1864,8 @@ const App = {
       }
     }
     migrateEntries();
+    /* 電子寵物：補算漏餵日子（只扣當前拍檔），要在首屏 render 之前完成 */
+    if (window.Pet) Pet.runDailyCheck();
     /* 背景補下未完嘅世代資料包（斷點續傳） */
     if (window.GenPack) GenPack.resumePending(loadState().unlockedGen || 1);
 
