@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.0...v1.8.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **sync:** patch user_account by id so item bag and clock sync actually persist ([0c17af4](https://github.com/MARCOTT402/PokeEngmon/commit/0c17af47a9377dd33e4294acc93e3a04db369891))
+
 # [1.8.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.7.1...v1.8.0) (2026-10-29)
 
 
