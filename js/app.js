@@ -108,14 +108,10 @@ const App = {
       if (hpNote0) hpNote0.textContent = "";
     }
 
-    /* 點圖片換拍檔（只可換已抽到嘅） */
-    const nOwned = st.entries.length;
-    sprite.classList.toggle("clickable", nOwned >= 2);
-    labelEl.textContent = nOwned >= 2 ? "My Partner (tap to switch)" : "My Partner";
-    sprite.onclick = () => {
-      if (nOwned >= 2) this.openPartnerPicker();
-      else if (nOwned === 1) this.toast("Only one partner so far — pull a second one to switch!");
-    };
+    /* 點拍檔 → Partner Care（育成 / 餵食 / 換拍檔都可以喺彈窗做） */
+    sprite.classList.toggle("clickable", !!entry);
+    labelEl.textContent = entry ? "My Partner (tap to care)" : "My Partner";
+    sprite.onclick = () => { if (entry) this.openPartnerPicker(); };
 
     /* Stats */
     const acc = st.totalQuestions > 0 ? Math.round((st.totalCorrect / st.totalQuestions) * 100) : 0;
