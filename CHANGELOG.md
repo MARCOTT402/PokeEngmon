@@ -1,3 +1,10 @@
+## [1.8.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.2...v1.8.3) (2026-10-29)
+
+
+### Bug Fixes
+
+* **gym:** serve badge sprites locally (PokeAPI items path was 404) ([9f7f3b3](https://github.com/MARCOTT402/PokeEngmon/commit/9f7f3b3ca86deca71262b6c30061005498604be1))
+
 ## [1.8.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.1...v1.8.2) (2026-10-29)
 
 
