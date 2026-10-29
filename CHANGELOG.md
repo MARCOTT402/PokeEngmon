@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.7.0...v1.7.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* route picture word audio through a dedicated bus so BGM and SFX volume settings no longer affect it ([569fd03](https://github.com/MARCOTT402/PokeEngmon/commit/569fd03cb353bc1ad8a4f47f1b95e457d2ece873))
+
 # [1.7.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.6.0...v1.7.0) (2026-10-29)
 
 
