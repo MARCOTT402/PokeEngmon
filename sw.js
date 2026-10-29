@@ -51,6 +51,7 @@ const ASSETS = [
   "./assets/bgm/flat-water.mp3",
   "./assets/gacha/dragonite.png",
   ...TYPE_ICONS.map(t => `./assets/types/${t}.png`),
+  ...Array.from({ length: 16 }, (_, i) => `./assets/badges/${i + 1}.png`),
   ...Array.from({ length: 151 }, (_, i) => `./assets/cries/${i + 1}.mp3`)
 ];
 

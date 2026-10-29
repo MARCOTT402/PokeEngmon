@@ -14,9 +14,12 @@ function gymBadgeItemForMilestone(milestone) {
   return GYM_BADGE_ITEMS[idx % GYM_BADGE_ITEMS.length];
 }
 
+/* 徽章圖改用本地 assets/badges/<n>.png
+   （原本 https://raw.githubusercontent.com/.../sprites/items/boulder-badge.png 係 404，
+     而且 raw.githubusercontent 在部分地區被封，會變成空白框） */
 function gymBadgeSpriteURL(milestone) {
-  const name = gymBadgeItemForMilestone(milestone);
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${name}.png`;
+  const idx = Math.max(0, Math.floor(milestone / 10) - 1) % GYM_BADGE_ITEMS.length;
+  return `assets/badges/${idx + 1}.png`;
 }
 
 const Gym = {
