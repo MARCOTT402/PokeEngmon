@@ -502,9 +502,14 @@ const Quiz = {
     const ballsHost = document.getElementById("catch-balls");
     if (!area || !ballsHost) return;
 
+    /* 停止舊物理循環、清空 */
+    this._stopPhysics();
+    ballsHost.innerHTML = "";
+    this._physBalls = [];
+    this._grabbed = null;
+
     /* 預設隱藏捕捉區，恢復輸入 */
     area.classList.add("hidden");
-    ballsHost.innerHTML = "";
     this.cells.forEach(c => {
       if (c.cellEl) c.cellEl.classList.remove("catch-target");
       if (c.input) c.input.disabled = false;
@@ -527,10 +532,28 @@ const Quiz = {
     const distractors = this._pickDistractors(q, correctAns, 3);
     const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
 
-    options.forEach(ans => {
+    const rect = ballsHost.getBoundingClientRect();
+    const W = rect.width || 380;
+    const H = rect.height || 260;
+    const R = 34; /* 半徑 */
+
+    options.forEach((ans, i) => {
       const ball = this._makeCatchBall(ans, ans === correctAns);
       ballsHost.appendChild(ball);
+      /* 隨機起始位置同速度 */
+      const x = R + 8 + Math.random() * (W - 2 * R - 16);
+      const y = R + 8 + Math.random() * (H * 0.4);
+      const vx = (Math.random() - 0.5) * 4;
+      const vy = (Math.random() * -2) - 1;
+      this._physBalls.push({ el: ball, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
+      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
     });
+
+    this._physHost = ballsHost;
+    this._physW = W;
+    this._physH = H;
+    this._physR = R;
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
   },
 
   /* 多空格題：答啱一格後，用下一格答案刷新精靈球 */
@@ -540,13 +563,39 @@ const Quiz = {
     if (!ballsHost || !item) return;
     const c = this.cells[this.currentCell];
     if (!c) return;
+
+    /* 停止舊物理循環、清空 */
+    this._stopPhysics();
+    ballsHost.innerHTML = "";
+    this._physBalls = [];
+    this._grabbed = null;
+
     const correctAns = this._norm(c.primary);
     const distractors = this._pickDistractors(item.q, correctAns, 3);
     const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
-    ballsHost.innerHTML = "";
+
+    const rect = ballsHost.getBoundingClientRect();
+    const W = rect.width || 380;
+    const H = rect.height || 260;
+    const R = 34;
+
     options.forEach(ans => {
-      ballsHost.appendChild(this._makeCatchBall(ans, ans === correctAns));
+      const ball = this._makeCatchBall(ans, ans === correctAns);
+      ballsHost.appendChild(ball);
+      const x = R + 8 + Math.random() * (W - 2 * R - 16);
+      const y = R + 8 + Math.random() * (H * 0.4);
+      const vx = (Math.random() - 0.5) * 4;
+      const vy = (Math.random() * -2) - 1;
+      this._physBalls.push({ el: ball, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
+      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
     });
+
+    this._physHost = ballsHost;
+    this._physW = W;
+    this._physH = H;
+    this._physR = R;
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+
     /* 移除黃光提示（新一格重新開始）*/
     this.cells.forEach(cc => {
       if (cc.cellEl) cc.cellEl.classList.remove("catch-target");
@@ -593,51 +642,184 @@ const Quiz = {
     return ball;
   },
 
+  /* ---------- 物理引擎 ---------- */
+  _physGravity: 0.42,
+  _physRestitution: 0.72,
+  _physFloorFriction: 0.96,
+  _physAirFriction: 0.999,
+  _physThrowScale: 0.18,
+
+  _applyBallPos(b) {
+    b.el.style.left = (b.x - this._physR) + "px";
+    b.el.style.top = (b.y - this._physR) + "px";
+    /* 旋轉：根據水平速度 */
+    b.el.style.transform = `rotate(${b.rx}deg)`;
+  },
+
+  _stopPhysics() {
+    if (this._physicsRAF) {
+      cancelAnimationFrame(this._physicsRAF);
+      this._physicsRAF = null;
+    }
+  },
+
+  _physicsTick() {
+    if (!this._physBalls) return;
+    const R = this._physR;
+    const W = this._physW;
+    const H = this._physH;
+
+    for (const b of this._physBalls) {
+      if (b.grabbed) continue;
+
+      /* 重力 */
+      b.vy += this._physGravity;
+      b.vx *= this._physAirFriction;
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      /* 旋轉跟水平速度 */
+      b.rx += b.vx * 3;
+
+      /* 牆壁碰撞 */
+      if (b.x < R) { b.x = R; b.vx = -b.vx * this._physRestitution; }
+      if (b.x > W - R) { b.x = W - R; b.vx = -b.vx * this._physRestitution; }
+      if (b.y < R) { b.y = R; b.vy = -b.vy * this._physRestitution; }
+      if (b.y > H - R) {
+        b.y = H - R;
+        b.vy = -b.vy * this._physRestitution;
+        b.vx *= this._physFloorFriction;
+        /* 靜止判定 */
+        if (Math.abs(b.vy) < 1.2) b.vy = 0;
+      }
+
+      this._applyBallPos(b);
+
+      /* 飛行中：檢查是否打中目標空格 */
+      if (b.flying) {
+        this._checkCatchHit(b);
+        /* 飛出 arena 範圍就回收 */
+        if (b.y > H + 120 || b.x < -120 || b.x > W + 120) {
+          b.flying = false;
+          this._respawnBall(b);
+        }
+      }
+    }
+
+    /* 球球之間簡單碰撞 */
+    this._ballBallCollision();
+
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+  },
+
+  _ballBallCollision() {
+    const R = this._physR;
+    const balls = this._physBalls;
+    for (let i = 0; i < balls.length; i++) {
+      for (let j = i + 1; j < balls.length; j++) {
+        const a = balls[i], b = balls[j];
+        if (a.grabbed || b.grabbed) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const min = R * 2;
+        if (dist > 0 && dist < min) {
+          const overlap = (min - dist) / 2;
+          const nx = dx / dist, ny = dy / dist;
+          a.x -= nx * overlap; a.y -= ny * overlap;
+          b.x += nx * overlap; b.y += ny * overlap;
+          /* 速度交換（簡化）*/
+          const dvx = b.vx - a.vx, dvy = b.vy - a.vy;
+          const dot = dvx * nx + dvy * ny;
+          if (dot < 0) {
+            const imp = dot * this._physRestitution;
+            a.vx += imp * nx; a.vy += imp * ny;
+            b.vx -= imp * nx; b.vy -= imp * ny;
+          }
+        }
+      }
+    }
+  },
+
+  _respawnBall(b) {
+    b.flying = false;
+    b.grabbed = false;
+    b.x = this._physR + 8 + Math.random() * (this._physW - 2 * this._physR - 16);
+    b.y = this._physR + 8;
+    b.vx = (Math.random() - 0.5) * 3;
+    b.vy = -1;
+    b.el.classList.remove("flying");
+    this._applyBallPos(b);
+  },
+
   _onBallDown(e, ball) {
     if (this.answered) return;
     e.preventDefault();
-    ball.classList.add("dragging");
-    const rect = ball.getBoundingClientRect();
-    const offX = e.clientX - rect.left;
-    const offY = e.clientY - rect.top;
-    ball.style.position = "fixed";
-    ball.style.left = rect.left + "px";
-    ball.style.top = rect.top + "px";
-    ball.style.width = rect.width + "px";
-    ball.style.height = rect.height + "px";
+    /* 攔截 bubbling，避免觸發 arena 嘅 pointerdown */
+    e.stopPropagation();
+
+    const b = this._physBalls.find(x => x.el === ball);
+    if (!b) return;
+
+    b.grabbed = true;
+    b.flying = false;
+    b.vx = 0; b.vy = 0;
+    ball.classList.add("grabbed");
+    ball.classList.remove("flying");
+
+    const hostRect = this._physHost.getBoundingClientRect();
+    this._grabOffsetX = e.clientX - (hostRect.left + b.x);
+    this._grabOffsetY = e.clientY - (hostRect.top + b.y);
+    this._lastMoveX = e.clientX;
+    this._lastMoveY = e.clientY;
+    this._moveVx = 0;
+    this._moveVy = 0;
 
     const onMove = (ev) => {
-      ball.style.left = (ev.clientX - offX) + "px";
-      ball.style.top = (ev.clientY - offY) + "px";
+      this._moveVx = ev.clientX - this._lastMoveX;
+      this._moveVy = ev.clientY - this._lastMoveY;
+      this._lastMoveX = ev.clientX;
+      this._lastMoveY = ev.clientY;
+      b.x = (ev.clientX - this._grabOffsetX) - hostRect.left;
+      b.y = (ev.clientY - this._grabOffsetY) - hostRect.top;
+      /* 拖動時旋轉 */
+      b.rx += this._moveVx * 4;
+      this._applyBallPos(b);
     };
     const onUp = (ev) => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
-      ball.classList.remove("dragging");
-      this._onBallUp(ev, ball);
+      ball.classList.remove("grabbed");
+      this._onBallUp(ev, b);
     };
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
   },
 
-  _onBallUp(e, ball) {
-    /* 還原位置（如果冇命中）*/
-    const host = ball.parentElement;
-    ball.style.position = "";
-    ball.style.left = "";
-    ball.style.top = "";
-    ball.style.width = "";
-    ball.style.height = "";
+  _onBallUp(e, b) {
+    b.grabbed = false;
+    /* 以拖動速度做投擲初速（向上為負）*/
+    b.vx = this._moveVx * this._physThrowScale * 6;
+    b.vy = this._moveVy * this._physThrowScale * 6;
+    /* 限制最大速度 */
+    const maxV = 22;
+    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    if (sp > maxV) { b.vx = b.vx / sp * maxV; b.vy = b.vy / sp * maxV; }
+    b.flying = true;
+    b.el.classList.add("flying");
+  },
 
-    /* 偵測是否打中當前空格 */
+  /* 飛行中檢查是否打中目標空格 */
+  _checkCatchHit(b) {
     const target = this.cells[this.currentCell];
     if (!target || !target.cellEl) return;
     const tr = target.cellEl.getBoundingClientRect();
-    const bx = e.clientX, by = e.clientY;
-    const hit = bx >= tr.left && bx <= tr.right && by >= tr.top && by <= tr.bottom;
-
-    if (hit) {
-      this._catchSubmit(ball.dataset.answer, ball.dataset.correct === "1");
+    const hostRect = this._physHost.getBoundingClientRect();
+    const cx = hostRect.left + b.x;
+    const cy = hostRect.top + b.y;
+    if (cx >= tr.left && cx <= tr.right && cy >= tr.top && cy <= tr.bottom) {
+      b.flying = false;
+      this._catchSubmit(b.answer, b.correct);
     }
   },
 
@@ -1175,6 +1357,8 @@ const Quiz = {
 
   /* ---------- 結算 ---------- */
   finish() {
+    this._stopPhysics();
+    this._physBalls = [];
     const results = this.set.map(q => {
       const a = this._answerFor(q);
       return {

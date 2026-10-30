@@ -779,47 +779,67 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .quiz-feedback.good { color: #2e7d32; animation: pop .3s; }
 .quiz-feedback.bad { color: #c62828; }
 
-/* ---- 小學生低 EF 精靈球捕捉模式 ---- */
+/* ---- 小學生低 EF 精靈球捕捉模式（物理彈跳 + 投擲） ---- */
 .quiz-catch-area {
-  margin: 12px auto 0; max-width: 400px; text-align: center;
+  margin: 12px auto 0; max-width: 420px; text-align: center;
 }
 .catch-hint {
   margin: 0 0 10px; font-size: .85rem; font-weight: 700; color: #5b6578;
 }
 .catch-balls {
-  position: relative; height: 220px; margin: 0 auto;
-  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center;
+  position: relative; height: 260px; margin: 0 auto;
+  background: linear-gradient(180deg, #eef4ff 0%, #dbe7ff 100%);
+  border: 2px solid #b8c6e8; border-radius: 16px;
+  overflow: hidden; box-shadow: inset 0 4px 12px rgba(0,0,0,.08);
+  touch-action: none;
 }
 .catch-ball {
-  position: relative; width: 72px; height: 72px; border-radius: 50%;
-  background: linear-gradient(180deg, #ef4444 0 48%, #fff 52% 100%);
-  border: 3px solid #1f2937; cursor: grab; user-select: none; touch-action: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,.25), inset 0 2px 6px rgba(255,255,255,.4);
+  position: absolute; width: 68px; height: 68px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, #ff8a8a 0%, #ef4444 35%, #b91c1c 100%);
+  border: 3px solid #1f2937;
+  cursor: grab; user-select: none; touch-action: none;
+  box-shadow:
+    0 6px 14px rgba(0,0,0,.3),
+    inset -4px -6px 10px rgba(0,0,0,.25),
+    inset 4px 4px 8px rgba(255,255,255,.35);
   display: flex; align-items: center; justify-content: center;
-  transition: transform .15s ease;
+  will-change: transform, left, top;
 }
+/* 中間黑帶 */
 .catch-ball::before {
   content: ""; position: absolute; left: 0; right: 0; top: 46%; height: 6px;
   background: #1f2937;
 }
+/* 中間按鈕 */
 .catch-ball::after {
-  content: ""; width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; border: 3px solid #1f2937; position: relative; z-index: 1;
+  content: ""; width: 16px; height: 16px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #d1d5db);
+  border: 3px solid #1f2937; position: relative; z-index: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
 }
-.catch-ball:active { cursor: grabbing; transform: scale(1.08); }
-.catch-ball.dragging { z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.catch-ball.grabbed {
+  cursor: grabbing; z-index: 100;
+  box-shadow: 0 10px 24px rgba(0,0,0,.45), inset -4px -6px 10px rgba(0,0,0,.25);
+  transform: scale(1.06);
+}
+.catch-ball.flying { z-index: 90; cursor: default; }
 .catch-ball.hint-glow {
-  box-shadow: 0 0 0 4px rgba(250, 204, 21, .8), 0 0 20px 6px rgba(250, 204, 21, .6);
+  box-shadow:
+    0 0 0 4px rgba(250, 204, 21, .85),
+    0 0 22px 8px rgba(250, 204, 21, .6),
+    inset -4px -6px 10px rgba(0,0,0,.25);
   animation: pulse-glow 1.2s ease-in-out infinite;
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(250,204,21,.8), 0 0 20px 6px rgba(250,204,21,.6); }
-  50% { box-shadow: 0 0 0 6px rgba(250,204,21,1), 0 0 30px 10px rgba(250,204,21,.8); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(250,204,21,.85), 0 0 22px 8px rgba(250,204,21,.6), inset -4px -6px 10px rgba(0,0,0,.25); }
+  50% { box-shadow: 0 0 0 6px rgba(250,204,21,1), 0 0 32px 12px rgba(250,204,21,.85), inset -4px -6px 10px rgba(0,0,0,.25); }
 }
 .catch-ball-label {
-  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%);
   font-size: .78rem; font-weight: 800; color: #1f2937; white-space: nowrap;
-  background: #fff; padding: 1px 6px; border-radius: 6px;
+  background: #fff; padding: 2px 7px; border-radius: 7px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15); pointer-events: none;
 }
 .qb-cell.catch-target {
   outline: 3px dashed #3b6ef2; outline-offset: 3px;
@@ -828,6 +848,10 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 @keyframes catch-pulse {
   0%, 100% { outline-color: #3b6ef2; }
   50% { outline-color: #fbbf24; }
+}
+/* 投擲軌跡 */
+.catch-ball .catch-trail {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .catch-ball.hint-glow, .qb-cell.catch-target { animation: none; }
