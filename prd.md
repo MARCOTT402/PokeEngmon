@@ -149,6 +149,7 @@
 - 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）
 - 圖片題 TTS：Azure `en-US-JennyNeural` rate -10%，本地 mp3 + **v116 起 speechSynthesis 兜底**（mp3 缺失都唔會靜音）
 - 寶可夢叫聲：本地 1-151 mp3，僅首次解鎖播放
+- 對戰 UI 素材（feat/battle-system branch）：HP 框、對話框、對戰背景、訓練家、精靈球、屬性／狀態徽章均為 Pokémon FireRed/LeafGreen 原裝圖（© Nintendo / Creatures Inc. / GAME FREAK inc.），來源 The Spriters Resource（rippers: redblueyellow、desgardes、Superjustinbros、Spherical Ice、EternalLight）及 pret/pokefirered decomp；存於 `assets/battle/ui/`、`assets/trainers/`
 - 無障礙：`user-scalable=no` 已移除；所有 hover 動效只用 `@media (hover:hover)` 觸發；支援 `prefers-reduced-motion`
 
 ---

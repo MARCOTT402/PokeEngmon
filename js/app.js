@@ -1866,6 +1866,7 @@ const App = {
         <h4>Data &amp; Image Credits</h4>
         <p>Pokémon base stats, moves, evolution data, sprites, and type icons are provided by <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>.</p>
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
+        <p>Battle UI frames, HP boxes, battle backgrounds, trainer sprites, and Poké Ball graphics are original assets from Pokémon FireRed/LeafGreen (© Nintendo / Creatures Inc. / GAME FREAK inc.), ripped from <a href="https://www.spriters-resource.com/game_boy_advance/pokemonfireredleafgreen/" target="_blank" rel="noopener">The Spriters Resource</a> (rippers: redblueyellow, desgardes, Superjustinbros, Spherical Ice, EternalLight) and the pret/pokefirered decompilation project.</p>
 
         <h4>Font</h4>
         <p><i>Inter</i> by Rasmus Andersson, licensed under the SIL Open Font License 1.1.</p>

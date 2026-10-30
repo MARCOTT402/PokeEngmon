@@ -419,35 +419,26 @@
     <!-- ============ 對戰（火紅版 UI） ============ -->
     <section id="view-battle" class="view battle-view">
       <div class="battle-stage">
-        <!-- 敵方 HP box（左上） -->
+        <!-- 敵方 HP box（左上）：FRLG 原裝框 + overlay -->
         <div class="battle-hpbox battle-hpbox-foe">
-          <div class="battle-hpbox-top">
-            <span class="battle-pokename" id="foe-name">FOE</span>
-            <span class="battle-lv">Lv<span id="foe-level">5</span></span>
-          </div>
-          <div class="battle-hpbar-row">
-            <span class="battle-hp-label">HP</span>
-            <div class="battle-hpbar-track"><i class="battle-hpbar" id="foe-hpbar"></i></div>
-          </div>
-          <span class="battle-status" id="foe-status"></span>
+          <span class="battle-pokename" id="foe-name">FOE</span>
+          <img class="battle-status" id="foe-status" alt="" hidden>
+          <span class="battle-lvnum" id="foe-level">5</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="foe-hpbar"></i></div>
         </div>
         <!-- 敵方 sprite（右上） -->
         <img class="battle-sprite battle-foe-sprite" id="foe-sprite" alt="foe">
 
         <!-- 我方 sprite（左下） -->
         <img class="battle-sprite battle-my-sprite" id="my-sprite" alt="mine">
-        <!-- 我方 HP box（右下） -->
+        <!-- 我方 HP box（右下）：FRLG 原裝框 + overlay -->
         <div class="battle-hpbox battle-hpbox-mine">
-          <div class="battle-hpbox-top">
-            <span class="battle-pokename" id="my-name">POKéMON</span>
-            <span class="battle-lv">Lv<span id="my-level">5</span></span>
-          </div>
-          <div class="battle-hpbar-row">
-            <span class="battle-hp-label">HP</span>
-            <div class="battle-hpbar-track"><i class="battle-hpbar" id="my-hpbar"></i></div>
-          </div>
-          <div class="battle-expbar-track"><i class="battle-expbar"></i></div>
-          <span class="battle-status" id="my-status"></span>
+          <span class="battle-pokename" id="my-name">POKéMON</span>
+          <img class="battle-status" id="my-status" alt="" hidden>
+          <span class="battle-lvnum" id="my-level">5</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="my-hpbar"></i></div>
+          <div class="battle-hpnum"><span id="my-hp-cur">22</span>/ <span id="my-hp-max">22</span></div>
+          <div class="battle-expbar-clip"><i class="battle-expbar" id="my-expbar"></i></div>
         </div>
 
         <!-- 開場 intro 層：訓練家見面 → 拋球 -->
@@ -456,7 +447,7 @@
           <div class="intro-balls intro-balls-foe" id="intro-balls-foe"></div>
           <img class="intro-trainer intro-foe-trainer" id="intro-foe-trainer" alt="foe trainer">
           <div class="intro-trainer intro-my-trainer" id="intro-my-trainer"></div>
-          <img class="intro-ball" id="intro-ball" src="assets/items/poke-ball.png" alt="" style="display:none">
+          <img class="intro-ball" id="intro-ball" src="assets/battle/ui/poke-ball-big.png" alt="" style="display:none">
           <div class="intro-flash" id="intro-flash" style="display:none"></div>
         </div>
       </div>

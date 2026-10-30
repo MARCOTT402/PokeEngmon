@@ -1,6 +1,13 @@
 /* PokeEngmon Service Worker - 離線快取 */
 const CACHE_NAME = "pokeengmon-1.12.3";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
+const BATTLE_TYPES = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "unknown", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark"];
+const BATTLE_UI = [
+  "foe-hp-box", "my-hp-box", "textbox-blue", "caret-red", "poke-ball-big", "poke-ball-tiny",
+  "bg-grass", "bg-building", "bg-water", "bg-cave", "bg-pond", "bg-ice", "bg-sand", "bg-psychic", "bg-teal", "bg-plain",
+  "status-psn", "status-par", "status-slp", "status-frz", "status-brn", "status-tox", "status-fnt"
+];
+const TRAINERS = ["red_back", "rival", "youngster", "bugcatcher", "lass", "gentleman", "ace_f"];
 const ASSETS = [
   "./",
   "./index.html",
@@ -29,6 +36,9 @@ const ASSETS = [
   "./js/evolve-scene.js",
   "./js/app.js",
   "./js/capture.js",
+  "./js/battle/engine.js",
+  "./js/battle/state.js",
+  "./js/battle/battle.js",
   "./vendor/gsap/gsap.min.js",
   "./vendor/three/three.module.js",
   "./vendor/three/addons/postprocessing/EffectComposer.js",
@@ -56,6 +66,10 @@ const ASSETS = [
   "./assets/bgm/evolution-fanfare.mp3",
   "./assets/gacha/dragonite.png",
   ...TYPE_ICONS.map(t => `./assets/types/${t}.png`),
+  "./assets/items/poke-ball.png",
+  ...TRAINERS.map(t => `./assets/trainers/${t}.png`),
+  ...BATTLE_TYPES.map(t => `./assets/battle/ui/type-${t}.png`),
+  ...BATTLE_UI.map(u => `./assets/battle/ui/${u}.png`),
   ...Array.from({ length: 16 }, (_, i) => `./assets/badges/${i + 1}.png`),
   ...Array.from({ length: 151 }, (_, i) => `./assets/cries/${i + 1}.mp3`)
 ];

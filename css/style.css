@@ -2486,120 +2486,146 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .at-name { font-weight: 700; color: #1a2a44; }
 .at-lvl { font-size: .8rem; color: #6b7590; }
 
-/* ----- 對戰主畫面 ----- */
+/* ----- 對戰主畫面（FRLG 原裝素材） ----- */
 .battle-view {
   min-height: 100vh; padding: 0; gap: 0;
-  background: linear-gradient(180deg, #9fd0ff 0%, #cfeaff 45%, #d8e8c8 55%, #b8d88a 100%);
+  background: #285068;
   font-family: "Courier New", "Consolas", monospace;
 }
 .battle-stage {
-  position: relative; flex: 1; min-height: 300px;
+  position: relative;
   width: 100%; max-width: 520px; margin: 0 auto;
+  aspect-ratio: 240 / 112;
+  background: url("../assets/battle/ui/bg-grass.png") center / 100% 100% no-repeat;
+  image-rendering: pixelated;
 }
 
-/* HP info box — 火紅版米色資訊框 */
+/* HP info box — FRLG 原裝米色框（背景圖 + 百分比 overlay） */
 .battle-hpbox {
-  position: absolute; width: 58%; max-width: 280px;
-  background: #f8f0dc; border: 3px solid #2b2b2b; border-radius: 10px;
-  padding: 8px 12px 10px; box-shadow: 2px 3px 0 rgba(0,0,0,.25);
-  z-index: 5;
+  position: absolute; z-index: 5;
+  background-repeat: no-repeat; background-size: 100% 100%;
+  image-rendering: pixelated;
+  color: #283030; font-weight: 800;
+  font-size: clamp(9px, 2.8vw, 14px);
 }
-.battle-hpbox-foe { top: 16px; left: 12px; }
-.battle-hpbox-mine { bottom: 12px; right: 12px; }
-.battle-hpbox-top {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin-bottom: 4px;
+.battle-hpbox-foe {
+  top: 3%; left: 2%;
+  width: 46%; max-width: 240px; aspect-ratio: 100 / 31;
+  background-image: url("../assets/battle/ui/foe-hp-box.png");
+}
+.battle-hpbox-mine {
+  bottom: 4%; right: 2%;
+  width: 50%; max-width: 260px; aspect-ratio: 108 / 39;
+  background-image: url("../assets/battle/ui/my-hp-box.png");
 }
 .battle-pokename {
-  font-weight: 800; font-size: 1rem; color: #1a1a1a;
-  letter-spacing: .5px; text-transform: uppercase;
+  position: absolute; left: 6%; top: 2%;
+  font-size: 1em; letter-spacing: .5px; text-transform: uppercase;
+  max-width: 62%; white-space: nowrap; overflow: hidden;
 }
-.battle-lv { font-weight: 700; font-size: .82rem; color: #1a1a1a; }
-.battle-hpbar-row {
-  display: flex; align-items: center; gap: 6px;
-}
-.battle-hp-label {
-  font-size: .62rem; font-weight: 800; color: #1a1a1a;
-  background: #f8f0dc; padding: 0 2px;
-}
-.battle-hpbar-track {
-  flex: 1; height: 8px; background: #3a3a3a; border-radius: 4px;
-  border: 1.5px solid #1a1a1a; overflow: hidden;
-}
-.battle-hpbar {
-  display: block; height: 100%; width: 100%;
-  transition: width .5s ease, background .3s ease;
-}
-.battle-expbar-track {
-  height: 4px; background: #3a3a3a; border-radius: 2px;
-  margin-top: 5px; overflow: hidden; border: 1px solid #1a1a1a;
-}
-.battle-expbar {
-  display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, #5ec8ff, #2196f3);
+.battle-lvnum {
+  position: absolute; right: 4.5%; top: 2%;
+  font-size: 1em;
 }
 .battle-status {
-  position: absolute; right: 12px; bottom: 6px; font-size: .95rem;
+  position: absolute; right: 20%; top: 6%;
+  height: 26%; width: auto; image-rendering: pixelated;
+}
+/* HP 條：遮住框圖上嘅綠條，白底 + 彩色 fill */
+.battle-hpbar-clip {
+  position: absolute; background: #f8f8f8; overflow: hidden;
+}
+.battle-hpbox-foe .battle-hpbar-clip { left: 38.5%; top: 53%; width: 49.5%; height: 10%; }
+.battle-hpbox-mine .battle-hpbar-clip { left: 33.3%; top: 42.5%; width: 44.5%; height: 8.5%; }
+.battle-hpbar {
+  display: block; height: 100%; width: 100%; background: #58d080;
+  transition: width .5s ease, background .3s ease;
+}
+.battle-hpnum {
+  position: absolute; right: 7%; top: 55%;
+  font-size: .92em; letter-spacing: .5px;
+}
+.battle-expbar-clip {
+  position: absolute; left: 23%; top: 84%; width: 71.5%; height: 5.5%;
+  overflow: hidden;
+}
+.battle-expbar {
+  display: block; height: 100%; width: 0%;
+  background: #40a8f8;
+  transition: width .5s ease;
 }
 
-/* 精靈圖 */
+/* 精靈圖（企喺平台位） */
 .battle-sprite { position: absolute; image-rendering: pixelated; z-index: 4; }
-.battle-foe-sprite { top: 28px; right: 28px; width: 110px; height: 110px; }
-.battle-my-sprite { bottom: 30px; left: 30px; width: 130px; height: 130px; }
+.battle-foe-sprite { top: 4%; right: 9%; width: 26%; max-width: 128px; aspect-ratio: 1; object-fit: contain; }
+.battle-my-sprite { bottom: 6%; left: 7%; width: 30%; max-width: 148px; aspect-ratio: 1; object-fit: contain; }
 
-/* ----- 底部：文字框 + 選單 ----- */
+/* ----- 底部：文字框 + 選單（FRLG 深藍金邊框） ----- */
 .battle-bottom {
   display: flex; gap: 0; width: 100%; max-width: 520px; margin: 0 auto;
-  min-height: 140px; border-top: 4px solid #2b2b2b;
+  min-height: 140px;
 }
-/* FRLG 標準文字框：深藍底 + 金邊 + 白字 */
+.battle-textbox, .battle-menubox {
+  border-style: solid;
+  border-width: 14px;
+  border-image: url("../assets/battle/ui/textbox-blue.png") 9 fill stretch;
+  background: none; color: #fff;
+}
 .battle-textbox {
-  flex: 1; background: #2c4a68; border: 4px solid #c8a848;
-  border-right: none; padding: 14px 16px;
-  font-size: .92rem; line-height: 1.5; color: #fff; font-weight: 600;
+  flex: 1; border-right-width: 7px; padding: 6px 10px;
+  font-size: .92rem; line-height: 1.5; font-weight: 700;
   display: flex; align-items: center; position: relative;
 }
 .battle-caret {
-  position: absolute; right: 10px; bottom: 6px; color: #ff4040;
-  font-size: .9rem; animation: caretBlink .7s steps(2) infinite;
+  position: absolute; right: 8px; bottom: 4px;
+  width: 14px; height: auto; image-rendering: pixelated;
+  animation: caretBlink .7s steps(2) infinite;
 }
 @keyframes caretBlink { 50% { opacity: 0; } }
 .battle-menubox {
-  width: 46%; background: #2c4a68; border: 4px solid #c8a848;
-  display: flex; align-items: center; justify-content: center; padding: 8px;
+  width: 46%; border-left-width: 7px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2px;
 }
 .battle-menu-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%;
 }
 .battle-menu-btn {
-  background: #2c4a68; border: none; color: #fff;
+  background: none; border: none; color: #fff;
   font-family: inherit; font-weight: 800; font-size: .95rem;
-  padding: 10px 4px; cursor: pointer; letter-spacing: .5px;
-  text-align: left; padding-left: 18px; position: relative;
+  padding: 8px 4px; cursor: pointer; letter-spacing: .5px;
+  text-align: left; padding-left: 20px; position: relative;
 }
 .battle-menu-btn::before {
-  content: "▶"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+  content: "▶"; position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
   font-size: .6rem; color: #ff4040; opacity: 0;
 }
 .battle-menu-btn:hover::before { opacity: 1; }
-.battle-menu-btn:active { background: #1d3550; }
+.battle-menu-btn:active { background: rgba(0,0,0,.25); }
 .battle-menu-btn:disabled {
   color: #6b7f96; cursor: not-allowed; opacity: .55;
 }
 .battle-menu-btn:disabled::before { display: none; }
 
-/* 招式選單 */
+/* 招式選單：白字 + 原裝屬性徽章 */
 .battle-move-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%;
 }
 .battle-move-btn {
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--tc, #666); border: 2px solid #1a1a1a;
+  display: flex; flex-direction: column; gap: 1px;
+  background: none; border: none;
   color: #fff; font-family: inherit; font-weight: 700; font-size: .78rem;
-  padding: 8px 6px; cursor: pointer; text-align: left;
-  border-radius: 6px;
+  padding: 4px 2px 4px 20px; cursor: pointer; text-align: left;
+  position: relative;
 }
+.battle-move-btn::before {
+  content: "▶"; position: absolute; left: 6px; top: 8px;
+  font-size: .6rem; color: #ff4040; opacity: 0;
+}
+.battle-move-btn:hover::before { opacity: 1; }
 .battle-move-btn .bm-name { font-size: .82rem; line-height: 1.1; }
+.battle-move-btn .bm-sub { display: flex; align-items: center; gap: 4px; }
+.battle-move-btn .bm-type { width: 36px; height: auto; image-rendering: pixelated; }
 .battle-move-btn .bm-pp { font-size: .65rem; opacity: .85; }
 .battle-move-btn:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -2615,7 +2641,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   color: #1a1a1a; font-weight: 700;
 }
 .battle-switch-btn img { width: 36px; height: 36px; image-rendering: pixelated; }
-.battle-switch-btn .bs-hp { font-size: .58rem; color: #444; }
+.battle-switch-btn .bs-hp { font-size: .58rem; color: #444; display: flex; align-items: center; gap: 3px; }
+.battle-switch-btn .bs-hp .bs-status { width: 24px; height: auto; image-rendering: pixelated; }
 .battle-switch-btn.fainted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
 .battle-switch-btn.active { border-color: #d9534f; background: #fde8e8; }
 .battle-switch-btn:disabled { cursor: not-allowed; }
@@ -2680,7 +2707,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .battle-view.intro-on .battle-hpbox,
 .battle-view.intro-on .battle-sprite { visibility: hidden; }
 .battle-view.intro-on .battle-menubox { display: none; }
-.battle-view.intro-on .battle-textbox { border-right: 4px solid #c8a848; }
+.battle-view.intro-on .battle-textbox { border-right-width: 14px; }
 
 .battle-intro { position: absolute; inset: 0; z-index: 6; }
 
@@ -2699,10 +2726,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .intro-balls-mine { top: 15%; left: 7%; }
 .intro-balls-foe { bottom: 27%; right: 9%; }
 .intro-balls img { width: 15px; height: 15px; image-rendering: pixelated; }
-.intro-balls .ball-empty {
-  width: 12px; height: 12px; border: 2px solid #3a3a3a; border-radius: 50%;
-  background: rgba(255,255,255,.35);
-}
+.intro-balls .ball-empty { filter: grayscale(1) brightness(1.7) opacity(.45); }
 
 /* 拋出嘅球 + 落地閃光 */
 .intro-ball {
@@ -2729,10 +2753,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 手機細屏微調 */
 @media (max-width: 420px) {
-  .battle-foe-sprite { width: 92px; height: 92px; right: 18px; top: 24px; }
-  .battle-my-sprite { width: 108px; height: 108px; left: 18px; bottom: 26px; }
-  .battle-hpbox { width: 64%; padding: 6px 10px 8px; }
-  .battle-pokename { font-size: .88rem; }
-  .battle-textbox { font-size: .82rem; padding: 10px 12px; }
-  .battle-menu-btn { font-size: .82rem; padding: 9px 4px 9px 16px; }
+  .battle-hpbox { font-size: clamp(8px, 2.9vw, 11px); }
+  .battle-textbox { font-size: .82rem; }
+  .battle-menu-btn { font-size: .82rem; padding: 7px 4px 7px 16px; }
 }

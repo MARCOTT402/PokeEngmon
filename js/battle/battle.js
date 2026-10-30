@@ -1,7 +1,7 @@
 /* ============================================================
    PokeEngmon Battle - UI 控制器（火紅版排版）
    依賴全域：Battle, BattleState, App, loadState, getActiveEntry,
-             entryCurrentSpecies, spriteURL, animatedURL, typeColor,
+             entryCurrentSpecies, spriteURL, animatedURL,
              typeLabel, moveInfo, RARITY
    ============================================================ */
 
@@ -202,8 +202,9 @@ const BattleUI = (() => {
   }
   function showCaret() {
     if (document.getElementById("battle-caret")) return;
-    const c = document.createElement("span");
-    c.className = "battle-caret"; c.id = "battle-caret"; c.textContent = "▼";
+    const c = document.createElement("img");
+    c.className = "battle-caret"; c.id = "battle-caret";
+    c.src = "assets/battle/ui/caret-red.png"; c.alt = "";
     document.getElementById("battle-text").appendChild(c);
   }
   function hideCaret() { document.getElementById("battle-caret")?.remove(); }
@@ -220,8 +221,8 @@ const BattleUI = (() => {
     let html = "";
     for (let i = 0; i < 6; i++) {
       html += i < teamSize
-        ? `<img src="assets/items/poke-ball.png" alt="">`
-        : `<span class="ball-empty"></span>`;
+        ? `<img src="assets/battle/ui/poke-ball-big.png" alt="">`
+        : `<img src="assets/battle/ui/poke-ball-big.png" alt="" class="ball-empty">`;
     }
     el.innerHTML = html;
   }
@@ -342,7 +343,8 @@ const BattleUI = (() => {
     box.textContent = msg;
   }
 
-  function hpColor(pct) { return pct > 50 ? "#5cb85c" : pct > 20 ? "#f0ad4e" : "#d9534f"; }
+  /* FRLG HP 條顏色：綠 → 黃 → 紅 */
+  function hpColor(pct) { return pct > 50 ? "#58d080" : pct > 20 ? "#f8c038" : "#f84040"; }
 
   /* ---------- render ---------- */
   function render() {
@@ -364,15 +366,30 @@ const BattleUI = (() => {
     const myBar = document.getElementById("my-hpbar");
     myBar.style.width = myPct + "%";
     myBar.style.background = hpColor(myPct);
+    document.getElementById("my-hp-cur").textContent = Math.max(0, mine.hp);
+    document.getElementById("my-hp-max").textContent = mine.maxHp;
     document.getElementById("my-sprite").src = animatedURL(mine.dexId);
 
-    /* status icons */
-    document.getElementById("my-status").textContent = statusIcon(mine.status);
-    document.getElementById("foe-status").textContent = statusIcon(foe.status);
+    /* status badges（FRLG 原裝 icon） */
+    setStatusBadge("foe-status", foe.status);
+    setStatusBadge("my-status", mine.status);
   }
 
-  function statusIcon(s) {
-    return { burn: "🔥", paralyze: "⚡", poison: "☠", toxic: "☠", sleep: "💤", freeze: "❄", confusion: "❓" }[s] || "";
+  function statusBadge(s) {
+    return { burn: "brn", paralyze: "par", poison: "psn", toxic: "tox", sleep: "slp", freeze: "frz" }[s] || "";
+  }
+  /* moveInfo type → 原裝屬性徽章檔名（FRLG 冇 fairy，用 ??? 徽章） */
+  const TYPE_BADGE = {
+    normal: "normal", fire: "fire", water: "water", electric: "electric", grass: "grass",
+    ice: "ice", fighting: "fighting", poison: "poison", ground: "ground", flying: "flying",
+    psychic: "psychic", bug: "bug", rock: "rock", ghost: "ghost", dragon: "dragon",
+    dark: "dark", steel: "steel", fairy: "unknown", "???": "unknown"
+  };
+  function setStatusBadge(elId, status) {
+    const el = document.getElementById(elId);
+    const key = statusBadge(status);
+    if (key) { el.src = `assets/battle/ui/status-${key}.png`; el.hidden = false; }
+    else { el.hidden = true; el.removeAttribute("src"); }
   }
 
   /* ---------- 動作選單 ---------- */
@@ -387,9 +404,10 @@ const BattleUI = (() => {
     const grid = document.getElementById("battle-move-menu");
     grid.innerHTML = mine.moves.map((m, i) => {
       const info = moveInfo(m.slug);
-      return `<button class="battle-move-btn" data-idx="${i}" style="--tc:${typeColor(info.type)}" ${m.pp <= 0 ? "disabled" : ""}>
+      const badge = TYPE_BADGE[info.type] ? `assets/battle/ui/type-${TYPE_BADGE[info.type]}.png` : "";
+      return `<button class="battle-move-btn" data-idx="${i}" ${m.pp <= 0 ? "disabled" : ""}>
         <span class="bm-name">${m.name}</span>
-        <span class="bm-pp">PP ${m.pp}/${m.maxPp}</span>
+        <span class="bm-sub">${badge ? `<img class="bm-type" src="${badge}" alt="${info.type}">` : ""}<span class="bm-pp">PP ${m.pp}/${m.maxPp}</span></span>
       </button>`;
     }).join("");
     grid.querySelectorAll(".battle-move-btn").forEach(b => {
@@ -409,7 +427,7 @@ const BattleUI = (() => {
       return `<button class="battle-switch-btn ${fainted ? "fainted" : ""} ${active ? "active" : ""}" data-idx="${i}" ${fainted || active ? "disabled" : ""}>
         <img src="${spriteURL(p.dexId)}" alt="${p.name}">
         <span>${p.name} Lv.${p.level}</span>
-        <span class="bs-hp">HP ${p.hp}/${p.maxHp} ${statusIcon(p.status)}</span>
+        <span class="bs-hp">HP ${p.hp}/${p.maxHp} ${statusBadge(p.status) ? `<img class="bs-status" src="assets/battle/ui/status-${statusBadge(p.status)}.png" alt="">` : ""}</span>
       </button>`;
     }).join("");
     grid.querySelectorAll(".battle-switch-btn").forEach(b => {
