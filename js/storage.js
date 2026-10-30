@@ -55,7 +55,8 @@ function defaultState() {
     customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
     unlockedGen: 1,          // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
     gymBadges: [],           // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges
-    items: { food: 0, premium: 0, revive: 0 }   // 電子寵物背包（目前只存本機，未上雲）
+    items: { food: 0, premium: 0, revive: 0 },   // 電子寵物背包（目前只存本機，未上雲）
+    curveMode: "standard"   // 遺忘曲線模式：standard / junior / teen / adult
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
 }
@@ -84,13 +85,28 @@ function loadState() {
     });
   }
   if (needSave) saveState();
+  /* 套用遺忘曲線模式到 SM-2 */
+  try { if (window.SM2 && SM2.setMode) SM2.setMode(_state.curveMode || "standard"); } catch (e) {}
   return _state;
 }
 
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
-  } catch (e) { console.warn("save failed", e); }
+    if (window.SM2 && SM2.setMode) SM2.setMode(_state.curveMode || "standard");
+  } catch (e) {}
+}
+
+function getCurveMode() {
+  return (loadState().curveMode) || "standard";
+}
+
+function setCurveMode(mode) {
+  const st = loadState();
+  st.curveMode = mode;
+  saveState();
+  try { if (window.SM2 && SM2.setMode) SM2.setMode(mode); } catch (e) {}
+  return mode;
 }
 
 function resetState() {

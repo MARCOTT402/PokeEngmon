@@ -85,16 +85,19 @@ const Quiz = {
   _answerFor(q) {
     const k = this._key(q);
     if (!this.answers.has(k)) {
-      this.answers.set(k, { hintCount: 0, hintEver: false, clean: false, chosen: "" });
+      this.answers.set(k, { hintCount: 0, hintEver: false, clean: false, chosen: "", attemptCount: 0, correctCount: 0 });
     }
     return this.answers.get(k);
   },
 
+  /* 小學生模式？*/
+  _isJunior() {
+    try { return SM2.getMode() === "junior"; } catch (e) { return false; }
+  },
+
   /* ---------- 進度 ---------- */
   _updateProgress() {
-    const shown = this.answered
-      ? this.seenQids.size
-      : Math.min(this.total, this.seenQids.size + 1);
+    const shown = this.seenQids.size;
     document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
     const pct = this.total ? (this.seenQids.size / this.total) * 100 : 0;
     document.getElementById("quiz-bar").style.width = `${pct}%`;
@@ -118,6 +121,7 @@ const Quiz = {
     const a = this._answerFor(q);
     a.hintCount = 0;
     a.chosen = "";
+    a.attemptCount = 0;   /* 每次重現重置 attempt；correctCount 保留用於防循環 */
 
     this._updateProgress();
 
@@ -166,6 +170,9 @@ const Quiz = {
 
     /* Chip：未答前顯示實際經過時間 */
     this._renderChip(q, null);
+
+    /* 小學生低 EF → 精靈球捕捉模式 */
+    this._setupCatchMode(q);
 
     this._focusCurrent();
   },
@@ -330,15 +337,34 @@ const Quiz = {
     c.value = c.input.value;
     c.textEl.textContent = c.value;
 
-    /* 打字後 ghost 消失 */
-    if (c.ghost) {
-      c.ghost = "";
+    const junior = this._isJunior();
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
+    const ans = this._norm(c.primary);
+    const val = this._norm(c.value);
+
+    if (junior) {
+      /* 小學生模式：ghost 用實際輸入長度計算（唔理啱錯）
+         底線數量 = 總長度 − 已輸入長度
+         揭示字母只喺未輸入到嘅位置顯示 */
+      const typedLen = val.length;
+      if (a.hintCount >= 2) {
+        c.ghost = this._juniorGhost(c, typedLen, 0);
+      } else if (a.hintCount === 1) {
+        c.ghost = this._juniorGhost(c, typedLen, a.hintLetters || 0);
+      } else {
+        c.ghost = "";
+      }
       this._applyGhost(c);
+    } else {
+      /* 打字後 ghost 消失 */
+      if (c.ghost) {
+        c.ghost = "";
+        this._applyGhost(c);
+      }
     }
     /* 打多過答案長度 → 格自動加寬 */
     this._syncCellWidth(c, c.value);
 
-    const val = this._norm(c.value);
     if (val !== "" && this._cellMatch(c, val)) this._greenCell(i);
   },
 
@@ -376,19 +402,58 @@ const Quiz = {
     this._applyGhost(c);
   },
 
-  /* L1：接住已輸入前綴之後，顯示下一組提示字母（ghost） */
+  /* 小學生模式：生成「提示字母 + 分開嘅下劃線」ghost
+     prefixLen: 已正確輸入嘅前綴長度
+     hintLetters: L1 揭示咗嘅字母數量（固定，唔會隨輸入增加）；0 = L2 模式
+     每個字母嘅底線分開顯示（用空格隔開），等用戶可以數到有幾多個字母 */
+  _juniorGhost(c, prefixLen, hintLetters) {
+    const ans = String(c.primary || "");
+    const len = ans.length;
+    const start = Math.min(prefixLen, len);
+    let ghost = "";
+    if (hintLetters > 0) {
+      /* L1：只顯示最初揭示嗰幾個字母嘅剩餘部分，之後全部係底線 */
+      const revealed = Math.min(hintLetters, len);
+      if (start < revealed) {
+        ghost = ans.slice(start, revealed);
+      }
+      const underscoreCount = Math.max(0, len - Math.max(start, revealed));
+      if (underscoreCount > 0) {
+        ghost = (ghost ? ghost + " " : "") + Array(underscoreCount).fill("_").join(" ");
+      }
+    } else {
+      /* L2 後：只顯示剩餘下劃線，每個字母分開 */
+      const underscoreCount = Math.max(0, len - start);
+      if (underscoreCount > 0) ghost = Array(underscoreCount).fill("_").join(" ");
+    }
+    return ghost;
+  },
+
+  /* L1：揭示前 k 個字母（固定數量，唔會隨輸入增加）
+     小學生模式：提示字母 + 分開嘅下劃線 */
   _showL1(c, prefixLen) {
     const ans = String(c.primary || "");
-    const rest = Math.max(0, ans.length - prefixLen);
-    const k = this._hintCount(rest);
-    c.ghost = ans.slice(prefixLen, prefixLen + k);
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
+    if (a) {
+      a.hintLetters = this._hintCount(Math.max(0, ans.length)); /* 固定揭示字母數 */
+    }
+    if (this._isJunior()) {
+      c.ghost = this._juniorGhost(c, prefixLen, a ? a.hintLetters : 0);
+    } else {
+      const rest = Math.max(0, ans.length - prefixLen);
+      const k = this._hintCount(rest);
+      c.ghost = ans.slice(prefixLen, prefixLen + k);
+    }
     this._applyGhost(c);
     this._syncCellWidth(c, c.value);
     this._focusCurrent();
   },
 
-  /* L2：清空該格，直接顯示整個答案做提示 */
+  /* L2：清空該格，直接顯示整個答案做提示
+     小學生模式：顯示整個答案，但一輸入就變成下劃線（hintLetters=0）*/
   _showL2(c) {
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
+    if (a) a.hintLetters = 0;
     this._clearCell(c);
     c.ghost = String(c.primary || "");
     this._applyGhost(c);
@@ -423,6 +488,444 @@ const Quiz = {
     this._showL1(c, val && isPrefix ? val.length : 0);
   },
 
+  /* ============ 小學生低 EF 精靈球捕捉模式 ============ */
+  _catchThreshold: 1.8,
+
+  _isCatchMode() {
+    if (!this._isJunior()) return false;
+    const ef = Number(this._curCard && this._curCard.ease_factor);
+    return ef > 0 && ef < this._catchThreshold;
+  },
+
+  _setupCatchMode(q) {
+    const area = document.getElementById("quiz-catch-area");
+    const ballsHost = document.getElementById("catch-balls");
+    if (!area || !ballsHost) return;
+
+    /* 停止舊物理循環、清空 */
+    this._stopPhysics();
+    ballsHost.innerHTML = "";
+    this._physBalls = [];
+    this._grabbed = null;
+
+    /* 預設隱藏捕捉區，恢復輸入 */
+    area.classList.add("hidden");
+    this.cells.forEach(c => {
+      if (c.cellEl) c.cellEl.classList.remove("catch-target");
+      if (c.input) c.input.disabled = false;
+    });
+    document.getElementById("quiz-toolbar-before").classList.remove("hidden");
+    document.getElementById("btn-quiz-check").classList.remove("hidden");
+
+    if (!this._isCatchMode()) return;
+
+    /* 進入捕捉模式：隱藏鍵盤輸入，顯示精靈球 */
+    area.classList.remove("hidden");
+    this.cells.forEach(c => {
+      if (c.cellEl) c.cellEl.classList.add("catch-target");
+      if (c.input) c.input.disabled = true;
+    });
+    document.getElementById("quiz-toolbar-before").classList.add("hidden");
+    document.getElementById("btn-quiz-check").classList.add("hidden");
+
+    const correctAns = this._norm(q.type === "word" ? q.word : q.answer);
+    const distractors = this._pickDistractors(q, correctAns, 3);
+    const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
+
+    const rect = ballsHost.getBoundingClientRect();
+    const W = rect.width || 380;
+    const H = rect.height || 260;
+    const R = 34; /* 半徑 */
+
+    options.forEach((ans, i) => {
+      const ball = this._makeCatchBall(ans, ans === correctAns);
+      ballsHost.appendChild(ball);
+      /* label 獨立放喺 arena，唔跟球旋轉 */
+      const label = document.createElement("span");
+      label.className = "catch-ball-label";
+      label.textContent = ans;
+      ballsHost.appendChild(label);
+      const x = R + 8 + Math.random() * (W - 2 * R - 16);
+      const y = R + 8 + Math.random() * (H * 0.4);
+      const vx = (Math.random() - 0.5) * 4;
+      const vy = (Math.random() * -2) - 1;
+      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
+      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
+    });
+
+    this._physHost = ballsHost;
+    this._physW = W;
+    this._physH = H;
+    this._physR = R;
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+  },
+
+  /* 多空格題：答啱一格後，用下一格答案刷新精靈球 */
+  _refreshCatchBalls() {
+    const ballsHost = document.getElementById("catch-balls");
+    const item = this.queue[0];
+    if (!ballsHost || !item) return;
+    const c = this.cells[this.currentCell];
+    if (!c) return;
+
+    /* 停止舊物理循環、清空 */
+    this._stopPhysics();
+    ballsHost.innerHTML = "";
+    this._physBalls = [];
+    this._grabbed = null;
+
+    const correctAns = this._norm(c.primary);
+    const distractors = this._pickDistractors(item.q, correctAns, 3);
+    const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
+
+    const rect = ballsHost.getBoundingClientRect();
+    const W = rect.width || 380;
+    const H = rect.height || 260;
+    const R = 34;
+
+    options.forEach(ans => {
+      const ball = this._makeCatchBall(ans, ans === correctAns);
+      ballsHost.appendChild(ball);
+      const label = document.createElement("span");
+      label.className = "catch-ball-label";
+      label.textContent = ans;
+      ballsHost.appendChild(label);
+      const x = R + 8 + Math.random() * (W - 2 * R - 16);
+      const y = R + 8 + Math.random() * (H * 0.4);
+      const vx = (Math.random() - 0.5) * 4;
+      const vy = (Math.random() * -2) - 1;
+      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
+      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
+    });
+
+    this._physHost = ballsHost;
+    this._physW = W;
+    this._physH = H;
+    this._physR = R;
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+
+    /* 移除黃光提示（新一格重新開始）*/
+    this.cells.forEach(cc => {
+      if (cc.cellEl) cc.cellEl.classList.remove("catch-target");
+    });
+    if (c.cellEl) c.cellEl.classList.add("catch-target");
+  },
+
+  /* 從同課題其他題目抽 3 個唔同嘅錯誤答案做干擾項 */
+  _pickDistractors(q, correct, n) {
+    const all = (typeof getAllQuestions === "function") ? getAllQuestions() : [];
+    const sameTopic = all.filter(x => x && x.topic === q.topic && x !== q);
+    const pool = [];
+    sameTopic.forEach(x => {
+      const a = this._norm(x.type === "word" ? x.word : x.answer);
+      if (a && a !== correct && pool.indexOf(a) < 0) pool.push(a);
+    });
+    /* 唔夠就從全題庫補 */
+    if (pool.length < n) {
+      all.forEach(x => {
+        const a = this._norm(x.type === "word" ? x.word : x.answer);
+        if (a && a !== correct && pool.indexOf(a) < 0) pool.push(a);
+      });
+    }
+    /* Fisher-Yates 抽 n 個 */
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, n);
+  },
+
+  _makeCatchBall(answer, isCorrect) {
+    const ball = document.createElement("div");
+    ball.className = "catch-ball";
+    ball.dataset.answer = answer;
+    ball.dataset.correct = isCorrect ? "1" : "0";
+
+    ball.addEventListener("pointerdown", (e) => this._onBallDown(e, ball));
+    return ball;
+  },
+
+  /* ---------- 物理引擎 ---------- */
+  _physGravity: 0.26,
+  _physRestitution: 0.82,
+  _physFloorFriction: 0.985,
+  _physAirFriction: 0.997,
+  _physThrowScale: 0.22,
+  _physTwitchTimer: 0,
+
+  _applyBallPos(b) {
+    b.el.style.left = (b.x - this._physR) + "px";
+    b.el.style.top = (b.y - this._physR) + "px";
+    /* 球體旋轉 */
+    b.el.style.transform = `rotate(${b.rx}deg)`;
+    /* label 獨立定位：永遠喺球底正中，唔跟旋轉 */
+    if (b.label) {
+      b.label.style.left = b.x + "px";
+      b.label.style.top = (b.y + this._physR + 6) + "px";
+    }
+  },
+
+  _stopPhysics() {
+    if (this._physicsRAF) {
+      cancelAnimationFrame(this._physicsRAF);
+      this._physicsRAF = null;
+    }
+  },
+
+  _physicsTick() {
+    if (!this._physBalls) return;
+    const R = this._physR;
+    const W = this._physW;
+    const H = this._physH;
+
+    /* 生命力：每隔一段時間隨機加細少少脈動，好似入面有精靈 */
+    this._physTwitchTimer++;
+    const doTwitch = this._physTwitchTimer > 55 + Math.random() * 40;
+    if (doTwitch) this._physTwitchTimer = 0;
+
+    for (const b of this._physBalls) {
+      if (b.grabbed) continue;
+
+      /* 重力 */
+      b.vy += this._physGravity;
+      b.vx *= this._physAirFriction;
+
+      /* 生命力脈動：非飛行球偶爾向隨機方向加力 */
+      if (doTwitch && !b.flying && Math.abs(b.vx) < 6 && Math.abs(b.vy) < 6) {
+        if (Math.random() < 0.5) {
+          b.vx += (Math.random() - 0.5) * 3.5;
+          b.vy -= Math.random() * 2.5; /* 偏向上彈，有生命力 */
+        }
+      }
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      /* 旋轉跟水平速度 */
+      b.rx += b.vx * 3;
+
+      if (b.flying) {
+        /* 飛行中：唔受 arena 牆壁限制，可飛出題目框 */
+        this._checkCatchHit(b);
+        /* 飛太遠先回收 */
+        if (b.y > H + 400 || b.x < -400 || b.x > W + 400 || b.y < -600) {
+          b.flying = false;
+          this._respawnBall(b);
+        }
+      } else {
+        /* 非飛行：arena 內彈跳 */
+        if (b.x < R) { b.x = R; b.vx = -b.vx * this._physRestitution; }
+        if (b.x > W - R) { b.x = W - R; b.vx = -b.vx * this._physRestitution; }
+        if (b.y < R) { b.y = R; b.vy = -b.vy * this._physRestitution; }
+        if (b.y > H - R) {
+          b.y = H - R;
+          b.vy = -b.vy * this._physRestitution;
+          b.vx *= this._physFloorFriction;
+          if (Math.abs(b.vy) < 0.8) b.vy = 0;
+        }
+      }
+
+      this._applyBallPos(b);
+    }
+
+    /* 球球之間碰撞 */
+    this._ballBallCollision();
+
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+  },
+
+  _ballBallCollision() {
+    const R = this._physR;
+    const balls = this._physBalls;
+    for (let i = 0; i < balls.length; i++) {
+      for (let j = i + 1; j < balls.length; j++) {
+        const a = balls[i], b = balls[j];
+        if (a.grabbed || b.grabbed) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const min = R * 2;
+        if (dist > 0 && dist < min) {
+          const overlap = (min - dist) / 2;
+          const nx = dx / dist, ny = dy / dist;
+          a.x -= nx * overlap; a.y -= ny * overlap;
+          b.x += nx * overlap; b.y += ny * overlap;
+          /* 速度交換（簡化）*/
+          const dvx = b.vx - a.vx, dvy = b.vy - a.vy;
+          const dot = dvx * nx + dvy * ny;
+          if (dot < 0) {
+            const imp = dot * this._physRestitution;
+            a.vx += imp * nx; a.vy += imp * ny;
+            b.vx -= imp * nx; b.vy -= imp * ny;
+          }
+        }
+      }
+    }
+  },
+
+  _respawnBall(b) {
+    b.flying = false;
+    b.grabbed = false;
+    b.x = this._physR + 8 + Math.random() * (this._physW - 2 * this._physR - 16);
+    b.y = this._physR + 8;
+    b.vx = (Math.random() - 0.5) * 3;
+    b.vy = -1;
+    b.el.classList.remove("flying");
+    this._applyBallPos(b);
+  },
+
+  _onBallDown(e, ball) {
+    if (this.answered) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const b = this._physBalls.find(x => x.el === ball);
+    if (!b) return;
+
+    b.grabbed = true;
+    b.flying = false;
+    b.vx = 0; b.vy = 0;
+    ball.classList.add("grabbed");
+    ball.classList.remove("flying");
+
+    const hostRect = this._physHost.getBoundingClientRect();
+    this._grabOffsetX = e.clientX - (hostRect.left + b.x);
+    this._grabOffsetY = e.clientY - (hostRect.top + b.y);
+    this._lastMoveX = e.clientX;
+    this._lastMoveY = e.clientY;
+    this._moveVx = 0;
+    this._moveVy = 0;
+    /* 旋轉力累積：追蹤角速度（圈得越快，spin 越大）*/
+    this._spinAccum = 0;
+    this._grabCenterX = e.clientX;
+    this._grabCenterY = e.clientY;
+    this._lastAngle = null;
+
+    const onMove = (ev) => {
+      this._moveVx = ev.clientX - this._lastMoveX;
+      this._moveVy = ev.clientY - this._lastMoveY;
+      this._lastMoveX = ev.clientX;
+      this._lastMoveY = ev.clientY;
+      b.x = (ev.clientX - this._grabOffsetX) - hostRect.left;
+      b.y = (ev.clientY - this._grabOffsetY) - hostRect.top;
+
+      /* 計算角速度（繞 grab 中心打圈）*/
+      const dx = ev.clientX - this._grabCenterX;
+      const dy = ev.clientY - this._grabCenterY;
+      const ang = Math.atan2(dy, dx);
+      let da = 0;
+      if (this._lastAngle !== null) {
+        da = ang - this._lastAngle;
+        if (da > Math.PI) da -= Math.PI * 2;
+        if (da < -Math.PI) da += Math.PI * 2;
+        this._spinAccum += da;
+      }
+      this._lastAngle = ang;
+
+      /* 視覺旋轉：跟水平拖動 + 打圈角速度（圈得越快轉得越快）*/
+      b.rx += this._moveVx * 2 + da * 40;
+
+      this._applyBallPos(b);
+    };
+    const onUp = (ev) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      ball.classList.remove("grabbed");
+      this._onBallUp(ev, b);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  },
+
+  _onBallUp(e, b) {
+    b.grabbed = false;
+    /* 投擲初速 = 拖動速度 */
+    b.vx = this._moveVx * this._physThrowScale * 6;
+    b.vy = this._moveVy * this._physThrowScale * 6;
+
+    /* 旋轉力加成：打圈嘅角速度轉換成切線方向嘅額外速度（已調弱）*/
+    const spin = this._spinAccum || 0;
+    if (Math.abs(spin) > 0.25) {
+      const hostRect = this._physHost.getBoundingClientRect();
+      const cx = this._grabCenterX - hostRect.left;
+      const cy = this._grabCenterY - hostRect.top;
+      const dx = b.x - cx, dy = b.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const tx = -dy / dist, ty = dx / dist;
+      const spinForce = Math.min(Math.abs(spin) * 3, 7);
+      const sign = spin > 0 ? 1 : -1;
+      b.vx += tx * spinForce * sign;
+      b.vy += ty * spinForce * sign;
+      b.rx += spin * 30;
+    }
+
+    /* 限制最大速度 */
+    const maxV = 26;
+    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    if (sp > maxV) { b.vx = b.vx / sp * maxV; b.vy = b.vy / sp * maxV; }
+    b.flying = true;
+    b.el.classList.add("flying");
+  },
+
+  /* 飛行中檢查是否打中目標空格 */
+  _checkCatchHit(b) {
+    const target = this.cells[this.currentCell];
+    if (!target || !target.cellEl) return;
+    const tr = target.cellEl.getBoundingClientRect();
+    const hostRect = this._physHost.getBoundingClientRect();
+    const cx = hostRect.left + b.x;
+    const cy = hostRect.top + b.y;
+    if (cx >= tr.left && cx <= tr.right && cy >= tr.top && cy <= tr.bottom) {
+      b.flying = false;
+      this._catchSubmit(b.answer, b.correct);
+    }
+  },
+
+  /* 捕捉模式提交：打中就當 Submit 處理 */
+  _catchSubmit(answer, isCorrect) {
+    const item = this.queue[0];
+    if (!item || this.answered) return;
+    const q = item.q;
+    const a = this._answerFor(q);
+
+    if (isCorrect) {
+      /* 答啱：填入答案 → green → 如有下一格就刷新精靈球 */
+      const c = this.cells[this.currentCell];
+      if (c) {
+        c.value = answer;
+        if (c.input) c.input.value = answer;
+        if (c.textEl) c.textEl.textContent = answer;
+      }
+      const prevCell = this.currentCell;
+      this._greenCell(this.currentCell);
+      /* 仲有下一格 → 用下一格答案重新生成精靈球 */
+      if (this.currentCell !== prevCell && !this.answered) {
+        this._refreshCatchBalls();
+      }
+    } else {
+      /* 答錯：沿用 junior attempt 邏輯，所有錯都閃紅 */
+      a.attemptCount++;
+      this._flashWrong();
+      this._vibrate(50);
+      if (a.attemptCount === 2) {
+        /* 第 2 次錯：L1 — 正確球發黃光 */
+        a.hintCount = 1;
+        this._highlightCorrectBall();
+      } else if (a.attemptCount >= 4) {
+        /* 第 4 次或以後錯：L2 — 正確球發黃光 */
+        a.hintCount = 2;
+        this._highlightCorrectBall();
+      }
+      /* 第 1、3 次錯：閃紅，畀再試 */
+    }
+  },
+
+  /* L1/L2 提示：將正確球用黃光包住 */
+  _highlightCorrectBall() {
+    document.querySelectorAll(".catch-ball").forEach(b => {
+      if (b.dataset.correct === "1") b.classList.add("hint-glow");
+    });
+  },
+
   /* 完整答案變體（處理 accept 同 primary 字數不同嘅情況，例如 were not / weren't）*/
   _fullAnswerVariants(q) {
     const raw = q.type === "word"
@@ -431,7 +934,8 @@ const Quiz = {
     return raw.map(v => this._norm(v)).filter(Boolean);
   },
 
-  /* ✓ 確認（保留）：不符 → 紅驚嘆號 + 微紅底 + EF −0.14 */
+  /* ✓ 確認（保留）：不符 → 紅驚嘆號 + 微紅底 + EF −0.14
+     小學生模式：按 attempt 次數決定係畀再試、出 L1、定出 L2 */
   check() {
     if (this.answered) return;
     const item = this.queue[0];
@@ -459,7 +963,36 @@ const Quiz = {
       return;
     }
 
-    /* 錯誤：只扣 EF，不重排、不清題、不寫 history */
+    const junior = this._isJunior();
+    if (junior) {
+      const a = this._answerFor(item.q);
+      a.attemptCount++;
+      /* 小學生所有答錯都閃紅，但第 1 次唔扣 EF */
+      this._flashWrong();
+      this._vibrate(50);
+      if (a.attemptCount === 1) {
+        /* 第 1 次錯：閃紅但唔扣 EF，畀小朋友再試一次 */
+        this._focusCurrent();
+      } else if (a.attemptCount === 2) {
+        /* 第 2 次錯：出 L1 引導思考 */
+        a.hintCount = 1;
+        const ans = this._norm(c.primary);
+        const v = this._norm(c.value);
+        const isPrefix = v.length <= ans.length && ans.indexOf(v) === 0;
+        if (v && !isPrefix) this._clearCell(c);
+        this._showL1(c, v && isPrefix ? v.length : 0);
+      } else if (a.attemptCount === 3) {
+        /* 第 3 次錯：再畀一次機會，唔出新提示 */
+        this._focusCurrent();
+      } else {
+        /* 第 4 次或以後錯：出 L2（顯示完整答案），之後答對會重排 */
+        a.hintCount = 2;
+        this._showL2(c);
+      }
+      return;
+    }
+
+    /* 標準模式：錯誤只扣 EF，不重排、不清題、不寫 history */
     this._flashWrong();
     this._vibrate(50);
     this._focusCurrent();
@@ -502,14 +1035,42 @@ const Quiz = {
     const now = Date.now();
     const responseMs = Math.max(0, now - (this._curQuestionStart || now));
 
+    const junior = this._isJunior();
+
+    /* 防無窮循環：小學生模式累計答啱 3 次（2 輪重排）→ 強制完結 */
+    let forceComplete = false;
+    if (junior) {
+      a.correctCount = (a.correctCount || 0) + 1;
+      if (a.correctCount >= 3) {
+        forceComplete = true;
+      }
+    }
+
     let card = SM2.getOrCreateCard(q);
-    card = usedHint ? SM2.applyHint(card, a.hintCount, now) : SM2.applyClean(card, now);
+    let qScore;
+
+    if (junior) {
+      /* 小學生 Q 值映射（按第幾次答啱）：
+         submission 1/2 啱 → q=5
+         submission 3 啱（L1 用過）→ q=4
+         submission 4 啱 → q=3
+         L2 後啱 → q=0
+         attemptCount = 答錯次數，第 N 次答啱時 attemptCount = N-1 */
+      if (a.hintCount >= 2) qScore = 0;
+      else if (a.attemptCount >= 3) qScore = 3;
+      else if (a.hintCount === 1) qScore = 4;
+      else qScore = 5;
+      card = SM2.applyJunior(card, qScore, now);
+    } else {
+      card = usedHint ? SM2.applyHint(card, a.hintCount, now) : SM2.applyClean(card, now);
+      qScore = usedHint ? SM2.HINT_Q : SM2.CLEAN_Q;
+    }
     this._curCard = SM2.upsertCard(card);
 
     SM2.appendHistory({
       card_id: card.card_id,
       ts: now,
-      q_score: usedHint ? SM2.HINT_Q : SM2.CLEAN_Q,
+      q_score: qScore,
       response_ms: responseMs,
       levenshtein_distance: 0,
       is_typo: false
@@ -519,14 +1080,25 @@ const Quiz = {
     if (!usedHint) a.clean = true;
     if (!a.chosen) a.chosen = this._joinedAnswer();
 
-    /* 用提示 → 排入重排佇列（最後一題豁免，保證回合終止）*/
+    /* 重排邏輯：
+       - 標準：用提示就重排
+       - 小學生：q=0（L2 後）先重排；強制完唔重排 */
     let requeued = false;
-    if (usedHint && this.queue.length > 1) {
-      this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
-      requeued = true;
+    if (!forceComplete) {
+      if (junior) {
+        if (qScore <= 0 && this.queue.length > 1) {
+          this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
+          requeued = true;
+        }
+      } else {
+        if (usedHint && this.queue.length > 1) {
+          this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
+          requeued = true;
+        }
+      }
     }
 
-    /* 進度只計真正完成嘅題：用提示重排嘅題，要之後無提示答啱先入數 */
+    /* 進度只計真正完成嘅題：重排嘅題要之後答啱先入數；強制完結都計入數 */
     if (!requeued) this.seenQids.add(this._key(q));
 
     /* UI：鎖格、換工具列 */
@@ -539,12 +1111,23 @@ const Quiz = {
     document.getElementById("quiz-toolbar-after").classList.remove("hidden");
 
     const fb = document.getElementById("quiz-feedback");
-    fb.textContent = usedHint ? "Correct — hint used." : this._praise();
+    if (forceComplete) {
+      fb.textContent = "That word was tricky — let's try again tomorrow! You've got this! 🌟";
+    } else if (junior) {
+      if (qScore >= 5) fb.textContent = this._praise();
+      else if (qScore >= 4) fb.textContent = "Good try! You got it with a little hint.";
+      else if (qScore >= 3) fb.textContent = "Nice effort! Keep practicing.";
+      else fb.textContent = "No worries — let's try this one again soon.";
+    } else {
+      fb.textContent = usedHint ? "Correct — hint used." : this._praise();
+    }
     fb.className = "quiz-feedback good";
 
-    /* Chip：重排維持「Review in 5 minutes」原字眼 */
+    /* Chip：重排維持「Review in 5 minutes」原字眼；強制完結顯示明日再試 */
     if (requeued) {
       this._renderChip(q, "Review in 5 minutes");
+    } else if (forceComplete) {
+      this._renderChip(q, "Review in 1 day");
     } else {
       this._renderChip(q, this._nextReviewLabel(card.interval_days));
     }
@@ -831,6 +1414,8 @@ const Quiz = {
 
   /* ---------- 結算 ---------- */
   finish() {
+    this._stopPhysics();
+    this._physBalls = [];
     const results = this.set.map(q => {
       const a = this._answerFor(q);
       return {

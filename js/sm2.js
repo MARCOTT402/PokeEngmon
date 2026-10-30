@@ -27,55 +27,132 @@
 
 window.SM2 = (() => {
 
-  /* ============ 參數常量 ============ */
-  const INITIAL_EF        = 2.50;
-  const MIN_EF            = 1.80;
-  const MAX_EF            = 3.00;
-  const MAX_INTERVAL_DAYS = 60;
-  const MAX_REP           = 5;          // repetition = 5 畢業
-  const SET_SIZE          = 10;
-  const DAY               = 24 * 60 * 60 * 1000;
+  /* ============ 模式 Profile ============
+     standard 係現有 v3 校準（向後兼容，card_id 唔加前綴）
+     junior / teen / adult 各自有獨立參數，card_id 加模式前綴
+     切換模式後，舊卡完全唔受影響（各自一套進度） */
+  const SM2_PROFILES = {
+    standard: {
+      initialEf: 2.50, minEf: 1.80, maxEf: 3.00,
+      maxIntervalDays: 60, maxRep: 5,
+      intervalMul: 0.6,       /* interval = round(prev × EF × 0.6) */
+      cleanEfDelta: 0.15,     /* 無提示答對 EF += 0.15 */
+      hintEfDelta1: 0.20,     /* 第 1 次提示 EF -= 0.20 */
+      hintEfDelta2: 0.30,     /* 第 2 次提示 EF -= 0.30 */
+      checkFailEfDelta: 0.14  /* ✓ 錯誤 EF -= 0.14 */
+    },
+    junior: {
+      /* 小學生模式（詳見 spec）：
+         EF₀ = 2.2，下限 1.3
+         I(1)=1 天、I(2)=3 天、I(n)=round(I(n-1) × EF × 0.85)
+         EF' = EF + (0.1 − (5−q) × (0.08 + (5−q) × 0.02))，下限 1.3 */
+      initialEf: 2.20, minEf: 1.30, maxEf: 3.00,
+      maxIntervalDays: 21, maxRep: 4,
+      intervalMul: 0.85,
+      intervalFixed: [1, 3],  /* rep 0→1 天、rep 1→3 天，之後用公式 */
+      useFormula: true,       /* EF 用通用公式而非固定 delta */
+      formulaBase: 0.10,
+      formulaA: 0.08,
+      formulaB: 0.02
+    },
+    teen: {
+      initialEf: 2.50, minEf: 1.70, maxEf: 3.00,
+      maxIntervalDays: 45, maxRep: 5,
+      intervalMul: 0.55,
+      cleanEfDelta: 0.15,
+      hintEfDelta1: 0.20,
+      hintEfDelta2: 0.30,
+      checkFailEfDelta: 0.14
+    },
+    adult: {
+      initialEf: 2.60, minEf: 1.90, maxEf: 3.20,
+      maxIntervalDays: 120, maxRep: 6,
+      intervalMul: 0.70,
+      cleanEfDelta: 0.15,
+      hintEfDelta1: 0.30,
+      hintEfDelta2: 0.40,
+      checkFailEfDelta: 0.14
+    }
+  };
+
+  const SET_SIZE = 10;
+  const DAY = 24 * 60 * 60 * 1000;
 
   const CLEAN_Q       = 5;   // 無提示答對
   const CHECK_FAIL_Q  = 3;   // ✓ 錯誤（只扣 EF，唔寫 history）
   const HINT_Q        = 0;   // 用提示答對
 
+  /* 當前模式（標準模式唔加 card_id 前綴，向後兼容）*/
+  let _currentMode = "standard";
+
+  function getMode() { return _currentMode; }
+  function setMode(mode) {
+    if (SM2_PROFILES[mode]) _currentMode = mode;
+  }
+  function profile() { return SM2_PROFILES[_currentMode] || SM2_PROFILES.standard; }
+
   /* ============ 小工具 ============ */
   function _round2(n) { return Math.round(n * 100) / 100; }
   function _clampEF(ef) {
+    const p = profile();
     const v = Number(ef);
-    const base = isFinite(v) && v > 0 ? v : INITIAL_EF;
-    return _round2(Math.min(MAX_EF, Math.max(MIN_EF, base)));
+    const base = isFinite(v) && v > 0 ? v : p.initialEf;
+    return _round2(Math.min(p.maxEf, Math.max(p.minEf, base)));
   }
   function _clampInterval(days) {
     const v = Math.round(Number(days) || 0);
-    return Math.min(MAX_INTERVAL_DAYS, Math.max(1, v));
+    return Math.min(profile().maxIntervalDays, Math.max(1, v));
   }
 
   /* ============ 演算法 1：EF ============ */
-  function efForClean(ef)      { return _clampEF((Number(ef) || INITIAL_EF) + 0.15); }
+  /* 通用公式（junior 用）：EF' = EF + (base − (5−q) × (a + (5−q) × b)) */
+  function efByFormula(ef, q) {
+    const p = profile();
+    const v = Number(ef) || p.initialEf;
+    const d = 5 - Number(q);
+    return _clampEF(v + (p.formulaBase - d * (p.formulaA + d * p.formulaB)));
+  }
+
+  function efForClean(ef) {
+    const p = profile();
+    if (p.useFormula) return efByFormula(ef, 5);
+    return _clampEF((Number(ef) || p.initialEf) + p.cleanEfDelta);
+  }
   function efForHint(ef, hintCount) {
-    let v = Number(ef) || INITIAL_EF;
-    if (hintCount >= 1) v -= 0.20;
-    if (hintCount >= 2) v -= 0.30;
+    const p = profile();
+    if (p.useFormula) return efByFormula(ef, 0);
+    let v = Number(ef) || p.initialEf;
+    if (hintCount >= 1) v -= p.hintEfDelta1;
+    if (hintCount >= 2) v -= p.hintEfDelta2;
     return _clampEF(v);
   }
-  function efForCheckFail(ef)  { return _clampEF((Number(ef) || INITIAL_EF) - 0.14); }
+  function efForCheckFail(ef) {
+    const p = profile();
+    if (p.useFormula) return efByFormula(ef, 3);
+    return _clampEF((Number(ef) || p.initialEf) - p.checkFailEfDelta);
+  }
 
   /* ============ 演算法 2：間隔（天）============ */
-  function intervalForClean(prevIntervalDays, ef) {
+  function intervalForClean(prevIntervalDays, ef, rep) {
+    const p = profile();
     const prev = Math.max(0, Number(prevIntervalDays) || 0);
-    const efv = Number(ef) || INITIAL_EF;
+    const efv = Number(ef) || p.initialEf;
+    /* junior 有固定頭兩段間隔 */
+    if (p.intervalFixed && Array.isArray(p.intervalFixed)) {
+      const r = Math.max(0, Number(rep) || 0);
+      if (r < p.intervalFixed.length) return _clampInterval(p.intervalFixed[r]);
+    }
     /* 新卡 prev=0 → round(0)=0 → 最少 1 天 */
-    return _clampInterval(Math.round(prev * efv * 0.6));
+    return _clampInterval(Math.round(prev * efv * p.intervalMul));
   }
 
   /* ============ 演算法 3：卡片更新 ============ */
   function applyClean(card, now) {
+    const p = profile();
     const t = now || Date.now();
     const newEF = efForClean(card.ease_factor);
-    const newInterval = intervalForClean(card.interval_days, newEF);
-    const newRep = Math.min(MAX_REP, (Number(card.repetition) || 0) + 1);
+    const newRep = Math.min(p.maxRep, (Number(card.repetition) || 0) + 1);
+    const newInterval = intervalForClean(card.interval_days, newEF, card.repetition);
     return {
       ...card,
       repetition: newRep,
@@ -83,12 +160,48 @@ window.SM2 = (() => {
       interval_days: newInterval,
       next_review_at: t + newInterval * DAY,
       last_review_at: t,
-      is_mastered: newRep >= MAX_REP,
+      is_mastered: newRep >= p.maxRep,
+      updated_at: t
+    };
+  }
+
+  /* 小學生模式：按 Q 值更新卡片
+     q=5（attempt1/2 答對）、q=4（L1 後答對）、q=3（多次嘗試答對）、q=0（L2 後答對）
+     q=3 以下會重置 rep、interval=1、重排隊尾 */
+  function applyJunior(card, q, now) {
+    const p = profile();
+    const t = now || Date.now();
+    const newEF = efByFormula(card.ease_factor, q);
+    const qv = Number(q);
+    if (qv <= 1) {
+      /* L2 後答對：重置，明日再考 */
+      return {
+        ...card,
+        repetition: 0,
+        ease_factor: newEF,
+        interval_days: 1,
+        next_review_at: t + DAY,
+        last_review_at: t,
+        is_mastered: false,
+        updated_at: t
+      };
+    }
+    const newRep = Math.min(p.maxRep, (Number(card.repetition) || 0) + 1);
+    const newInterval = intervalForClean(card.interval_days, newEF, card.repetition);
+    return {
+      ...card,
+      repetition: newRep,
+      ease_factor: newEF,
+      interval_days: newInterval,
+      next_review_at: t + newInterval * DAY,
+      last_review_at: t,
+      is_mastered: newRep >= p.maxRep,
       updated_at: t
     };
   }
 
   function applyHint(card, hintCount, now) {
+    const p = profile();
     const t = now || Date.now();
     return {
       ...card,
@@ -139,10 +252,12 @@ window.SM2 = (() => {
   const LS_CARDS = "pokeengmon_sm2_cards_v2";
   const LS_HIST  = "pokeengmon_sm2_history_v2";
 
-  /* 題目 → card_id（w: 前綴防撞）*/
+  /* 題目 → card_id（w: 前綴防撞；非 standard 模式加模式前綴）*/
   function _cardId(q) {
-    if (q && q.type === "word") return `w\u0001${String(q.word).toLowerCase()}`;
-    return `${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
+    const mode = _currentMode;
+    const prefix = mode === "standard" ? "" : mode + "\u0001";
+    if (q && q.type === "word") return `${prefix}w\u0001${String(q.word).toLowerCase()}`;
+    return `${prefix}${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
   }
 
   function _loadCards() {
@@ -165,12 +280,13 @@ window.SM2 = (() => {
     const key = _cardId(q);
     const cards = _loadCards();
     if (cards[key]) return { ...cards[key], _key: key };
+    const p = profile();
     const card = {
       card_id: key,
       card_type: q.type || "sentence",
       next_review_at: 0,              /* 即時可答 */
       interval_days: 0,
-      ease_factor: INITIAL_EF,
+      ease_factor: p.initialEf,
       repetition: 0,
       lapse_count: 0,
       is_mastered: false,
@@ -288,7 +404,7 @@ window.SM2 = (() => {
           interval_days: interval,
           last_review_at: last > 0 ? last : 0,
           next_review_at: last > 0 ? last + interval * DAY : (Number(c.next_review_at) || 0),
-          is_mastered: (Number(c.repetition) || 0) >= MAX_REP,
+          is_mastered: (Number(c.repetition) || 0) >= profile().maxRep,
           /* 用遷移時間做 updated_at，令重算結果喺 pull 時贏過舊雲端卡，再推返上雲 */
           updated_at: migratedAt
         };
@@ -354,9 +470,11 @@ window.SM2 = (() => {
 
   /* ============ Public API ============ */
   return {
+    /* 模式 */
+    getMode, setMode, SM2_PROFILES, profile,
     /* 演算法（純函數，方便測試）*/
-    efForClean, efForHint, efForCheckFail, intervalForClean,
-    applyClean, applyHint, applyCheckFail,
+    efForClean, efForHint, efForCheckFail, efByFormula, intervalForClean,
+    applyClean, applyJunior, applyHint, applyCheckFail,
     lastReviewedMs, formatSpan,
     /* Storage adapter */
     getOrCreateCard, upsertCard, listDue, listNew, listAll, listHistory, appendHistory, mergeHistory,
@@ -364,8 +482,13 @@ window.SM2 = (() => {
     migrateV3,
     /* Session */
     buildSession,
-    /* 常量 */
-    INITIAL_EF, MIN_EF, MAX_EF, MAX_INTERVAL_DAYS, MAX_REP, SET_SIZE,
+    /* 常量（向後兼容，取 standard profile）*/
+    get INITIAL_EF() { return SM2_PROFILES.standard.initialEf; },
+    get MIN_EF() { return SM2_PROFILES.standard.minEf; },
+    get MAX_EF() { return SM2_PROFILES.standard.maxEf; },
+    get MAX_INTERVAL_DAYS() { return SM2_PROFILES.standard.maxIntervalDays; },
+    get MAX_REP() { return SM2_PROFILES.standard.maxRep; },
+    SET_SIZE,
     CLEAN_Q, CHECK_FAIL_Q, HINT_Q
   };
 })();
