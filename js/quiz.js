@@ -405,9 +405,10 @@ const Quiz = {
     this._applyGhost(c);
   },
 
-  /* 小學生模式：生成「提示字母 + 下劃線」ghost
+  /* 小學生模式：生成「提示字母 + 分開嘅下劃線」ghost
      prefixLen: 已正確輸入嘅前綴長度
-     showHintLetters: true=L1（顯示提示字母）、false=L2（只顯示下劃線）*/
+     showHintLetters: true=L1（顯示提示字母）、false=L2（只顯示下劃線）
+     每個字母嘅底線分開顯示（用空格隔開），等用戶可以數到有幾多個字母 */
   _juniorGhost(c, prefixLen, showHintLetters) {
     const ans = String(c.primary || "");
     const len = ans.length;
@@ -418,10 +419,14 @@ const Quiz = {
       const k = this._hintCount(rest);
       ghost = ans.slice(start, start + k);
       const underscoreCount = Math.max(0, len - start - k);
-      if (underscoreCount > 0) ghost += "_".repeat(underscoreCount);
+      if (underscoreCount > 0) {
+        /* 每個字母一個底線，用空格隔開 */
+        ghost += " " + Array(underscoreCount).fill("_").join(" ");
+      }
     } else {
-      /* L2 後：只顯示剩餘下劃線，唔顯示提示字母 */
-      ghost = "_".repeat(Math.max(0, len - start));
+      /* L2 後：只顯示剩餘下劃線，每個字母分開 */
+      const underscoreCount = Math.max(0, len - start);
+      if (underscoreCount > 0) ghost = Array(underscoreCount).fill("_").join(" ");
     }
     return ghost;
   },
