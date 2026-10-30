@@ -85,9 +85,14 @@ const Quiz = {
   _answerFor(q) {
     const k = this._key(q);
     if (!this.answers.has(k)) {
-      this.answers.set(k, { hintCount: 0, hintEver: false, clean: false, chosen: "" });
+      this.answers.set(k, { hintCount: 0, hintEver: false, clean: false, chosen: "", attemptCount: 0, correctCount: 0 });
     }
     return this.answers.get(k);
+  },
+
+  /* 小學生模式？*/
+  _isJunior() {
+    try { return SM2.getMode() === "junior"; } catch (e) { return false; }
   },
 
   /* ---------- 進度 ---------- */
@@ -118,6 +123,7 @@ const Quiz = {
     const a = this._answerFor(q);
     a.hintCount = 0;
     a.chosen = "";
+    a.attemptCount = 0;   /* 每次重現重置 attempt；correctCount 保留用於防循環 */
 
     this._updateProgress();
 
@@ -330,15 +336,35 @@ const Quiz = {
     c.value = c.input.value;
     c.textEl.textContent = c.value;
 
-    /* 打字後 ghost 消失 */
-    if (c.ghost) {
-      c.ghost = "";
+    const junior = this._isJunior();
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
+    const ans = this._norm(c.primary);
+    const val = this._norm(c.value);
+
+    if (junior) {
+      /* 小學生模式：ghost 唔消失，按正確前綴重算
+         L1（hintCount===1）：顯示提示字母 + 下劃線
+         L2（hintCount>=2）：只顯示下劃線 */
+      const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
+      const prefixLen = isPrefix ? val.length : 0;
+      if (a.hintCount >= 2) {
+        c.ghost = this._juniorGhost(c, prefixLen, false);
+      } else if (a.hintCount === 1) {
+        c.ghost = this._juniorGhost(c, prefixLen, true);
+      } else {
+        c.ghost = "";
+      }
       this._applyGhost(c);
+    } else {
+      /* 打字後 ghost 消失 */
+      if (c.ghost) {
+        c.ghost = "";
+        this._applyGhost(c);
+      }
     }
     /* 打多過答案長度 → 格自動加寬 */
     this._syncCellWidth(c, c.value);
 
-    const val = this._norm(c.value);
     if (val !== "" && this._cellMatch(c, val)) this._greenCell(i);
   },
 
@@ -376,18 +402,45 @@ const Quiz = {
     this._applyGhost(c);
   },
 
-  /* L1：接住已輸入前綴之後，顯示下一組提示字母（ghost） */
+  /* 小學生模式：生成「提示字母 + 下劃線」ghost
+     prefixLen: 已正確輸入嘅前綴長度
+     showHintLetters: true=L1（顯示提示字母）、false=L2（只顯示下劃線）*/
+  _juniorGhost(c, prefixLen, showHintLetters) {
+    const ans = String(c.primary || "");
+    const len = ans.length;
+    const start = Math.min(prefixLen, len);
+    let ghost = "";
+    if (showHintLetters) {
+      const rest = Math.max(0, len - start);
+      const k = this._hintCount(rest);
+      ghost = ans.slice(start, start + k);
+      const underscoreCount = Math.max(0, len - start - k);
+      if (underscoreCount > 0) ghost += "_".repeat(underscoreCount);
+    } else {
+      /* L2 後：只顯示剩餘下劃線，唔顯示提示字母 */
+      ghost = "_".repeat(Math.max(0, len - start));
+    }
+    return ghost;
+  },
+
+  /* L1：接住已輸入前綴之後，顯示下一組提示字母（ghost）
+     小學生模式：提示字母 + 下劃線 */
   _showL1(c, prefixLen) {
     const ans = String(c.primary || "");
-    const rest = Math.max(0, ans.length - prefixLen);
-    const k = this._hintCount(rest);
-    c.ghost = ans.slice(prefixLen, prefixLen + k);
+    if (this._isJunior()) {
+      c.ghost = this._juniorGhost(c, prefixLen, true);
+    } else {
+      const rest = Math.max(0, ans.length - prefixLen);
+      const k = this._hintCount(rest);
+      c.ghost = ans.slice(prefixLen, prefixLen + k);
+    }
     this._applyGhost(c);
     this._syncCellWidth(c, c.value);
     this._focusCurrent();
   },
 
-  /* L2：清空該格，直接顯示整個答案做提示 */
+  /* L2：清空該格，直接顯示整個答案做提示
+     小學生模式：顯示整個答案，但一輸入就變成下劃線 */
   _showL2(c) {
     this._clearCell(c);
     c.ghost = String(c.primary || "");
@@ -431,7 +484,8 @@ const Quiz = {
     return raw.map(v => this._norm(v)).filter(Boolean);
   },
 
-  /* ✓ 確認（保留）：不符 → 紅驚嘆號 + 微紅底 + EF −0.14 */
+  /* ✓ 確認（保留）：不符 → 紅驚嘆號 + 微紅底 + EF −0.14
+     小學生模式：按 attempt 次數決定係畀再試、出 L1、定出 L2 */
   check() {
     if (this.answered) return;
     const item = this.queue[0];
@@ -459,7 +513,33 @@ const Quiz = {
       return;
     }
 
-    /* 錯誤：只扣 EF，不重排、不清題、不寫 history */
+    const junior = this._isJunior();
+    if (junior) {
+      const a = this._answerFor(item.q);
+      a.attemptCount++;
+      if (a.attemptCount === 1) {
+        /* 第 1 次錯：當無事發生，畀小朋友再試一次（唔閃紅、唔扣 EF）*/
+        this._focusCurrent();
+      } else if (a.attemptCount === 2) {
+        /* 第 2 次錯：出 L1 引導思考 */
+        a.hintCount = 1;
+        const ans = this._norm(c.primary);
+        const v = this._norm(c.value);
+        const isPrefix = v.length <= ans.length && ans.indexOf(v) === 0;
+        if (v && !isPrefix) this._clearCell(c);
+        this._showL1(c, v && isPrefix ? v.length : 0);
+      } else if (a.attemptCount === 3) {
+        /* 第 3 次錯：再畀一次機會，唔出新提示 */
+        this._focusCurrent();
+      } else {
+        /* 第 4 次或以後錯：出 L2（顯示完整答案），之後答對會重排 */
+        a.hintCount = 2;
+        this._showL2(c);
+      }
+      return;
+    }
+
+    /* 標準模式：錯誤只扣 EF，不重排、不清題、不寫 history */
     this._flashWrong();
     this._vibrate(50);
     this._focusCurrent();
@@ -502,14 +582,41 @@ const Quiz = {
     const now = Date.now();
     const responseMs = Math.max(0, now - (this._curQuestionStart || now));
 
+    const junior = this._isJunior();
+
+    /* 防無窮循環：小學生模式累計答啱 3 次（2 輪重排）→ 強制完結 */
+    let forceComplete = false;
+    if (junior) {
+      a.correctCount = (a.correctCount || 0) + 1;
+      if (a.correctCount >= 3) {
+        forceComplete = true;
+      }
+    }
+
     let card = SM2.getOrCreateCard(q);
-    card = usedHint ? SM2.applyHint(card, a.hintCount, now) : SM2.applyClean(card, now);
+    let qScore;
+
+    if (junior) {
+      /* 小學生 Q 值映射（同時考慮手動提示同自動提示）：
+         L2 用過 → q=0；L1 用過 → q=4；
+         否則按 attemptCount：0/1→q=5、2→q=4、3→q=3、>=4→q=0 */
+      if (a.hintCount >= 2) qScore = 0;
+      else if (a.hintCount === 1) qScore = 4;
+      else if (a.attemptCount <= 1) qScore = 5;
+      else if (a.attemptCount === 2) qScore = 4;
+      else if (a.attemptCount === 3) qScore = 3;
+      else qScore = 0;
+      card = SM2.applyJunior(card, qScore, now);
+    } else {
+      card = usedHint ? SM2.applyHint(card, a.hintCount, now) : SM2.applyClean(card, now);
+      qScore = usedHint ? SM2.HINT_Q : SM2.CLEAN_Q;
+    }
     this._curCard = SM2.upsertCard(card);
 
     SM2.appendHistory({
       card_id: card.card_id,
       ts: now,
-      q_score: usedHint ? SM2.HINT_Q : SM2.CLEAN_Q,
+      q_score: qScore,
       response_ms: responseMs,
       levenshtein_distance: 0,
       is_typo: false
@@ -519,14 +626,25 @@ const Quiz = {
     if (!usedHint) a.clean = true;
     if (!a.chosen) a.chosen = this._joinedAnswer();
 
-    /* 用提示 → 排入重排佇列（最後一題豁免，保證回合終止）*/
+    /* 重排邏輯：
+       - 標準：用提示就重排
+       - 小學生：q=0（L2 後）先重排；強制完唔重排 */
     let requeued = false;
-    if (usedHint && this.queue.length > 1) {
-      this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
-      requeued = true;
+    if (!forceComplete) {
+      if (junior) {
+        if (qScore <= 0 && this.queue.length > 1) {
+          this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
+          requeued = true;
+        }
+      } else {
+        if (usedHint && this.queue.length > 1) {
+          this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
+          requeued = true;
+        }
+      }
     }
 
-    /* 進度只計真正完成嘅題：用提示重排嘅題，要之後無提示答啱先入數 */
+    /* 進度只計真正完成嘅題：重排嘅題要之後答啱先入數；強制完結都計入數 */
     if (!requeued) this.seenQids.add(this._key(q));
 
     /* UI：鎖格、換工具列 */
@@ -539,12 +657,23 @@ const Quiz = {
     document.getElementById("quiz-toolbar-after").classList.remove("hidden");
 
     const fb = document.getElementById("quiz-feedback");
-    fb.textContent = usedHint ? "Correct — hint used." : this._praise();
+    if (forceComplete) {
+      fb.textContent = "That word was tricky — let's try again tomorrow! You've got this! 🌟";
+    } else if (junior) {
+      if (qScore >= 5) fb.textContent = this._praise();
+      else if (qScore >= 4) fb.textContent = "Good try! You got it with a little hint.";
+      else if (qScore >= 3) fb.textContent = "Nice effort! Keep practicing.";
+      else fb.textContent = "No worries — let's try this one again soon.";
+    } else {
+      fb.textContent = usedHint ? "Correct — hint used." : this._praise();
+    }
     fb.className = "quiz-feedback good";
 
-    /* Chip：重排維持「Review in 5 minutes」原字眼 */
+    /* Chip：重排維持「Review in 5 minutes」原字眼；強制完結顯示明日再試 */
     if (requeued) {
       this._renderChip(q, "Review in 5 minutes");
+    } else if (forceComplete) {
+      this._renderChip(q, "Review in 1 day");
     } else {
       this._renderChip(q, this._nextReviewLabel(card.interval_days));
     }

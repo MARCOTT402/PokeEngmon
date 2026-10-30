@@ -183,6 +183,11 @@ window.Sync = (() => {
         }
         /* 明確記住「用家改過名」，避免之後新裝置再判定錯誤 */
         if (acct.name_customized === true) st.nameCustomized = true;
+        /* 遺忘曲線模式 */
+        if (acct.curve_mode && ["standard","junior","teen","adult"].indexOf(acct.curve_mode) >= 0) {
+          st.curveMode = acct.curve_mode;
+          try { if (window.SM2 && SM2.setMode) SM2.setMode(acct.curve_mode); } catch (e) {}
+        }
         /* 背包：雲端 null = 未上過雲 → 保留本機（首次 backfill 靠呢條規則） */
         if (acct.items_food != null || acct.items_premium != null || acct.items_revive != null) {
           const bag = (st.items && typeof st.items === "object") ? st.items : { food: 0, premium: 0, revive: 0 };
@@ -287,20 +292,21 @@ window.Sync = (() => {
     console.log("[Sync] pushState start — account:", ref.account_id,
       "cards:", (typeof SM2!=="undefined"&&SM2.listAll)?SM2.listAll().length:0);
 
-    /* ---- 1. Patch user_account（淨 trainer_name + name_customized —— diamonds/totals 係 RPC-only）---- */
+    /* ---- 1. Patch user_account（淨 trainer_name + name_customized + curve_mode —— diamonds/totals 係 RPC-only）---- */
     try {
       const acctPayload = {
         trainer_name: st.playerName || "The PokéEngmon Trainer",
         name_customized: !!st.nameCustomized,
+        curve_mode: st.curveMode || "standard",
         updated_at: Date.now()
       };
       await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, acctPayload);
-      console.log("[Sync] ✅ user_account patch ok (trainer_name + name_customized)");
+      console.log("[Sync] ✅ user_account patch ok (trainer_name + name_customized + curve_mode)");
     } catch (e) {
-      /* 未執行 entry-nature / name migration 時後端未有 name_customized 欄
+      /* 未執行 entry-nature / name / curve-mode migration 時後端未有對應欄
          → 退化為只推 trainer_name，避免連改名都同步唔到 */
       const msg = String(e.message || "");
-      if (msg.indexOf("name_customized") >= 0 || msg.indexOf("schema cache") >= 0) {
+      if (msg.indexOf("name_customized") >= 0 || msg.indexOf("curve_mode") >= 0 || msg.indexOf("schema cache") >= 0) {
         try {
           await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, {
             trainer_name: st.playerName || "The PokéEngmon Trainer",

@@ -1372,6 +1372,19 @@ const App = {
     const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
     const bgmPct = Math.round(prefs.bgm * 100);
     const sfxPct = Math.round(prefs.sfx * 100);
+    const curMode = (typeof getCurveMode === "function") ? getCurveMode() : "standard";
+    const modeOpts = [
+      { v: "standard", label: "📘 Standard", desc: "Balanced review for most learners" },
+      { v: "junior", label: "🧒 Junior", desc: "Gentle curve with extra attempts & hints" },
+      { v: "teen", label: "🎓 Teen", desc: "Steadier pace for secondary learners" },
+      { v: "adult", label: "🧑 Adult", desc: "Longer intervals for faster recall" }
+    ];
+    const modeHtml = modeOpts.map(o => `
+      <label class="curve-mode-opt${o.v === curMode ? " active" : ""}">
+        <input type="radio" name="curveMode" value="${o.v}" ${o.v === curMode ? "checked" : ""}>
+        <span class="cm-label">${o.label}</span>
+        <small class="cm-desc">${o.desc}</small>
+      </label>`).join("");
     this.showModal(`
       <div class="settings-box">
         <h3 class="settings-title">⚙️ Settings</h3>
@@ -1385,6 +1398,10 @@ const App = {
             <span class="settings-vol-label">Sound Effects <b id="set-sfx-pct">${sfxPct}%</b></span>
             <input id="set-sfx" type="range" min="0" max="100" step="1" value="${sfxPct}" aria-label="Sound effects volume">
           </label>
+        </div>
+        <div class="curve-mode-section">
+          <p class="settings-sub" style="text-align:left;margin:0">📈 Forgetting Curve Mode</p>
+          <div class="curve-mode-grid">${modeHtml}</div>
         </div>
         <button id="btn-add-sentence" class="btn-big btn-secondary">✏️ Add sentence question</button>
         <button id="btn-add-picture" class="btn-big btn-secondary">🖼️ Add picture question</button>
@@ -1427,6 +1444,16 @@ const App = {
     document.getElementById("btn-view-my-q").onclick = () => this.openMyQuestions();
     document.getElementById("btn-parent-guide").onclick = () => this.openParentGuide();
     document.getElementById("btn-reset-progress").onclick = () => this._confirmReset();
+    /* 遺忘曲線模式切換 */
+    document.querySelectorAll('input[name="curveMode"]').forEach(r => {
+      r.onchange = () => {
+        if (typeof setCurveMode === "function") setCurveMode(r.value);
+        document.querySelectorAll(".curve-mode-opt").forEach(l => l.classList.remove("active"));
+        r.closest(".curve-mode-opt").classList.add("active");
+        try { if (window.Sync && Sync.pushState) Sync.pushState(); } catch (e) {}
+        App.toast(`Curve mode: ${r.value}`);
+      };
+    });
   },
 
   /* ---------- Login Hub（Poké Ball 風格） ---------- */
