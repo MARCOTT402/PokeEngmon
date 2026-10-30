@@ -1941,6 +1941,8 @@ const App = {
     /* 按鈕 */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
+    document.getElementById("btn-home-battle").onclick = () => { if (typeof BattleUI !== "undefined") BattleUI.openMenu(); };
+    if (typeof BattleUI !== "undefined") BattleUI.bind();
     document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
     const gymBtn = document.getElementById("btn-gym-challenge");

@@ -2451,3 +2451,203 @@ body.capture-mode { overflow: hidden; background: #07110d; }
     transform: scale(1.05);
   }
 }
+
+/* ============================================================
+   對戰系統 — 火紅/葉綠 FireRed/LeafGreen 風格 UI
+   ============================================================ */
+
+/* ----- 對戰選單頁 ----- */
+.battle-menu-view { padding-bottom: 90px; }
+.battle-menu-inner {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px; max-width: 520px; margin: 0 auto; width: 100%;
+}
+.battle-menu-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 16px 18px; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(180deg, #f8fbff, #eef3fb);
+  border: 2px solid #cdd8eb; box-shadow: 0 3px 10px rgba(30, 50, 90, .12);
+  font-family: inherit; text-align: left;
+}
+.battle-menu-tile:active { transform: scale(.98); }
+.bmt-icon { font-size: 1.8rem; }
+.bmt-title { font-size: 1.15rem; font-weight: 800; color: #1a2a44; }
+.bmt-sub { font-size: .78rem; color: #6b7590; }
+
+.ai-trainer-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.ai-trainer-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer;
+  background: #fff; border: 2px solid #dfe6f2;
+  box-shadow: 0 2px 6px rgba(30, 50, 90, .08);
+}
+.ai-trainer-card.locked { opacity: .45; cursor: not-allowed; filter: grayscale(.6); }
+.ai-trainer-card.done { border-color: #4caf50; background: #f1fbf3; }
+.at-name { font-weight: 700; color: #1a2a44; }
+.at-lvl { font-size: .8rem; color: #6b7590; }
+
+/* ----- 對戰主畫面 ----- */
+.battle-view {
+  min-height: 100vh; padding: 0; gap: 0;
+  background: linear-gradient(180deg, #9fd0ff 0%, #cfeaff 45%, #d8e8c8 55%, #b8d88a 100%);
+  font-family: "Courier New", "Consolas", monospace;
+}
+.battle-stage {
+  position: relative; flex: 1; min-height: 300px;
+  width: 100%; max-width: 520px; margin: 0 auto;
+}
+
+/* HP info box — 火紅版米色資訊框 */
+.battle-hpbox {
+  position: absolute; width: 58%; max-width: 280px;
+  background: #f8f0dc; border: 3px solid #2b2b2b; border-radius: 10px;
+  padding: 8px 12px 10px; box-shadow: 2px 3px 0 rgba(0,0,0,.25);
+  z-index: 5;
+}
+.battle-hpbox-foe { top: 16px; left: 12px; }
+.battle-hpbox-mine { bottom: 12px; right: 12px; }
+.battle-hpbox-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 4px;
+}
+.battle-pokename {
+  font-weight: 800; font-size: 1rem; color: #1a1a1a;
+  letter-spacing: .5px; text-transform: uppercase;
+}
+.battle-lv { font-weight: 700; font-size: .82rem; color: #1a1a1a; }
+.battle-hpbar-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.battle-hp-label {
+  font-size: .62rem; font-weight: 800; color: #1a1a1a;
+  background: #f8f0dc; padding: 0 2px;
+}
+.battle-hpbar-track {
+  flex: 1; height: 8px; background: #3a3a3a; border-radius: 4px;
+  border: 1.5px solid #1a1a1a; overflow: hidden;
+}
+.battle-hpbar {
+  display: block; height: 100%; width: 100%;
+  transition: width .5s ease, background .3s ease;
+}
+.battle-expbar-track {
+  height: 4px; background: #3a3a3a; border-radius: 2px;
+  margin-top: 5px; overflow: hidden; border: 1px solid #1a1a1a;
+}
+.battle-expbar {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, #5ec8ff, #2196f3);
+}
+.battle-status {
+  position: absolute; right: 12px; bottom: 6px; font-size: .95rem;
+}
+
+/* 精靈圖 */
+.battle-sprite { position: absolute; image-rendering: pixelated; z-index: 4; }
+.battle-foe-sprite { top: 28px; right: 28px; width: 110px; height: 110px; }
+.battle-my-sprite { bottom: 30px; left: 30px; width: 130px; height: 130px; }
+
+/* ----- 底部：文字框 + 選單 ----- */
+.battle-bottom {
+  display: flex; gap: 0; width: 100%; max-width: 520px; margin: 0 auto;
+  min-height: 140px; border-top: 4px solid #2b2b2b;
+}
+.battle-textbox {
+  flex: 1; background: #f8f0dc; border: 3px solid #2b2b2b;
+  border-right: none; padding: 14px 16px;
+  font-size: .92rem; line-height: 1.5; color: #1a1a1a; font-weight: 600;
+  display: flex; align-items: center;
+}
+.battle-menubox {
+  width: 46%; background: #2b5cb8; border: 3px solid #2b2b2b;
+  display: flex; align-items: center; justify-content: center; padding: 8px;
+}
+.battle-menu-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
+}
+.battle-menu-btn {
+  background: #2b5cb8; border: 2px solid #1a3d7a; color: #ffe259;
+  font-family: inherit; font-weight: 800; font-size: .95rem;
+  padding: 10px 4px; cursor: pointer; letter-spacing: .5px;
+  text-align: left; padding-left: 18px; position: relative;
+}
+.battle-menu-btn::before {
+  content: "▶"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+  font-size: .6rem; color: #fff; opacity: 0;
+}
+.battle-menu-btn:hover::before { opacity: 1; }
+.battle-menu-btn:active { background: #1a4a9a; }
+.battle-menu-btn:disabled {
+  color: #7a8bb0; cursor: not-allowed; opacity: .55;
+}
+.battle-menu-btn:disabled::before { display: none; }
+
+/* 招式選單 */
+.battle-move-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
+}
+.battle-move-btn {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--tc, #666); border: 2px solid #1a1a1a;
+  color: #fff; font-family: inherit; font-weight: 700; font-size: .78rem;
+  padding: 8px 6px; cursor: pointer; text-align: left;
+  border-radius: 6px;
+}
+.battle-move-btn .bm-name { font-size: .82rem; line-height: 1.1; }
+.battle-move-btn .bm-pp { font-size: .65rem; opacity: .85; }
+.battle-move-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* 切換選單 */
+.battle-switch-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
+  max-height: 130px; overflow-y: auto;
+}
+.battle-switch-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: #f8f0dc; border: 2px solid #1a1a1a; border-radius: 6px;
+  padding: 4px 2px; cursor: pointer; font-family: inherit; font-size: .66rem;
+  color: #1a1a1a; font-weight: 700;
+}
+.battle-switch-btn img { width: 36px; height: 36px; image-rendering: pixelated; }
+.battle-switch-btn .bs-hp { font-size: .58rem; color: #444; }
+.battle-switch-btn.fainted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
+.battle-switch-btn.active { border-color: #d9534f; background: #fde8e8; }
+.battle-switch-btn:disabled { cursor: not-allowed; }
+
+/* ----- 隊伍選擇彈窗 ----- */
+.team-select-modal {
+  position: fixed; inset: 0; background: rgba(10, 12, 22, .82);
+  display: flex; align-items: center; justify-content: center; z-index: 2000;
+  padding: 16px;
+}
+.team-select-card {
+  background: #fff; border-radius: 16px; padding: 18px;
+  max-width: 420px; width: 100%; max-height: 86vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.ts-title { font-size: 1.05rem; font-weight: 800; text-align: center; color: #1a2a44; }
+.team-select-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.team-slot {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px; border: 2px solid #dfe6f2; border-radius: 10px;
+  background: #f8fafc; cursor: pointer; font-size: .7rem; font-weight: 700;
+  color: #1a2a44; text-align: center;
+}
+.team-slot img { width: 48px; height: 48px; image-rendering: pixelated; }
+.team-slot.picked {
+  border-color: #4caf50; background: #f1fbf3;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, .25);
+}
+.ts-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+/* 手機細屏微調 */
+@media (max-width: 420px) {
+  .battle-foe-sprite { width: 92px; height: 92px; right: 18px; top: 24px; }
+  .battle-my-sprite { width: 108px; height: 108px; left: 18px; bottom: 26px; }
+  .battle-hpbox { width: 64%; padding: 6px 10px 8px; }
+  .battle-pokename { font-size: .88rem; }
+  .battle-textbox { font-size: .82rem; padding: 10px 12px; }
+  .battle-menu-btn { font-size: .82rem; padding: 9px 4px 9px 16px; }
+}

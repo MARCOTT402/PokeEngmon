@@ -136,6 +136,7 @@
           <nav class="pd-menu">
             <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
             <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
+            <button id="btn-home-battle" class="pd-menu-btn">⚔ Battle</button>
             <div class="home-cal-row">
               <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
               <div id="home-streak-wrap" class="home-streak-wrap" hidden>
@@ -389,6 +390,98 @@
       </div>
     </section>
 
+    <!-- ============ 對戰選單 ============ -->
+    <section id="view-battle-menu" class="view battle-menu-view">
+      <header class="topbar">
+        <div class="topbar-name">Battle</div>
+        <div class="topbar-res">
+          <button class="chip chip-diamond">💎 <b id="topbar-diamonds-bm">0</b></button>
+        </div>
+      </header>
+      <div class="battle-menu-inner">
+        <button id="battle-menu-pvp" class="battle-menu-tile">
+          <span class="bmt-icon">🌐</span>
+          <span class="bmt-title">PvP Battle</span>
+          <span class="bmt-sub">Online match · random team size</span>
+        </button>
+        <button id="battle-menu-ai" class="battle-menu-tile">
+          <span class="bmt-icon">🤖</span>
+          <span class="bmt-title">AI Trainers</span>
+          <span class="bmt-sub">Climb the trainer ladder</span>
+        </button>
+        <div id="ai-trainer-list" class="ai-trainer-list"></div>
+        <div class="hub-bar">
+          <button id="battle-menu-back" class="btn-big btn-plain">‹ Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 對戰（火紅版 UI） ============ -->
+    <section id="view-battle" class="view battle-view">
+      <div class="battle-stage">
+        <!-- 敵方 HP box（左上） -->
+        <div class="battle-hpbox battle-hpbox-foe">
+          <div class="battle-hpbox-top">
+            <span class="battle-pokename" id="foe-name">FOE</span>
+            <span class="battle-lv">Lv<span id="foe-level">5</span></span>
+          </div>
+          <div class="battle-hpbar-row">
+            <span class="battle-hp-label">HP</span>
+            <div class="battle-hpbar-track"><i class="battle-hpbar" id="foe-hpbar"></i></div>
+          </div>
+          <span class="battle-status" id="foe-status"></span>
+        </div>
+        <!-- 敵方 sprite（右上） -->
+        <img class="battle-sprite battle-foe-sprite" id="foe-sprite" alt="foe">
+
+        <!-- 我方 sprite（左下） -->
+        <img class="battle-sprite battle-my-sprite" id="my-sprite" alt="mine">
+        <!-- 我方 HP box（右下） -->
+        <div class="battle-hpbox battle-hpbox-mine">
+          <div class="battle-hpbox-top">
+            <span class="battle-pokename" id="my-name">POKéMON</span>
+            <span class="battle-lv">Lv<span id="my-level">5</span></span>
+          </div>
+          <div class="battle-hpbar-row">
+            <span class="battle-hp-label">HP</span>
+            <div class="battle-hpbar-track"><i class="battle-hpbar" id="my-hpbar"></i></div>
+          </div>
+          <div class="battle-expbar-track"><i class="battle-expbar"></i></div>
+          <span class="battle-status" id="my-status"></span>
+        </div>
+      </div>
+
+      <!-- 底部：文字框 + 選單 -->
+      <div class="battle-bottom">
+        <div class="battle-textbox" id="battle-text">What will POKéMON do?</div>
+        <div class="battle-menubox">
+          <!-- 主選單 2×2 -->
+          <div id="battle-action-menu" class="battle-menu-grid">
+            <button id="btn-battle-fight" class="battle-menu-btn">FIGHT</button>
+            <button id="btn-battle-bag" class="battle-menu-btn battle-menu-bag" disabled>BAG</button>
+            <button id="btn-battle-pokemon" class="battle-menu-btn">POKéMON</button>
+            <button id="btn-battle-run" class="battle-menu-btn" hidden>RUN</button>
+          </div>
+          <!-- 招式選單 2×2 -->
+          <div id="battle-move-menu" class="battle-move-grid" style="display:none"></div>
+          <!-- 切換選單 -->
+          <div id="battle-switch-menu" class="battle-switch-grid" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 隊伍選擇彈窗 -->
+    <div id="team-select-modal" class="team-select-modal" style="display:none">
+      <div class="team-select-card">
+        <div class="ts-title">Choose your team · <span id="team-size-label">3</span> Pokémon</div>
+        <div id="team-select-grid" class="team-select-grid"></div>
+        <div class="ts-actions">
+          <button id="team-select-cancel" class="btn-big btn-plain">Cancel</button>
+          <button id="team-select-confirm" class="btn-big btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Entry gate: one tap unlocks audio + starts BGM -->
     <div id="entry-gate" class="entry-gate hidden">
       <div class="entry-gate-card">
@@ -412,6 +505,9 @@
   <script src="js/data.js?v=1.12.3"></script>
   <script src="js/qimg-db.js?v=1.12.3"></script>
   <script src="js/pokemon.js?v=1.12.3"></script>
+  <script src="js/battle/engine.js?v=1.12.3"></script>
+  <script src="js/battle/state.js?v=1.12.3"></script>
+  <script src="js/battle/battle.js?v=1.12.3"></script>
   <script src="js/genpack.js?v=1.12.3"></script>
   <script src="js/storage.js?v=1.12.3"></script>
   <script src="js/pet.js?v=1.12.3"></script>
