@@ -97,9 +97,7 @@ const Quiz = {
 
   /* ---------- 進度 ---------- */
   _updateProgress() {
-    const shown = this.answered
-      ? this.seenQids.size
-      : Math.min(this.total, this.seenQids.size + 1);
+    const shown = this.seenQids.size;
     document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
     const pct = this.total ? (this.seenQids.size / this.total) * 100 : 0;
     document.getElementById("quiz-bar").style.width = `${pct}%`;
