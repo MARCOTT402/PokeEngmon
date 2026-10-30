@@ -1,3 +1,11 @@
+# [1.13.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.12.0...v1.13.0) (2026-10-30)
+
+
+### Features
+
+* **battle:** add full move data, type chart, move loadouts & Other Moves ([23b50ea](https://github.com/MARCOTT402/PokeEngmon/commit/23b50ea27d588025687e4e98e5149d154d0a25f0))
+* **questions:** three-tier categories (category > unit > topic) and rename Q_folder to grammar/vocab ([5649406](https://github.com/MARCOTT402/PokeEngmon/commit/56494063a68e17c73d70db11b74b8ad3b9768587))
+
 # [1.12.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.11.0...v1.12.0) (2026-10-30)
 
 
