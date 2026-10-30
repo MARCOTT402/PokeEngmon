@@ -654,8 +654,10 @@ const Quiz = {
         this._refreshCatchBalls();
       }
     } else {
-      /* 答錯：沿用 junior attempt 邏輯 */
+      /* 答錯：沿用 junior attempt 邏輯，所有錯都閃紅 */
       a.attemptCount++;
+      this._flashWrong();
+      this._vibrate(50);
       if (a.attemptCount === 2) {
         /* 第 2 次錯：L1 — 正確球發黃光 */
         a.hintCount = 1;
@@ -665,8 +667,7 @@ const Quiz = {
         a.hintCount = 2;
         this._highlightCorrectBall();
       }
-      /* 第 1、3 次錯：靜默，畀再試 */
-      this._vibrate(50);
+      /* 第 1、3 次錯：閃紅，畀再試 */
     }
   },
 
@@ -718,8 +719,11 @@ const Quiz = {
     if (junior) {
       const a = this._answerFor(item.q);
       a.attemptCount++;
+      /* 小學生所有答錯都閃紅，但第 1 次唔扣 EF */
+      this._flashWrong();
+      this._vibrate(50);
       if (a.attemptCount === 1) {
-        /* 第 1 次錯：當無事發生，畀小朋友再試一次（唔閃紅、唔扣 EF）*/
+        /* 第 1 次錯：閃紅但唔扣 EF，畀小朋友再試一次 */
         this._focusCurrent();
       } else if (a.attemptCount === 2) {
         /* 第 2 次錯：出 L1 引導思考 */
@@ -798,15 +802,16 @@ const Quiz = {
     let qScore;
 
     if (junior) {
-      /* 小學生 Q 值映射（同時考慮手動提示同自動提示）：
-         L2 用過 → q=0；L1 用過 → q=4；
-         否則按 attemptCount：0/1→q=5、2→q=4、3→q=3、>=4→q=0 */
+      /* 小學生 Q 值映射（按第幾次答啱）：
+         submission 1/2 啱 → q=5
+         submission 3 啱（L1 用過）→ q=4
+         submission 4 啱 → q=3
+         L2 後啱 → q=0
+         attemptCount = 答錯次數，第 N 次答啱時 attemptCount = N-1 */
       if (a.hintCount >= 2) qScore = 0;
+      else if (a.attemptCount >= 3) qScore = 3;
       else if (a.hintCount === 1) qScore = 4;
-      else if (a.attemptCount <= 1) qScore = 5;
-      else if (a.attemptCount === 2) qScore = 4;
-      else if (a.attemptCount === 3) qScore = 3;
-      else qScore = 0;
+      else qScore = 5;
       card = SM2.applyJunior(card, qScore, now);
     } else {
       card = usedHint ? SM2.applyHint(card, a.hintCount, now) : SM2.applyClean(card, now);
