@@ -781,7 +781,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 
 /* ---- 小學生低 EF 精靈球捕捉模式（物理彈跳 + 投擲） ---- */
 .quiz-catch-area {
-  margin: 12px auto 0; width: 100%; text-align: center;
+  margin: 48px auto 0; width: 100%; text-align: center;
 }
 .catch-hint {
   margin: 0 0 10px; font-size: .85rem; font-weight: 700; color: #5b6578;

@@ -802,20 +802,22 @@ const Quiz = {
       this._lastMoveY = ev.clientY;
       b.x = (ev.clientX - this._grabOffsetX) - hostRect.left;
       b.y = (ev.clientY - this._grabOffsetY) - hostRect.top;
-      /* 拖動時旋轉跟水平速度 */
-      b.rx += this._moveVx * 4;
 
       /* 計算角速度（繞 grab 中心打圈）*/
       const dx = ev.clientX - this._grabCenterX;
       const dy = ev.clientY - this._grabCenterY;
       const ang = Math.atan2(dy, dx);
+      let da = 0;
       if (this._lastAngle !== null) {
-        let da = ang - this._lastAngle;
+        da = ang - this._lastAngle;
         if (da > Math.PI) da -= Math.PI * 2;
         if (da < -Math.PI) da += Math.PI * 2;
         this._spinAccum += da;
       }
       this._lastAngle = ang;
+
+      /* 視覺旋轉：跟水平拖動 + 打圈角速度（圈得越快轉得越快）*/
+      b.rx += this._moveVx * 2 + da * 40;
 
       this._applyBallPos(b);
     };
@@ -835,23 +837,20 @@ const Quiz = {
     b.vx = this._moveVx * this._physThrowScale * 6;
     b.vy = this._moveVy * this._physThrowScale * 6;
 
-    /* 旋轉力加成：打圈嘅角速度轉換成切線方向嘅額外速度 */
+    /* 旋轉力加成：打圈嘅角速度轉換成切線方向嘅額外速度（已調弱）*/
     const spin = this._spinAccum || 0;
-    if (Math.abs(spin) > 0.15) {
-      /* 切線方向：垂直於 grab center → ball 方向 */
+    if (Math.abs(spin) > 0.25) {
       const hostRect = this._physHost.getBoundingClientRect();
       const cx = this._grabCenterX - hostRect.left;
       const cy = this._grabCenterY - hostRect.top;
       const dx = b.x - cx, dy = b.y - cy;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      /* 切線方向（順時針 / 逆時針由 spin 正負決定）*/
       const tx = -dy / dist, ty = dx / dist;
-      const spinForce = Math.min(Math.abs(spin) * 8, 16);
+      const spinForce = Math.min(Math.abs(spin) * 3, 7);
       const sign = spin > 0 ? 1 : -1;
       b.vx += tx * spinForce * sign;
       b.vy += ty * spinForce * sign;
-      /* 旋轉力亦令球體自轉更勁 */
-      b.rx += spin * 60;
+      b.rx += spin * 30;
     }
 
     /* 限制最大速度 */
