@@ -140,7 +140,7 @@
 
 1. 用 `Q_folder/AI出題指引.md` 嘅 prompt 叫 AI 出題（貼俾 ChatGPT / Claude 等）
 2. 將生成嘅 CSV 貼入 App 嘅「📥 IMPORT CSV QUESTIONS」
-3. 或者直接取代 `Q_folder/questions/questions.csv`，咁所有裝置開網站就有新題
+3. 或者直接取代 `Q_folder/grammar/grammar.csv`，咁所有裝置開網站就有新題
 
 詳細規則睇 [question-authoring skill](.trae/skills/question-authoring/SKILL.md) 同 [AI出題指引.md](Q_folder/AI出題指引.md)。
 

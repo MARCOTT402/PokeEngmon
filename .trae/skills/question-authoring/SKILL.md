@@ -29,18 +29,23 @@ Current types:
 4. If the CSV carries an `Image` column, store the **full repo-root-relative path** in each row, e.g. `Q_folder/picture_words/picture_words_images/cat.webp` — not just the filename.
 5. Service Worker (`sw.js`): add `./Q_folder/<newtype>/<newtype>.csv` to the `ASSETS` array so the CSV works offline.
 
-## Rule 1 — Sentence-question CSV has a fixed 8-column header
+## Rule 1 — Sentence-question CSV has a fixed 9-column header
 
 `questions.csv` must keep this exact header, one question per line, UTF-8, no blank lines:
 
 ```
-編號,課題,題型,難度,句子,答案,關鍵詞,提示
+編號,大類,單元,題型,難度,句子,答案,關鍵詞,提示
 ```
 
 - 編號 — 5 digits (e.g. `00001`), unique, maps to `Q_folder/questions/questions_images/00001.png`. May be left blank (blank = no image).
+- 大類 — top-level category, one of the fixed 11 in `CATEGORY_ORDER` (`js/data.js`): Phonetics, Grammar, Vocab, Phrases, Listening, Reading, Proof-reading, Rewriting, Talking with AI, Reading Aloud, Punctuation. Fill-in-the-blank batches use `Grammar`.
+- 單元 — unit inside the category, e.g. `Articles`, `Past Tense`. Same spelling = same unit.
+- 題型 — question type inside the unit, e.g. `Articles: Basics`.
 - 難度 — integer `1`–`5`; the quiz shows that many ★.
 - 句子 — complete English sentence containing exactly one `___` (three underscores, not `____`/`__`/`……`). A hint word may follow the blank, e.g. `___(go)`.
 - Any field containing a half-width comma must be wrapped in double quotes. Full-width `，` needs no quoting.
+
+Legacy 8-column files (`編號,課題,題型,…`) are still accepted by the importer and treated as 大類＝Grammar with 單元＝課題.
 
 ## Rule 2 — Answer column: `/` separates acceptable answers; blank = zero-article
 
@@ -59,12 +64,12 @@ Current types:
 - Prefer the first content word after the blank (it usually determines the answer), e.g. `This is ___ apple.` → `apple`.
 - If no good keyword exists, leave the column empty — never stuff in words absent from the sentence.
 
-## Rule 4 — 課題/題型/提示 are English-only; all game UI is English-only
+## Rule 4 — 大類/單元/題型/提示 are English-only; all game UI is English-only
 
-- 課題 (topic), 題型 (question type), and 提示 (hint shown on wrong answer) must be in English.
-- Keep the spelling of a 課題/題型 byte-for-byte consistent across rows (e.g. always `Past Tense`, never `Past tense`) — the app groups by exact string.
+- 大類 (category), 單元 (unit), 題型 (question type), and 提示 (hint shown on wrong answer) must be in English.
+- Keep the spelling of a 單元/題型 byte-for-byte consistent across rows (e.g. always `Past Tense`, never `Past tense`) — the app groups by exact string.
 - Hints should be short, avoid grammar jargon, and lead with examples, e.g. `Past tense of go is went.`
-- One CSV batch usually holds 1–5 課題, each with 2–6 題型.
+- One CSV batch usually holds 1–5 單元 within one 大類, each with 2–6 題型.
 
 ## Rule 5 — Import auto-dedupes on sentence+answer
 
@@ -111,11 +116,11 @@ Adding a new question type means it must feel identical to sentence questions wh
 
 ## Pre-import self-check (per row of questions.csv)
 
-- [ ] Exactly 8 columns
+- [ ] Exactly 9 columns
 - [ ] 編號 is 5 digits, unique (if filled)
 - [ ] Sentence contains `___` (exactly three underscores)
 - [ ] 難度 is an integer 1–5
 - [ ] Answer filled — empty only for zero-article (no `X` marker)
-- [ ] 課題, 題型, 提示 all in English
+- [ ] 大類 is one of the fixed 11; 單元, 題型, 提示 all in English
 - [ ] Every keyword (split by `/`) appears verbatim in the sentence
 - [ ] Fields with half-width commas are wrapped in double quotes

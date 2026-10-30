@@ -384,6 +384,24 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 }
 .course-mini-row { justify-content: flex-start; }
 .course-topics .topic-chip { padding: 10px 14px; font-size: .98rem; }
+
+/* 大類未有題目：顯示 Coming Soon，唔可以展開／揀 */
+.course-card.course-soon { opacity: .55; }
+.course-card.course-soon .course-head { cursor: default; }
+
+/* 單元（第二層）：大類入面嘅分組，撳 ☑ 全選，撳名／箭咀展開題型 */
+.unit-card { border: 2px solid #e2e8f4; border-radius: 12px; overflow: hidden; background: #fcfdff; }
+.unit-card.unit-all { border-color: #a9c2ff; background: #f4f8ff; }
+.unit-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; cursor: pointer; user-select: none; -webkit-user-select: none;
+}
+.unit-name { font-size: .98rem; font-weight: 800; color: var(--ink); flex: 1; }
+.unit-topics {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 10px 10px; border-top: 2px dashed #e6ebf5;
+}
+.unit-topics .topic-chip { padding: 8px 12px; font-size: .92rem; border-width: 2px; }
 .custom-q-count { text-align: center; color: #2e7d32; font-weight: 800; font-size: .9rem; min-height: 1.2em; }
 
 /* ---------- CSV 匯入 Modal ---------- */

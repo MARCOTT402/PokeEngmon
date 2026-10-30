@@ -56,7 +56,7 @@ fix(v116): harden system-voice TTS fallback for picture words
 
 ```powershell
 git status
-git add Q_folder/picture_words/picture_words.csv js/app.js
+git add Q_folder/vocab/vocab.csv js/app.js
 git commit -m "v117: update picture words"
 git push
 ```
@@ -95,7 +95,7 @@ python tools/git_commit_push.py -m "v117: add new picture words"
 python tools/git_commit_push.py
 
 # 只提交指定檔案（推薦，避免誤提交）
-python tools/git_commit_push.py --paths Q_folder/picture_words/picture_words.csv js/app.js -m "v117: update words"
+python tools/git_commit_push.py --paths Q_folder/vocab/vocab.csv js/app.js -m "v117: update words"
 
 # 先睇會做咩，唔真做
 python tools/git_commit_push.py --dry-run

@@ -137,7 +137,7 @@
 ### 3.10 家長功能
 
 - CSV 匯入自訂題目（存 `customQuestions`，跨帳戶登出都保留）
-- 內建詞庫：`Q_folder/questions/questions.csv`（句子題）、`Q_folder/picture_words/picture_words.csv`（圖片單字題）
+- 內建詞庫：`Q_folder/grammar/grammar.csv`（句子題）、`Q_folder/vocab/vocab.csv`（圖片單字題）
 - Settings 頁：重置進度（要輸入正確訓練員名先 confirm；名要 `escapeHTML`）、查看版本、匯入 CSV
 
 ### 3.11 音效與無障礙
@@ -200,9 +200,9 @@
 | v112 | **Q_folder 重構**：所有題型集中放 `Q_folder/<type>/`，附帶 CSV + images + audio |
 | v113 | 修復 gacha 抽 lv1 寶可夢冇招式（Sync.pull 要 await loadPokemonDex） |
 | v114 | **統一答題回應**：所有題型必須經 `Quiz._showFeedback`，新增題型唔可以另起爐灶 |
-| v115 | 圖片題 TTS mp3 搬入 `Q_folder/picture_words/picture_words_audio/`，補返缺失嘅 `wordAudioURL()` |
+| v115 | 圖片題 TTS mp3 搬入 `Q_folder/vocab/vocab_audio/`，補返缺失嘅 `wordAudioURL()` |
 | v116 | **TTS 兜底**：mp3 缺失時自動用瀏覽器 speechSynthesis 讀出，保證唔會靜音 |
-| v117 | 內建 fallback 題（data.js QUESTION_BANK）全數遷移入 questions.csv，題目統一由 CSV 驅動 |
+| v117 | 內建 fallback 題（data.js QUESTION_BANK）全數遷移入 grammar.csv，題目統一由 CSV 驅動 |
 | v119 | Settings 自訂題教學彈窗加「AI出題指引.md」超連結（新分頁打開） |
 | v120 | 全域 BGM 音量 0.4 → 0.25 |
 | v127 | **Gen 2–5 世代擴充**：+498 隻（#152–649）、世代解鎖制（儲齊全鏈開下一代）、GenPack 按需下載、圖鑑 5 代分頁 + 浮動 hub、未解鎖世代純「?」格、SQL 遷移（`chain_rarity.gen`、`gacha_pull(p_gen)`、`obtain_capture` 放寬 649） |

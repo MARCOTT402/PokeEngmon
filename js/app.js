@@ -1,4 +1,4 @@
-﻿﻿﻿﻿/* ============================================================
+﻿﻿﻿﻿﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
@@ -424,55 +424,61 @@ const App = {
     }
   },
 
-  /* ---------- 題型選擇（做題前）：先揀課題，再展開揀個別題型 ---------- */
+  /* ---------- 題型選擇（做題前）：大類 → 單元 → 題型 三層 ---------- */
   openSetup() {
-    this.selectedTopics = new Set(getCourses().flatMap(c => c.topics.map(t => t.key)));
+    this.selectedTopics = new Set(getCategories().flatMap(c => c.units.flatMap(u => u.topics.map(t => t.key))));
     this._expanded = new Set();
+    const first = getCategories().find(c => !c.comingSoon);
+    if (first) this._expanded.add("c:" + first.category);
     this.renderSetup();
     this.showView("view-quiz-setup");
   },
 
   _allTopicKeys() {
-    return getCourses().flatMap(c => c.topics.map(t => t.key));
+    return getCategories().flatMap(c => c.units.flatMap(u => u.topics.map(t => t.key)));
   },
 
   renderSetup() {
-    const courses = getCourses();
+    const cats = getCategories();
     const list = document.getElementById("topic-list");
     list.innerHTML = "";
     if (!this._expanded) this._expanded = new Set();
 
-    courses.forEach(({ course, topics, count }) => {
-      const keys = topics.map(t => t.key);
+    cats.forEach(({ category, units, count, comingSoon }) => {
+      const keys = units.flatMap(u => u.topics.map(t => t.key));
       const sel = keys.filter(k => this.selectedTopics.has(k)).length;
-      const all = sel === keys.length;
-      const open = this._expanded.has(course);
+      const all = keys.length > 0 && sel === keys.length;
+      const catKey = "c:" + category;
+      const open = !comingSoon && this._expanded.has(catKey);
 
       const card = document.createElement("div");
-      card.className = "course-card" + (all ? " course-all" : "") + (open ? " open" : "");
+      card.className = "course-card" + (all ? " course-all" : "") + (open ? " open" : "")
+        + (comingSoon ? " course-soon" : "");
 
-      /* 課題列：☑ 一次過全選／取消成個課題；撳名或箭咀展開題型 */
+      /* 大類列：☑ 一次過全選／取消成個大類；撳名或箭咀展開入面嘅單元 */
       const head = document.createElement("div");
       head.className = "course-head";
       head.innerHTML = `
         <span class="course-check" role="checkbox" aria-checked="${all}">${all ? "☑" : sel > 0 ? "◩" : "☐"}</span>
-        <span class="course-name">${escapeHTML(course)}</span>
-        <span class="course-count">${sel}/${keys.length} topics · ${count} questions</span>
-        <span class="course-arrow">${open ? "▾" : "▸"}</span>`;
-      head.querySelector(".course-check").onclick = (e) => {
-        e.stopPropagation();
-        if (all) keys.forEach(k => this.selectedTopics.delete(k));
-        else keys.forEach(k => this.selectedTopics.add(k));
-        this.renderSetup();
-      };
-      head.onclick = () => {
-        if (open) this._expanded.delete(course);
-        else this._expanded.add(course);
-        this.renderSetup();
-      };
+        <span class="course-name">${escapeHTML(category)}</span>
+        <span class="course-count">${comingSoon ? "Coming Soon" : `${sel}/${keys.length} topics · ${count} questions`}</span>
+        <span class="course-arrow">${comingSoon ? "" : open ? "▾" : "▸"}</span>`;
+      if (!comingSoon) {
+        head.querySelector(".course-check").onclick = (e) => {
+          e.stopPropagation();
+          if (all) keys.forEach(k => this.selectedTopics.delete(k));
+          else keys.forEach(k => this.selectedTopics.add(k));
+          this.renderSetup();
+        };
+        head.onclick = () => {
+          if (open) this._expanded.delete(catKey);
+          else this._expanded.add(catKey);
+          this.renderSetup();
+        };
+      }
       card.appendChild(head);
 
-      /* 展開後：課題入面嘅個別題型 */
+      /* 展開後：大類入面嘅單元 */
       if (open) {
         const box = document.createElement("div");
         box.className = "course-topics";
@@ -481,7 +487,7 @@ const App = {
         mini.className = "setup-mini-row course-mini-row";
         const bAll = document.createElement("button");
         bAll.className = "btn-mini";
-        bAll.textContent = "Select all in this course";
+        bAll.textContent = "Select all in this category";
         bAll.onclick = () => { keys.forEach(k => this.selectedTopics.add(k)); this.renderSetup(); };
         const bNone = document.createElement("button");
         bNone.className = "btn-mini";
@@ -491,17 +497,57 @@ const App = {
         mini.appendChild(bNone);
         box.appendChild(mini);
 
-        topics.forEach(({ topic, count: n, key }) => {
-          const on = this.selectedTopics.has(key);
-          const b = document.createElement("button");
-          b.className = "topic-chip" + (on ? " on" : "");
-          b.innerHTML = `<span class="topic-name">${escapeHTML(topic)}</span><span class="topic-count">${n} questions</span>`;
-          b.onclick = () => {
-            if (on) this.selectedTopics.delete(key);
-            else this.selectedTopics.add(key);
+        units.forEach(({ unit, topics, count: unitCount }) => {
+          const uKeys = topics.map(t => t.key);
+          const uSel = uKeys.filter(k => this.selectedTopics.has(k)).length;
+          const uAll = uSel === uKeys.length;
+          const unitKey = "u:" + category + "\u0001" + unit;
+          const uOpen = this._expanded.has(unitKey);
+
+          const row = document.createElement("div");
+          row.className = "unit-card" + (uOpen ? " open" : "") + (uAll ? " unit-all" : "");
+
+          /* 單元列：☑ 全選／取消整個單元；撳名或箭咀展開題型 */
+          const uHead = document.createElement("div");
+          uHead.className = "unit-head";
+          uHead.innerHTML = `
+            <span class="course-check" role="checkbox" aria-checked="${uAll}">${uAll ? "☑" : uSel > 0 ? "◩" : "☐"}</span>
+            <span class="unit-name">${escapeHTML(unit)}</span>
+            <span class="course-count">${uSel}/${uKeys.length} · ${unitCount} questions</span>
+            <span class="course-arrow">${uOpen ? "▾" : "▸"}</span>`;
+          uHead.querySelector(".course-check").onclick = (e) => {
+            e.stopPropagation();
+            if (uAll) uKeys.forEach(k => this.selectedTopics.delete(k));
+            else uKeys.forEach(k => this.selectedTopics.add(k));
             this.renderSetup();
           };
-          box.appendChild(b);
+          uHead.onclick = () => {
+            if (uOpen) this._expanded.delete(unitKey);
+            else this._expanded.add(unitKey);
+            this.renderSetup();
+          };
+          row.appendChild(uHead);
+
+          /* 展開後：單元入面嘅個別題型 */
+          if (uOpen) {
+            const tbox = document.createElement("div");
+            tbox.className = "unit-topics";
+            topics.forEach(({ topic, count: n, key }) => {
+              const on = this.selectedTopics.has(key);
+              const b = document.createElement("button");
+              b.className = "topic-chip" + (on ? " on" : "");
+              b.innerHTML = `<span class="topic-name">${escapeHTML(topic)}</span><span class="topic-count">${n} questions</span>`;
+              b.onclick = () => {
+                if (on) this.selectedTopics.delete(key);
+                else this.selectedTopics.add(key);
+                this.renderSetup();
+              };
+              tbox.appendChild(b);
+            });
+            row.appendChild(tbox);
+          }
+
+          box.appendChild(row);
         });
         card.appendChild(box);
       }
@@ -541,8 +587,10 @@ const App = {
         <textarea id="add-sent-sentence" class="import-paste" rows="3" placeholder="Excuse me, what ___ your name?"></textarea>
         <label class="import-label">Answer</label>
         <input id="add-sent-answer" class="import-file" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your">
-        <label class="import-label">Course (optional)</label>
-        <input id="add-sent-course" class="import-file" type="text" value="Custom" placeholder="Custom">
+        <label class="import-label">Category (optional)</label>
+        <input id="add-sent-category" class="import-file" type="text" value="Grammar" placeholder="Grammar">
+        <label class="import-label">Unit (optional)</label>
+        <input id="add-sent-unit" class="import-file" type="text" value="Custom" placeholder="Custom">
         <label class="import-label">Topic (optional)</label>
         <input id="add-sent-topic" class="import-file" type="text" value="Custom Sentences" placeholder="Custom Sentences">
         <label class="import-label">Level 1–9 (optional)</label>
@@ -557,7 +605,8 @@ const App = {
       const r = addCustomSentenceQuestion({
         sentence: document.getElementById("add-sent-sentence").value,
         answer: document.getElementById("add-sent-answer").value,
-        course: document.getElementById("add-sent-course").value,
+        category: document.getElementById("add-sent-category").value,
+        unit: document.getElementById("add-sent-unit").value,
         topic: document.getElementById("add-sent-topic").value,
         level: document.getElementById("add-sent-level").value
       });
@@ -581,8 +630,10 @@ const App = {
         </div>
         <label class="import-label">Answer (the word)</label>
         <input id="add-pic-word" class="import-file" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Chemistry">
-        <label class="import-label">Course (optional)</label>
-        <input id="add-pic-course" class="import-file" type="text" value="Custom" placeholder="Custom">
+        <label class="import-label">Category (optional)</label>
+        <input id="add-pic-category" class="import-file" type="text" value="Vocab" placeholder="Vocab">
+        <label class="import-label">Unit (optional)</label>
+        <input id="add-pic-unit" class="import-file" type="text" value="Dictation" placeholder="Dictation">
         <label class="import-label">Topic (optional)</label>
         <input id="add-pic-topic" class="import-file" type="text" value="Custom Pictures" placeholder="Custom Pictures">
         <div class="confirm-row">
@@ -611,7 +662,8 @@ const App = {
       const r = await addCustomPictureQuestion({
         word: document.getElementById("add-pic-word").value,
         file,
-        course: document.getElementById("add-pic-course").value,
+        category: document.getElementById("add-pic-category").value,
+        unit: document.getElementById("add-pic-unit").value,
         topic: document.getElementById("add-pic-topic").value
       });
       if (!r.ok) { this.toast(r.error); return; }
@@ -634,7 +686,7 @@ const App = {
           const thumb = isWord && q.imageId && typeof QImgDB !== "undefined"
             ? (QImgDB.urlSync(q.imageId) || "")
             : "";
-          const meta = `${q.course || "Custom"} / ${q.topic || ""}`;
+          const meta = `${q.category || (isWord ? "Vocab" : "Grammar")} / ${q.unit || q.course || "Custom"} / ${q.topic || ""}`;
           const main = isWord ? (q.word || q.answer || "") : (q.sentence || "");
           const ans = isWord ? "" : (q.answer || "(empty)");
           return `<div class="my-q-row">
@@ -710,8 +762,10 @@ const App = {
           <input type="file" id="edit-pic-file" accept="image/webp,image/jpeg,image/png" class="import-file">
           <label class="import-label">Answer (the word)</label>
           <input id="edit-pic-word" class="import-file" type="text" value="${escAttr(q.word || q.answer || "")}" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <label class="import-label">Course</label>
-          <input id="edit-pic-course" class="import-file" type="text" value="${escAttr(q.course || "Custom")}">
+          <label class="import-label">Category</label>
+          <input id="edit-pic-category" class="import-file" type="text" value="${escAttr(q.category || "Vocab")}">
+          <label class="import-label">Unit</label>
+          <input id="edit-pic-unit" class="import-file" type="text" value="${escAttr(q.unit || q.course || "Dictation")}">
           <label class="import-label">Topic</label>
           <input id="edit-pic-topic" class="import-file" type="text" value="${escAttr(q.topic || "Custom Pictures")}">
           <label class="import-label">Level 1–9</label>
@@ -741,7 +795,8 @@ const App = {
         const file = fileEl.files && fileEl.files[0];
         const r = await updateCustomQuestion(id, {
           word: document.getElementById("edit-pic-word").value,
-          course: document.getElementById("edit-pic-course").value,
+          category: document.getElementById("edit-pic-category").value,
+          unit: document.getElementById("edit-pic-unit").value,
           topic: document.getElementById("edit-pic-topic").value,
           level: document.getElementById("edit-pic-level").value,
           file: file || undefined
@@ -769,8 +824,10 @@ const App = {
         <textarea id="edit-sent-sentence" class="import-paste" rows="3"></textarea>
         <label class="import-label">Answer</label>
         <input id="edit-sent-answer" class="import-file" type="text" value="${escAttr(answerVal)}" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <label class="import-label">Course</label>
-        <input id="edit-sent-course" class="import-file" type="text" value="${escAttr(q.course || "Custom")}">
+        <label class="import-label">Category</label>
+        <input id="edit-sent-category" class="import-file" type="text" value="${escAttr(q.category || "Grammar")}">
+        <label class="import-label">Unit</label>
+        <input id="edit-sent-unit" class="import-file" type="text" value="${escAttr(q.unit || q.course || "Custom")}">
         <label class="import-label">Topic</label>
         <input id="edit-sent-topic" class="import-file" type="text" value="${escAttr(q.topic || "Custom Sentences")}">
         <label class="import-label">Level 1–9</label>
@@ -790,7 +847,8 @@ const App = {
       const r = await updateCustomQuestion(id, {
         sentence: document.getElementById("edit-sent-sentence").value,
         answer: document.getElementById("edit-sent-answer").value,
-        course: document.getElementById("edit-sent-course").value,
+        category: document.getElementById("edit-sent-category").value,
+        unit: document.getElementById("edit-sent-unit").value,
         topic: document.getElementById("edit-sent-topic").value,
         level: document.getElementById("edit-sent-level").value,
         keyword: document.getElementById("edit-sent-keyword").value,
@@ -812,12 +870,13 @@ const App = {
         <details class="csv-guide">
           <summary>📖 CSV format guide (tap to open)</summary>
           <div class="csv-guide-body">
-            <p><b>One question per line, 8 columns, comma separated:</b></p>
-            <pre>No,Course,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
+            <p><b>One question per line, 9 columns, comma separated:</b></p>
+            <pre>No,Category,Unit,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
             <ul>
-              <li><b>No</b> (optional): five digits, e.g. <code>00001</code>; also matches <code>Q_folder/questions/questions_images/00001.png</code> as the question image</li>
-              <li><b>Course</b>: the big group (e.g. <code>Articles</code>); a course can hold many topics</li>
-              <li><b>Topic</b>: the small group inside the course (e.g. <code>Articles: Basics</code>); same name = same topic</li>
+              <li><b>No</b> (optional): five digits, e.g. <code>00001</code>; also matches <code>Q_folder/grammar/grammar_images/00001.png</code> as the question image</li>
+              <li><b>Category</b>: the big group — <code>Phonetics</code>, <code>Grammar</code>, <code>Vocab</code>, <code>Phrases</code>, <code>Listening</code>, <code>Reading</code>, <code>Proof-reading</code>, <code>Rewriting</code>, <code>Talking with AI</code>, <code>Reading Aloud</code>, <code>Punctuation</code></li>
+              <li><b>Unit</b>: the group inside the category (e.g. <code>Articles</code>, <code>Past Tense</code> under Grammar)</li>
+              <li><b>Topic</b>: the small group inside the unit (e.g. <code>Articles: Basics</code>); same name = same topic</li>
               <li><b>Level</b>: number <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>… (shows that many ★ when answering)</li>
               <li><b>Sentence</b>: must contain <code>___</code> (three underscores) as the blank</li>
               <li><b>Answer</b>: the correct answer; several accepted answers can be separated with <code>|</code> or <code>/</code> (e.g. <code>were not / weren't</code>); <b>may be blank</b> (zero article)</li>
@@ -825,10 +884,10 @@ const App = {
               <li><b>Hint</b> (optional): short explanation shown after a wrong answer</li>
             </ul>
             <p><b>Example:</b></p>
-            <pre>No,Course,Topic,Level,Sentence,Answer,Keywords,Hint
-00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
-00002,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school</pre>
-            <p class="csv-note">⚠ A header row (first cell "No" or "Course") is skipped automatically. Wrap any value containing commas in double quotes.<br>Question images live in <code>Q_folder/questions/questions_images/</code> named after the number (<code>00001.png</code>; jpg/jpeg/webp/gif also accepted). No image = nothing shown.</p>
+            <pre>No,Category,Unit,Topic,Level,Sentence,Answer,Keywords,Hint
+00001,Grammar,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
+00002,Grammar,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school</pre>
+            <p class="csv-note">⚠ A header row (first cell "No" or "Category") is skipped automatically. Old 8-column files (No,Course,Topic,…) still work — they are treated as <code>Grammar</code>. Wrap any value containing commas in double quotes.<br>Question images live in <code>Q_folder/grammar/grammar_images/</code> named after the number (<code>00001.png</code>; jpg/jpeg/webp/gif also accepted). No image = nothing shown.</p>
           </div>
         </details>
 
@@ -836,7 +895,7 @@ const App = {
         <input type="file" id="csv-file" accept=".csv,text/csv,text/plain" class="import-file">
 
         <label class="import-label">Option 2: paste the content</label>
-        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="No,Course,Topic,Level,Sentence,Answer,Keywords,Hint&#10;00001,Past Tense,Verb Past,1,Yesterday I ___(go) to the park.,went,Yesterday,go becomes went"></textarea>
+        <textarea id="csv-paste" class="import-paste" rows="5" placeholder="No,Category,Unit,Topic,Level,Sentence,Answer,Keywords,Hint&#10;00001,Grammar,Past Tense,Past Tense Verbs,1,Yesterday I ___(go) to the park.,went,Yesterday,go becomes went"></textarea>
 
         <div class="confirm-row">
           <button id="btn-do-import" class="btn-big btn-primary">Import</button>
@@ -920,7 +979,7 @@ const App = {
           <h4>Method A — Ask AI to generate questions (easiest for many)</h4>
           <ol>
             <li>Copy the full prompt from <a href="Q_folder/AI%E5%87%BA%E9%A1%8C%E6%8C%87%E5%BC%95.md" target="_blank" rel="noopener">📄 AI出題指引.md</a> (opens in a new tab).</li>
-            <li>Paste it to ChatGPT / Claude / Gemini, and add what you want, e.g.<br><i>"Generate 30 P.3 questions on Past Tense, split into 2 courses, 2–3 topics each, level 1–4."</i></li>
+            <li>Paste it to ChatGPT / Claude / Gemini, and add what you want, e.g.<br><i>"Generate 30 P.3 questions on Past Tense, category Grammar, 2 units, 2–3 topics each, level 1–4."</i></li>
             <li>The AI will return CSV text. Copy it.</li>
             <li>Back here → <b>Settings → 📥 Import CSV Questions → Option 2: paste the content</b> → Import.</li>
           </ol>
@@ -928,32 +987,33 @@ const App = {
 
         <div class="guide-section">
           <h4>Method 2 — Write or edit the CSV yourself</h4>
-          <p>One question per line, 8 columns, comma separated:</p>
-          <pre class="guide-pre">No,Course,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
+          <p>One question per line, 9 columns, comma separated:</p>
+          <pre class="guide-pre">No,Category,Unit,Topic,Level,Sentence,Answer,Keywords,Hint</pre>
           <ul>
             <li><b>No</b> (optional): five digits, e.g. <code>00001</code> — also used as the question image filename</li>
-            <li><b>Course</b>: the big group, e.g. <code>Articles</code></li>
-            <li><b>Topic</b>: the small group inside the course, e.g. <code>Articles: Basics</code></li>
+            <li><b>Category</b>: the big group, e.g. <code>Grammar</code>, <code>Vocab</code>, <code>Reading</code></li>
+            <li><b>Unit</b>: the group inside the category, e.g. <code>Articles</code></li>
+            <li><b>Topic</b>: the small group inside the unit, e.g. <code>Articles: Basics</code></li>
             <li><b>Level</b>: <code>1</code>–<code>5</code> (1 = easiest; shows that many ★)</li>
             <li><b>Sentence</b>: must contain <code>___</code> (three underscores) as the blank</li>
             <li><b>Answer</b>: the correct answer; separate multiple accepted answers with <code>/</code> (e.g. <code>were not / weren't</code>); <b>leave completely empty for zero-article questions</b></li>
             <li><b>Keywords</b> (optional): words to highlight in the sentence, separated with <code>/</code>; each must appear verbatim in the sentence</li>
             <li><b>Hint</b> (optional): short English explanation shown after a wrong answer</li>
           </ul>
-          <p class="guide-tip">⚠ Course, Topic and Hint must be in <b>English</b>. Wrap any value containing a comma in double quotes.</p>
+          <p class="guide-tip">⚠ Category, Unit, Topic and Hint must be in <b>English</b>. Wrap any value containing a comma in double quotes.</p>
         </div>
 
         <div class="guide-section">
           <h4>Example (copy-paste ready)</h4>
-          <pre class="guide-pre">No,Course,Topic,Level,Sentence,Answer,Keywords,Hint
-00001,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
-00002,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school
-00003,Past Tense,Past Tense Verbs,2,Yesterday I ___(go) to the park.,went,Yesterday,Past tense of go is went.</pre>
+          <pre class="guide-pre">No,Category,Unit,Topic,Level,Sentence,Answer,Keywords,Hint
+00001,Grammar,Articles,Articles: Basics,1,This is ___ apple. It is sweet and red.,an,apple,Vowel sound (apple)
+00002,Grammar,Articles,Articles: Advanced,3,He went to ___ school by bus.,,school,Zero article: go to school
+00003,Grammar,Past Tense,Past Tense Verbs,2,Yesterday I ___(go) to the park.,went,Yesterday,Past tense of go is went.</pre>
         </div>
 
         <div class="guide-section">
           <h4>Question images (optional)</h4>
-          <p>If you want a picture for a question, put the image in <code>Q_folder/questions/questions_images/</code> and name it after the question number, e.g. <code>00001.png</code> (<code>.jpg</code> / <code>.jpeg</code> / <code>.webp</code> / <code>.gif</code> also work). No image = the question just shows text.</p>
+          <p>If you want a picture for a question, put the image in <code>Q_folder/grammar/grammar_images/</code> and name it after the question number, e.g. <code>00001.png</code> (<code>.jpg</code> / <code>.jpeg</code> / <code>.webp</code> / <code>.gif</code> also work). No image = the question just shows text.</p>
         </div>
 
         <div class="guide-section">

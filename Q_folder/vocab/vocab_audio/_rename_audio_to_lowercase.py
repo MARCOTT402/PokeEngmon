@@ -1,6 +1,6 @@
 import os
 
-target_dir = r"C:\Users\user\Documents\trae_projects\PokeEngmon\Q_folder\picture_words\picture_words_audio"
+target_dir = r"C:\Users\user\Documents\trae_projects\PokeEngmon\Q_folder\vocab\vocab_audio"
 
 def rename_audio_files_to_lowercase(directory):
     if not os.path.exists(directory):

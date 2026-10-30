@@ -4,8 +4,8 @@ const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "figh
 const ASSETS = [
   "./",
   "./index.html",
-  "./Q_folder/questions/questions.csv",
-  "./Q_folder/picture_words/picture_words.csv",
+  "./Q_folder/grammar/grammar.csv",
+  "./Q_folder/vocab/vocab.csv",
   "./js/supabase-auth.js",
   "./js/sm2.js",
   "./js/sync.js",

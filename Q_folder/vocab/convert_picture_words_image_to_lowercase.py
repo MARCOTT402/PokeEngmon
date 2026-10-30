@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # 定義目標檔案路徑
-target_file = r"C:\Users\user\Documents\trae_projects\PokeEngmon\Q_folder\picture_words\picture_words.csv"
+target_file = r"C:\Users\user\Documents\trae_projects\PokeEngmon\Q_folder\vocab\vocab.csv"
 
 def convert_image_column_to_lowercase(file_path):
     if not os.path.exists(file_path):

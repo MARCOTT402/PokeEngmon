@@ -211,18 +211,40 @@ function entryCurrentSpecies(entry) {
 
 /* ---------- 題目 helpers ---------- */
 
-/* 網站題目（根目錄 questions.csv，開網站時自動載入） */
+/* 網站題目（Q_folder/grammar/grammar.csv，開網站時自動載入） */
 let SITE_QUESTIONS = [];
 
-/* 圖片單字題（根目錄 picture_words.csv）：點圖聽聲 → 默寫單字 */
+/* 圖片單字題（Q_folder/vocab/vocab.csv）：點圖聽聲 → 默寫單字 */
 let PICTURE_WORDS = [];
 
-/* 題型選擇鍵：同名題型可以出現在唔同課題，所以用「課題＋題型」做 key */
-function topicKey(course, topic) {
-  return `${course}\u0001${topic}`;
+/* ---------- 題目分類（三層）----------
+   大類 Category → 單元 Unit → 題型 Topic
+   - 大類：固定次序，見 CATEGORY_ORDER（未有題目嘅會顯示 Coming Soon）
+   - 單元：大類入面嘅主題（例如 Grammar 下面嘅 Articles、Past Tense）
+   - 題型：單元入面嘅小分類（例如 Articles: Basics）
+   ⚠️ SRS card_id 只用 q.topic（見 sm2.js）——改 q.topic 會令舊進度失效 */
+const CATEGORY_ORDER = [
+  "Phonetics",
+  "Grammar",
+  "Vocab",
+  "Phrases",
+  "Listening",
+  "Reading",
+  "Proof-reading",
+  "Rewriting",
+  "Talking with AI",
+  "Reading Aloud",
+  "Punctuation"
+];
+
+/* 題型選擇鍵：同名題型可以出現在唔同單元，所以用「大類＋單元＋題型」做 key */
+function topicKey(category, unit, topic) {
+  return `${category}\u0001${unit}\u0001${topic}`;
 }
 function questionTopicKey(q) {
-  return topicKey(q.course, q.topic);
+  const cat = q.category || "Grammar";
+  const unit = q.unit || q.course || "Uncategorized";
+  return topicKey(cat, unit, q.topic);
 }
 
 /* 題目唯一鍵：同題型＋同句子＋同答案＝同一題
@@ -239,9 +261,10 @@ function hashString(str) {
   return h.toString(36);
 }
 
-/* 補齊課題／難度（CSV 已有嘅話唔會覆蓋） */
+/* 補齊大類／單元／難度（CSV 或舊資料已有嘅話唔會覆蓋） */
 function normalizeQuestion(q) {
-  if (!q.course) q.course = "Uncategorized";
+  if (!q.category) q.category = q.type === "word" ? "Vocab" : "Grammar";
+  if (!q.unit) q.unit = q.course || (q.type === "word" ? "Dictation" : "Uncategorized");
   if (!q.level) q.level = 1;
   if (!q.no) q.no = "";
   return q;
@@ -250,7 +273,7 @@ function normalizeQuestion(q) {
 /* 載入網站題庫。失敗（例如用 file:// 開）就靜靜略過 */
 async function loadSiteQuestions() {
   try {
-    const res = await fetch("Q_folder/questions/questions.csv", { cache: "no-cache" });
+    const res = await fetch("Q_folder/grammar/grammar.csv", { cache: "no-cache" });
     if (!res.ok) return 0;
     const { questions } = questionsFromCSV(await res.text());
     questions.forEach(q => {
@@ -265,9 +288,9 @@ async function loadSiteQuestions() {
   }
 }
 
-/* 圖片單字題語音路徑：Q_folder/picture_words/picture_words_audio/<word>.mp3
+/* 圖片單字題語音路徑：Q_folder/vocab/vocab_audio/<word>.mp3
    命名同 tools/gen_word_tts.py 嘅 safe_name() 保持一致（細楷、空格→_、只留 a-z0-9_-'） */
-const WORD_AUDIO_DIR = "Q_folder/picture_words/picture_words_audio";
+const WORD_AUDIO_DIR = "Q_folder/vocab/vocab_audio";
 function wordAudioURL(word) {
   const key = String(word || "").trim().toLowerCase()
     .replace(/\s+/g, "_")
@@ -275,13 +298,14 @@ function wordAudioURL(word) {
   return `${WORD_AUDIO_DIR}/${key}.mp3`;
 }
 
-/* 載入圖片單字題庫（picture_words.csv）
+/* 載入圖片單字題庫（Q_folder/vocab/vocab.csv）
    欄位：Word,Level,Course,Type,Category,Image,Accept,Source
-   - Word     : 正確串法（亦係語音檔名：Q_folder/picture_words/picture_words_audio/<word>.mp3）
-   - Course   : 課題（例如 Dictation）
-   - Type     : 題型（例如 Noun）
-   - Category : 主題分組（例如 Animals / Food），用於錯題回顧顯示
-   - Image    : 圖片相對路徑（例如 Q_folder/picture_words/picture_words_images/elephant.webp）
+   - Word     : 正確串法（亦係語音檔名：Q_folder/vocab/vocab_audio/<word>.mp3）
+   - Level    : 1／2／3（難度，答題時顯示同等數量星星）
+   - Course   : 單元（例如 Dictation）→ 對應 q.unit
+   - Type     : 題型（例如 Noun）→ 對應 q.topic
+   - Category : 主題分組（例如 Animals / Food）→ 存 q.theme，用於錯題回顧顯示
+   - Image    : 圖片相對路徑（例如 Q_folder/vocab/vocab_images/elephant.webp）
    - Accept   : 其他可接受串法，用 / 分隔（例如 color/colour）
    - Source   : 圖片來源，供版權聲明列明（可留空） */
 function wordsFromCSV(text) {
@@ -299,13 +323,15 @@ function wordsFromCSV(text) {
       id: "w" + hashString(word.toLowerCase()),
       word,
       course: courseRaw || "Dictation",
+      unit: courseRaw || "Dictation",
+      category: "Vocab",
       topic: typeRaw || "Dictation",
-      category: catRaw || "",
+      theme: catRaw || "",
       level: Math.min(9, Math.max(1, parseInt(levelRaw, 10) || 1)),
       sentence: "___",                              // 令舊有解釋／Power Up 渲染器可直接重用
       answer: word,
       accept: String(acceptRaw || "").split(/[|/]/).map(s => s.trim()).filter(Boolean),
-      image: imageRaw || `Q_folder/picture_words/picture_words_images/${word.toLowerCase().replace(/\s+/g, "_")}.webp`,
+      image: imageRaw || `Q_folder/vocab/vocab_images/${word.toLowerCase().replace(/\s+/g, "_")}.webp`,
       source: sourceRaw || "",
       custom: false,
       explain: { keyword: "", hint: "" }
@@ -316,7 +342,7 @@ function wordsFromCSV(text) {
 
 async function loadPictureWords() {
   try {
-    const res = await fetch("Q_folder/picture_words/picture_words.csv", { cache: "no-cache" });
+    const res = await fetch("Q_folder/vocab/vocab.csv", { cache: "no-cache" });
     if (!res.ok) return 0;
     const { words } = wordsFromCSV(await res.text());
     PICTURE_WORDS = words;
@@ -351,7 +377,7 @@ function getAllQuestions() {
 }
 
 /* App 內新增句子填空題 → customQuestions */
-function addCustomSentenceQuestion({ sentence, answer, course, topic, level, keyword, hint } = {}) {
+function addCustomSentenceQuestion({ sentence, answer, category, unit, topic, level, keyword, hint } = {}) {
   const sent = String(sentence || "").trim();
   if (!sent || !sent.includes("___")) return { ok: false, error: "Sentence must include ___ (blank)" };
   const answers = String(answer ?? "").split(/[|/]/).map(s => s.trim()).filter(Boolean);
@@ -359,7 +385,9 @@ function addCustomSentenceQuestion({ sentence, answer, course, topic, level, key
   const q = {
     id: `c${stamp}-0`,
     no: "",
-    course: String(course || "Custom").trim() || "Custom",
+    category: String(category || "Grammar").trim() || "Grammar",
+    unit: String(unit || "Custom").trim() || "Custom",
+    course: String(unit || "Custom").trim() || "Custom",
     topic: String(topic || "Custom Sentences").trim() || "Custom Sentences",
     level: Math.min(9, Math.max(1, parseInt(level, 10) || 1)),
     sentence: sent,
@@ -377,7 +405,7 @@ function addCustomSentenceQuestion({ sentence, answer, course, topic, level, key
 }
 
 /* App 內新增圖片單字題：blob → IndexedDB；metadata → customQuestions */
-async function addCustomPictureQuestion({ word, file, course, topic, level } = {}) {
+async function addCustomPictureQuestion({ word, file, category, unit, topic, level } = {}) {
   const w = String(word || "").trim();
   if (!w || !/^[A-Za-z'\- ]+$/.test(w)) {
     return { ok: false, error: "Answer must be English letters (spaces / ' / - OK)" };
@@ -396,9 +424,10 @@ async function addCustomPictureQuestion({ word, file, course, topic, level } = {
     type: "word",
     id: `cw${stamp}`,
     word: w,
-    course: String(course || "Custom").trim() || "Custom",
+    category: String(category || "Vocab").trim() || "Vocab",
+    unit: String(unit || "Dictation").trim() || "Dictation",
+    course: String(unit || "Dictation").trim() || "Dictation",
     topic: String(topic || "Custom Pictures").trim() || "Custom Pictures",
-    category: "",
     level: Math.min(9, Math.max(1, parseInt(level, 10) || 1)),
     sentence: "___",
     answer: w,
@@ -449,7 +478,9 @@ async function updateCustomQuestion(id, patch = {}) {
     const next = Object.assign({}, cur, {
       word: w,
       answer: w,
-      course: String(patch.course != null ? patch.course : cur.course || "Custom").trim() || "Custom",
+      category: String(patch.category != null ? patch.category : cur.category || "Vocab").trim() || "Vocab",
+      unit: String(patch.unit != null ? patch.unit : cur.unit || cur.course || "Dictation").trim() || "Dictation",
+      course: String(patch.unit != null ? patch.unit : cur.unit || cur.course || "Dictation").trim() || "Dictation",
       topic: String(patch.topic != null ? patch.topic : cur.topic || "Custom Pictures").trim() || "Custom Pictures",
       level: Math.min(9, Math.max(1, parseInt(patch.level != null ? patch.level : cur.level, 10) || 1))
     });
@@ -490,7 +521,9 @@ async function updateCustomQuestion(id, patch = {}) {
     sentence: sent,
     answer: answers[0] || "",
     accept: answers.slice(1),
-    course: String(patch.course != null ? patch.course : cur.course || "Custom").trim() || "Custom",
+    category: String(patch.category != null ? patch.category : cur.category || "Grammar").trim() || "Grammar",
+    unit: String(patch.unit != null ? patch.unit : cur.unit || cur.course || "Custom").trim() || "Custom",
+    course: String(patch.unit != null ? patch.unit : cur.unit || cur.course || "Custom").trim() || "Custom",
     topic: String(patch.topic != null ? patch.topic : cur.topic || "Custom Sentences").trim() || "Custom Sentences",
     level: Math.min(9, Math.max(1, parseInt(patch.level != null ? patch.level : cur.level, 10) || 1)),
     explain: {
@@ -528,17 +561,34 @@ function findQuestion(qid) {
   return q ? withResolvedImage(q) : null;
 }
 
-/* 課題一覽：[{ course, count, topics: [{ key, topic, count }] }]，按題庫出現次序 */
-function getCourses() {
-  const map = new Map();
+/* 題庫一覽（三層）：[{ category, count, comingSoon, units: [{ unit, count, topics: [{ key, topic, count }] }] }]
+   大類按 CATEGORY_ORDER 排，未有題目嘅大類都會列出（comingSoon＝true） */
+function getCategories() {
+  const map = new Map();   // category -> Map(unit -> Map(topic -> count))
   getAllQuestions().forEach(q => {
-    if (!map.has(q.course)) map.set(q.course, new Map());
-    const tm = map.get(q.course);
+    const cat = q.category || "Grammar";
+    const unit = q.unit || q.course || "Uncategorized";
+    if (!map.has(cat)) map.set(cat, new Map());
+    const um = map.get(cat);
+    if (!um.has(unit)) um.set(unit, new Map());
+    const tm = um.get(unit);
     tm.set(q.topic, (tm.get(q.topic) || 0) + 1);
   });
-  return [...map].map(([course, tm]) => {
-    const topics = [...tm].map(([topic, count]) => ({ key: topicKey(course, topic), topic, count }));
-    return { course, topics, count: topics.reduce((s, t) => s + t.count, 0) };
+  const extra = [...map.keys()].filter(c => !CATEGORY_ORDER.includes(c));
+  return [...CATEGORY_ORDER, ...extra].map(category => {
+    const um = map.get(category);
+    const units = um ? [...um].map(([unit, tm]) => {
+      const topics = [...tm].map(([topic, count]) => ({
+        key: topicKey(category, unit, topic), topic, count
+      }));
+      return { unit, topics, count: topics.reduce((s, t) => s + t.count, 0) };
+    }) : [];
+    return {
+      category,
+      units,
+      count: units.reduce((s, u) => s + u.count, 0),
+      comingSoon: units.length === 0
+    };
   });
 }
 
@@ -553,18 +603,20 @@ function drawMixedSet(size, keys) {
 }
 
 /* ---------- CSV 匯入 ----------
-   新格式（8 欄）：編號,課題,題型,難度,句子,答案,關鍵詞,提示
+   新格式（9 欄）：編號,大類,單元,題型,難度,句子,答案,關鍵詞,提示
+   舊格式（8 欄）：編號,課題,題型,難度,句子,答案,關鍵詞,提示（大類＝Grammar、單元＝課題）
    舊格式（7 欄）：課題,題型,難度,句子,答案,關鍵詞,提示
-   舊格式（5 欄）：題型,句子,答案,關鍵詞,提示（課題＝Uncategorized、難度＝1）
-   - 課題：大分類；同一個課題下面可以有多個題型
-   - 題型：課題入面嘅小分類；同名歸入同一題型
+   舊格式（5 欄）：題型,句子,答案,關鍵詞,提示（單元＝Uncategorized、難度＝1）
+   - 大類：Phonetics / Grammar / Vocab / Phrases / Listening / …（見 CATEGORY_ORDER）
+   - 單元：大類入面嘅主題（例如 Grammar 下面嘅 Articles）
+   - 題型：單元入面嘅小分類；同名歸入同一題型
    - 難度：1、2、3、4…（答題時顯示同等數量嘅星星）
    - 句子：必須有 ___ （三個底線）做空位
    - 答案：正確答案；多個可接受答案用 | 或 / 分隔（例：were not / weren't）
      留空＝零冠詞（答題時要留空提交）
    - 關鍵詞（可留空）：句子內要 highlight 嘅詞語，多個用 / 分隔
    - 提示（可留空）：答錯時顯示嘅短解釋
-   第一行如果係標題（第一格係「編號」「課題」或「題型」）會自動略過 */
+   第一行如果係標題（第一格係「編號」「大類」「單元」「課題」或「題型」）會自動略過 */
 
 function parseCSV(text) {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);   // 去除 UTF-8 BOM
@@ -595,9 +647,9 @@ function parseCSV(text) {
   return rows;
 }
 
-/* 題目圖片：Q_folder/questions/questions_images/00001.png（亦支援 jpg / jpeg / webp / gif）
+/* 題目圖片：Q_folder/grammar/grammar_images/00001.png（亦支援 jpg / jpeg / webp / gif）
    唔可以列出資料夾，所以逐個副檔名試載入；結果記住，唔會重複試 */
-const IMAGE_DIR = "Q_folder/questions/questions_images";
+const IMAGE_DIR = "Q_folder/grammar/grammar_images";
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif"];
 const _imageCache = new Map();   // 編號 → 圖片路徑（搵唔到＝null）
 
@@ -640,30 +692,37 @@ function questionsFromCSV(text) {
   if (rows.length === 0) return { questions, skipped };
 
   /* 判斷格式：
-     8 欄（第一格「編號」）＝ 有題目編號，可對應 Q_folder/questions/questions_images/<編號>.png
+     9 欄（第一格「編號」、第二格「大類」）＝ 三層分類
+     8 欄（第一格「編號」）＝ 舊格式，冇大類（大類＝Grammar，單元＝課題）
      7 欄（第一格「課題」）＝ 冇編號
-     5 欄 ＝ 舊格式（題型,句子,答案,關鍵詞,提示） */
+     5 欄 ＝ 最舊格式（題型,句子,答案,關鍵詞,提示） */
   const firstRow = rows[0].map(s => s.trim());
   const hasNo = firstRow.length >= 8 || /^(編號|id|no)$/i.test(firstRow[0] || "");
+  const hasCat = hasNo && firstRow.length >= 9;
   const isNew = hasNo || firstRow.length >= 7 || /^(課題|課程|course)$/i.test(firstRow[0] || "");
 
   rows.forEach((cols, idx) => {
     const c = cols.map(s => s.trim());
-    /* 略過標題行（第一格啱啱好係「編號」「課題」或「題型」先當標題） */
-    if (idx === 0 && /^(編號|id|no|課題|課程|題型|course|topic)$/i.test(c[0] || "")) return;
+    /* 略過標題行（第一格啱啱好係「編號」「課題」「大類」或「題型」先當標題） */
+    if (idx === 0 && /^(編號|id|no|課題|課程|大類|單元|題型|course|category|unit|topic)$/i.test(c[0] || "")) return;
 
-    let no = "", course, topic, levelRaw, sentence, answerRaw, keyword, hint;
-    if (hasNo) {
-      [no, course, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+    let no = "", category, unit, topic, levelRaw, sentence, answerRaw, keyword, hint;
+    if (hasCat) {
+      [no, category, unit, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+    } else if (hasNo) {
+      [no, unit, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+      category = "Grammar";
     } else if (isNew) {
-      [course, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+      [unit, topic, levelRaw, sentence, answerRaw, keyword, hint] = c;
+      category = "Grammar";
     } else {
       [topic, sentence, answerRaw, keyword, hint] = c;
-      course = "Uncategorized";
+      category = "Grammar";
+      unit = "Uncategorized";
       levelRaw = "1";
     }
 
-    if (!course || !topic || !sentence || !sentence.includes("___")) { skipped++; return; }
+    if (!category || !unit || !topic || !sentence || !sentence.includes("___")) { skipped++; return; }
 
     /* 「X」代表零冠詞，同留空答案等價 */
     if (hasNo && /^x$/i.test(String(answerRaw || "").trim())) answerRaw = "";
@@ -677,7 +736,9 @@ function questionsFromCSV(text) {
     questions.push({
       id: `c${stamp}-${questions.length}`,
       no: normalizeNo(no),
-      course,
+      category,
+      unit,
+      course: unit,      /* 向後兼容：舊程式／舊自訂題仍然讀 q.course */
       topic,
       level,
       sentence,

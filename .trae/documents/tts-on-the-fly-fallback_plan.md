@@ -4,7 +4,7 @@
 
 **現況**
 - [capture.js `playWord(url, onFail)`](file:///c:/Users/user/Documents/trae_projects/PokeEngmon/js/capture.js#L619) 已經有兩層：
-  1. `fetch(url)` 拿 `Q_folder/picture_words/picture_words_audio/<word>.mp3` → Web Audio 播放。
+  1. `fetch(url)` 拿 `Q_folder/vocab/vocab_audio/<word>.mp3` → Web Audio 播放。
   2. 失敗 → [`_speakFallback(word)`](file:///c:/Users/user/Documents/trae_projects/PokeEngmon/js/capture.js#L670)，用瀏覽器 `speechSynthesis` 讀個 word。
 - v115 補返咗 `wordAudioURL()`，所以而家點圖**唔會再 throw**，理論上 fallback 鏈已經行得通。
 - 但 `_speakFallback` 過於簡單：冇等 voices 載入、冇揀 en-US 語音、冇處理首次講嘢失敗，某啲瀏覽器（尤其手機 Safari / 舊 Chrome）可能靜音。

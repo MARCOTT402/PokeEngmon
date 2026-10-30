@@ -34,8 +34,8 @@ PokeEngmon/
 │   └── migrations/          # 遷移腳本（按日期）
 ├── Q_folder/               # 題庫資料
 │   ├── AI出題指引.md        # 家長貼俾 AI 出題嘅 prompt
-│   ├── questions/           # 句子題
-│   └── picture_words/      # 圖片單字題
+│   ├── grammar/             # 句子題（大類 Grammar）
+│   └── vocab/               # 圖片單字題（大類 Vocab）
 ├── css/style.css
 ├── js/
 │   ├── app.js              # 主流程：路由、主畫面、結算、進化、modal、版本號
@@ -68,13 +68,13 @@ PokeEngmon/
 │   ├── bgm/                # 背景音樂
 │   └── types/              # 屬性 icon
 ├── Q_folder/               # 所有考題集中放呢度，方便擴充新題型
-│   ├── questions/          # 句子題
-│   │   ├── questions.csv
-│   │   └── questions_images/
-│   └── picture_words/      # 圖片單字題
-│       ├── picture_words.csv
-│       ├── picture_words_images/
-│       └── picture_words_audio/   # 單字發音 mp3（<word>.mp3，Azure Jenny -10%）
+│   ├── grammar/            # 句子題（大類 Grammar）
+│   │   ├── grammar.csv
+│   │   └── grammar_images/
+│   └── vocab/              # 圖片單字題（大類 Vocab）
+│       ├── vocab.csv
+│       ├── vocab_images/
+│       └── vocab_audio/           # 單字發音 mp3（<word>.mp3，Azure Jenny -10%）
 ├── tools/
 │   ├── gen_word_tts.py     # 離線生成圖片題 TTS mp3（用 Azure Speech）
 │   ├── fetch_gen_data.py   # 離線抓 PokeAPI → 生成 gens-data.js + pokemon-gen{2..5}.json（299 條鏈 + rarity）
@@ -304,7 +304,7 @@ pokeengmon_audio_v1       → { bgm: 0–1, sfx: 0–1 }   # Settings 滑動條�
 7. **Sync.pull 前要 `await loadPokemonDex()`**：否則 `initialMoves()` 返回空陣列，新抽嘅寶可夢無招式（v113 教訓）
 8. **新增題型必須共用 `Quiz._showFeedback`**：唔好另起爐灶（v114 教訓）
 9. **Service Worker 用容錯式逐個快取**：`caches.addAll()` 一個 404 全盤失敗
-10. **圖片題 mp3 放 `Q_folder/picture_words/picture_words_audio/`**：唔好放返 `assets/tts/`
+10. **圖片題 mp3 放 `Q_folder/vocab/vocab_audio/`**：唔好放返 `assets/tts/`
 11. **Gen 2–5 entry 在 Sync.pull derive 前要 `ensureGenDataLoaded(g)`**：否則 `initialMoves()` 讀唔到 POKEMON_DEX → 招式變空（v113 同款坑嘅世代版）
 12. **改 RPC 簽名必須先 `drop function` 舊版**：default 參數會撞 overload → PostgREST 300 ambiguous（v127 `gacha_pull` 加 `p_gen` 時教訓）
 13. **未解鎖世代圖鑑格係純「?」**：唔可以用剪影或者背後藏 `<img>`，否則洩露外形兼白耗流量

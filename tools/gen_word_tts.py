@@ -3,7 +3,7 @@
 """
 PokeEngmon — 圖片單字題語音生成器
 
-由 picture_words.csv 讀取單字，為每個字生成一個 MP3：
+由 vocab.csv 讀取單字，為每個字生成一個 MP3：
     assets/tts/w/<word>.mp3
 
 同一個字只生成一次（已存在就跳過），之後加新題只要跑一次，
@@ -35,8 +35,8 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV_PATH = ROOT / "Q_folder" / "picture_words" / "picture_words.csv"
-OUT_DIR = ROOT / "Q_folder" / "picture_words" / "picture_words_audio"
+CSV_PATH = ROOT / "Q_folder" / "vocab" / "vocab.csv"
+OUT_DIR = ROOT / "Q_folder" / "vocab" / "vocab_audio"
 OUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
 
 
