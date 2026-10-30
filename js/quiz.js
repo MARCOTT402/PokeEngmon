@@ -345,15 +345,14 @@ const Quiz = {
     const val = this._norm(c.value);
 
     if (junior) {
-      /* 小學生模式：ghost 唔消失，按正確前綴重算
-         L1（hintCount===1）：顯示固定揭示字母 + 下劃線
-         L2（hintCount>=2）：只顯示下劃線 */
-      const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
-      const prefixLen = isPrefix ? val.length : 0;
+      /* 小學生模式：ghost 用實際輸入長度計算（唔理啱錯）
+         底線數量 = 總長度 − 已輸入長度
+         揭示字母只喺未輸入到嘅位置顯示 */
+      const typedLen = val.length;
       if (a.hintCount >= 2) {
-        c.ghost = this._juniorGhost(c, prefixLen, 0);
+        c.ghost = this._juniorGhost(c, typedLen, 0);
       } else if (a.hintCount === 1) {
-        c.ghost = this._juniorGhost(c, prefixLen, a.hintLetters || 0);
+        c.ghost = this._juniorGhost(c, typedLen, a.hintLetters || 0);
       } else {
         c.ghost = "";
       }
