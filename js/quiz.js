@@ -733,7 +733,7 @@ const Quiz = {
             <button id="report-cancel" class="btn-big btn-plain">Cancel</button>
           </div>
         </div>
-      </div>`, true);
+      </div>`);
 
     const chipsEl = document.getElementById("report-chips");
     const more = document.getElementById("report-more");
