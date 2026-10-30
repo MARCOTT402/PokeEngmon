@@ -42,6 +42,8 @@ const ASSETS = [
   "./vendor/three/addons/shaders/OutputShader.js",
   "./vendor/three/addons/shaders/BokehShader.js",
   "./manifest.json",
+  "./assets/fonts/inter-latin-var.woff2",
+  "./assets/audio/wrong-answer.mp3",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./assets/bgm/wild-battle.mp3",

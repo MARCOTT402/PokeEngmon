@@ -1,4 +1,4 @@
-﻿﻿/* ============================================================
+﻿﻿﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
@@ -1685,6 +1685,9 @@ const App = {
         <p>Pokémon base stats, moves, evolution data, sprites, and type icons are provided by <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>.</p>
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
 
+        <h4>Font</h4>
+        <p><i>Inter</i> by Rasmus Andersson, licensed under the SIL Open Font License 1.1.</p>
+
         <h4>Music &amp; Sound Credits</h4>
         <p>Background music: <i>Flat Water</i> by BGM channel (official music video). All rights belong to their respective owners.</p>
         <p>Battle/jingle tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
@@ -1837,7 +1840,47 @@ const App = {
       if (e.key !== "Enter") return;
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
+      /* 設定彈窗開住：Enter = 確認 Quit this set（經按鈕，會一併關窗） */
+      const quitBtn = document.getElementById("quiz-settings-quit");
+      if (quitBtn) {
+        e.preventDefault();
+        quitBtn.click();
+        return;
+      }
       if (Quiz.answered) { e.preventDefault(); Quiz.next(); }
+    });
+
+    /* Esc：答題頁開設定；設定彈窗開住時 Esc = Keep going */
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const qv = document.getElementById("view-quiz");
+      if (!qv || !qv.classList.contains("active")) return;
+      const keep = document.getElementById("quiz-settings-close");
+      if (keep) {
+        e.preventDefault();
+        keep.click();
+      } else if (!document.getElementById("quiz-settings-quit")) {
+        e.preventDefault();
+        Quiz.openSettings();
+      }
+    });
+
+    /* Ctrl+P / Cmd+P：播放圖片題音頻（要先 preventDefault，唔好開列印對話框）*/
+    document.addEventListener("keydown", (e) => {
+      if (!(e.ctrlKey || e.metaKey) || String(e.key).toLowerCase() !== "p") return;
+      const qv = document.getElementById("view-quiz");
+      if (!qv || !qv.classList.contains("active")) return;
+      e.preventDefault();
+      Quiz.playWordAudio();
+    });
+
+    /* Ctrl+H：等同按 Show hint */
+    document.addEventListener("keydown", (e) => {
+      if (!e.ctrlKey || String(e.key).toLowerCase() !== "h") return;
+      const qv = document.getElementById("view-quiz");
+      if (!qv || !qv.classList.contains("active")) return;
+      e.preventDefault();
+      Quiz.hint();
     });
 
     /* 日曆 */
