@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -59,12 +59,12 @@
       background: rgba(255, 255, 255, .35); transform: rotate(-30deg);
     }
     .ld-text {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
       font-size: 20px; font-weight: 700; color: #1a1a1a;
       letter-spacing: .08em; text-transform: uppercase;
     }
     .ld-sub {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
       font-size: 13px; font-weight: 500; color: rgba(26, 26, 26, .62);
       margin-top: -12px; letter-spacing: .04em;
       text-align: center; padding: 0 24px;
@@ -187,16 +187,13 @@
     <!-- ============ 做題 ============ -->
     <section id="view-quiz" class="view">
       <div class="quiz-top">
-        <button id="btn-quiz-exit" class="quiz-exit-btn" aria-label="Quit this set" title="Quit this set">✕</button>
+        <span class="quiz-trophy" aria-hidden="true">🏆</span>
         <div class="quiz-top-mid">
           <span class="quiz-progress" id="quiz-progress">1 / 10</span>
-          <span class="quiz-timer" id="quiz-timer">⏱ 0:00</span>
         </div>
-        <span class="quiz-exit-spacer" aria-hidden="true"></span>
+        <button id="btn-quiz-settings" class="quiz-gear-btn" aria-label="Quiz settings" title="Quiz settings">⚙</button>
       </div>
-      <div class="progressbar"><i id="quiz-bar"></i></div>
-      <div class="quiz-topic" id="quiz-topic"></div>
-      <div class="quiz-memory" id="quiz-memory"></div>
+      <div class="progressbar"><i id="quiz-bar"></i><span class="bar-star" id="quiz-bar-star">★</span></div>
       <div class="quiz-image-box" id="quiz-image-box">
         <img id="quiz-image" class="quiz-image" alt="Question image">
       </div>
@@ -208,47 +205,21 @@
         <div id="quiz-word-status" class="word-status">🔊 Tap the picture to hear the word</div>
       </div>
       <div class="quiz-card" id="quiz-card">
+        <div class="quiz-chip" id="quiz-chip"></div>
         <div class="quiz-sentence" id="quiz-sentence"></div>
       </div>
       <div class="quiz-answer-box">
-        <input id="quiz-answer" class="quiz-answer-input" type="text"
-               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-               placeholder="Type your answer…">
-        <div class="quiz-answer-row">
-          <button id="btn-quiz-hint" class="btn-big btn-plain quiz-btn-side">💡 Hint</button>
-          <button id="btn-quiz-submit" class="btn-big btn-primary quiz-btn-grow">Submit ✔</button>
-          <button id="btn-quiz-skip" class="btn-big btn-plain quiz-btn-side">Skip ⏭</button>
+        <div class="quiz-toolbar" id="quiz-toolbar-before">
+          <button id="btn-quiz-hint" class="quiz-tool">💡 Show hint</button>
+          <button id="btn-quiz-voice" class="quiz-tool" disabled>🎤 Voice mode</button>
         </div>
-        <button id="btn-quiz-continue" class="btn-big btn-primary hidden">Continue →</button>
+        <div class="quiz-toolbar hidden" id="quiz-toolbar-after">
+          <button id="btn-quiz-next" class="quiz-tool">Next →</button>
+          <button id="btn-quiz-replay" class="quiz-tool" disabled>🔊 Pronounce</button>
+        </div>
+        <button id="btn-quiz-check" class="btn-big btn-primary">Submit ✔</button>
       </div>
       <div class="quiz-feedback" id="quiz-feedback"></div>
-    </section>
-
-    <!-- ============ Power Up Zone（回合尾改錯：三階腳架） ============ -->
-    <section id="view-powerup" class="view">
-      <h2 class="powerup-title">⚡ Power Up Zone</h2>
-      <p class="powerup-sub">Fix every mistake to finish this round!</p>
-      <div class="quiz-top">
-        <button id="btn-powerup-exit" class="quiz-exit-btn" aria-label="Quit Power Up Zone" title="Quit">✕</button>
-        <div class="quiz-top-mid">
-          <span class="quiz-progress" id="powerup-progress">1 / 1</span>
-          <span class="powerup-badge">🔋 Correct them all!</span>
-        </div>
-        <span class="quiz-exit-spacer" aria-hidden="true"></span>
-      </div>
-      <div class="progressbar"><i id="powerup-bar"></i></div>
-      <div class="quiz-card">
-        <div class="quiz-sentence" id="powerup-sentence"></div>
-      </div>
-      <div class="powerup-hint" id="powerup-hint"></div>
-      <div class="quiz-answer-box">
-        <input id="powerup-answer" class="quiz-answer-input" type="text"
-               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-               placeholder="Type your answer…">
-        <button id="btn-powerup-submit" class="btn-big btn-primary">Submit ✔</button>
-      </div>
-      <div class="quiz-feedback" id="powerup-feedback"></div>
-      <div id="powerup-explain" class="powerup-explain"></div>
     </section>
 
     <!-- ============ 結算 ============ -->
@@ -438,7 +409,6 @@
   <script src="js/pet.js?v=1.8.3"></script>
   <script src="js/explain.js?v=1.8.3"></script>
   <script src="js/quiz.js?v=1.8.3"></script>
-  <script src="js/powerup.js?v=1.8.3"></script>
   <script src="js/gacha.js?v=1.8.3"></script>
   <script src="js/pokedex.js?v=1.8.3"></script>
   <script src="js/gym.js?v=1.8.3"></script>

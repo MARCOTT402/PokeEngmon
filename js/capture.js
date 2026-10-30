@@ -220,6 +220,21 @@ class CaptureAudio {
     this._noiseHit({ freq: 4200, q: 2, gain: 0.05, dur: 0.05, type: "highpass" });
   }
 
+  /* 答錯提交：播 assets/audio/wrong-answer.mp3（每次錯都播一次） */
+  wrong() {
+    try {
+      if (!this._wrongEl) {
+        this._wrongEl = new Audio("./assets/audio/wrong-answer.mp3");
+        this._wrongEl.preload = "auto";
+      }
+      const scale = (this._sfxScale == null) ? 1 : Number(this._sfxScale) || 0;
+      this._wrongEl.volume = Math.max(0, Math.min(1, 0.7 * scale));
+      try { this._wrongEl.pause(); this._wrongEl.currentTime = 0; } catch (e) {}
+      const p = this._wrongEl.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) { /* audio unavailable */ }
+  }
+
   /* Metallic coin ping — pitch climbs per tap (gacha coin insert) */
   coin(step) {
     this.ensure();
@@ -577,12 +592,6 @@ class CaptureAudio {
     if (!this.ctx) return;
     this._tone(880, { type: "triangle", dur: 0.14, gain: 0.2 });
     this._tone(1318, { type: "sine", dur: 0.22, gain: 0.16, at: 0.07 });
-  }
-  wrong() {
-    this.ensure();
-    if (!this.ctx) return;
-    this._tone(160, { type: "sawtooth", dur: 0.32, gain: 0.16, slideTo: 90 });
-    this._tone(110, { type: "square", dur: 0.3, gain: 0.08, at: 0.02 });
   }
 
   /* ---------- Town BGM: Flat Water (BGM channel) — global background loop ---------- */

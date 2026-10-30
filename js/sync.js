@@ -71,6 +71,7 @@ window.Sync = (() => {
       repetition: card.repetition,
       lapse_count: card.lapse_count,
       is_mastered: card.is_mastered,
+      last_review_at: card.last_review_at || 0,
       updated_at: card.updated_at
     });
     console.log("[Sync] queueUpsert — card:", card.card_id, "pending:", _pendingCards.length);
@@ -113,7 +114,8 @@ window.Sync = (() => {
         await _api("POST", "/user_cards?on_conflict=account_id,card_id", cards.map(c => ({
           ...c,
           interval_days: Number(c.interval_days),
-          ease_factor: Number(c.ease_factor)
+          ease_factor: Number(c.ease_factor),
+          last_review_at: Number(c.last_review_at || 0)
         })));
         console.log("[Sync] ✅ flush cards ok:", cards.length);
       } catch (e) {
@@ -334,6 +336,7 @@ window.Sync = (() => {
             repetition: c.repetition,
             lapse_count: c.lapse_count,
             is_mastered: c.is_mastered,
+            last_review_at: c.last_review_at || 0,
             updated_at: c.updated_at
           }));
         const cardsRes = await _api("POST", "/user_cards?on_conflict=account_id,card_id", rows);
