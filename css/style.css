@@ -2642,6 +2642,33 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .ts-actions { display: flex; gap: 10px; margin-top: 4px; }
 
+/* ----- PvP 配對面板 ----- */
+.pvp-match-panel {
+  position: fixed; inset: 0; background: rgba(10, 12, 22, .82);
+  display: flex; align-items: center; justify-content: center; z-index: 2100;
+  padding: 16px;
+}
+.pvp-match-card {
+  background: #fff; border-radius: 16px; padding: 26px 18px;
+  max-width: 360px; width: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.pvp-matching { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.pvp-spinner {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 5px solid #dfe6f2; border-top-color: #2b5cb8;
+  animation: pvpSpin .9s linear infinite;
+}
+@keyframes pvpSpin { to { transform: rotate(360deg); } }
+.pvp-match-text { font-weight: 800; color: #1a2a44; font-size: 1rem; }
+.pvp-matched { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pvp-found-title { font-size: 1.2rem; font-weight: 800; color: #1a2a44; }
+.pvp-format-label { font-size: .78rem; color: #6b7590; margin-top: 8px; }
+.pvp-format-value {
+  font-size: 2.2rem; font-weight: 900; color: #2b5cb8; line-height: 1;
+  margin-bottom: 8px;
+}
+
 /* 手機細屏微調 */
 @media (max-width: 420px) {
   .battle-foe-sprite { width: 92px; height: 92px; right: 18px; top: 24px; }

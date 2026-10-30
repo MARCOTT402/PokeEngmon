@@ -482,6 +482,23 @@
       </div>
     </div>
 
+    <!-- PvP 配對面板：matching → 抽場制 → confirm -->
+    <div id="pvp-match-panel" class="pvp-match-panel" style="display:none">
+      <div class="pvp-match-card">
+        <div id="pvp-matching" class="pvp-matching">
+          <div class="pvp-spinner" aria-hidden="true"></div>
+          <div class="pvp-match-text">Searching for opponent…</div>
+          <button id="pvp-match-cancel" class="btn-big btn-plain">Cancel</button>
+        </div>
+        <div id="pvp-matched" class="pvp-matched" style="display:none">
+          <div class="pvp-found-title">Opponent found!</div>
+          <div class="pvp-format-label">Battle format</div>
+          <div class="pvp-format-value" id="pvp-format-value">3v3</div>
+          <button id="pvp-format-confirm" class="btn-big btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Entry gate: one tap unlocks audio + starts BGM -->
     <div id="entry-gate" class="entry-gate hidden">
       <div class="entry-gate-card">

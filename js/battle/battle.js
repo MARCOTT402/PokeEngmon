@@ -15,6 +15,8 @@ const BattleUI = (() => {
   let foeTeamEntries = [];
   let acting = false;      /* 防止重複點擊 */
   let pendingSwitch = false;
+  let pvpMatchTimer = null;  /* PvP 配對計時（模擬用，Task 9 換真配對） */
+  let pvpTeamSize = 3;       /* 抽中嘅場制 */
   const toast = (m) => App.toast(m);
 
   /* ---------- 入口 ---------- */
@@ -77,19 +79,68 @@ const BattleUI = (() => {
     openTeamSelect(() => launchBattle());
   }
 
+  /* ---------- PvP 流程：配對 → 抽場制 → confirm → 揀隊 → 開戰 ---------- */
   function startPvP() {
-    /* PvP 配對（Task 9）；暫時用 AI 模擬對手作為 fallback 展示 UI */
     mode = "pvp";
-    const fallback = AI_TRAINERS[0];
-    foeTeamEntries = fallback.team.map(m => ({ dexId: m.dexId, level: m.level, ivs: {}, evs: {}, nature: "hardy", moves: m.moves }));
-    openTeamSelect(() => launchBattle());
+    aiTrainer = null;
+    showMatchPanel();
   }
 
-  function openTeamSelect(cb) {
+  function showMatchPanel() {
+    document.getElementById("pvp-match-panel").style.display = "flex";
+    document.getElementById("pvp-matching").style.display = "flex";
+    document.getElementById("pvp-matched").style.display = "none";
+    /* TODO Task 9：接 Supabase matchmaking；而家先模擬配對延遲 */
+    clearTimeout(pvpMatchTimer);
+    pvpMatchTimer = setTimeout(onMatched, 1600 + Math.random() * 1400);
+  }
+
+  function cancelMatch() {
+    clearTimeout(pvpMatchTimer);
+    document.getElementById("pvp-match-panel").style.display = "none";
+  }
+
+  function onMatched() {
+    /* 配對成功 → 抽 1v1 / 3v3 / 6v6（唔會多過玩家持有數） */
+    const st = loadState();
+    const ownedCount = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length).length;
+    const size = Math.min([1, 3, 6][Math.floor(Math.random() * 3)], Math.max(1, ownedCount));
+    pvpTeamSize = size;
+    /* fallback 對手隊伍（Task 9 換成真對手隊伍） */
+    foeTeamEntries = makeFallbackFoeTeam(size);
+    document.getElementById("pvp-matching").style.display = "none";
+    document.getElementById("pvp-matched").style.display = "flex";
+    document.getElementById("pvp-format-value").textContent = size + "v" + size;
+  }
+
+  function confirmFormat() {
+    document.getElementById("pvp-match-panel").style.display = "none";
+    openTeamSelect(() => launchBattle(), pvpTeamSize);
+  }
+
+  /* fallback 對手：隨機 pool（Task 9 前用） */
+  function makeFallbackFoeTeam(size) {
+    const pool = [
+      { dexId: 19, moves: ["tackle", "tail-whip"] },
+      { dexId: 16, moves: ["tackle", "sand-attack"] },
+      { dexId: 21, moves: ["tackle", "leer"] },
+      { dexId: 43, moves: ["absorb", "growth"] },
+      { dexId: 10, moves: ["tackle", "harden"] },
+      { dexId: 13, moves: ["tackle", "string-shot"] }
+    ];
+    const team = [];
+    for (let i = 0; i < size; i++) {
+      const p = pool[Math.floor(Math.random() * pool.length)];
+      team.push({ dexId: p.dexId, level: 8 + Math.floor(Math.random() * 6), ivs: {}, evs: {}, nature: "hardy", moves: p.moves });
+    }
+    return team;
+  }
+
+  function openTeamSelect(cb, fixedSize) {
     const st = loadState();
     const owned = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length);
-    /* 隊伍大小隨機 1/3/6，但唔會多過玩家擁有嘅寶可夢數量 */
-    const teamSize = Math.min([1, 3, 6][Math.floor(Math.random() * 3)], owned.length);
+    /* PvP 用抽中嘅場制；AI 隨機 1/3/6 — 都唔會多過玩家擁有嘅寶可夢數量 */
+    const teamSize = Math.min(fixedSize || [1, 3, 6][Math.floor(Math.random() * 3)], owned.length);
     document.getElementById("team-size-label").textContent = teamSize;
     const grid = document.getElementById("team-select-grid");
     grid.innerHTML = owned.map((e, i) => {
@@ -342,6 +393,8 @@ const BattleUI = (() => {
     document.getElementById("btn-battle-run").style.display = "none"; /* 冇逃跑 */
     document.getElementById("battle-menu-back").onclick = () => { App.renderHome(); App.showView("view-home"); };
     document.getElementById("team-select-cancel").onclick = () => { document.getElementById("team-select-modal").style.display = "none"; openMenu(); };
+    document.getElementById("pvp-match-cancel").onclick = cancelMatch;
+    document.getElementById("pvp-format-confirm").onclick = confirmFormat;
   }
 
   return { openMenu, bind, renderMenu, openAITrainers };
