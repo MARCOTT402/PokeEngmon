@@ -1,3 +1,15 @@
+# [1.9.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.3...v1.9.0) (2026-10-30)
+
+
+### Features
+
+* **exp:** score clean completions only ([79cc6d6](https://github.com/MARCOTT402/PokeEngmon/commit/79cc6d619ac50ef084f885cce354e38ae9980129))
+* **quiz:** inline word blanks, two-level hints and same-set requeue ([0ada2cf](https://github.com/MARCOTT402/PokeEngmon/commit/0ada2cfb960208dde5e7b81c883f23fe3edfeb3b))
+* **quiz:** review-time bubble before answering and hint-aware progress ([7151edb](https://github.com/MARCOTT402/PokeEngmon/commit/7151edbe511db2ba13f127e4ffce25a59336bc0f))
+* **sm2:** recalibrate EF/interval model and add last_review_at ([9fcb614](https://github.com/MARCOTT402/PokeEngmon/commit/9fcb614ac164eb5c07596ef3230fd5bac918d81a))
+* **sync:** persist last_review_at and add DB migration ([c74ce68](https://github.com/MARCOTT402/PokeEngmon/commit/c74ce6804ca97957b718fe3c046739574c3db70c))
+* **ui:** bundle Inter font, wrong-answer sound and quiz keyboard shortcuts ([462ee4c](https://github.com/MARCOTT402/PokeEngmon/commit/462ee4cdc110f266a4981ae57f9f9e8a8298804e))
+
 ## [1.8.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.2...v1.8.3) (2026-10-29)
 
 
