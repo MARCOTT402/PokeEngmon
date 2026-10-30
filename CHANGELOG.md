@@ -1,3 +1,16 @@
+# [1.10.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.9.0...v1.10.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **quiz:** allow closing the report hub by tapping outside ([bc389ed](https://github.com/MARCOTT402/PokeEngmon/commit/bc389ed7b504294fa5196fd39f5eec317e1e8f02))
+
+
+### Features
+
+* **quiz:** add card drawer and report-issue hub ([103a55d](https://github.com/MARCOTT402/PokeEngmon/commit/103a55d922605b084e4250525cecdb902ca9b8a5))
+* **reports:** upload problem reports to Supabase ([6528ff3](https://github.com/MARCOTT402/PokeEngmon/commit/6528ff3bc7963ad3ff433b14eb7db6a7946f43bb))
+
 # [1.9.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.8.3...v1.9.0) (2026-10-30)
 
 
