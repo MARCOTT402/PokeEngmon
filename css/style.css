@@ -2402,6 +2402,39 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pc-item.disabled{opacity:.45;cursor:not-allowed}
 .pc-item.selected{outline:2px solid #ffcb05;outline-offset:2px}
 
+/* 進化石一行：同食物分開，避免擠爆 */
+.pc-items.stones{flex-wrap:wrap;margin-top:8px}
+.pc-item.stone{width:70px;background:#f7f3ff;border-color:#ddd3f5}
+.pc-item.stone .stone-icon{display:block;height:30px;line-height:30px;font-size:24px;pointer-events:none}
+.pc-evo-note{font-size:11px;color:#7a8299;text-align:center;margin-top:8px;line-height:1.4}
+
+/* 石進化前：舊形態發光變光團（唔顯示新形態） */
+#pc-sprite.glow-evo{animation:evo-glow 1.5s ease-in forwards}
+@keyframes evo-glow {
+  0%   { filter: none; transform: none; opacity: 1; }
+  35%  { filter: brightness(2) saturate(0); transform: scale(.92); }
+  70%  { filter: brightness(3) saturate(0) blur(2px); transform: scale(.6); }
+  100% { filter: brightness(3.5) saturate(0) blur(7px); transform: scale(.38); opacity: .95; }
+}
+
+/* 圖鑑配招：Other Moves + 換招狀態 */
+.dex-moves-sub{margin-top:14px;font-size:13px;opacity:.85}
+.dex-moves-tip{font-size:11px;opacity:.6;margin:2px 0 6px}
+.dex-other-moves .mv-wrap{opacity:.82}
+.dex-other-moves .mv-wrap:hover{opacity:1}
+.mv-wrap{transition:outline-color .15s ease, box-shadow .15s ease, opacity .15s ease;border-radius:10px;outline:2px solid transparent}
+.mv-wrap.swap-pick{outline-color:#f5b942;box-shadow:0 0 10px rgba(245,185,66,.5);opacity:1}
+.mv-wrap.swap-target{cursor:pointer;outline-color:#4ade80;box-shadow:0 0 10px rgba(74,222,128,.45)}
+
+/* 進化場景 */
+.evolve-scene{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:6px 4px}
+.evo-stage{position:relative;width:200px;height:200px}
+.evo-gif{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;
+  transition:opacity .1s;image-rendering:pixelated;pointer-events:none}
+.evo-gif.show{opacity:1}
+.evo-name{font-size:1.3rem;font-weight:900;min-height:1.4em}
+.evo-hint{font-size:11px;color:#7a8299}
+
 .pc-tip{font-size:11px;color:#7a8299;text-align:center;margin-top:6px;line-height:1.4}
 .pc-rosterhead{display:flex;justify-content:space-between;gap:8px;margin:12px 0 6px;font-size:11px;color:#7a8299}
 

@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿/* ============================================================
+﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "1.12.0";
+const APP_VERSION = "1.12.3";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -124,6 +124,43 @@ const App = {
     const verEl = document.getElementById("app-version");
     if (verEl) verEl.textContent = APP_VERSION;
     if (typeof Gym !== "undefined" && Gym.refreshHomeUI) Gym.refreshHomeUI();
+    /* 外部條件進化（例如未來 likes 達 20）→ 主頁／登入時自動播出進化場景 */
+    if (typeof EvolveScene !== "undefined") this._checkPendingEvolutions();
+  },
+
+  /* ---------- 主頁／登入時檢查條件已達成嘅進化（trade likes 等） ---------- */
+  _checkPendingEvolutions() {
+    if (this._evoChecking) return;
+    const root = document.getElementById("modal-root");
+    if (root && root.innerHTML) return;   /* 有彈窗進行中，唔打斷 */
+    const st = loadState();
+    const pending = [];
+    (st.entries || []).forEach(e => {
+      const info = entryNextEvolution(e);
+      if (!info || !info.target || !canEvolveNow(e, info)) return;
+      const fromDex = entryCurrentSpecies(e)[0];
+      const res = addEntryExp(e, 0);
+      if (!res || !res.evolvedTo) return;
+      pending.push({ fromDex, toDex: res.evolvedTo.dexId });
+      if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+        if (e.branch != null) Sync.patchEntry(e.uid, { branch: e.branch });
+        if (e.stone) Sync.patchEntry(e.uid, { stone_used: e.stone });
+      }
+    });
+    if (!pending.length) return;
+    saveState();
+    this._evoChecking = true;
+    this.renderHome();
+    const next = () => {
+      const p = pending.shift();
+      if (!p) {
+        this._evoChecking = false;
+        this.renderHome();
+        return;
+      }
+      EvolveScene.open({ fromDex: p.fromDex, toDex: p.toDex, onDone: next });
+    };
+    setTimeout(next, 400);
   },
 
   /* ---------- 重設進度（Settings 內，要輸入訓練員名先撳得） ---------- */
@@ -211,6 +248,14 @@ const App = {
             <b class="pc-count" data-count="revive">0</b>
           </div>
         </div>
+        <div class="pc-items stones" id="pc-stones">
+          ${STONE_KINDS.map(kind => `
+          <div class="pc-item stone" data-kind="${kind}">
+            <span class="stone-icon">${STONE_ICONS[kind]}</span><span>${STONE_LABELS[kind]}</span>
+            <b class="pc-count" data-count="${kind}">0</b>
+          </div>`).join("")}
+        </div>
+        <div class="pc-evo-note" id="pc-evo-note"></div>
         <div class="pc-tip">Drag an item onto your partner — or tap an item, then tap the stage.</div>
 
         <div class="pc-rosterhead"><span>Your Pokémon</span><span>Tap to bring it to the stage</span></div>
@@ -288,9 +333,30 @@ const App = {
     this._pcSel = null;
     if (res.ok) {
       this._pcFloat(res.msg, "good");
-      this._syncPetCare();
       this.renderHome();
       this._syncPetCloud();
+      /* 石進化：branch / stone_used 要上雲，否則 pull 重推會退化 */
+      if (res.evolvedTo) {
+        const current = getActiveEntry();
+        if (current && window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+          if (res.branch != null) Sync.patchEntry(current.uid, { branch: res.branch });
+          if (res.stone) Sync.patchEntry(current.uid, { stone_used: res.stone });
+        }
+        /* 先留住舊形態喺舞台發光（光團），完左先彈進化 hub；
+           hub 關閉後重開 Partner Care 先見到新形態 */
+        this._pcKeepSprite = true;
+        this._syncPetCare();
+        const sp = document.getElementById("pc-sprite");
+        if (sp) sp.classList.add("glow-evo");
+        setTimeout(() => {
+          this.showEvolveModal(res.evolvedTo, () => {
+            this._pcKeepSprite = false;
+            this.openPartnerPicker();
+          }, res.evolvedFrom);
+        }, 1500);
+        return;
+      }
+      this._syncPetCare();
     } else {
       this._pcToast(res.msg);
     }
@@ -322,7 +388,7 @@ const App = {
     const dayQ = Pet.dayKey();
 
     const sprite = document.getElementById("pc-sprite");
-    if (sprite) {
+    if (sprite && !this._pcKeepSprite) {
       const want = animatedURL(cur[0]);
       if (sprite.dataset.src !== want) {
         sprite.dataset.src = want;
@@ -380,6 +446,29 @@ const App = {
       tile.classList.toggle("selected", this._pcSel === kind && usable);
       tile.draggable = usable;
     });
+
+    /* 進化石提示：下一階段需要咩條件 */
+    const evoNote = document.getElementById("pc-evo-note");
+    if (evoNote) {
+      const info = entryNextEvolution(entry);
+      let txt = "";
+      if (!info) {
+        txt = "Fully evolved — no further evolution.";
+      } else if (info.trade) {
+        const likes = loadState().trainerLikes || 0;
+        txt = `Needs ${TRADE_LIKES_REQUIRED} likes to evolve (${likes}/${TRADE_LIKES_REQUIRED})`;
+      } else if (info.target && info.stone) {
+        txt = `Use a ${STONE_LABELS[info.stone]} to evolve.`;
+      } else if (info.target) {
+        txt = (entry.level || 1) >= (info.needLevel || 0)
+          ? "Ready to evolve!"
+          : `Evolves at Lv.${info.needLevel} (now Lv.${entry.level || 1}).`;
+      } else if (info.options && info.options.length) {
+        const kinds = info.options.filter(o => o.stone).map(o => STONE_LABELS[o.stone]);
+        txt = kinds.length ? `Evolves with ${kinds.join(" / ")}.` : "";
+      }
+      evoNote.textContent = txt;
+    }
 
     /* 全部寶可夢：沿用原本 Switch Partner 的 dex-cell 外觀 */
     const roster = document.getElementById("pc-roster");
@@ -1188,6 +1277,7 @@ const App = {
     /* v99：diamonds/EXP/entries 已各自經 RPC 上雲；SM-2 cards/history 由 queueUpsert/
        queueHistory 批量 flush —— 唔再需要 pushState 全量推（會重複 insert history） */
 
+    rewards.evolving = !!(levelRes && levelRes.evolvedTo);
     this._renderSettlement(data, rewards);
     this.showView("view-settlement");
     if (levelRes) {
@@ -1195,14 +1285,21 @@ const App = {
         const whose = entryCurrentSpecies(entry)[1];
         this.toast(`${whose} reached Lv.${entry.level}!`);
       }
-      if (levelRes.evolvedTo) setTimeout(() => this.showEvolveModal(levelRes.evolvedTo), 600);
-      if (levelRes.learned.length) {
-        setTimeout(() => this.queueMoveLearn(entry, levelRes.learned), levelRes.evolvedTo ? 1500 : 600);
+      if (levelRes.evolvedTo) {
+        /* 進化場景播完先處理學招／世代解鎖 */
+        setTimeout(() => this.showEvolveModal(levelRes.evolvedTo, () => {
+          if (levelRes.learned.length) setTimeout(() => this.queueMoveLearn(entry, levelRes.learned), 400);
+          setTimeout(() => this.maybeShowGenUnlock(), 400);
+        }), 600);
+      } else {
+        if (levelRes.learned.length) {
+          setTimeout(() => this.queueMoveLearn(entry, levelRes.learned), 600);
+        }
+        setTimeout(() => this.maybeShowGenUnlock(), 900);
       }
+    } else {
+      setTimeout(() => this.maybeShowGenUnlock(), 900);
     }
-    /* 世代解鎖慶祝：等進化/結算動畫行完先彈（levelRes 有進化就再遲啲） */
-    const unlockDelay = levelRes && levelRes.evolvedTo ? 2200 : 900;
-    setTimeout(() => this.maybeShowGenUnlock(), unlockDelay);
 
     /* Gym：結算畫面之後返主頁先判 badge（Hint／錯題已計入 results） */
     if (Quiz.mode === "gym" || data.mode === "gym") {
@@ -1263,8 +1360,8 @@ const App = {
       const jingleUrl = cap.caught ? "assets/bgm/obtained-pokemon.mp3" : "assets/bgm/obtained-berry.mp3";
       CaptureScene.audio.playOnce(jingleUrl, 0.4);
     }
-    /* 捕捉完結：jingle 播完後恢復全域 BGM */
-    if (window.CaptureScene && CaptureScene.audio) {
+    /* 捕捉完結：jingle 播完後恢復全域 BGM（有進化場景就交返俾場景完結時恢復） */
+    if (!rewards.evolving && window.CaptureScene && CaptureScene.audio) {
       setTimeout(() => CaptureScene.audio.startTownBGM(), 3200);
     }
 
@@ -1399,27 +1496,25 @@ const App = {
     });
   },
 
-  /* ---------- 進化 Modal（簡單淡入切換） ---------- */
-  showEvolveModal(species) {
-    const chain = EVOLUTION_CHAINS.find(c => c.key === species.chainKey);
-    const entry = loadState().entries.find(e => e.chainKey === species.chainKey);
-    const stage = [species.dexId, species.name];
-    const prevStage = species.stage > 1 && entry
-      ? (species.stage - 1 <= chain.stages.length ? chain.stages[species.stage - 2] : chain.stages[chain.stages.length - 1])
-      : null;
-    this.showModal(`
-      <div class="evolve-box">
-        <div class="evolve-title">✨ It evolved! ✨</div>
-        ${prevStage ? `<div class="evolve-from">${prevStage[1]} →</div>` : ""}
-        <img class="evolve-art" src="${artworkURL(stage[0])}" alt="${stage[1]}"
-             onerror="this.onerror=null;this.src='${spriteURL(stage[0])}'">
-        <div class="evolve-name">${stage[1]}</div>
-        <button id="evolve-ok" class="btn-big btn-primary">Awesome!</button>
-      </div>`, true);
-    document.getElementById("evolve-ok").onclick = () => {
-      this.closeModal();
+  /* ---------- 進化 Scene（EvolveScene 播完整段動畫） ---------- */
+  showEvolveModal(species, onDone, fromDex) {
+    if (!species) return;
+    let from = fromDex;
+    if (!from) {
+      const chain = EVOLUTION_CHAINS.find(c => c.key === species.chainKey);
+      if (chain) {
+        const idx = species.branch ? chain.stages.length - 1 : (species.stageIndex || 0) - 1;
+        const prev = chain.stages[idx];
+        if (prev) from = prev[0];
+      }
+    }
+    if (!from) from = species.dexId;
+    const done = () => {
       this.renderHome();
+      if (onDone) onDone();
     };
+    if (typeof EvolveScene === "undefined") { done(); return; }
+    EvolveScene.open({ fromDex: from, toDex: species.dexId, onDone: done });
   },
 
   /* ---------- 設定 ---------- */
@@ -1777,7 +1872,7 @@ const App = {
 
         <h4>Music &amp; Sound Credits</h4>
         <p>Background music: <i>Flat Water</i> by BGM channel (official music video). All rights belong to their respective owners.</p>
-        <p>Battle/jingle tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
+        <p>Battle/jingle/evolution tracks (<i>Battle! (Wild Pokémon)</i>, <i>Obtained a Pokémon!</i>, <i>Obtained a Berry!</i>, <i>Evolution</i>, <i>Fanfare — Evolution</i>, from Pokémon Red/Green/Blue/Yellow) are from the original Pokémon game soundtracks, composed by Junichi Masuda, Gō Ichinose, Morikazu Aoki, Shota Kageyama and others. © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
         <p>Pokémon soundtrack resources referenced from <a href="https://downloads.khinsider.com" target="_blank" rel="noopener">KHInsider Video Game Music</a> (unofficial fan archive).</p>
 
         <h4>In-Game Items</h4>

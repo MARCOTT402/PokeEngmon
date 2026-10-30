@@ -1,51 +1,56 @@
-# Tasks — 句子題行內空格練習 + SM-2 v3 校準
+# Tasks — 五種進化石 + 精靈進化場景
 
 > 對應 [spec.md](file:///c:/Users/user/Documents/trae_projects/PokeEngmon/spec.md)
-> 分支：`feat/inline-blank-quiz`｜介面文字：全英文
+> 介面文字：全英文
 
 ## 執行順序（每項完成後自檢）
 
-- [x] **T1. SM-2 演算法層重寫**（`js/sm2.js`）
-  - 刪除舊 Q 值／階梯函數；新增 `efForClean` / `efForHint` / `efForCheckFail` / `intervalForClean` / `applyClean` / `applyHint` / `applyCheckFail` / `lastReviewedMs` / `formatSpan` / `migrateV3`。
-  - 卡片新 shape 加 `last_review_at`。
-  - 保留 Storage 與 `buildSession`。
-  - 驗證：`node --check js/sm2.js`；用 console 跑 spec §5 數值表。
+- [x] **T1. 進化條件核心（`js/storage.js`）**
+  - 新增 `STONE_KINDS`、`STONE_LABELS`、`STONE_ITEM_MAP`、`TRADE_LIKES_REQUIRED`、`entryNextEvolution()`、`canEvolveNow()`、`canStoneEvolve()`。
+  - `defaultState()` 加 5 個石 key 及 `trainerLikes: 0`。
+  - 條件跟官方：`level-up` 用 `evo.minLevel`（null 才 fallback 30）；`use-item` + 5 石 → 只要有石即可（無等級）；`trade` → likes ≥ 20。
+  - `addEntryExp()`：改用 helper；伊貝石分支；回傳 `evolvedFrom`。
+  - `useEntryCandy()`：帶出 `evolvedFrom`。
+  - `deriveEntryFields()`：同一 helper replay，登出再登入不退化。
+  - 驗證：`node --check js/storage.js`；console 跑 spec §4.2。
 
-- [x] **T2. 同步層 + DB 遷移**（`js/sync.js`、`supabase/supabase-schema.sql`、新增 migration SQL）
-  - `queueUpsert` 與 `pushState` 加 `last_review_at`。
-  - Migration：`alter table user_cards add column if not exists last_review_at bigint;`
-  - 驗證：`node --check js/sync.js`；payload 有 `last_review_at`。
+- [x] **T2. 道具層（`js/pet.js`）**
+  - `ITEM_KINDS` 加 5 石。
+  - `rollDrops()` 加 10% 石掉落、5 種各 20%。
+  - `canUse()` / `useItem()` 石分支（消耗、`entry.stone`、觸發進化、回傳 `evolvedFrom/evolvedTo/branch/stone`）。
+  - 驗證：`node --check js/pet.js`；掉落 chip 文案。
 
-- [x] **T3. 回合引擎重寫**（`js/quiz.js`）
-  - 行內空格渲染、逐格自動綠、L1/L2 ghost、✓ 檢查、重排佇列、chip、設定彈窗。
-  - 移除 submit / skip / _continue / _advance / memory light。
-  - 驗證：`node --check js/quiz.js`；手動流程見 spec §6 第 3–9 項。
+- [x] **T3. 進化場景（新檔 `js/evolve-scene.js` + `js/capture.js`）**
+  - `CaptureAudio.playMusicOnce(url, volume, maxSeconds)` → bgmBus、可停、timeout 自動停。
+  - `EvolveScene.open/close`：GIF、叫聲、8 秒交替、5 秒 fanfare、完結後 backdrop 關閉、BGM 恢復。
+  - 驗證：`node --check`；瀏覽器完整流程。
 
-- [x] **T4. 答題頁 DOM + 樣式**（`index.html`、`css/style.css`）
-  - 重寫 `#view-quiz`；刪 `#view-powerup`；刪 `powerup.js` script。
-  - 新增 toolbar／chip／gear／qb-cell 樣式；清走 powerup-only CSS。
-  - 驗證：頁面載入無 console error；元素 id 與 app.js 綁定一致。
+- [x] **T4. App / Pokedex 接線（`js/app.js`、`js/pokedex.js`）**
+  - Partner Care 石 tile（`.pc-items.stones`）＋ 點擊／拖放。
+  - `_pcUse` 石成功 → patchEntry（branch / stone_used）→ 開場景 → onDone 重開 Partner Care。
+  - `onSetComplete`：場景完結後才 queueMoveLearn / gen unlock。
+  - `_renderSettlement`：有進化時不重開城鎮 BGM。
+  - `showEvolveModal(species, onDone)` 改接 `EvolveScene`。
+  - `Pokedex.feedCandy` 用 `res.evolvedFrom` 開場景。
+  - `renderHome()` 加 `_checkPendingEvolutions()`（防重入、逐隻播場景，供未來 likes）。
+  - 驗證：`node --check`；手動四條觸發路徑。
 
-- [x] **T5. 主流程整合**（`js/app.js`）
-  - `onQuizFinished` 移除 PowerUp；`onSetComplete` 改單維度 EXP；刪 memory bonus。
-  - 更新按鈕綁定；`init()` 呼叫 `SM2.migrateV3()`。
-  - 驗證：`node --check js/app.js`；完成一組 → 捕捉 → 結算無報錯。
+- [x] **T5. 雲端（`js/sync.js` + migration）**
+  - `localEntryFromServer` 讀 `stone_used`。
+  - `patchEntry` 支援 `stone_used`。
+  - `pushItems` 加 `items_stones`，schema 錯誤 retry 舊 payload。
+  - `pull` 讀 `items_stones` 及 `trainer_likes`（null 保留本機）。
+  - 新增 `supabase/migrations/supabase-migrate-20261031-stone-evolution.sql`（`stone_used`、`items_stones`、`trainer_likes` + grants）。
+  - 驗證：`node --check js/sync.js`；未跑 migration 時 retry 成功。
 
-- [x] **T6. 移除 Power Up**（`js/powerup.js`、`sw.js`、相關 CSS）
-  - 刪檔、刪 `sw.js` ASSETS 條目、刪殘留引用。
-  - 驗證：`Grep "PowerUp|powerup"` 只剩文件／註解。
+- [x] **T6. 資產與文件（`index.html`、`sw.js`、`css/style.css`、`prd.md`、disclaimer）**
+  - 複製 2 首 mp3 到 `assets/bgm/`。
+  - `index.html` 加 script；`sw.js` ASSETS 加 3 個檔案。
+  - 加石 tile / 進化場景 CSS。
+  - disclaimer credits + prd.md §3.11。
+  - 驗證：檔案存在、路徑正確、`?v=` 一致（本地預覽需跑 sync-version）。
 
-- [x] **T7. 手動驗收**（瀏覽器）
-  - 用 browser 子代理開本地預覽，逐項核對 spec §6。
-  - 特別測：`human race` 2 格、`wasn't` 1 格、空答案題、hint L1/L2、重排、最後一題不再排、chip 單位。
+- [x] **T7. 端到端驗證**
+  - spec §4 全部項目；瀏覽器實測；回報結果。
 
-- [x] **T8. Commit + push 分支**
-  - 按 spec §7 五個 commit（`--paths` 限定）。
-  - push `feat/inline-blank-quiz`；**不 merge**。
-  - 回報 commit 清單與驗收重點。
-
-## 完成定義（DoD）
-
-- spec §6 全數通過。
-- 分支已 push，main 未改動。
-- 回報含：改了哪些檔案、行為差異、Supabase migration 需要用戶在正式環境執行、已知取捨。
+> 注意：T5 migration 需要用戶在 Supabase SQL Editor 執行；未執行時功能仍可本機運作。

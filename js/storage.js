@@ -55,7 +55,12 @@ function defaultState() {
     customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
     unlockedGen: 1,          // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
     gymBadges: [],           // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges
-    items: { food: 0, premium: 0, revive: 0 },   // 電子寵物背包（目前只存本機，未上雲）
+    items: {
+      food: 0, premium: 0, revive: 0,
+      thunder: 0, moon: 0, fire: 0, leaf: 0, water: 0
+    },   // 電子寵物背包（目前只存本機，未上雲）
+    trainerLikes: 0,        // 未來 leaderboard likes；≥20 = trade 進化條件
+    moveLoadouts: {},       // uid -> [招式 slug ×≤4]：玩家自訂持有招式（pull 重推後還原用）
     curveMode: "standard"   // 遺忘曲線模式：standard / junior / teen / adult
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
@@ -189,7 +194,10 @@ function obtainPokemon(chainKey, mode) {
   const st = loadState();
   const chain = EVOLUTION_CHAINS.find(c => c.key === chainKey);
   if (!chain) { console.warn("[storage] obtainPokemon: chain not found", chainKey); return null; }
-  const existing = st.entries.find(e => e.chainKey === chainKey);
+  /* dupe 目標：同鏈第一隻「未完全進化」嘅 entry。
+     全部完全進化咗（例如 Eevee → Flareon 後再捉 Eevee）→ 開新 entry，
+     等玩家可以集齊分支進化（Vaporeon / Jolteon / Flareon） */
+  const existing = st.entries.find(e => e.chainKey === chainKey && !isEntryFullyEvolved(e));
   if (existing) {
     ensureEntryPokemonData(existing);
     existing.dupes = (existing.dupes || 0) + 1;
@@ -214,6 +222,7 @@ function obtainPokemon(chainKey, mode) {
     evPoints: 0,
     nature: randomNature(),
     moves: initialMoves(dexId),
+    knownMoves: initialMoves(dexId),   // 招式池：等級夠學嘅全部招（配招嘅來源）
     candies: 0,
     dupes: 0,
     stars: 1,
@@ -242,8 +251,113 @@ function addEvPoint(entry, statKey) {
   return true;
 }
 
+/* ---------- 進化石 / 官方進化條件 ---------- */
+const STONE_KINDS = ["thunder", "moon", "fire", "leaf", "water"];
+const STONE_LABELS = {
+  thunder: "Thunder Stone", moon: "Moon Stone", fire: "Fire Stone",
+  leaf: "Leaf Stone", water: "Water Stone"
+};
+const STONE_ICONS = { thunder: "⚡", moon: "🌙", fire: "🔥", leaf: "🍃", water: "💧" };
+/* PokéAPI item slug → 本作道具 key */
+const STONE_ITEM_MAP = {
+  "thunder-stone": "thunder", "moon-stone": "moon", "fire-stone": "fire",
+  "leaf-stone": "leaf", "water-stone": "water"
+};
+const TRADE_LIKES_REQUIRED = 20;
+
+function stoneKindOfItem(item) {
+  return STONE_ITEM_MAP[item] || null;
+}
+
+/* 某隻物種進化到 target 的官方條件（evolvesTo 一筆） */
+function evolutionDetail(fromDex, target, branchIndex) {
+  const evo = ((dexOf(fromDex) || {}).evolvesTo || []).find(x => x.id === target[0]) || null;
+  const trigger = (evo && evo.trigger) || "level-up";
+  const stone = trigger === "use-item" ? stoneKindOfItem(evo && evo.item) : null;
+  let needLevel = 0;
+  if (trigger === "level-up") needLevel = (evo && evo.minLevel) || 30;
+  else if (trigger !== "trade" && !stone) needLevel = (evo && evo.minLevel) || 30;  // 其他道具／特殊進化：維持近似
+  return {
+    target,
+    branchIndex: branchIndex == null ? null : branchIndex,
+    needLevel,
+    stone,
+    trade: trigger === "trade"
+  };
+}
+
+/* 下一個進化（官方條件）。伊貝未揀分支時 target = null、options 列出所有石選項。 */
+function entryNextEvolution(entry) {
+  const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
+  if (!chain) return null;
+  const maxStage = chainMaxStage(chain);
+  const stage = Math.max(1, Number(entry.stage) || 1);
+  if (stage >= maxStage) return null;
+  const fromDex = entryCurrentSpecies(entry)[0];
+
+  if (stage < chain.stages.length) {
+    const target = chain.stages[stage];
+    return Object.assign({ fromDex, options: [] }, evolutionDetail(fromDex, target, null));
+  }
+
+  const bi = stage - chain.stages.length;
+  const opts = (chain.branches && chain.branches[bi]) || [];
+  if (!opts.length) return null;
+  const options = opts.map((target, idx) => evolutionDetail(fromDex, target, idx));
+  let chosen = null;
+  if (entry.branch != null && options[entry.branch]) {
+    chosen = options[entry.branch];
+  } else if (entry.stone) {
+    chosen = options.find(o => o.stone && o.stone === entry.stone) || null;
+  }
+  if (chosen) return Object.assign({ fromDex, options }, chosen);
+  return { fromDex, target: null, branchIndex: null, needLevel: 0, stone: null, trade: false, options };
+}
+
+/* 條件是否全部達成（等級／石／likes） */
+function canEvolveNow(entry, info) {
+  if (!info || !info.target) return false;
+  if (info.trade) return (loadState().trainerLikes || 0) >= TRADE_LIKES_REQUIRED;
+  if (info.stone) {
+    /* 舊存檔：branch 已記錄但未有 stone_used → 當已用石 */
+    if (info.branchIndex != null && entry.branch != null) return true;
+    return entry.stone === info.stone;
+  }
+  return (entry.level || 1) >= (info.needLevel || 0);
+}
+
+/* 用某粒石能否令呢隻進化（Partner Care 道具 tile 用） */
+function canStoneEvolve(entry, kind) {
+  if (!entry) return { ok: false, msg: "No partner" };
+  const info = entryNextEvolution(entry);
+  if (!info) return { ok: false, msg: "Already fully evolved" };
+  const name = (SPECIES[info.fromDex] || {}).name || "This Pokémon";
+  const candidates = info.target ? [info] : (info.options || []);
+
+  const match = candidates.find(o => o.target && o.stone === kind);
+  if (match) {
+    return { ok: true, msg: "Ready to evolve!", target: match.target, branchIndex: match.branchIndex };
+  }
+  const needed = candidates.find(o => o.target && o.stone);
+  if (needed) return { ok: false, msg: `${name} needs a ${STONE_LABELS[needed.stone]}` };
+  if (candidates.some(o => o.target && o.trade)) {
+    return { ok: false, msg: `${name} needs ${TRADE_LIKES_REQUIRED} likes to evolve` };
+  }
+  if (info.target && !info.stone) {
+    return { ok: false, msg: `${name} evolves by level, not with a stone` };
+  }
+  return { ok: false, msg: `That stone has no effect on ${name}` };
+}
+
 /* 加 EXP（照 PokéAPI 經驗表升級）→ 可能學招式／進化
-   回傳 {levelsGained, learned:[{level,move}], evolvedTo, entry} */
+   回傳 {levelsGained, learned, evolvedFrom, evolvedTo, entry} */
+/* 完全進化？（stage 到達鏈上限）。呢個旗幟決定「再抽到同一條鏈」係 dupe 定開新 entry */
+function isEntryFullyEvolved(entry) {
+  const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
+  if (!chain) return true;
+  return (Number(entry.stage) || 1) >= chainMaxStage(chain);
+}
+
 function addEntryExp(entry, amount) {
   const st = loadState();
   ensureEntryPokemonData(entry);
@@ -257,33 +371,41 @@ function addEntryExp(entry, amount) {
   if (lv > MAX_LEVEL) lv = MAX_LEVEL;
   entry.level = Math.max(entry.level, lv);
 
+  /* 「學過」以招式池 + 持有為準：pool 有嘅招唔會再當新學（否則換出嘅招升級時會重複彈學招） */
+  const knownSet = [...new Set([...(entry.knownMoves || []), ...(entry.moves || [])])];
   const learned = entry.level > oldLevel
-    ? movesBetween(dexId, oldLevel, entry.level, entry.moves)
+    ? movesBetween(dexId, oldLevel, entry.level, knownSet)
     : [];
+  /* 招式池即時更新：等級夠學嘅招即時入池（持有 4 招唔變，由玩家喺圖鑑配） */
+  if (learned.length) {
+    if (!Array.isArray(entry.knownMoves)) entry.knownMoves = (entry.moves || []).slice();
+    const pool = new Set(entry.knownMoves);
+    learned.forEach(m => { if (!pool.has(m.move)) { pool.add(m.move); entry.knownMoves.push(m.move); } });
+  }
 
+  let evolvedFrom = null;
   let evolvedTo = null;
   while (entry.stage < maxStage) {
-    let nextStageArr;
-    if (entry.stage < chain.stages.length) {
-      nextStageArr = chain.stages[entry.stage];              // 線性進化
-    } else {
-      const bi = entry.stage - chain.stages.length;          // 分支進化（伊貝）
-      const opts = chain.branches[bi];
-      if (entry.branch == null) entry.branch = Math.floor(Math.random() * opts.length);
-      nextStageArr = opts[entry.branch];
-    }
-    const fromDex = entryCurrentSpecies(entry)[0];
-    const evo = ((dexOf(fromDex) || {}).evolvesTo || []).find(x => x.id === nextStageArr[0]);
-    const needLevel = (evo && evo.minLevel) || 30;           // 道具／親密度進化 → 30 級
-    if (entry.level < needLevel) break;
+    const info = entryNextEvolution(entry);
+    if (!info || !info.target) break;
+    if (!canEvolveNow(entry, info)) break;
 
+    const fromDex = entryCurrentSpecies(entry)[0];
+    if (info.branchIndex != null && entry.branch == null) entry.branch = info.branchIndex;
     entry.stage += 1;
-    const newDex = nextStageArr[0];
+    const newDex = info.target[0];
     if (!entry.ownedSpecies.includes(newDex)) entry.ownedSpecies.push(newDex);
+    if (evolvedFrom == null) evolvedFrom = fromDex;
     evolvedTo = SPECIES[newDex];
   }
+  entry.isFinal = isEntryFullyEvolved(entry);
   saveState();
-  return { levelsGained: entry.level - oldLevel, learned, evolvedTo, entry };
+  /* 完全進化 → 標記上雲：server RPC（gacha_pull / obtain_capture）靠 is_final
+     決定下一隻同鏈寵係 dupe 定開新 row */
+  if (evolvedTo && entry.isFinal && window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+    try { Sync.patchEntry(entry.uid, { is_final: true }); } catch (e) {}
+  }
+  return { levelsGained: entry.level - oldLevel, learned, evolvedFrom, evolvedTo, entry };
 }
 
 /* 由 (chainKey, exp, dupes, branch) 重推 derived 欄位（level/stage/ownedSpecies/moves/stars）。
@@ -298,37 +420,43 @@ function deriveEntryFields(entry) {
   const maxStage = chainMaxStage(chain);
 
   /* 進化 replay：同 addEntryExp 嘅 while loop 對齊
-     （branch 未記錄時用 0 佔位 —— 真正 branch 喺進化發生時由 client PATCH 上雲） */
+     （branch／stone_used 由 server 權威提供；未記錄時唔會自動揀分支） */
   out.stage = 1;
   out.ownedSpecies = [chain.stages[0][0]];
   while (out.stage < maxStage) {
+    const info = entryNextEvolution(out);
+    if (!info || !info.target) break;
     const curDex = entryCurrentSpecies(out)[0];
     const lv = Math.min(MAX_LEVEL, levelFromExp(curDex, Number(out.exp) || 0));
-    let nextStageArr;
-    if (out.stage < chain.stages.length) {
-      nextStageArr = chain.stages[out.stage];            // 線性進化
-    } else {
-      const opts = chain.branches[out.stage - chain.stages.length];
-      nextStageArr = opts[out.branch ?? 0] || opts[0];   // 分支進化（伊貝）
-    }
-    const evo = ((dexOf(curDex) || {}).evolvesTo || []).find(x => x.id === nextStageArr[0]);
-    const needLevel = (evo && evo.minLevel) || 30;
-    if (lv < needLevel) break;
+    const met = info.trade
+      ? ((out.trainerLikes != null ? out.trainerLikes : loadState().trainerLikes) || 0) >= TRADE_LIKES_REQUIRED
+      : info.stone
+        ? (out.stone === info.stone || (info.branchIndex != null && out.branch != null))
+        : lv >= (info.needLevel || 0);
+    if (!met) break;
+    if (info.branchIndex != null && out.branch == null) out.branch = info.branchIndex;
     out.stage += 1;
-    if (!out.ownedSpecies.includes(nextStageArr[0])) out.ownedSpecies.push(nextStageArr[0]);
+    if (!out.ownedSpecies.includes(info.target[0])) out.ownedSpecies.push(info.target[0]);
   }
 
   /* level 用最終形態嘅 growth table 反推 */
   const finalDex = entryCurrentSpecies(out)[0];
   out.level = Math.min(MAX_LEVEL, levelFromExp(finalDex, Number(out.exp) || 0));
 
-  /* moves：初始招 + 最終形態喺現等級內學到嘅招（近似 replay，display 用） */
-  const known = initialMoves(chain.stages[0][0]);
-  const learned = movesBetween(finalDex, 1, out.level, known).map(m => m.move);
-  out.moves = [...new Set([...known, ...learned])];
+  /* 招式池 replay：所有擁有過嘅形態（stage1→而家）喺現等級內學到嘅招。
+     官方規則：進化前學嘅招會保留，所以唔可以淨係用最終形態嘅 learnset。
+     knownMoves = 全部學過（配招池）；moves = 持有 4 招（預設最先學嘅 4 招，
+     玩家自訂配招由 applyMoveLoadout 喺 pull 後還原） */
+  const poolSet = new Set(initialMoves(chain.stages[0][0]));
+  (out.ownedSpecies || []).forEach(dex => {
+    learnsetOf(dex).forEach(l => { if (l.level <= out.level) poolSet.add(l.move); });
+  });
+  out.knownMoves = [...poolSet];
+  out.moves = out.knownMoves.slice(0, 4);
 
   /* stars 由 dupes 推（同 obtainPokemon 公式對齊） */
   out.stars = Math.min(5, 1 + Math.floor((out.dupes || 0) / 5));
+  out.isFinal = isEntryFullyEvolved(out);
   return out;
 }
 
@@ -344,6 +472,7 @@ function localEntryFromServer(e) {
     candies: e.candies ?? 0,
     dupes: e.dupes ?? 0,
     branch: (e.branch === 0 || e.branch) ? e.branch : null,
+    stone: e.stone_used || null,
     nature: e.nature || null,
     obtainedAt: e.obtained_at
   });
@@ -372,12 +501,52 @@ function mergePet(localPet, serverPet) {
   return Object.assign({}, base, { decayDay: day || base.decayDay });
 }
 
+/* ---------- 配招（持有 4 招） ----------
+   entry.moves = 持有（≤4）；entry.knownMoves = 招式池（等級夠學嘅全部）。
+   玩家自訂配招存 st.moveLoadouts[uid]，因為 pull 重推 moves 會還原預設，
+   要喺重推後 apply 返。 */
+
+/* pull / adopt 重推後還原玩家配招（配招唔合法 → 保留預設） */
+function applyMoveLoadout(entry) {
+  const st = loadState();
+  const pref = st.moveLoadouts && st.moveLoadouts[entry.uid];
+  const pool = new Set(entry.knownMoves || entry.moves || []);
+  if (Array.isArray(pref) && pref.length && pref.every(m => pool.has(m))) {
+    entry.moves = pref.slice(0, 4);
+  }
+  return entry;
+}
+
+/* 圖鑑配招：只准用招式池入面嘅招、最多 4 招、至少 1 招 */
+function setEntryMoves(entry, slugs) {
+  const pool = new Set(entry.knownMoves || []);
+  const clean = [...new Set(slugs)].filter(m => pool.has(m)).slice(0, 4);
+  if (!clean.length) return { ok: false, msg: "No valid moves" };
+  entry.moves = clean;
+  const st = loadState();
+  st.moveLoadouts = st.moveLoadouts || {};
+  st.moveLoadouts[entry.uid] = clean;
+  saveState();
+  return { ok: true };
+}
+
 /* 採用 server entry：按 chainKey 搵本地 entry，存在就以 server 值覆蓋（uid 都換 —
    server id 先係 RPC 認嘅），唔存在就新加。activeUid 指向舊 uid 會一併修正。 */
 function adoptServerEntry(serverRow) {
   const st = loadState();
-  const mapped = localEntryFromServer(serverRow);
-  const idx = st.entries.findIndex(e => e.chainKey === mapped.chainKey);
+  const mapped = applyMoveLoadout(localEntryFromServer(serverRow));
+  /* 一條鏈可以有多個 entry（完全進化後可再收集）：
+     先用 uid 精準對；對唔到先喺同鏈入面揀最近獲得嗰隻（即啱啱 obtain 嗰個） */
+  let idx = st.entries.findIndex(e => e.uid === mapped.uid);
+  if (idx < 0) {
+    const cands = st.entries
+      .map((e, i) => ({ e, i }))
+      .filter(x => x.e.chainKey === mapped.chainKey);
+    if (cands.length) {
+      cands.sort((a, b) => (b.e.obtainedAt || 0) - (a.e.obtainedAt || 0));
+      idx = cands[0].i;
+    }
+  }
   if (idx >= 0) {
     const old = st.entries[idx];
     /* nature 已上雲（v1.4.1）：以 server 為準；server 未有（舊資料）才沿用本地性格 */
@@ -405,7 +574,7 @@ function adoptServerEntry(serverRow) {
 function useEntryCandy(entry, count) {
   ensureEntryPokemonData(entry);
   let used = 0;
-  let result = { levelsGained: 0, learned: [], evolvedTo: null, entry };
+  let result = { levelsGained: 0, learned: [], evolvedFrom: null, evolvedTo: null, entry };
   const n = Math.min(count || 1, entry.candies || 0);
   for (let i = 0; i < n && entry.level < MAX_LEVEL; i++) {
     const dexId = entryCurrentSpecies(entry)[0];
@@ -414,6 +583,7 @@ function useEntryCandy(entry, count) {
     used += 1;
     result.levelsGained += res.levelsGained;
     result.learned.push(...res.learned);
+    if (res.evolvedFrom && result.evolvedFrom == null) result.evolvedFrom = res.evolvedFrom;
     if (res.evolvedTo) result.evolvedTo = res.evolvedTo;
   }
   saveState();
@@ -438,6 +608,19 @@ function migrateEntries() {
     if ((!e.moves || e.moves.length === 0) && typeof POKEMON_DEX !== "undefined" && POKEMON_DEX) {
       e.moves = deriveEntryFields(e).moves;
       changed = true;
+    }
+    /* 招式池一律喺 dex 就緒後強制重推：pre-dex 寫過嘅殘缺池（[] 或「得持有招」）
+       靠 ensureEntryPokemonData 嘅非空判斷補唔返，要喺度對住 learnset 校準 */
+    if (typeof POKEMON_DEX !== "undefined" && POKEMON_DEX) {
+      const owned = (Array.isArray(e.ownedSpecies) && e.ownedSpecies.length) ? e.ownedSpecies : [entryCurrentSpecies(e)[0]];
+      const poolSet = new Set(e.moves || []);
+      owned.forEach(dex => {
+        learnsetOf(dex).forEach(l => { if (l.level <= (e.level || 1)) poolSet.add(l.move); });
+      });
+      const pool = [...poolSet];
+      const same = Array.isArray(e.knownMoves) && e.knownMoves.length === pool.length
+        && pool.every(m => e.knownMoves.includes(m));
+      if (!same) { e.knownMoves = pool; changed = true; }
     }
   });
   if (changed) saveState();

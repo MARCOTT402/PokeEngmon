@@ -20,7 +20,7 @@ const Pet = (() => {
   const DECAY_AMOUNT = 50;        // 自然消耗 = 最大血量 50%
   const DEFAULT_HEALTH = 100;
   const MAX_SETTLE_DAYS = 60;     // 防止離線超久時無限 loop
-  const ITEM_KINDS = ["food", "premium", "revive"];
+  const ITEM_KINDS = ["food", "premium", "revive", ...STONE_KINDS];
 
   /* 結算時區：固定 UTC+8。HKT 無夏令時間，所以恆定 +8h。 */
   const HKT_MS = 8 * 3600 * 1000;
@@ -254,17 +254,35 @@ const Pet = (() => {
   function canUse(kind, entry, now) {
     const p = ensure(entry);
     if (!p || countOf(kind) <= 0) return false;
+    if (STONE_KINDS.includes(kind)) return canStoneEvolve(entry, kind).ok;
     if (kind === "revive") return p.health <= 0;
     if (p.health <= 0) return false;           // 食物救唔到 Faint
     if (!inWindow(now)) return false;          // 只限 15:00–20:59 HKT
     return p.health < 100;                     // 血滿停餵
   }
 
-  /* 回傳 { ok, msg, heal } */
+  /* 回傳 { ok, msg, heal }；進化石成功時另有 evolvedFrom / evolvedTo / branch / stone */
   function useItem(kind, entry, now) {
     const p = ensure(entry);
     if (!p) return { ok: false, msg: "No partner" };
     if (countOf(kind) <= 0) return { ok: false, msg: "No item left" };
+    if (STONE_KINDS.includes(kind)) {
+      const check = canStoneEvolve(entry, kind);
+      if (!check.ok) return check;
+      addItem(kind, -1);
+      entry.stone = kind;
+      saveState();
+      const evo = addEntryExp(entry, 0);
+      if (!evo.evolvedTo) return { ok: false, msg: "Evolution could not start" };
+      return {
+        ok: true,
+        msg: `${evo.evolvedTo.name} is here!`,
+        evolvedFrom: evo.evolvedFrom,
+        evolvedTo: evo.evolvedTo,
+        branch: entry.branch,
+        stone: kind
+      };
+    }
     if (kind === "revive") {
       if (p.health > 0) return { ok: false, msg: "Revival only works when fainted" };
       addItem("revive", -1);
@@ -306,6 +324,12 @@ const Pet = (() => {
         addItem("revive", 1);
         drops.push({ kind: "revive", label: "💊 Revival +1" });
       }
+    }
+    /* 進化石：每回合獨立 10%，掉落時 5 種各 20% */
+    if (Math.random() < 0.10) {
+      const stone = STONE_KINDS[Math.floor(Math.random() * STONE_KINDS.length)];
+      addItem(stone, 1);
+      drops.push({ kind: stone, label: `${STONE_ICONS[stone]} ${STONE_LABELS[stone]} +1` });
     }
     return drops;
   }

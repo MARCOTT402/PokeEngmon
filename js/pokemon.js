@@ -5,6 +5,7 @@
 
 let POKEMON_DEX = null;
 let MOVES = null;
+let TYPE_CHART = null;   /* {atkType: {defType: mult}}，只記非 1 倍率 */
 
 const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 const STAT_LABELS = { hp: "HP", atk: "Atk", def: "Def", spa: "SpA", spd: "SpD", spe: "Spe" };
@@ -51,14 +52,16 @@ const DAMAGE_CLASS_INFO = {
 async function loadPokemonDex() {
   if (POKEMON_DEX) return POKEMON_DEX;
   try {
-    const [dexRes, moveRes] = await Promise.all([
+    const [dexRes, moveRes, chartRes] = await Promise.all([
       fetch("data/pokemon-151.json"),
-      fetch("data/moves.json")
+      fetch("data/moves.json"),
+      fetch("data/type-chart.json")
     ]);
     if (!dexRes.ok) throw new Error(`HTTP ${dexRes.status}`);
     POKEMON_DEX = await dexRes.json();
     POKEMON_DEX._loadedGens = { 1: true };   // 記低已載入嘅世代（Gen 1 開 app 即載）
     if (moveRes.ok) MOVES = (await moveRes.json()).moves || {};
+    if (chartRes.ok) TYPE_CHART = (await chartRes.json()).chart || {};
   } catch (e) {
     console.warn("Pokemon data load failed", e);
     POKEMON_DEX = null;
@@ -98,6 +101,18 @@ function moveInfo(slug) {
     type: "normal", damage_class: "status", target: "selected-pokemon",
     effect_chance: null, desc: ""
   };
+}
+
+/* 攻擊屬性 atkType 對防守方屬性組合嘅總倍率（相剋表未載入 → 當 1） */
+function typeMultiplier(atkType, defTypes) {
+  if (!TYPE_CHART || !atkType) return 1;
+  const row = TYPE_CHART[atkType];
+  if (!row) return 1;
+  let mult = 1;
+  (defTypes || []).forEach(dt => {
+    mult *= (row[dt] != null) ? row[dt] : 1;
+  });
+  return mult;
 }
 
 function typeIconURL(type) {
@@ -300,6 +315,26 @@ function ensureEntryPokemonData(entry) {
   }
   if (!Array.isArray(entry.moves)) {
     entry.moves = initialMoves(dexId);
+    changed = true;
+  }
+  /* 招式池 backfill：舊 entry（功能前建立）冇 knownMoves → 按所有擁有過嘅形態
+     喺現等級內可學嘅招重推（同 deriveEntryFields 一致）。
+     空陣列都當缺失：v113 已知 pre-dex derive 會寫 []。
+     必須等 POKEMON_DEX 就緒先推 —— 否則 learnset 係空，會寫出「得持有招」
+     嘅殘缺池，之後非空就永遠補唔返（migrateEntries 會喺 dex 就緒後強制重推） */
+  if (POKEMON_DEX && (!Array.isArray(entry.knownMoves) || entry.knownMoves.length === 0)) {
+    const owned = (Array.isArray(entry.ownedSpecies) && entry.ownedSpecies.length) ? entry.ownedSpecies : [dexId];
+    const poolSet = new Set(entry.moves.slice());
+    owned.forEach(dex => {
+      learnsetOf(dex).forEach(l => { if (l.level <= (entry.level || 1)) poolSet.add(l.move); });
+    });
+    entry.knownMoves = [...poolSet];
+    changed = true;
+  }
+  /* 舊資料（功能前 derive）moves 可能寫成「全部學過」超過 4 招 → trim 至 4，
+     多餘嘅留喺 knownMoves 池，Pokédex 會顯示喺 Other Moves 可以換入 */
+  if (entry.moves.length > 4) {
+    entry.moves = entry.moves.slice(0, 4);
     changed = true;
   }
   if (typeof entry.candies !== "number") { entry.candies = 0; changed = true; }

@@ -152,3 +152,20 @@ Lookup with `.find(c => c.key === key)`, NEVER `EVOLUTION_CHAINS[key]` (undefine
 - Only destructive or blocking confirmations (Reset Progress name confirmation, quit-quiz confirmation, cloud-overwrite warning) may pass `true`, because an accidental backdrop tap must not wipe or overwrite progress.
 - When adding a new hub, also wire its Cancel/close button to `App.closeModal()` so both dismissal paths exist.
 
+## Rule 18 — Derived fields (moves / knownMoves / level / stats) depend on POKEMON_DEX — NEVER compute pre-dex
+
+Any field derived from `POKEMON_DEX` (learnsets, growth tables, base stats, types) MUST be computed only after `POKEMON_DEX` is loaded. Computing it pre-dex produces a **degraded non-empty value** (e.g. `knownMoves = moves.slice()` while `learnsetOf()` returns `[]`, or `moves = []`), and the standard repair check (`!Array.isArray(x)`) then skips it forever — the corruption persists across reloads.
+
+Real incident (v113 / move-pool work): `ensureEntryPokemonData` ran before dex load, wrote `knownMoves = moves` (no learnset union). Later `migrateEntries` saw a non-empty pool and skipped repair, so Other Moves stayed empty.
+
+Defenses:
+- Guard every dex-dependent backfill with `if (POKEMON_DEX && …)` — don't write the field if dex isn't ready; leave it missing/empty so a later call repairs it.
+- `migrateEntries()` in `js/storage.js` is the **single post-dex repair authority** (runs after `await loadPokemonDex()` at `js/app.js` ~L2107). When adding a new dex-derived entry field, add its force-rebuild there (recompute from the canonical source, compare, save only on diff). Do NOT rely on lazy `!Array.isArray` checks alone.
+- `Sync.pull()` already `await loadPokemonDex()` before `deriveEntryFields` (`js/sync.js` ~L241); any new server-row → local-entry derivation must do the same.
+
+## Rule 19 — Re-collection after full evolution uses `is_final`; move loadouts are local-only
+
+**Re-collection:** when every entry of an evolution chain is fully evolved (`stage >= chainMaxStage`), the next pull/capture on the same chain opens a **new** entry instead of duping into a finished one. Server RPCs (`gacha_pull`, `obtain_capture`) select the dupe target with `… and is_final = false order by obtained_at asc limit 1`. `is_final` is **client-derived** (server doesn't track `stage`); `deriveEntryFields` sets `out.isFinal = isEntryFullyEvolved(out)`, and `Sync.pull` backfills `is_final=true` to the server for any row where the client says it's final. If you add new fields that affect "fully evolved", update `isEntryFullyEvolved` and `Sync.patchEntry`'s whitelist must include `is_final`.
+
+**Move loadouts:** `entry.moves` = held (≤4), `entry.knownMoves` = the move pool (every move learnable by any owned form at the current level). Player-custom loadouts live in `st.moveLoadouts[uid]` (localStorage only, NOT synced to the cloud — moves aren't a server column). After `pull`/`adoptServerEntry` rebuild `moves` from the pool, `applyMoveLoadout(entry)` restores the player's picks if they're still in the pool. `setEntryMoves` validates against the pool, caps at 4, and writes the loadout — never bypass it.
+

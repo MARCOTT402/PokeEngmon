@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html><body><script>
+(function () {
+  function ivs() { return { hp: 20, atk: 20, def: 20, spa: 20, spd: 20, spe: 20 }; }
+  function evs() { return { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }; }
+  var entries = [
+    { uid: "11111111-1111-4111-8111-111111111111", chainKey: "charmander", stage: 1, exp: 2520, level: 15,
+      ivs: ivs(), evs: evs(), evPoints: 0, nature: "hardy", moves: [], candies: 0, dupes: 0, stars: 1,
+      ownedSpecies: [4], obtainedAt: 1 },
+    { uid: "22222222-2222-4222-8222-222222222222", chainKey: "pikachu", stage: 1, exp: 0, level: 1,
+      ivs: ivs(), evs: evs(), evPoints: 0, nature: "hardy", moves: [], candies: 0, dupes: 0, stars: 1,
+      ownedSpecies: [25], obtainedAt: 2 },
+    { uid: "33333333-3333-4333-8333-333333333333", chainKey: "eevee", stage: 1, exp: 0, level: 1,
+      ivs: ivs(), evs: evs(), evPoints: 0, nature: "hardy", moves: [], candies: 0, dupes: 0, stars: 1,
+      ownedSpecies: [133], obtainedAt: 3 },
+    { uid: "44444444-4444-4444-8444-444444444444", chainKey: "bellsprout", stage: 2, exp: 11735, level: 25,
+      ivs: ivs(), evs: evs(), evPoints: 0, nature: "hardy", moves: [], candies: 0, dupes: 0, stars: 1,
+      ownedSpecies: [69, 70], obtainedAt: 4 }
+  ];
+  var st = {
+    device_id: "",
+    playerName: "The PokéEngmon Trainer",
+    nameCustomized: false,
+    diamonds: 0,
+    normalPulls: 0,
+    totalSets: 0,
+    totalCorrect: 0,
+    totalQuestions: 0,
+    bestStreak: 0,
+    practiceDays: {},
+    entries: entries,
+    activeUid: entries[0].uid,
+    records: {},
+    customQuestions: [],
+    unlockedGen: 1,
+    gymBadges: [],
+    items: { food: 0, premium: 0, revive: 0, thunder: 1, moon: 0, fire: 1, leaf: 1, water: 0 },
+    trainerLikes: 0,
+    curveMode: "standard"
+  };
+  localStorage.setItem("pokeengmon_state_v1", JSON.stringify(st));
+  localStorage.removeItem("pokeengmon_sm2_cards_v2");
+  localStorage.removeItem("pokeengmon_sm2_history_v2");
+  location.replace("index.html");
+})();
+</script></body></html>

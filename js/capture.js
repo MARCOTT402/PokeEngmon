@@ -671,6 +671,54 @@ class CaptureAudio {
       .catch(() => { rec.loading = false; rec.waiters = []; });
   }
 
+  /* Music one-shot through bgmBus (evolution scene): stoppable + optional auto-stop */
+  playMusicOnce(url, volume = 0.7, maxSeconds = 0) {
+    this.ensure();
+    const handle = {
+      cancelled: false,
+      stop: () => { handle.cancelled = true; }
+    };
+    if (!this.ctx) return handle;
+    if (!this._oneShotBufs) this._oneShotBufs = {};
+    const start = (buf) => {
+      if (handle.cancelled) return;
+      try {
+        const g = this.ctx.createGain();
+        g.gain.value = volume;
+        g.connect(this.bgmBus || this.ctx.destination);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(0);
+        let stopped = false;
+        let timer = null;
+        const stop = () => {
+          if (stopped) return;
+          stopped = true;
+          if (timer) clearTimeout(timer);
+          try { src.stop(); } catch (e) {}
+          try { src.disconnect(); g.disconnect(); } catch (e) {}
+        };
+        handle.stop = () => { handle.cancelled = true; stop(); };
+        src.onended = () => {
+          try { src.disconnect(); g.disconnect(); } catch (e) {}
+        };
+        if (maxSeconds > 0) timer = setTimeout(stop, maxSeconds * 1000);
+      } catch (e) {}
+    };
+    const cached = this._oneShotBufs[url];
+    if (cached && cached.buf) { start(cached.buf); return handle; }
+    if (cached && cached.loading) { cached.waiters.push(start); return handle; }
+    const rec = { buf: null, loading: true, waiters: [start] };
+    this._oneShotBufs[url] = rec;
+    fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(ab => this.ctx.decodeAudioData(ab))
+      .then(buf => { rec.buf = buf; rec.loading = false; rec.waiters.forEach(fn => { try { fn(buf); } catch (e) {} }); rec.waiters = []; })
+      .catch(() => { rec.loading = false; rec.waiters = []; });
+    return handle;
+  }
+
   /* Settings SFX slider preview：停上一段再播，避免拖動疊聲；經 sfxBus 跟用戶倍率 */
   previewSfx(url, volume = 0.4) {
     this.ensure();

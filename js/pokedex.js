@@ -171,13 +171,21 @@ const Pokedex = {
     const sp = SPECIES[dexId];
     const st = loadState();
     const chain = EVOLUTION_CHAINS.find(c => c.key === sp.chainKey);
-    const entry = st.entries.find(e => e.chainKey === sp.chainKey);
+    /* 一條鏈可以多個 entry（完全進化後可再收集）。
+       能力值只跟「而家真係呢隻物種」嘅 entry —— Eevee 進化成 Flareon 後，
+       Eevee 頁只保留 collected 記錄（進化鏈圖亮燈），唔再顯示能力值，
+       直至玩家再抽／捉到新 Eevee（stage 1 個體）先復活數值。
+       進化鏈圖用全鏈聯集（曾經擁有過嘅都亮燈）。 */
+    const chainEntries = st.entries.filter(e => e.chainKey === sp.chainKey);
+    const entry = chainEntries.find(e => entryCurrentSpecies(e)[0] === dexId) || null;
+    const ownedSet = new Set();
+    chainEntries.forEach(e => (e.ownedSpecies || []).forEach(id => ownedSet.add(id)));
     const rz = RARITY[sp.rarity] || RARITY.normal;
 
     /* Evolution chain (linear + Eevee branches) */
     const nodes = [];
     chain.stages.forEach((s) => {
-      const got = entry && entry.ownedSpecies.includes(s[0]);
+      const got = ownedSet.has(s[0]);
       nodes.push(`<div class="evo-node ${got ? "got" : ""}">
                 <img src="${spriteURL(s[0])}" alt="${s[1]}">
                 <span>${got ? s[1] : "???"}</span>
@@ -185,7 +193,7 @@ const Pokedex = {
     });
     (chain.branches || []).forEach(opts => {
       const sub = opts.map(s => {
-        const got = entry && entry.ownedSpecies.includes(s[0]);
+        const got = ownedSet.has(s[0]);
         return `<div class="evo-node ${got ? "got" : ""}">
                   <img src="${spriteURL(s[0])}" alt="${s[1]}">
                   <span>${got ? s[1] : "???"}</span>
@@ -197,6 +205,10 @@ const Pokedex = {
 
     /* Level / stats / moves / EV / candy */
     let extraHTML = "";
+    /* 曾經擁有但已進化走：保留 collected 記錄，提示要再捉先見到數值 */
+    if (!entry && ownedSet.has(dexId)) {
+      extraHTML = `<div class="dex-empty" style="margin-top:10px">Previously owned — it evolved. Catch or pull another ${sp.name} to raise one again.</div>`;
+    }
     if (entry) {
       ensureEntryPokemonData(entry);
       const level = entry.level || 1;
@@ -207,9 +219,16 @@ const Pokedex = {
       const stats = calcStats(dexId, level, entry.ivs, entry.evs, entry.nature);
       const statCells = STAT_KEYS.map(k =>
         `<div class="dex-stat">${STAT_LABELS[k]}<b>${stats ? stats[k] : "-"}</b></div>`).join("");
-      const cards = (entry.moves || []).length
-        ? entry.moves.map(m => moveCardHTML(m)).join("")
+      /* 持有 4 招 + 招式池（Other Moves）：玩家可以喺度配招，日後對戰用 */
+      const held = entry.moves || [];
+      const poolAll = (Array.isArray(entry.knownMoves) && entry.knownMoves.length) ? entry.knownMoves : held;
+      const others = poolAll.filter(m => !held.includes(m));
+      const cards = held.length
+        ? held.map(m => `<div class="mv-wrap mv-held" data-slug="${escapeHTML(m)}">${moveCardHTML(m)}</div>`).join("")
         : `<div class="dex-empty">No moves yet</div>`;
+      const otherCards = others.length
+        ? others.map(m => `<div class="mv-wrap mv-other" data-slug="${escapeHTML(m)}">${moveCardHTML(m)}</div>`).join("")
+        : `<div class="dex-empty">Level up to learn more moves</div>`;
       const canAddEv = (k) => (entry.evPoints || 0) > 0
         && (entry.evs[k] || 0) < MAX_EV
         && evTotal(entry.evs) < MAX_EV_TOTAL;
@@ -238,6 +257,9 @@ const Pokedex = {
         <div class="dex-moves">
           <div class="dex-moves-title">Moves (${(entry.moves || []).length}/4)</div>
           ${cards}
+          <div class="dex-moves-title dex-moves-sub">Other Moves</div>
+          <div class="dex-moves-tip">Tap an other move, then tap a held move to swap it in.</div>
+          <div class="dex-other-moves">${otherCards}</div>
         </div>
 
         <div class="dex-candy">
@@ -280,6 +302,44 @@ const Pokedex = {
         App.renderHome();
       };
     });
+
+    /* 配招互動：撳 Other Move 揀招 → 撳持有招換入（再撳同一招取消） */
+    if (entry) {
+      const otherWraps = document.querySelectorAll("#modal-root .mv-other");
+      const heldWraps = document.querySelectorAll("#modal-root .mv-held");
+      let swapSlug = null;
+      const clearSwap = () => {
+        swapSlug = null;
+        otherWraps.forEach(w => w.classList.remove("swap-pick"));
+        heldWraps.forEach(w => w.classList.remove("swap-target"));
+      };
+      otherWraps.forEach(w => {
+        w.onclick = () => {
+          const slug = w.dataset.slug;
+          if (swapSlug === slug) { clearSwap(); return; }
+          clearSwap();
+          swapSlug = slug;
+          w.classList.add("swap-pick");
+          heldWraps.forEach(h => h.classList.add("swap-target"));
+        };
+      });
+      heldWraps.forEach(w => {
+        w.onclick = () => {
+          if (!swapSlug) return;
+          const heldNow = (entry.moves || []).slice();
+          const idx = heldNow.indexOf(w.dataset.slug);
+          if (idx < 0) { clearSwap(); return; }
+          const name = moveInfo(swapSlug).name;
+          heldNow[idx] = swapSlug;
+          const res = setEntryMoves(entry, heldNow);
+          clearSwap();
+          if (res.ok) {
+            App.toast(`Moved ${name} into the set`);
+            this.showDetail(dexId, true);
+          }
+        };
+      });
+    }
   },
 
   /* Feed candy -> +1 level (may learn a move / evolve) */
@@ -299,9 +359,13 @@ const Pokedex = {
     App.renderHome();
     if (res.levelsGained === 0) { App.toast("Already Lv.MAX!"); return; }
     App.toast(`Level up! Now Lv.${entry.level} ・ Candy left ${entry.candies}`);
-    if (res.evolvedTo) setTimeout(() => App.showEvolveModal(res.evolvedTo), 300);
-    if (res.learned.length) {
-      setTimeout(() => App.queueMoveLearn(entry, res.learned), res.evolvedTo ? 1300 : 400);
+    if (res.evolvedTo) {
+      /* 進化場景播完先學招 */
+      setTimeout(() => App.showEvolveModal(res.evolvedTo, () => {
+        if (res.learned.length) setTimeout(() => App.queueMoveLearn(entry, res.learned), 400);
+      }, res.evolvedFrom), 300);
+    } else if (res.learned.length) {
+      setTimeout(() => App.queueMoveLearn(entry, res.learned), 400);
     }
   },
 

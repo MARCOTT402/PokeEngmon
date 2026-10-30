@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-1.12.0";
+const CACHE_NAME = "pokeengmon-1.12.3";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const ASSETS = [
   "./",
@@ -11,6 +11,7 @@ const ASSETS = [
   "./js/sync.js",
   "./data/pokemon-151.json",
   "./data/moves.json",
+  "./data/type-chart.json",
   "./css/style.css",
   "./js/data.js",
   "./js/qimg-db.js",
@@ -25,6 +26,7 @@ const ASSETS = [
   "./js/pokedex.js",
   "./js/leaderboard.js",
   "./js/calendar.js",
+  "./js/evolve-scene.js",
   "./js/app.js",
   "./js/capture.js",
   "./vendor/gsap/gsap.min.js",
@@ -50,6 +52,8 @@ const ASSETS = [
   "./assets/bgm/obtained-pokemon.mp3",
   "./assets/bgm/obtained-berry.mp3",
   "./assets/bgm/flat-water.mp3",
+  "./assets/bgm/evolution.mp3",
+  "./assets/bgm/evolution-fanfare.mp3",
   "./assets/gacha/dragonite.png",
   ...TYPE_ICONS.map(t => `./assets/types/${t}.png`),
   ...Array.from({ length: 16 }, (_, i) => `./assets/badges/${i + 1}.png`),

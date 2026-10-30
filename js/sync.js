@@ -189,12 +189,22 @@ window.Sync = (() => {
           try { if (window.SM2 && SM2.setMode) SM2.setMode(acct.curve_mode); } catch (e) {}
         }
         /* 背包：雲端 null = 未上過雲 → 保留本機（首次 backfill 靠呢條規則） */
-        if (acct.items_food != null || acct.items_premium != null || acct.items_revive != null) {
+        if (acct.items_food != null || acct.items_premium != null || acct.items_revive != null || acct.items_stones != null) {
           const bag = (st.items && typeof st.items === "object") ? st.items : { food: 0, premium: 0, revive: 0 };
           if (acct.items_food != null) bag.food = Math.max(0, Number(acct.items_food) || 0);
           if (acct.items_premium != null) bag.premium = Math.max(0, Number(acct.items_premium) || 0);
           if (acct.items_revive != null) bag.revive = Math.max(0, Number(acct.items_revive) || 0);
+          const cloudStones = acct.items_stones;
+          if (cloudStones && typeof cloudStones === "object") {
+            STONE_KINDS.forEach(k => {
+              if (cloudStones[k] != null) bag[k] = Math.max(0, Number(cloudStones[k]) || 0);
+            });
+          }
           st.items = bag;
+        }
+        /* likes（trade 進化條件）：雲端未上過就保留本機 */
+        if (acct.trainer_likes != null) {
+          st.trainerLikes = Math.max(0, Number(acct.trainer_likes) || 0);
         }
         saveState();
       }
@@ -248,10 +258,19 @@ window.Sync = (() => {
         }
         const st = loadState();
         st.entries = normalized.map(e => localEntryFromServer(e));
+        /* 玩家自訂配招（moveLoadouts）喺重推後還原 */
+        st.entries.forEach(ent => { try { applyMoveLoadout(ent); } catch (e) {} });
         /* activeUid：邊個 entry.active = true（用未 map 前 id，同 server row） */
         const activeEntry = normalized.find(e => e.active === true);
         st.activeUid = activeEntry ? activeEntry.id : (st.entries.length > 0 ? st.entries[0].uid : null);
         saveState();
+        /* is_final backfill：舊 row 預設 false，本地 derive 話完全進化就補寫上雲，
+           等 server RPC 唔會再將同鏈新寵當 dupe 落入呢啲舊 entry */
+        st.entries.forEach((ent, i) => {
+          if (ent.isFinal && normalized[i] && normalized[i].is_final !== true) {
+            try { patchEntry(ent.uid, { is_final: true }); } catch (e) {}
+          }
+        });
       }
 
       /* ---- 3. 還原 SM-2 cards（合併本地 vs 雲端，取較新） ---- */
@@ -381,6 +400,10 @@ window.Sync = (() => {
     if (fields.branch !== undefined && fields.branch !== null) body.branch = fields.branch;
     /* nature 由 v1.4.1 起可以直寫（column-level grant 只開放呢一欄，非經濟數值） */
     if (typeof fields.nature === "string" && fields.nature) body.nature = fields.nature;
+    /* 石進化：branch 以外，記住用咗邊粒石（pull 重推 stage 嘅必要輸入） */
+    if (typeof fields.stone_used === "string" && fields.stone_used) body.stone_used = fields.stone_used;
+    /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */
+    if (typeof fields.is_final === "boolean") body.is_final = fields.is_final;
     try {
       await _api("PATCH", `/user_entries?id=eq.${entryId}`, body);
     } catch (e) { console.warn("[Sync] patchEntry failed:", e.message); }
@@ -444,14 +467,24 @@ window.Sync = (() => {
   async function pushItems(items) {
     const ref = _accountRef();
     if (!ref.isAuth || !items) return false;
+    const base = {
+      items_food: Math.max(0, Number(items.food) || 0),
+      items_premium: Math.max(0, Number(items.premium) || 0),
+      items_revive: Math.max(0, Number(items.revive) || 0)
+    };
+    const stones = {};
+    STONE_KINDS.forEach(k => { stones[k] = Math.max(0, Number(items[k]) || 0); });
     try {
-      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, {
-        items_food: Math.max(0, Number(items.food) || 0),
-        items_premium: Math.max(0, Number(items.premium) || 0),
-        items_revive: Math.max(0, Number(items.revive) || 0)
-      });
+      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`,
+        Object.assign({}, base, { items_stones: stones }));
       return true;
-    } catch (e) { console.warn("[Sync] pushItems failed:", e.message); return false; }
+    } catch (e) {
+      /* migration 未跑（items_stones column 唔存在）→ 退返舊 payload，食物／復活藥照樣同步 */
+      try {
+        await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, base);
+        return true;
+      } catch (e2) { console.warn("[Sync] pushItems failed:", e2.message); return false; }
+    }
   }
 
   return {

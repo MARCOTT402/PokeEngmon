@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pet System · Prototype v2</title>
+<style>
+  :root{
+    --yellow:#ffcb05; --red:#ee1515; --panel:#232b47;
+    --good:#38d39f; --warn:#ffb340; --bad:#ff5c6c; --muted:#8b93ad;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#eef1f8;
+       background:radial-gradient(circle at 50% 0%,#2c3557 0%,#141a2d 55%,#0b0f1c 100%);
+       min-height:100vh;padding:18px}
+  .wrap{max-width:460px;margin:0 auto;display:grid;gap:14px}
+  .card{background:var(--panel);border:1px solid #343d5e;border-radius:16px;padding:16px}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{font-size:12px;color:var(--muted);margin:0}
+  button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 12px;cursor:pointer;
+         background:#3a466e;color:#dfe4f4;transition:transform .12s cubic-bezier(.25,1,.5,1)}
+  button:hover{transform:scale(1.03)}
+  button.primary{background:var(--yellow);color:#2b2300}
+  button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+  /* ---------- simulator ---------- */
+  .sim{display:grid;gap:10px}
+  .row{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+  .row strong{color:#eef1f8;font-size:13px;min-width:96px}
+  input[type=range]{flex:1;accent-color:var(--yellow)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* ---------- popup (partner care) ---------- */
+  .popup{padding:0;overflow:hidden}
+  .popHead{display:flex;align-items:center;justify-content:space-between;
+           padding:14px 16px 10px;border-bottom:1px solid #343d5e}
+  .popHead b{font-size:15px}
+  .popHead .x{background:transparent;color:var(--muted);font-size:18px;padding:2px 8px}
+
+  /* layer 1：育成視窗 */
+  .stage{position:relative;height:168px;margin:14px;border-radius:14px;overflow:hidden;
+         background:linear-gradient(#1b2545,#141c33 70%,#101628);border:1px solid #343d5e}
+  .stage.dropHint{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,203,5,.18) inset}
+  .ground{position:absolute;left:8%;right:8%;bottom:36px;height:3px;border-radius:2px;
+          background:linear-gradient(90deg,#3d4a72,#5c6ba0,#3d4a72)}
+  .walker{position:absolute;bottom:36px;left:8%;--travel:190px;
+          animation:walkX 5.2s ease-in-out infinite alternate}
+  .walker img{width:84px;display:block;image-rendering:pixelated;
+              animation:hop .85s ease-in-out infinite}
+  .stage.faint .walker img{filter:grayscale(1) brightness(.75)}
+  @keyframes walkX{from{transform:translateX(0)}to{transform:translateX(var(--travel))}}
+  @keyframes hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-11px)}}
+  @media (prefers-reduced-motion: reduce){
+    .walker,.walker img{animation:none}
+  }
+  .float{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);font-weight:800;
+         font-size:15px;color:#9df3cc;opacity:0;animation:floatUp 1.1s ease-out}
+  @keyframes floatUp{0%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-34px)}}
+  .stageTop{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;
+            align-items:flex-start;gap:8px;font-size:11px}
+  .pill{padding:3px 9px;border-radius:999px;background:#2b3452;color:#cfd6ec}
+  .pill.streak{background:#2a4a3b;color:#7ff0c1}
+  .hpWrap{position:absolute;left:12px;right:12px;bottom:10px}
+  .bar{height:10px;border-radius:999px;background:#151a2b;border:1px solid #343d5e;overflow:hidden}
+  .bar > i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--good),#7ff0c1);transition:width .45s ease-out}
+  .bar.mid > i{background:linear-gradient(90deg,var(--warn),#ffd98a)}
+  .bar.low > i{background:linear-gradient(90deg,var(--bad),#ff9aa6)}
+  .hpText{font-size:11px;color:var(--muted);margin-top:4px}
+  .state{font-size:11px;margin:0 14px 4px;padding:7px 10px;border-radius:10px;background:#2b3452;color:#d6dcf0}
+  .state.hungry{background:#4a3a16;color:#ffd27a}
+  .state.closed{background:#2a3049;color:#9aa3bf}
+  .state.full{background:#25423a;color:#9df3cc}
+  .state.faint{background:#4a2330;color:#ffb0ba}
+
+  /* layer 2：道具 */
+  .itemsRow{display:flex;gap:10px;justify-content:center;padding:6px 14px 14px}
+  .tile{position:relative;width:76px;border-radius:12px;background:#1b2238;border:1px solid #343d5e;
+        padding:8px 4px 6px;display:grid;justify-items:center;gap:2px;cursor:grab;user-select:none}
+  .tile img{width:38px;height:38px;object-fit:contain;pointer-events:none}
+  .tile span{font-size:10px;color:var(--muted);pointer-events:none}
+  .badge{position:absolute;right:-5px;top:-5px;min-width:22px;height:22px;border-radius:999px;
+         background:var(--yellow);color:#2b2300;font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 5px}
+  .tile.disabled{opacity:.35;cursor:not-allowed}
+  .tile.selected{outline:2px solid var(--yellow);outline-offset:2px}
+  .tile:active{cursor:grabbing}
+  .dragTip{font-size:11px;color:var(--muted);text-align:center;padding:0 14px 6px}
+
+  /* layer 3：全部寶可夢 */
+  .rosterHead{display:flex;align-items:center;justify-content:space-between;
+              padding:10px 16px;border-top:1px solid #343d5e;font-size:12px;color:var(--muted)}
+  .roster{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 14px 16px}
+  .pick{position:relative;background:#1b2238;border:1px solid #343d5e;border-radius:12px;
+        padding:8px 4px;text-align:center;cursor:pointer;transition:transform .12s cubic-bezier(.25,1,.5,1)}
+  .pick:hover{transform:scale(1.05)}
+  .pick img{width:46px;image-rendering:pixelated}
+  .pick small{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+  .pick.active{border-color:var(--yellow);box-shadow:0 0 0 2px rgba(255,203,5,.2) inset}
+  .pick.faint{opacity:.45}
+  .pick.faint img{filter:grayscale(1)}
+  .pick .tag{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;
+             background:var(--yellow);color:#2b2300;border-radius:999px;padding:1px 6px}
+
+  /* ---------- settlement ---------- */
+  .settleOut{display:flex;gap:6px;flex-wrap:wrap;min-height:26px;align-items:center}
+  .drop{padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#2a4a3b;color:#7ff0c1;
+        animation:pop .35s cubic-bezier(.25,1,.5,1) both}
+  @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🐾 Pet System Prototype v2</h1>
+    <p class="sub">Partner care popup · walking stage · drag-and-drop items · roster switch.</p>
+  </div>
+
+  <!-- simulator -->
+  <div class="card sim">
+    <div class="row"><strong>Day</strong>
+      <input type="range" id="day" min="0" max="4" step="1" value="0">
+      <span id="dayOut">Day 1</span></div>
+    <div class="row"><strong>Clock</strong>
+      <input type="range" id="hour" min="0" max="1439" step="15" value="1080">
+      <span id="hourOut">18:00</span></div>
+    <div class="btns">
+      <button id="nextDay" class="primary">Advance to next day (21:00 check)</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div class="hint">Feeding window 15:00–20:59. Unfed day → −50 health at 21:00. Only the
+      partner is affected; other Pokémon are frozen.</div>
+  </div>
+
+  <!-- ===== partner care popup ===== -->
+  <div class="card popup">
+    <div class="popHead">
+      <b>Partner Care</b>
+      <button class="x" title="mock close">✕</button>
+    </div>
+
+    <!-- layer 1：育成視窗 -->
+    <div class="stage" id="stage">
+      <div class="ground"></div>
+      <div class="stageTop">
+        <span class="pill" id="pillFed">Not fed today</span>
+        <span class="pill streak" id="pillStreak">🔥 0</span>
+      </div>
+      <div class="walker"><img id="walkerImg" alt="partner"
+        src="../../assets/animated/25.gif"
+        onerror="this.onerror=null;this.src='../../icons/icon-192.png'"></div>
+      <div class="hpWrap">
+        <div class="bar" id="hpBar"><i id="hpFill"></i></div>
+        <div class="hpText" id="hpText">Health 100 / 100</div>
+      </div>
+      <div id="floatBox"></div>
+    </div>
+    <div class="state" id="stateMsg">Zzz… feeding starts at 15:00</div>
+
+    <!-- layer 2：道具 -->
+    <div class="itemsRow">
+      <div class="tile" id="tileFood" draggable="true" data-kind="food">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/oran-berry.png" alt="Food">
+        <span>Food +25</span><div class="badge" id="nFood">2</div>
+      </div>
+      <div class="tile" id="tilePremium" draggable="true" data-kind="premium">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/sitrus-berry.png" alt="Premium">
+        <span>Premium +50</span><div class="badge" id="nPremium">1</div>
+      </div>
+      <div class="tile" id="tileRevive" draggable="true" data-kind="revive">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/revive.png" alt="Revival">
+        <span>Revival</span><div class="badge" id="nRevive">0</div>
+      </div>
+    </div>
+    <div class="dragTip">Drag an item onto your partner — or tap an item, then tap the partner.</div>
+
+    <!-- layer 3：所有寶可夢 -->
+    <div class="rosterHead"><span>Your Pokémon</span><span>Tap any to bring it to the care stage</span></div>
+    <div class="roster" id="roster"></div>
+  </div>
+
+  <!-- settlement demo -->
+  <div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:8px">Round settlement drops</div>
+    <div class="btns">
+      <button id="rollPerfect" class="primary">Finish 10/10 (Perfect)</button>
+      <button id="rollNormal">Finish 7/10</button>
+    </div>
+    <div class="settleOut" id="settleOut" style="margin-top:10px"></div>
+    <div class="hint">Perfect: Revival +1 &amp; Premium +1 guaranteed, plus 10% extra Revival.
+      Normal: Food +1 guaranteed, plus 10% Revival. Production rolls run server-side.</div>
+  </div>
+</div>
+
+<script>
+const WIN_START = 15 * 60, WIN_END = 21 * 60;
+const S = {
+  day: 0,
+  minutes: 1080,
+  food: 2, premium: 1, revive: 0,
+  activeIdx: 0,
+  dragKind: null,
+  selectedKind: null,
+  roster: [
+    { dex: 25, name: "Pikachu",    health: 100, fedToday: false, streak: 0 },
+    { dex: 1,  name: "Bulbasaur",  health: 100, fedToday: false, streak: 0 },
+    { dex: 4,  name: "Charmander", health: 0,   fedToday: false, streak: 0 },   // Faint demo
+    { dex: 7,  name: "Squirtle",   health: 50,  fedToday: false, streak: 0 },
+  ],
+};
+const el = id => document.getElementById(id);
+const fmt = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const anim = dex => `../../assets/animated/${dex}.gif`;
+const fallback = "../../icons/icon-192.png";
+const pet = () => S.roster[S.activeIdx];
+const isFaint = () => pet().health <= 0;
+const inWindow = () => S.minutes >= WIN_START && S.minutes < WIN_END;
+
+function canUse(kind) {
+  const p = pet();
+  if (kind === "revive") return isFaint() && S.revive > 0;
+  if (isFaint()) return false;                    // 食物救唔到 Faint
+  if (!inWindow()) return false;                  // 只限 15:00–20:59
+  if (p.health >= 100) return false;              // 血滿停餵（否則可無限餵）
+  return kind === "premium" ? S.premium > 0 : S.food > 0;
+}
+
+function render() {
+  const p = pet();
+  el("dayOut").textContent = "Day " + (S.day + 1);
+  el("hourOut").textContent = fmt(S.minutes);
+
+  const stage = el("stage");
+  stage.classList.toggle("faint", isFaint());
+  const img = el("walkerImg");
+  if (img.dataset.dex !== String(p.dex)) {
+    img.dataset.dex = p.dex;
+    img.src = anim(p.dex);
+    img.onerror = () => { img.onerror = null; img.src = fallback; };
+  }
+  el("hpFill").style.width = Math.max(0, p.health) + "%";
+  el("hpBar").className = "bar" + (p.health <= 25 ? " low" : p.health <= 50 ? " mid" : "");
+  el("hpText").textContent = "Health " + Math.max(0, p.health) + " / 100";
+  el("pillFed").textContent = p.fedToday ? "Fed today" : "Not fed today";
+  el("pillStreak").textContent = "🔥 " + p.streak;
+
+  const msg = el("stateMsg");
+  msg.className = "state";
+  if (isFaint()) {
+    msg.classList.add("faint");
+    msg.textContent = p.name + " has fainted — answers still allowed but earn 0 EXP. Use a Revival to wake it.";
+  } else if (p.health >= 100) {
+    msg.classList.add("full");
+    msg.textContent = "Health is full — no need to feed. " + (p.fedToday ? "Streak " + p.streak : "");
+  } else if (!inWindow()) {
+    msg.classList.add("closed");
+    msg.textContent = S.minutes < WIN_START ? "Zzz… feeding starts at 15:00"
+                                            : "🍽️ Kitchen closed — missed today's meal (−50 at 21:00)";
+  } else {
+    msg.classList.add("hungry");
+    msg.textContent = "😋 " + p.name + " is hungry! Keep feeding until health is full (15:00–20:59).";
+  }
+
+  el("nFood").textContent = S.food;
+  el("nPremium").textContent = S.premium;
+  el("nRevive").textContent = S.revive;
+  [["food", "tileFood"], ["premium", "tilePremium"], ["revive", "tileRevive"]].forEach(([k, id]) => {
+    const t = el(id);
+    t.classList.toggle("disabled", !canUse(k));
+    t.classList.toggle("selected", S.selectedKind === k);
+    t.draggable = canUse(k);
+  });
+
+  el("roster").innerHTML = S.roster.map((r, i) => {
+    const faint = r.health <= 0;
+    const active = i === S.activeIdx;
+    return `<div class="pick ${active ? "active" : ""} ${faint ? "faint" : ""}" data-i="${i}">
+      ${active ? '<span class="tag">PARTNER</span>' : ""}
+      <img src="${anim(r.dex)}" alt="${r.name}" onerror="this.onerror=null;this.src='${fallback}'">
+    </div>`;
+  }).join("");
+  [...el("roster").querySelectorAll(".pick")].forEach(card => {
+    card.onclick = () => {
+      const i = +card.dataset.i;
+      if (i === S.activeIdx) return;
+      S.activeIdx = i;               /* Faint 亦可揀入育成視窗，方便用復活藥 */
+      S.selectedKind = null;
+      render();
+    };
+  });
+}
+
+let toastTimer = null;
+function toast(text) {
+  const box = el("floatBox");
+  box.innerHTML = `<div class="float" style="color:#ffb0ba">${text}</div>`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.innerHTML = ""; }, 1200);
+}
+
+function floatText(text, good) {
+  const box = el("floatBox");
+  box.innerHTML = `<div class="float" style="color:${good ? "#9df3cc" : "#ffb0ba"}">${text}</div>`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.innerHTML = ""; }, 1100);
+}
+
+function useItem(kind) {
+  const p = pet();
+  if (!canUse(kind)) {
+    if (kind === "revive") { toast(isFaint() ? "No Revival in bag" : "Revival only works when fainted"); return; }
+    if (isFaint()) { toast("Food cannot wake a fainted Pokémon"); return; }
+    if (!inWindow()) { toast("Feeding window is 15:00–20:59"); return; }
+    if (p.health >= 100) { toast("Health is full — no need to feed"); return; }
+    toast("No item left"); return;
+  }
+  if (kind === "revive") {
+    S.revive--; p.health = 100; p.fedToday = true;
+    floatText("Revived!", true);
+  } else {
+    const heal = kind === "premium" ? 50 : 25;
+    if (kind === "premium") S.premium--; else S.food--;
+    p.health = Math.min(100, p.health + heal);
+    /* 餵食次數不限；Streak 只計當日第一次成功餵食 */
+    if (!p.fedToday) { p.fedToday = true; p.streak++; }
+    floatText("+" + heal + " HP", true);
+  }
+  S.selectedKind = null;
+  render();
+}
+
+function nextDay() {
+  const p = pet();                       /* 只有拍檔受時間影響 */
+  if (!p.fedToday) {
+    p.health = Math.max(0, p.health - 50);
+    p.streak = 0;
+  }
+  S.day++;
+  p.fedToday = false;
+  S.minutes = 1080;
+  el("day").value = Math.min(4, S.day);
+  el("hour").value = S.minutes;
+  render();
+}
+
+/* 掉落（正式版由 server RPC 擲骰） */
+function rollDrops(perfect) {
+  const out = [];
+  if (perfect) {
+    S.revive++;  out.push("💊 Revival +1");
+    S.premium++; out.push("🍱 Premium +1");
+    if (Math.random() < 0.10) { S.revive++; out.push("💊 Revival +1 (bonus 10%)"); }
+  } else {
+    S.food++; out.push("🥣 Food +1");
+    if (Math.random() < 0.10) { S.revive++; out.push("💊 Revival +1 (10%)"); }
+  }
+  el("settleOut").innerHTML = out.map((t, i) =>
+    `<span class="drop" style="animation-delay:${i * 90}ms">${t}</span>`).join("");
+  render();
+}
+
+/* ---------- drag & drop + tap-to-use ---------- */
+["tileFood", "tilePremium", "tileRevive"].forEach(id => {
+  const tile = el(id);
+  tile.addEventListener("dragstart", e => {
+    S.dragKind = tile.dataset.kind;
+    try { e.dataTransfer.setData("text/plain", S.dragKind); } catch (err) {}
+  });
+  tile.addEventListener("dragend", () => {
+    S.dragKind = null;
+    el("stage").classList.remove("dropHint");
+  });
+  tile.addEventListener("click", () => {
+    if (!canUse(tile.dataset.kind)) { useItem(tile.dataset.kind); return; }  /* 顯示原因 */
+    S.selectedKind = S.selectedKind === tile.dataset.kind ? null : tile.dataset.kind;
+    render();
+  });
+});
+
+(function bindDropZone() {
+  const stage = el("stage");
+  stage.addEventListener("dragover", e => {
+    if (!S.dragKind) return;
+    e.preventDefault();
+    stage.classList.add("dropHint");
+  });
+  stage.addEventListener("dragleave", () => stage.classList.remove("dropHint"));
+  stage.addEventListener("drop", e => {
+    e.preventDefault();
+    stage.classList.remove("dropHint");
+    const kind = S.dragKind || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+    S.dragKind = null;
+    if (kind) useItem(kind);
+  });
+  stage.addEventListener("click", () => {
+    if (S.selectedKind) useItem(S.selectedKind);
+  });
+})();
+
+el("day").oninput = e => { S.day = +e.target.value; render(); };
+el("hour").oninput = e => { S.minutes = +e.target.value; render(); };
+el("nextDay").onclick = nextDay;
+el("rollPerfect").onclick = () => rollDrops(true);
+el("rollNormal").onclick = () => rollDrops(false);
+el("reset").onclick = () => {
+  Object.assign(S, { day: 0, minutes: 1080, food: 2, premium: 1, revive: 0, activeIdx: 0, selectedKind: null });
+  S.roster.forEach((r, i) => { r.health = i === 2 ? 0 : i === 3 ? 50 : 100; r.fedToday = false; r.streak = 0; });
+  el("day").value = 0; el("hour").value = 1080; el("settleOut").innerHTML = "";
+  render();
+};
+render();
+</script>
+</body>
+</html>

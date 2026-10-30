@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.12.0**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.12.3**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -143,6 +143,7 @@
 ### 3.11 音效與無障礙
 
 - 全域 BGM：Flat Water（BGM channel），設計基數音量 0.1，捕捉場景暫停、結算 jingle 完後恢復
+- 進化場景：先播進化前叫聲 → `assets/bgm/evolution.mp3` 8 秒（同時交替閃動進化前／後 GIF）→ 進化後叫聲 → `assets/bgm/evolution-fanfare.mp3` 5 秒；完結後恢復 Flat Water BGM
 - **音量設定（v145–v146）**：Settings 兩個連續滑動條（Music／Sound Effects，0–100%）；`localStorage` `pokeengmon_audio_v1` 持久化（refresh／關網再開都 keep；清進度唔抹）；拖 SFX 停 ~180ms 播 `obtained-pokemon` preview（跟 sfxBus 倍率）
 - **UI 掣 click（v147）**：全部 button／chip／menu 短合成 tap（`uiTap`），跟 SFX %；document capture 委派一次
 - 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）

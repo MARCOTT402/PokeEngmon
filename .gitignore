@@ -5,3 +5,9 @@ supabase/supabase-config.local.js
 node_modules/
 .npm/
 *.log
+
+# PokéAPI move cache (regenerable, 560+ small json)
+tools/.cache_pokeapi/
+
+# Trae temp share artifacts
+.trae-html-share-packages/
