@@ -96,7 +96,10 @@ const Quiz = {
       ? this.seenQids.size
       : Math.min(this.total, this.seenQids.size + 1);
     document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
-    document.getElementById("quiz-bar").style.width = `${this.total ? (this.seenQids.size / this.total) * 100 : 0}%`;
+    const pct = this.total ? (this.seenQids.size / this.total) * 100 : 0;
+    document.getElementById("quiz-bar").style.width = `${pct}%`;
+    const star = document.getElementById("quiz-bar-star");
+    if (star) star.style.left = `${pct}%`;
   },
 
   /* ---------- 渲染 ---------- */
@@ -129,7 +132,8 @@ const Quiz = {
       imageBox.classList.remove("show");
       document.getElementById("quiz-image").removeAttribute("src");
     }
-    cardEl.classList.remove("memory-glow");
+    cardEl.classList.remove("memory-glow", "bad");
+    clearTimeout(this._wrongTimer);
     cardEl.style.display = "";
 
     if (isWord) {
@@ -212,6 +216,38 @@ const Quiz = {
       host.classList.add("word-blank-line");
       this.cells.forEach((c, i) => host.appendChild(this._makeCell(c, i)));
     }
+
+    /* 格寬＝答案文字實際寬度，令用戶可以從寬度推算要填幾長 */
+    this.cells.forEach(c => {
+      c.baseWidth = c.empty ? 92 : Math.max(40, Math.ceil(this._measureText(c.primary)) + 20);
+      this._syncCellWidth(c, "");
+    });
+  },
+
+  /* 用隱藏探針量度文字實際寬度（同 qb-text 同字型） */
+  _measureText(text) {
+    const host = document.getElementById("quiz-sentence") || document.body;
+    const probe = document.createElement("span");
+    probe.className = "qb-text";
+    probe.textContent = String(text || "");
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    probe.style.whiteSpace = "pre";
+    host.appendChild(probe);
+    const w = probe.getBoundingClientRect().width;
+    probe.remove();
+    return w;
+  },
+
+  /* 格寬：最少要容納已輸入文字；超出答案長度時自動加寬 */
+  _syncCellWidth(c, typed) {
+    if (!c || !c.cellEl) return;
+    const text = (typed == null ? (c.value || "") : String(typed)) + (c.ghost || "");
+    const pad = 20;
+    const need = text ? Math.ceil(this._measureText(text)) + pad : 0;
+    const min = c.empty ? 92 : 40;
+    const target = Math.max(min, c.baseWidth || 0, need);
+    c.cellEl.style.width = target + "px";
   },
 
   _makeCell(c, i) {
@@ -232,8 +268,8 @@ const Quiz = {
     input.spellcheck = false;
     input.dataset.i = String(i);
 
-    span.appendChild(ghost);
     span.appendChild(text);
+    span.appendChild(ghost);
     span.appendChild(input);
 
     c.cellEl = span;
@@ -281,7 +317,8 @@ const Quiz = {
   _applyGhost(c) {
     if (!c.ghostEl) return;
     c.ghostEl.textContent = c.ghost || "";
-    c.ghostEl.style.display = (c.ghost && !c.value) ? "" : "none";
+    /* ghost 可以接喺已輸入文字之後（L1 提示下一組字母） */
+    c.ghostEl.style.display = c.ghost ? "" : "none";
   },
 
   _onInput(i) {
@@ -293,14 +330,12 @@ const Quiz = {
     c.textEl.textContent = c.value;
 
     /* 打字後 ghost 消失 */
-    if (c.value.length > 0 && c.ghost) {
+    if (c.ghost) {
       c.ghost = "";
       this._applyGhost(c);
     }
-    /* 清走 ✓ 錯誤嘅紅狀態 */
-    c.cellEl.classList.remove("bad");
-    const bang = c.cellEl.querySelector(".qb-bang");
-    if (bang) bang.remove();
+    /* 打多過答案長度 → 格自動加寬 */
+    this._syncCellWidth(c, c.value);
 
     const val = this._norm(c.value);
     if (val !== "" && this._cellMatch(c, val)) this._greenCell(i);
@@ -311,9 +346,6 @@ const Quiz = {
     if (!c || c.green) return;
     c.green = true;
     c.cellEl.classList.add("good");
-    c.cellEl.classList.remove("bad");
-    const bang = c.cellEl.querySelector(".qb-bang");
-    if (bang) bang.remove();
     if (c.input) c.input.disabled = true;
 
     const next = this.cells.findIndex(x => !x.green);
@@ -330,6 +362,39 @@ const Quiz = {
     try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {}
   },
 
+  /* 提示字母數：仲要輸入 5 個或以下 → 1 個；6 個或以上 → 2 個 */
+  _hintCount(rest) {
+    return rest <= 5 ? 1 : 2;
+  },
+
+  _clearCell(c) {
+    c.value = "";
+    c.ghost = "";
+    if (c.input) c.input.value = "";
+    c.textEl.textContent = "";
+    this._applyGhost(c);
+  },
+
+  /* L1：接住已輸入前綴之後，顯示下一組提示字母（ghost） */
+  _showL1(c, prefixLen) {
+    const ans = String(c.primary || "");
+    const rest = Math.max(0, ans.length - prefixLen);
+    const k = this._hintCount(rest);
+    c.ghost = ans.slice(prefixLen, prefixLen + k);
+    this._applyGhost(c);
+    this._syncCellWidth(c, c.value);
+    this._focusCurrent();
+  },
+
+  /* L2：清空該格，直接顯示整個答案做提示 */
+  _showL2(c) {
+    this._clearCell(c);
+    c.ghost = String(c.primary || "");
+    this._applyGhost(c);
+    this._syncCellWidth(c, "");
+    this._focusCurrent();
+  },
+
   hint() {
     if (this.answered) return;
     const item = this.queue[0];
@@ -340,31 +405,21 @@ const Quiz = {
 
     if (c.empty) { this._vibrate(20); return; }
 
-    if (a.hintCount === 0) {
-      /* L1：首兩個字母 */
-      a.hintCount = 1;
-      c.ghost = c.primary.slice(0, 2);
-      this._applyGhost(c);
+    /* 同一條題用過一次提示之後，再按一律當第 2 次 → 直接出 L2 */
+    const used = Number(a.hintCount) || 0;
+    if (used >= 1) {
+      a.hintCount = 2;
+      this._showL2(c);
       return;
     }
 
-    /* ghost 仍然顯示 → 只震一下 */
-    if (c.ghost && !c.value) {
-      this._vibrate(30);
-      return;
-    }
-
-    /* ghost 已消失 → 重出 L2，並清空該格 */
-    a.hintCount = 2;
-    c.ghost = c.primary;
-    c.value = "";
-    if (c.input) c.input.value = "";
-    c.textEl.textContent = "";
-    c.cellEl.classList.remove("bad");
-    const bang = c.cellEl.querySelector(".qb-bang");
-    if (bang) bang.remove();
-    this._applyGhost(c);
-    this._focusCurrent();
+    /* 第 1 次：L1；已輸入唔係正確前綴就先清空 */
+    a.hintCount = 1;
+    const ans = this._norm(c.primary);
+    const val = this._norm(c.value);
+    const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
+    if (val && !isPrefix) this._clearCell(c);
+    this._showL1(c, val && isPrefix ? val.length : 0);
   },
 
   /* 完整答案變體（處理 accept 同 primary 字數不同嘅情況，例如 were not / weren't）*/
@@ -397,7 +452,6 @@ const Quiz = {
       this.cells.forEach(x => {
         x.green = true;
         x.cellEl.classList.add("good");
-        x.cellEl.classList.remove("bad");
         if (x.input) x.input.disabled = true;
       });
       this._complete();
@@ -405,17 +459,34 @@ const Quiz = {
     }
 
     /* 錯誤：只扣 EF，不重排、不清題、不寫 history */
-    c.cellEl.classList.add("bad");
-    if (!c.cellEl.querySelector(".qb-bang")) {
-      const bang = document.createElement("span");
-      bang.className = "qb-bang";
-      bang.textContent = "!";
-      c.cellEl.appendChild(bang);
-    }
+    this._flashWrong();
     this._vibrate(50);
+    this._focusCurrent();
 
     const card = SM2.applyCheckFail(this._curCard || SM2.getOrCreateCard(item.q));
     this._curCard = SM2.upsertCard(card);
+  },
+
+  /* 答錯：整個題目框紅底 + 左上角紅色驚嘆號，維持 1 秒後以 0.4s 過渡退回 */
+  _flashWrong() {
+    try {
+      const audio = window.CaptureScene && CaptureScene.audio;
+      if (audio && audio.wrong) audio.wrong();
+    } catch (e) {}
+
+    const cardEl = document.getElementById("quiz-card");
+    if (!cardEl) return;
+    if (!cardEl.querySelector(".qb-bang")) {
+      const bang = document.createElement("span");
+      bang.className = "qb-bang";
+      bang.textContent = "!";
+      cardEl.appendChild(bang);
+    }
+    cardEl.classList.remove("bad");
+    void cardEl.offsetWidth;   /* 強制 reflow，令連續答錯都重新閃一次 */
+    cardEl.classList.add("bad");
+    clearTimeout(this._wrongTimer);
+    this._wrongTimer = setTimeout(() => cardEl.classList.remove("bad"), 1000);
   },
 
   /* ---------- 完成 / 下一題 ---------- */
@@ -446,7 +517,6 @@ const Quiz = {
     a.hintEver = a.hintEver || usedHint;
     if (!usedHint) a.clean = true;
     if (!a.chosen) a.chosen = this._joinedAnswer();
-    this.seenQids.add(this._key(q));
 
     /* 用提示 → 排入重排佇列（最後一題豁免，保證回合終止）*/
     let requeued = false;
@@ -454,6 +524,9 @@ const Quiz = {
       this.queue.push({ q, requeued: true, dueAt: now + 5 * 60 * 1000 });
       requeued = true;
     }
+
+    /* 進度只計真正完成嘅題：用提示重排嘅題，要之後無提示答啱先入數 */
+    if (!requeued) this.seenQids.add(this._key(q));
 
     /* UI：鎖格、換工具列 */
     this.cells.forEach(c => {
@@ -503,25 +576,56 @@ const Quiz = {
   },
 
   /* ---------- Chip ---------- */
+  /* 未答前：新題 / 上次練習距今時間；答完：下次複習時間。pre → post 有翻轉效果 */
   _renderChip(q, nextText) {
     const el = document.getElementById("quiz-chip");
     if (!el) return;
+    clearTimeout(this._chipFlipTimer);
+
+    let text;
+    let mode = "";
     if (nextText) {
-      el.textContent = nextText;
-      el.classList.add("show", "next");
-      return;
+      text = nextText;
+      mode = "next";
+    } else {
+      const card = this._curCard || SM2.getOrCreateCard(q);
+      const last = SM2.lastReviewedMs(card);
+      if (!last || last <= 0) {
+        text = "New question";
+        mode = "fresh";
+      } else {
+        const span = SM2.formatSpan(Date.now() - last);
+        text = `${span.value} ${this._shortUnit(span.unit, span.value)} ago`;
+      }
     }
-    el.classList.remove("next");
-    const card = this._curCard || SM2.getOrCreateCard(q);
-    const last = SM2.lastReviewedMs(card);
-    if (!last || last <= 0) {
-      el.textContent = "";
-      el.classList.remove("show");
-      return;
-    }
-    const span = SM2.formatSpan(Date.now() - last);
-    el.textContent = `Last practised ${span.value} ${span.unit}${span.value === 1 ? "" : "s"} ago`;
+
+    const wasShown = el.classList.contains("show");
+    const changed = wasShown && el.textContent !== text;
+    el.classList.remove("flip-out", "flip-in", "next", "fresh");
+    if (mode) el.classList.add(mode);
     el.classList.add("show");
+
+    /* 只有答完（pre → post）先翻轉；換題時直接靜態更新 */
+    if (nextText && changed) {
+      const token = (this._chipToken = (this._chipToken || 0) + 1);
+      el.classList.add("flip-out");
+      this._chipFlipTimer = setTimeout(() => {
+        if (token !== this._chipToken) return;
+        el.textContent = text;
+        el.classList.remove("flip-out");
+        void el.offsetWidth;
+        el.classList.add("flip-in");
+      }, 160);
+      return;
+    }
+
+    el.textContent = text;
+  },
+
+  _shortUnit(unit, value) {
+    if (unit === "minute") return value === 1 ? "min" : "mins";
+    if (unit === "hour") return value === 1 ? "hr" : "hrs";
+    return value === 1 ? "day" : "days";
   },
 
   /* ---------- 圖片單字題 ---------- */
@@ -569,6 +673,8 @@ const Quiz = {
         status.className = "word-status missing";
       }
     });
+    /* 播完音頻／按語音鍵後，浮標返去輸入格 */
+    this._focusCurrent();
   },
 
   /* ---------- 設定 / 退出 ---------- */
@@ -585,7 +691,11 @@ const Quiz = {
       App.closeModal();
       this.quit();
     };
-    document.getElementById("quiz-settings-close").onclick = () => App.closeModal();
+    document.getElementById("quiz-settings-close").onclick = () => {
+      App.closeModal();
+      /* Keep going：關窗後浮標返去輸入格，用戶唔使再點一次 */
+      setTimeout(() => this._focusCurrent(), 100);
+    };
   },
 
   quit() {
