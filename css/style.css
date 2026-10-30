@@ -779,6 +779,60 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .quiz-feedback.good { color: #2e7d32; animation: pop .3s; }
 .quiz-feedback.bad { color: #c62828; }
 
+/* ---- 小學生低 EF 精靈球捕捉模式 ---- */
+.quiz-catch-area {
+  margin: 12px auto 0; max-width: 400px; text-align: center;
+}
+.catch-hint {
+  margin: 0 0 10px; font-size: .85rem; font-weight: 700; color: #5b6578;
+}
+.catch-balls {
+  position: relative; height: 220px; margin: 0 auto;
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center;
+}
+.catch-ball {
+  position: relative; width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(180deg, #ef4444 0 48%, #fff 52% 100%);
+  border: 3px solid #1f2937; cursor: grab; user-select: none; touch-action: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25), inset 0 2px 6px rgba(255,255,255,.4);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease;
+}
+.catch-ball::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 46%; height: 6px;
+  background: #1f2937;
+}
+.catch-ball::after {
+  content: ""; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; border: 3px solid #1f2937; position: relative; z-index: 1;
+}
+.catch-ball:active { cursor: grabbing; transform: scale(1.08); }
+.catch-ball.dragging { z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.catch-ball.hint-glow {
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, .8), 0 0 20px 6px rgba(250, 204, 21, .6);
+  animation: pulse-glow 1.2s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(250,204,21,.8), 0 0 20px 6px rgba(250,204,21,.6); }
+  50% { box-shadow: 0 0 0 6px rgba(250,204,21,1), 0 0 30px 10px rgba(250,204,21,.8); }
+}
+.catch-ball-label {
+  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  font-size: .78rem; font-weight: 800; color: #1f2937; white-space: nowrap;
+  background: #fff; padding: 1px 6px; border-radius: 6px;
+}
+.qb-cell.catch-target {
+  outline: 3px dashed #3b6ef2; outline-offset: 3px;
+  animation: catch-pulse 1s ease-in-out infinite;
+}
+@keyframes catch-pulse {
+  0%, 100% { outline-color: #3b6ef2; }
+  50% { outline-color: #fbbf24; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catch-ball.hint-glow, .qb-cell.catch-target { animation: none; }
+}
+
 /* ============================================================
    記憶光芒（Partner Light）：記憶曲線到期題目嘅彩色呼吸光芒
    ============================================================ */

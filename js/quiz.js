@@ -173,6 +173,9 @@ const Quiz = {
     /* Chip：未答前顯示實際經過時間 */
     this._renderChip(q, null);
 
+    /* 小學生低 EF → 精靈球捕捉模式 */
+    this._setupCatchMode(q);
+
     this._focusCurrent();
   },
 
@@ -474,6 +477,204 @@ const Quiz = {
     const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
     if (val && !isPrefix) this._clearCell(c);
     this._showL1(c, val && isPrefix ? val.length : 0);
+  },
+
+  /* ============ 小學生低 EF 精靈球捕捉模式 ============ */
+  _catchThreshold: 1.8,
+
+  _isCatchMode() {
+    if (!this._isJunior()) return false;
+    const ef = Number(this._curCard && this._curCard.ease_factor);
+    return ef > 0 && ef < this._catchThreshold;
+  },
+
+  _setupCatchMode(q) {
+    const area = document.getElementById("quiz-catch-area");
+    const ballsHost = document.getElementById("catch-balls");
+    if (!area || !ballsHost) return;
+
+    /* 預設隱藏捕捉區，恢復輸入 */
+    area.classList.add("hidden");
+    ballsHost.innerHTML = "";
+    this.cells.forEach(c => {
+      if (c.cellEl) c.cellEl.classList.remove("catch-target");
+      if (c.input) c.input.disabled = false;
+    });
+    document.getElementById("quiz-toolbar-before").classList.remove("hidden");
+    document.getElementById("btn-quiz-check").classList.remove("hidden");
+
+    if (!this._isCatchMode()) return;
+
+    /* 進入捕捉模式：隱藏鍵盤輸入，顯示精靈球 */
+    area.classList.remove("hidden");
+    this.cells.forEach(c => {
+      if (c.cellEl) c.cellEl.classList.add("catch-target");
+      if (c.input) c.input.disabled = true;
+    });
+    document.getElementById("quiz-toolbar-before").classList.add("hidden");
+    document.getElementById("btn-quiz-check").classList.add("hidden");
+
+    const correctAns = this._norm(q.type === "word" ? q.word : q.answer);
+    const distractors = this._pickDistractors(q, correctAns, 3);
+    const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
+
+    options.forEach(ans => {
+      const ball = this._makeCatchBall(ans, ans === correctAns);
+      ballsHost.appendChild(ball);
+    });
+  },
+
+  /* 多空格題：答啱一格後，用下一格答案刷新精靈球 */
+  _refreshCatchBalls() {
+    const ballsHost = document.getElementById("catch-balls");
+    const item = this.queue[0];
+    if (!ballsHost || !item) return;
+    const c = this.cells[this.currentCell];
+    if (!c) return;
+    const correctAns = this._norm(c.primary);
+    const distractors = this._pickDistractors(item.q, correctAns, 3);
+    const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
+    ballsHost.innerHTML = "";
+    options.forEach(ans => {
+      ballsHost.appendChild(this._makeCatchBall(ans, ans === correctAns));
+    });
+    /* 移除黃光提示（新一格重新開始）*/
+    this.cells.forEach(cc => {
+      if (cc.cellEl) cc.cellEl.classList.remove("catch-target");
+    });
+    if (c.cellEl) c.cellEl.classList.add("catch-target");
+  },
+
+  /* 從同課題其他題目抽 3 個唔同嘅錯誤答案做干擾項 */
+  _pickDistractors(q, correct, n) {
+    const all = (typeof getAllQuestions === "function") ? getAllQuestions() : [];
+    const sameTopic = all.filter(x => x && x.topic === q.topic && x !== q);
+    const pool = [];
+    sameTopic.forEach(x => {
+      const a = this._norm(x.type === "word" ? x.word : x.answer);
+      if (a && a !== correct && pool.indexOf(a) < 0) pool.push(a);
+    });
+    /* 唔夠就從全題庫補 */
+    if (pool.length < n) {
+      all.forEach(x => {
+        const a = this._norm(x.type === "word" ? x.word : x.answer);
+        if (a && a !== correct && pool.indexOf(a) < 0) pool.push(a);
+      });
+    }
+    /* Fisher-Yates 抽 n 個 */
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, n);
+  },
+
+  _makeCatchBall(answer, isCorrect) {
+    const ball = document.createElement("div");
+    ball.className = "catch-ball";
+    ball.dataset.answer = answer;
+    ball.dataset.correct = isCorrect ? "1" : "0";
+
+    const label = document.createElement("span");
+    label.className = "catch-ball-label";
+    label.textContent = answer;
+    ball.appendChild(label);
+
+    ball.addEventListener("pointerdown", (e) => this._onBallDown(e, ball));
+    return ball;
+  },
+
+  _onBallDown(e, ball) {
+    if (this.answered) return;
+    e.preventDefault();
+    ball.classList.add("dragging");
+    const rect = ball.getBoundingClientRect();
+    const offX = e.clientX - rect.left;
+    const offY = e.clientY - rect.top;
+    ball.style.position = "fixed";
+    ball.style.left = rect.left + "px";
+    ball.style.top = rect.top + "px";
+    ball.style.width = rect.width + "px";
+    ball.style.height = rect.height + "px";
+
+    const onMove = (ev) => {
+      ball.style.left = (ev.clientX - offX) + "px";
+      ball.style.top = (ev.clientY - offY) + "px";
+    };
+    const onUp = (ev) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      ball.classList.remove("dragging");
+      this._onBallUp(ev, ball);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  },
+
+  _onBallUp(e, ball) {
+    /* 還原位置（如果冇命中）*/
+    const host = ball.parentElement;
+    ball.style.position = "";
+    ball.style.left = "";
+    ball.style.top = "";
+    ball.style.width = "";
+    ball.style.height = "";
+
+    /* 偵測是否打中當前空格 */
+    const target = this.cells[this.currentCell];
+    if (!target || !target.cellEl) return;
+    const tr = target.cellEl.getBoundingClientRect();
+    const bx = e.clientX, by = e.clientY;
+    const hit = bx >= tr.left && bx <= tr.right && by >= tr.top && by <= tr.bottom;
+
+    if (hit) {
+      this._catchSubmit(ball.dataset.answer, ball.dataset.correct === "1");
+    }
+  },
+
+  /* 捕捉模式提交：打中就當 Submit 處理 */
+  _catchSubmit(answer, isCorrect) {
+    const item = this.queue[0];
+    if (!item || this.answered) return;
+    const q = item.q;
+    const a = this._answerFor(q);
+
+    if (isCorrect) {
+      /* 答啱：填入答案 → green → 如有下一格就刷新精靈球 */
+      const c = this.cells[this.currentCell];
+      if (c) {
+        c.value = answer;
+        if (c.input) c.input.value = answer;
+        if (c.textEl) c.textEl.textContent = answer;
+      }
+      const prevCell = this.currentCell;
+      this._greenCell(this.currentCell);
+      /* 仲有下一格 → 用下一格答案重新生成精靈球 */
+      if (this.currentCell !== prevCell && !this.answered) {
+        this._refreshCatchBalls();
+      }
+    } else {
+      /* 答錯：沿用 junior attempt 邏輯 */
+      a.attemptCount++;
+      if (a.attemptCount === 2) {
+        /* 第 2 次錯：L1 — 正確球發黃光 */
+        a.hintCount = 1;
+        this._highlightCorrectBall();
+      } else if (a.attemptCount >= 4) {
+        /* 第 4 次或以後錯：L2 — 正確球發黃光 */
+        a.hintCount = 2;
+        this._highlightCorrectBall();
+      }
+      /* 第 1、3 次錯：靜默，畀再試 */
+      this._vibrate(50);
+    }
+  },
+
+  /* L1/L2 提示：將正確球用黃光包住 */
+  _highlightCorrectBall() {
+    document.querySelectorAll(".catch-ball").forEach(b => {
+      if (b.dataset.correct === "1") b.classList.add("hint-glow");
+    });
   },
 
   /* 完整答案變體（處理 accept 同 primary 字數不同嘅情況，例如 were not / weren't）*/
