@@ -643,17 +643,21 @@ const Quiz = {
   },
 
   /* ---------- 物理引擎 ---------- */
-  _physGravity: 0.42,
-  _physRestitution: 0.72,
-  _physFloorFriction: 0.96,
-  _physAirFriction: 0.999,
-  _physThrowScale: 0.18,
+  _physGravity: 0.26,
+  _physRestitution: 0.82,
+  _physFloorFriction: 0.985,
+  _physAirFriction: 0.997,
+  _physThrowScale: 0.22,
+  _physTwitchTimer: 0,
 
   _applyBallPos(b) {
     b.el.style.left = (b.x - this._physR) + "px";
     b.el.style.top = (b.y - this._physR) + "px";
-    /* 旋轉：根據水平速度 */
+    /* 球體旋轉 */
     b.el.style.transform = `rotate(${b.rx}deg)`;
+    /* label 反向旋轉，永遠保持水平喺底部 */
+    const lbl = b.el.querySelector(".catch-ball-label");
+    if (lbl) lbl.style.transform = `translateX(-50%) rotate(${-b.rx}deg)`;
   },
 
   _stopPhysics() {
@@ -669,6 +673,11 @@ const Quiz = {
     const W = this._physW;
     const H = this._physH;
 
+    /* 生命力：每隔一段時間隨機加細少少脈動，好似入面有精靈 */
+    this._physTwitchTimer++;
+    const doTwitch = this._physTwitchTimer > 55 + Math.random() * 40;
+    if (doTwitch) this._physTwitchTimer = 0;
+
     for (const b of this._physBalls) {
       if (b.grabbed) continue;
 
@@ -676,38 +685,45 @@ const Quiz = {
       b.vy += this._physGravity;
       b.vx *= this._physAirFriction;
 
+      /* 生命力脈動：非飛行球偶爾向隨機方向加力 */
+      if (doTwitch && !b.flying && Math.abs(b.vx) < 6 && Math.abs(b.vy) < 6) {
+        if (Math.random() < 0.5) {
+          b.vx += (Math.random() - 0.5) * 3.5;
+          b.vy -= Math.random() * 2.5; /* 偏向上彈，有生命力 */
+        }
+      }
+
       b.x += b.vx;
       b.y += b.vy;
 
       /* 旋轉跟水平速度 */
       b.rx += b.vx * 3;
 
-      /* 牆壁碰撞 */
-      if (b.x < R) { b.x = R; b.vx = -b.vx * this._physRestitution; }
-      if (b.x > W - R) { b.x = W - R; b.vx = -b.vx * this._physRestitution; }
-      if (b.y < R) { b.y = R; b.vy = -b.vy * this._physRestitution; }
-      if (b.y > H - R) {
-        b.y = H - R;
-        b.vy = -b.vy * this._physRestitution;
-        b.vx *= this._physFloorFriction;
-        /* 靜止判定 */
-        if (Math.abs(b.vy) < 1.2) b.vy = 0;
-      }
-
-      this._applyBallPos(b);
-
-      /* 飛行中：檢查是否打中目標空格 */
       if (b.flying) {
+        /* 飛行中：唔受 arena 牆壁限制，可飛出題目框 */
         this._checkCatchHit(b);
-        /* 飛出 arena 範圍就回收 */
-        if (b.y > H + 120 || b.x < -120 || b.x > W + 120) {
+        /* 飛太遠先回收 */
+        if (b.y > H + 400 || b.x < -400 || b.x > W + 400 || b.y < -600) {
           b.flying = false;
           this._respawnBall(b);
         }
+      } else {
+        /* 非飛行：arena 內彈跳 */
+        if (b.x < R) { b.x = R; b.vx = -b.vx * this._physRestitution; }
+        if (b.x > W - R) { b.x = W - R; b.vx = -b.vx * this._physRestitution; }
+        if (b.y < R) { b.y = R; b.vy = -b.vy * this._physRestitution; }
+        if (b.y > H - R) {
+          b.y = H - R;
+          b.vy = -b.vy * this._physRestitution;
+          b.vx *= this._physFloorFriction;
+          if (Math.abs(b.vy) < 0.8) b.vy = 0;
+        }
       }
+
+      this._applyBallPos(b);
     }
 
-    /* 球球之間簡單碰撞 */
+    /* 球球之間碰撞 */
     this._ballBallCollision();
 
     this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
@@ -755,7 +771,6 @@ const Quiz = {
   _onBallDown(e, ball) {
     if (this.answered) return;
     e.preventDefault();
-    /* 攔截 bubbling，避免觸發 arena 嘅 pointerdown */
     e.stopPropagation();
 
     const b = this._physBalls.find(x => x.el === ball);
@@ -774,6 +789,11 @@ const Quiz = {
     this._lastMoveY = e.clientY;
     this._moveVx = 0;
     this._moveVy = 0;
+    /* 旋轉力累積：追蹤角速度（圈得越快，spin 越大）*/
+    this._spinAccum = 0;
+    this._grabCenterX = e.clientX;
+    this._grabCenterY = e.clientY;
+    this._lastAngle = null;
 
     const onMove = (ev) => {
       this._moveVx = ev.clientX - this._lastMoveX;
@@ -782,8 +802,21 @@ const Quiz = {
       this._lastMoveY = ev.clientY;
       b.x = (ev.clientX - this._grabOffsetX) - hostRect.left;
       b.y = (ev.clientY - this._grabOffsetY) - hostRect.top;
-      /* 拖動時旋轉 */
+      /* 拖動時旋轉跟水平速度 */
       b.rx += this._moveVx * 4;
+
+      /* 計算角速度（繞 grab 中心打圈）*/
+      const dx = ev.clientX - this._grabCenterX;
+      const dy = ev.clientY - this._grabCenterY;
+      const ang = Math.atan2(dy, dx);
+      if (this._lastAngle !== null) {
+        let da = ang - this._lastAngle;
+        if (da > Math.PI) da -= Math.PI * 2;
+        if (da < -Math.PI) da += Math.PI * 2;
+        this._spinAccum += da;
+      }
+      this._lastAngle = ang;
+
       this._applyBallPos(b);
     };
     const onUp = (ev) => {
@@ -798,11 +831,31 @@ const Quiz = {
 
   _onBallUp(e, b) {
     b.grabbed = false;
-    /* 以拖動速度做投擲初速（向上為負）*/
+    /* 投擲初速 = 拖動速度 */
     b.vx = this._moveVx * this._physThrowScale * 6;
     b.vy = this._moveVy * this._physThrowScale * 6;
+
+    /* 旋轉力加成：打圈嘅角速度轉換成切線方向嘅額外速度 */
+    const spin = this._spinAccum || 0;
+    if (Math.abs(spin) > 0.15) {
+      /* 切線方向：垂直於 grab center → ball 方向 */
+      const hostRect = this._physHost.getBoundingClientRect();
+      const cx = this._grabCenterX - hostRect.left;
+      const cy = this._grabCenterY - hostRect.top;
+      const dx = b.x - cx, dy = b.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      /* 切線方向（順時針 / 逆時針由 spin 正負決定）*/
+      const tx = -dy / dist, ty = dx / dist;
+      const spinForce = Math.min(Math.abs(spin) * 8, 16);
+      const sign = spin > 0 ? 1 : -1;
+      b.vx += tx * spinForce * sign;
+      b.vy += ty * spinForce * sign;
+      /* 旋轉力亦令球體自轉更勁 */
+      b.rx += spin * 60;
+    }
+
     /* 限制最大速度 */
-    const maxV = 22;
+    const maxV = 26;
     const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
     if (sp > maxV) { b.vx = b.vx / sp * maxV; b.vy = b.vy / sp * maxV; }
     b.flying = true;
