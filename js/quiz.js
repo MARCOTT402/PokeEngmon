@@ -346,14 +346,14 @@ const Quiz = {
 
     if (junior) {
       /* 小學生模式：ghost 唔消失，按正確前綴重算
-         L1（hintCount===1）：顯示提示字母 + 下劃線
+         L1（hintCount===1）：顯示固定揭示字母 + 下劃線
          L2（hintCount>=2）：只顯示下劃線 */
       const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
       const prefixLen = isPrefix ? val.length : 0;
       if (a.hintCount >= 2) {
-        c.ghost = this._juniorGhost(c, prefixLen, false);
+        c.ghost = this._juniorGhost(c, prefixLen, 0);
       } else if (a.hintCount === 1) {
-        c.ghost = this._juniorGhost(c, prefixLen, true);
+        c.ghost = this._juniorGhost(c, prefixLen, a.hintLetters || 0);
       } else {
         c.ghost = "";
       }
@@ -407,21 +407,22 @@ const Quiz = {
 
   /* 小學生模式：生成「提示字母 + 分開嘅下劃線」ghost
      prefixLen: 已正確輸入嘅前綴長度
-     showHintLetters: true=L1（顯示提示字母）、false=L2（只顯示下劃線）
+     hintLetters: L1 揭示咗嘅字母數量（固定，唔會隨輸入增加）；0 = L2 模式
      每個字母嘅底線分開顯示（用空格隔開），等用戶可以數到有幾多個字母 */
-  _juniorGhost(c, prefixLen, showHintLetters) {
+  _juniorGhost(c, prefixLen, hintLetters) {
     const ans = String(c.primary || "");
     const len = ans.length;
     const start = Math.min(prefixLen, len);
     let ghost = "";
-    if (showHintLetters) {
-      const rest = Math.max(0, len - start);
-      const k = this._hintCount(rest);
-      ghost = ans.slice(start, start + k);
-      const underscoreCount = Math.max(0, len - start - k);
+    if (hintLetters > 0) {
+      /* L1：只顯示最初揭示嗰幾個字母嘅剩餘部分，之後全部係底線 */
+      const revealed = Math.min(hintLetters, len);
+      if (start < revealed) {
+        ghost = ans.slice(start, revealed);
+      }
+      const underscoreCount = Math.max(0, len - Math.max(start, revealed));
       if (underscoreCount > 0) {
-        /* 每個字母一個底線，用空格隔開 */
-        ghost += " " + Array(underscoreCount).fill("_").join(" ");
+        ghost = (ghost ? ghost + " " : "") + Array(underscoreCount).fill("_").join(" ");
       }
     } else {
       /* L2 後：只顯示剩餘下劃線，每個字母分開 */
@@ -431,12 +432,16 @@ const Quiz = {
     return ghost;
   },
 
-  /* L1：接住已輸入前綴之後，顯示下一組提示字母（ghost）
-     小學生模式：提示字母 + 下劃線 */
+  /* L1：揭示前 k 個字母（固定數量，唔會隨輸入增加）
+     小學生模式：提示字母 + 分開嘅下劃線 */
   _showL1(c, prefixLen) {
     const ans = String(c.primary || "");
+    const a = this._currentAnswer(c);
+    if (a) {
+      a.hintLetters = this._hintCount(Math.max(0, ans.length)); /* 固定揭示字母數 */
+    }
     if (this._isJunior()) {
-      c.ghost = this._juniorGhost(c, prefixLen, true);
+      c.ghost = this._juniorGhost(c, prefixLen, a ? a.hintLetters : 0);
     } else {
       const rest = Math.max(0, ans.length - prefixLen);
       const k = this._hintCount(rest);
@@ -448,8 +453,10 @@ const Quiz = {
   },
 
   /* L2：清空該格，直接顯示整個答案做提示
-     小學生模式：顯示整個答案，但一輸入就變成下劃線 */
+     小學生模式：顯示整個答案，但一輸入就變成下劃線（hintLetters=0）*/
   _showL2(c) {
+    const a = this._currentAnswer(c);
+    if (a) a.hintLetters = 0;
     this._clearCell(c);
     c.ghost = String(c.primary || "");
     this._applyGhost(c);
