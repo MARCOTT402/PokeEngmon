@@ -1,3 +1,24 @@
+# [1.11.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.10.0...v1.11.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **quiz-junior:** flash red on all wrong answers; fix Q-value mapping ([2c8a7f0](https://github.com/MARCOTT402/PokeEngmon/commit/2c8a7f0522dbfc4437428ace15daf13201fe9c70))
+* **quiz-junior:** ghost uses typed length, not prefix length; wrong input no longer re-reveals hint letters ([688de41](https://github.com/MARCOTT402/PokeEngmon/commit/688de4143640adecee5f6adf82b08fc9ad553112))
+* **quiz-junior:** L1 hint letters are fixed, not regenerated on input ([35869bb](https://github.com/MARCOTT402/PokeEngmon/commit/35869bb88fc9416df4e1d7d5d68a5d29bf733497))
+* **quiz-junior:** label is sibling of ball, always stays below regardless of rotation ([3264fe6](https://github.com/MARCOTT402/PokeEngmon/commit/3264fe6c3053ef34fc15690e83dd1e80e06d95d7))
+* **quiz-junior:** separate underscores per letter in L1/L2 hints ([ccc0aaa](https://github.com/MARCOTT402/PokeEngmon/commit/ccc0aaa390e9d842c2ee2a5906434a7b5df91cbd))
+* **quiz-junior:** use _answerFor instead of undefined _currentAnswer ([c246920](https://github.com/MARCOTT402/PokeEngmon/commit/c246920375d2ac8c3013c4c5850d9aae7e2e5a76))
+* **quiz:** progress bar starts at 0/10, not 1/10 ([1a4756a](https://github.com/MARCOTT402/PokeEngmon/commit/1a4756aa452e09aef2ee60654602eb11cd94383d))
+
+
+### Features
+
+* **quiz-junior:** aligned widths, non-rotating labels, lively balls, throw escapes arena, spin force from circling ([c34a184](https://github.com/MARCOTT402/PokeEngmon/commit/c34a1844ec5daec6a7c74b8f70a2e4b0fd4d2a8d))
+* **quiz-junior:** physics-based bouncing pokeballs with drag-to-throw mechanic ([1bceff4](https://github.com/MARCOTT402/PokeEngmon/commit/1bceff4ea322874073dea26dd08635e899656575))
+* **quiz:** junior catch mode for low-EF words (EF < 1.8) ([4e8aafa](https://github.com/MARCOTT402/PokeEngmon/commit/4e8aafa297c594b85a27296e4fdacbcb69a96f90))
+* **sm2:** add forgetting curve modes (junior/standard/teen/adult) ([eaedd02](https://github.com/MARCOTT402/PokeEngmon/commit/eaedd02a32ea14481d421dd42c263739bf40f676))
+
 # [1.10.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.9.0...v1.10.0) (2026-10-30)
 
 
