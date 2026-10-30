@@ -796,15 +796,38 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .catch-ball {
   position: absolute; width: 68px; height: 68px; border-radius: 50%;
   background:
-    radial-gradient(circle at 32% 28%, #ff8a8a 0%, #ef4444 35%, #b91c1c 100%);
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, #f25959 0%, #d32f2f 44%, #1f2937 44%, #1f2937 52%, #ffffff 52%, #cbd5e1 100%);
   border: 3px solid #1f2937;
   cursor: grab; user-select: none; touch-action: none;
   box-shadow:
     0 6px 14px rgba(0,0,0,.3),
-    inset -4px -6px 10px rgba(0,0,0,.25),
-    inset 4px 4px 8px rgba(255,255,255,.35);
+    inset -4px -6px 10px rgba(0,0,0,.22),
+    inset 4px 4px 8px rgba(255,255,255,.3);
   display: flex; align-items: center; justify-content: center;
   will-change: transform, left, top;
+  transition: opacity .3s ease;
+}
+/* L2 提示：正確球變成大師球（紫白）*/
+.catch-ball.master {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.65) 0%, rgba(255,255,255,0) 42%),
+    radial-gradient(circle at 50% 46%, rgba(244,63,94,.9) 0%, rgba(244,63,94,0) 26%),
+    linear-gradient(180deg, #b06cf5 0%, #7c3aed 44%, #1f2937 44%, #1f2937 52%, #ffffff 52%, #cbd5e1 100%);
+  box-shadow:
+    0 0 0 4px rgba(168, 85, 247, .85),
+    0 0 26px 10px rgba(168, 85, 247, .55),
+    inset -4px -6px 10px rgba(0,0,0,.22);
+  animation: master-glow 1.4s ease-in-out infinite;
+}
+@keyframes master-glow {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(168,85,247,.85), 0 0 26px 10px rgba(168,85,247,.55), inset -4px -6px 10px rgba(0,0,0,.22); }
+  50% { box-shadow: 0 0 0 7px rgba(192,132,252,1), 0 0 38px 16px rgba(168,85,247,.8), inset -4px -6px 10px rgba(0,0,0,.22); }
+}
+/* L1 提示：隨機移除一個錯誤選項球 */
+.catch-ball.removing,
+.catch-ball-label.removing {
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
 }
 /* 中間黑帶 */
 .catch-ball::before {

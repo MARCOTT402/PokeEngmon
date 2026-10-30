@@ -469,6 +469,19 @@ const Quiz = {
     const c = this.cells[this.currentCell];
     if (!c) return;
 
+    /* 精靈球捕捉模式：L1 拿走一個錯球；再按一次 L2 正確球變大師球 */
+    if (this._isCatchMode() && this._physBalls && this._physBalls.length) {
+      const usedCatch = Number(a.hintCount) || 0;
+      if (usedCatch >= 1) {
+        a.hintCount = 2;
+        this._catchL2();
+      } else {
+        a.hintCount = 1;
+        this._catchL1();
+      }
+      return;
+    }
+
     if (c.empty) { this._vibrate(20); return; }
 
     /* 同一條題用過一次提示之後，再按一律當第 2 次 → 直接出 L2 */
@@ -515,53 +528,27 @@ const Quiz = {
       if (c.input) c.input.disabled = false;
     });
     document.getElementById("quiz-toolbar-before").classList.remove("hidden");
+    const voiceBtn = document.getElementById("btn-quiz-voice");
+    if (voiceBtn) voiceBtn.classList.remove("hidden");
     document.getElementById("btn-quiz-check").classList.remove("hidden");
 
     if (!this._isCatchMode()) return;
 
-    /* 進入捕捉模式：隱藏鍵盤輸入，顯示精靈球 */
+    /* 進入捕捉模式：隱藏鍵盤輸入，顯示精靈球（提示按鈕保留）*/
     area.classList.remove("hidden");
     this.cells.forEach(c => {
       if (c.cellEl) c.cellEl.classList.add("catch-target");
       if (c.input) c.input.disabled = true;
     });
-    document.getElementById("quiz-toolbar-before").classList.add("hidden");
+    if (voiceBtn) voiceBtn.classList.add("hidden");
     document.getElementById("btn-quiz-check").classList.add("hidden");
 
-    const correctAns = this._norm(q.type === "word" ? q.word : q.answer);
-    const distractors = this._pickDistractors(q, correctAns, 3);
-    const options = [correctAns, ...distractors].sort(() => Math.random() - 0.5);
-
-    const rect = ballsHost.getBoundingClientRect();
-    const W = rect.width || 380;
-    const H = rect.height || 260;
-    const R = 34; /* 半徑 */
-
-    options.forEach((ans, i) => {
-      const ball = this._makeCatchBall(ans, ans === correctAns);
-      ballsHost.appendChild(ball);
-      /* label 獨立放喺 arena，唔跟球旋轉 */
-      const label = document.createElement("span");
-      label.className = "catch-ball-label";
-      label.textContent = ans;
-      ballsHost.appendChild(label);
-      const x = R + 8 + Math.random() * (W - 2 * R - 16);
-      const y = R + 8 + Math.random() * (H * 0.4);
-      const vx = (Math.random() - 0.5) * 4;
-      const vy = (Math.random() * -2) - 1;
-      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
-      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
-    });
-
-    this._physHost = ballsHost;
-    this._physW = W;
-    this._physH = H;
-    this._physR = R;
-    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+    /* 每個空格各自一組精靈球（post office → post 一組、office 一組）*/
+    this._spawnCatchBalls();
   },
 
-  /* 多空格題：答啱一格後，用下一格答案刷新精靈球 */
-  _refreshCatchBalls() {
+  /* 生成當前空格嘅精靈球（1 正確 + 3 干擾項）*/
+  _spawnCatchBalls() {
     const ballsHost = document.getElementById("catch-balls");
     const item = this.queue[0];
     if (!ballsHost || !item) return;
@@ -583,50 +570,80 @@ const Quiz = {
     const H = rect.height || 260;
     const R = 34;
 
-    options.forEach(ans => {
-      const ball = this._makeCatchBall(ans, ans === correctAns);
-      ballsHost.appendChild(ball);
-      const label = document.createElement("span");
-      label.className = "catch-ball-label";
-      label.textContent = ans;
-      ballsHost.appendChild(label);
-      const x = R + 8 + Math.random() * (W - 2 * R - 16);
-      const y = R + 8 + Math.random() * (H * 0.4);
-      const vx = (Math.random() - 0.5) * 4;
-      const vy = (Math.random() * -2) - 1;
-      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
-      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
-    });
-
     this._physHost = ballsHost;
     this._physW = W;
     this._physH = H;
     this._physR = R;
-    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
+    this._computePlayfield();
 
-    /* 移除黃光提示（新一格重新開始）*/
+    const P = this._play;
+    options.forEach(ans => {
+      const ball = this._makeCatchBall(ans, ans === correctAns);
+      ballsHost.appendChild(ball);
+      /* label 獨立放喺 arena，唔跟球旋轉 */
+      const label = document.createElement("span");
+      label.className = "catch-ball-label";
+      label.textContent = ans;
+      ballsHost.appendChild(label);
+      const spanX = Math.max(1, (P.right - P.left) - 2 * R - 12);
+      const spanY = Math.max(1, (H - 2 * R - 12));
+      const x = P.left + R + 6 + Math.random() * spanX;
+      const y = R + 6 + Math.random() * spanY;
+      const vx = (Math.random() - 0.5) * 9;
+      const vy = -(2 + Math.random() * 5);
+      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: Math.random() * 360, grabbed: false, flying: false, flyFrames: 0, answer: ans, correct: ans === correctAns });
+      this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
+    });
+
+    /* 標示當前要打中嘅空格 */
     this.cells.forEach(cc => {
       if (cc.cellEl) cc.cellEl.classList.remove("catch-target");
     });
     if (c.cellEl) c.cellEl.classList.add("catch-target");
+
+    this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
   },
 
-  /* 從同課題其他題目抽 3 個唔同嘅錯誤答案做干擾項 */
+  /* 可活動範圍＝題目框 + 精靈球框 + 進度條（host 相對座標），波撞邊反彈 */
+  _computePlayfield() {
+    const hostRect = this._physHost.getBoundingClientRect();
+    const targets = ["quiz-card", "quiz-catch-area"]
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+    const topBar = document.querySelector(".quiz-top");
+    if (topBar) targets.push(topBar);
+    if (!targets.length) {
+      this._play = { left: 0, right: this._physW, top: 0, bottom: this._physH };
+      return;
+    }
+    const rs = targets.map(el => el.getBoundingClientRect());
+    this._play = {
+      left: Math.min(...rs.map(r => r.left)) - hostRect.left,
+      right: Math.max(...rs.map(r => r.right)) - hostRect.left,
+      top: Math.min(...rs.map(r => r.top)) - hostRect.top,
+      bottom: Math.max(...rs.map(r => r.bottom)) - hostRect.top
+    };
+  },
+
+  /* 多空格題：答啱一格後，用下一格答案刷新精靈球 */
+  _refreshCatchBalls() {
+    this._spawnCatchBalls();
+  },
+
+  /* 從同課題其他題目抽 3 個唔同嘅錯誤答案做干擾項（以單字為單位）*/
   _pickDistractors(q, correct, n) {
     const all = (typeof getAllQuestions === "function") ? getAllQuestions() : [];
-    const sameTopic = all.filter(x => x && x.topic === q.topic && x !== q);
     const pool = [];
-    sameTopic.forEach(x => {
-      const a = this._norm(x.type === "word" ? x.word : x.answer);
-      if (a && a !== correct && pool.indexOf(a) < 0) pool.push(a);
-    });
-    /* 唔夠就從全題庫補 */
-    if (pool.length < n) {
-      all.forEach(x => {
-        const a = this._norm(x.type === "word" ? x.word : x.answer);
-        if (a && a !== correct && pool.indexOf(a) < 0) pool.push(a);
+    const pushQuestion = (x) => {
+      const raw = x.type === "word" ? String(x.word || "") : String(x.answer || "");
+      raw.trim().split(/\s+/).forEach(tok => {
+        const t = this._norm(tok);
+        if (t && t !== correct && pool.indexOf(t) < 0) pool.push(t);
       });
-    }
+    };
+    all.filter(x => x && x.topic === q.topic && x !== q).forEach(pushQuestion);
+    /* 唔夠就從全題庫補 */
+    if (pool.length < n) all.forEach(x => { if (x && x !== q) pushQuestion(x); });
     /* Fisher-Yates 抽 n 個 */
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -646,12 +663,11 @@ const Quiz = {
   },
 
   /* ---------- 物理引擎 ---------- */
-  _physGravity: 0.26,
-  _physRestitution: 0.82,
-  _physFloorFriction: 0.985,
-  _physAirFriction: 0.997,
+  _physGravity: 0.16,
+  _physRestitution: 0.9,
+  _physAirFriction: 0.999,
   _physThrowScale: 0.22,
-  _physTwitchTimer: 0,
+  _physGen: 0,
 
   _applyBallPos(b) {
     b.el.style.left = (b.x - this._physR) + "px";
@@ -666,6 +682,7 @@ const Quiz = {
   },
 
   _stopPhysics() {
+    this._physGen++;
     if (this._physicsRAF) {
       cancelAnimationFrame(this._physicsRAF);
       this._physicsRAF = null;
@@ -674,54 +691,60 @@ const Quiz = {
 
   _physicsTick() {
     if (!this._physBalls) return;
+    const gen = this._physGen;
     const R = this._physR;
-    const W = this._physW;
-    const H = this._physH;
-
-    /* 生命力：每隔一段時間隨機加細少少脈動，好似入面有精靈 */
-    this._physTwitchTimer++;
-    const doTwitch = this._physTwitchTimer > 55 + Math.random() * 40;
-    if (doTwitch) this._physTwitchTimer = 0;
+    const G = this._physGravity;
+    const rest = this._physRestitution;
+    const P = this._play || { left: 0, right: this._physW, top: 0, bottom: this._physH };
 
     for (const b of this._physBalls) {
-      if (b.grabbed) continue;
+      if (b.grabbed || b.removed) continue;
+      if (this._physGen !== gen) return; /* 已重新生成球組，停止舊循環 */
 
-      /* 重力 */
-      b.vy += this._physGravity;
+      /* 重力 + 空氣阻力 */
+      b.vy += G;
       b.vx *= this._physAirFriction;
+      b.vy *= this._physAirFriction;
 
-      /* 生命力脈動：非飛行球偶爾向隨機方向加力 */
-      if (doTwitch && !b.flying && Math.abs(b.vx) < 6 && Math.abs(b.vy) < 6) {
-        if (Math.random() < 0.5) {
-          b.vx += (Math.random() - 0.5) * 3.5;
-          b.vy -= Math.random() * 2.5; /* 偏向上彈，有生命力 */
-        }
+      /* 生命力：靜止球隨機獲得彈跳力，全區亂彈 */
+      if (!b.flying && Math.random() < 0.03) {
+        b.vx += (Math.random() - 0.5) * 9;
+        b.vy -= 3.5 + Math.random() * 5;
+      }
+      /* 非飛行球限速，避免越彈越快 */
+      if (!b.flying) {
+        const MAX = 11;
+        if (b.vx > MAX) b.vx = MAX; else if (b.vx < -MAX) b.vx = -MAX;
+        if (b.vy > MAX) b.vy = MAX; else if (b.vy < -MAX) b.vy = -MAX;
       }
 
       b.x += b.vx;
       b.y += b.vy;
+      b.rx += b.vx * (b.flying ? 2 : 1.2);
 
-      /* 旋轉跟水平速度 */
-      b.rx += b.vx * 3;
+      /* 邊界反彈：
+         自由彈跳 → 只限精靈球框內（唔會彈高過框頂）
+         拋出飛行 → 整個活動範圍（題目框 + 精靈球框 + 進度條）*/
+      const box = b.flying
+        ? P
+        : { left: 0, right: this._physW, top: 0, bottom: this._physH };
+      if (b.x < box.left + R) { b.x = box.left + R; b.vx = Math.abs(b.vx) * rest; }
+      if (b.x > box.right - R) { b.x = box.right - R; b.vx = -Math.abs(b.vx) * rest; }
+      if (b.y < box.top + R) { b.y = box.top + R; b.vy = Math.abs(b.vy) * rest; }
+      if (b.y > box.bottom - R) {
+        b.y = box.bottom - R;
+        b.vy = -Math.abs(b.vy) * rest;
+        if (Math.abs(b.vy) < 1.2) b.vy = -3.2; /* 永遠保持彈跳力 */
+      }
 
       if (b.flying) {
-        /* 飛行中：唔受 arena 牆壁限制，可飛出題目框 */
         this._checkCatchHit(b);
-        /* 飛太遠先回收 */
-        if (b.y > H + 400 || b.x < -400 || b.x > W + 400 || b.y < -600) {
+        b.flyFrames = (b.flyFrames || 0) + 1;
+        /* 抛完落返精靈球框內（或超時）就回復自由彈跳 */
+        if ((b.flyFrames > 40 && b.y >= R) || b.flyFrames > 240 || (!b.el.classList.contains("flying"))) {
           b.flying = false;
-          this._respawnBall(b);
-        }
-      } else {
-        /* 非飛行：arena 內彈跳 */
-        if (b.x < R) { b.x = R; b.vx = -b.vx * this._physRestitution; }
-        if (b.x > W - R) { b.x = W - R; b.vx = -b.vx * this._physRestitution; }
-        if (b.y < R) { b.y = R; b.vy = -b.vy * this._physRestitution; }
-        if (b.y > H - R) {
-          b.y = H - R;
-          b.vy = -b.vy * this._physRestitution;
-          b.vx *= this._physFloorFriction;
-          if (Math.abs(b.vy) < 0.8) b.vy = 0;
+          b.flyFrames = 0;
+          b.el.classList.remove("flying");
         }
       }
 
@@ -731,6 +754,7 @@ const Quiz = {
     /* 球球之間碰撞 */
     this._ballBallCollision();
 
+    if (this._physGen !== gen) return; /* 舊循環不再排程，避免雙重 RAF */
     this._physicsRAF = requestAnimationFrame(() => this._physicsTick());
   },
 
@@ -740,7 +764,7 @@ const Quiz = {
     for (let i = 0; i < balls.length; i++) {
       for (let j = i + 1; j < balls.length; j++) {
         const a = balls[i], b = balls[j];
-        if (a.grabbed || b.grabbed) continue;
+        if (a.grabbed || b.grabbed || a.removed || b.removed) continue;
         const dx = b.x - a.x, dy = b.y - a.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const min = R * 2;
@@ -760,17 +784,6 @@ const Quiz = {
         }
       }
     }
-  },
-
-  _respawnBall(b) {
-    b.flying = false;
-    b.grabbed = false;
-    b.x = this._physR + 8 + Math.random() * (this._physW - 2 * this._physR - 16);
-    b.y = this._physR + 8;
-    b.vx = (Math.random() - 0.5) * 3;
-    b.vy = -1;
-    b.el.classList.remove("flying");
-    this._applyBallPos(b);
   },
 
   _onBallDown(e, ball) {
@@ -863,6 +876,7 @@ const Quiz = {
     const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
     if (sp > maxV) { b.vx = b.vx / sp * maxV; b.vy = b.vy / sp * maxV; }
     b.flying = true;
+    b.flyFrames = 0;
     b.el.classList.add("flying");
   },
 
@@ -874,8 +888,10 @@ const Quiz = {
     const hostRect = this._physHost.getBoundingClientRect();
     const cx = hostRect.left + b.x;
     const cy = hostRect.top + b.y;
-    if (cx >= tr.left && cx <= tr.right && cy >= tr.top && cy <= tr.bottom) {
+    const pad = 12; /* 目標判定稍為放寬，易啲打中 */
+    if (cx >= tr.left - pad && cx <= tr.right + pad && cy >= tr.top - pad && cy <= tr.bottom + pad) {
       b.flying = false;
+      b.el.classList.remove("flying");
       this._catchSubmit(b.answer, b.correct);
     }
   },
@@ -906,23 +922,39 @@ const Quiz = {
       a.attemptCount++;
       this._flashWrong();
       this._vibrate(50);
-      if (a.attemptCount === 2) {
-        /* 第 2 次錯：L1 — 正確球發黃光 */
-        a.hintCount = 1;
-        this._highlightCorrectBall();
-      } else if (a.attemptCount >= 4) {
-        /* 第 4 次或以後錯：L2 — 正確球發黃光 */
+      if (a.attemptCount >= 4 || a.hintCount >= 1) {
+        /* 第 4 次或以後錯（或用過 L1）→ L2：正確球變大師球 */
         a.hintCount = 2;
-        this._highlightCorrectBall();
+        this._catchL2();
+      } else if (a.attemptCount >= 2) {
+        /* 第 2 次錯（或之後未到 L2）→ L1：拿走一個錯誤選項球 */
+        a.hintCount = 1;
+        this._catchL1();
       }
-      /* 第 1、3 次錯：閃紅，畀再試 */
+      /* 第 1 次錯：閃紅，畀再試 */
     }
   },
 
-  /* L1/L2 提示：將正確球用黃光包住 */
-  _highlightCorrectBall() {
-    document.querySelectorAll(".catch-ball").forEach(b => {
-      if (b.dataset.correct === "1") b.classList.add("hint-glow");
+  /* L1 提示：隨機拿走一個錯誤選項嘅精靈球 */
+  _catchL1() {
+    const wrong = (this._physBalls || []).filter(b => !b.correct && !b.removed && b.el.parentNode);
+    if (!wrong.length) return;
+    const target = wrong[Math.floor(Math.random() * wrong.length)];
+    target.removed = true;
+    target.el.classList.add("removing");
+    if (target.label) target.label.classList.add("removing");
+    const el = target.el, lbl = target.label;
+    setTimeout(() => {
+      el.remove();
+      if (lbl) lbl.remove();
+      this._physBalls = (this._physBalls || []).filter(x => x !== target);
+    }, 320);
+  },
+
+  /* L2 提示：正確答案嘅精靈球變成大師球 */
+  _catchL2() {
+    (this._physBalls || []).forEach(b => {
+      if (b.correct) b.el.classList.add("master");
     });
   },
 
