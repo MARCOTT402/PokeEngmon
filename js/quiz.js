@@ -436,7 +436,7 @@ const Quiz = {
      小學生模式：提示字母 + 分開嘅下劃線 */
   _showL1(c, prefixLen) {
     const ans = String(c.primary || "");
-    const a = this._currentAnswer(c);
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
     if (a) {
       a.hintLetters = this._hintCount(Math.max(0, ans.length)); /* 固定揭示字母數 */
     }
@@ -455,7 +455,7 @@ const Quiz = {
   /* L2：清空該格，直接顯示整個答案做提示
      小學生模式：顯示整個答案，但一輸入就變成下劃線（hintLetters=0）*/
   _showL2(c) {
-    const a = this._currentAnswer(c);
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
     if (a) a.hintLetters = 0;
     this._clearCell(c);
     c.ghost = String(c.primary || "");
