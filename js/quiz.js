@@ -540,12 +540,16 @@ const Quiz = {
     options.forEach((ans, i) => {
       const ball = this._makeCatchBall(ans, ans === correctAns);
       ballsHost.appendChild(ball);
-      /* 隨機起始位置同速度 */
+      /* label 獨立放喺 arena，唔跟球旋轉 */
+      const label = document.createElement("span");
+      label.className = "catch-ball-label";
+      label.textContent = ans;
+      ballsHost.appendChild(label);
       const x = R + 8 + Math.random() * (W - 2 * R - 16);
       const y = R + 8 + Math.random() * (H * 0.4);
       const vx = (Math.random() - 0.5) * 4;
       const vy = (Math.random() * -2) - 1;
-      this._physBalls.push({ el: ball, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
+      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
       this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
     });
 
@@ -582,11 +586,15 @@ const Quiz = {
     options.forEach(ans => {
       const ball = this._makeCatchBall(ans, ans === correctAns);
       ballsHost.appendChild(ball);
+      const label = document.createElement("span");
+      label.className = "catch-ball-label";
+      label.textContent = ans;
+      ballsHost.appendChild(label);
       const x = R + 8 + Math.random() * (W - 2 * R - 16);
       const y = R + 8 + Math.random() * (H * 0.4);
       const vx = (Math.random() - 0.5) * 4;
       const vy = (Math.random() * -2) - 1;
-      this._physBalls.push({ el: ball, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
+      this._physBalls.push({ el: ball, label, x, y, vx, vy, rx: 0, grabbed: false, flying: false, answer: ans, correct: ans === correctAns });
       this._applyBallPos(this._physBalls[this._physBalls.length - 1]);
     });
 
@@ -633,11 +641,6 @@ const Quiz = {
     ball.dataset.answer = answer;
     ball.dataset.correct = isCorrect ? "1" : "0";
 
-    const label = document.createElement("span");
-    label.className = "catch-ball-label";
-    label.textContent = answer;
-    ball.appendChild(label);
-
     ball.addEventListener("pointerdown", (e) => this._onBallDown(e, ball));
     return ball;
   },
@@ -655,9 +658,11 @@ const Quiz = {
     b.el.style.top = (b.y - this._physR) + "px";
     /* 球體旋轉 */
     b.el.style.transform = `rotate(${b.rx}deg)`;
-    /* label 反向旋轉，永遠保持水平喺底部 */
-    const lbl = b.el.querySelector(".catch-ball-label");
-    if (lbl) lbl.style.transform = `translateX(-50%) rotate(${-b.rx}deg)`;
+    /* label 獨立定位：永遠喺球底正中，唔跟旋轉 */
+    if (b.label) {
+      b.label.style.left = b.x + "px";
+      b.label.style.top = (b.y + this._physR + 6) + "px";
+    }
   },
 
   _stopPhysics() {

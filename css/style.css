@@ -836,11 +836,11 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   50% { box-shadow: 0 0 0 6px rgba(250,204,21,1), 0 0 32px 12px rgba(250,204,21,.85), inset -4px -6px 10px rgba(0,0,0,.25); }
 }
 .catch-ball-label {
-  position: absolute; bottom: -24px; left: 50%;
+  position: absolute; transform: translateX(-50%);
   font-size: .78rem; font-weight: 800; color: #1f2937; white-space: nowrap;
   background: #fff; padding: 2px 7px; border-radius: 7px;
   box-shadow: 0 1px 3px rgba(0,0,0,.15); pointer-events: none;
-  transform: translateX(-50%); /* 由 JS 反向旋轉保持水平 */
+  z-index: 5;
 }
 .qb-cell.catch-target {
   outline: 3px dashed #3b6ef2; outline-offset: 3px;
