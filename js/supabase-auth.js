@@ -248,6 +248,36 @@ const SupabaseAuth = {
     return this._rpc("settle_capture", { dex_id: dexId });
   },
 
+  /* ---------- RPC：錯誤回報（匿名都用得，唔使登入） ----------
+     回傳 report id；失敗 return null（前端 fallback 存本機） */
+  async submitReport(report) {
+    if (!this.isEnabled()) return null;
+    try {
+      const res = await fetch(`${this.URL}/rest/v1/rpc/submit_report`, {
+        method: "POST",
+        headers: {
+          ...(this._session?.access_token ? { Authorization: `Bearer ${this._session.access_token}` } : {}),
+          apikey: this.ANON_KEY,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify({
+          p_device_id: report.device_id || "",
+          p_qid: report.qid || "",
+          p_question_type: report.type || "",
+          p_topic: report.topic || "",
+          p_question: report.question || "",
+          p_answer: report.answer || "",
+          p_reasons: report.reasons || [],
+          p_detail: report.detail || "",
+          p_client_ts: new Date(report.ts || Date.now()).toISOString()
+        })
+      });
+      if (!res.ok) throw new Error("submit_report failed: " + res.status + " " + await res.text());
+      return await res.json();
+    } catch (e) { console.warn("[Auth RPC] submit_report failed:", e.message); return null; }
+  },
+
   /* ---------- RPC：稀有抽（server 原子扣鑽 + roll rarity + 派寵） ----------
      回傳 {entry, rarity, is_dupe, balance}；失敗 return null（前端唔好扣本地鑽）
      gen = 目前最高已解鎖世代（server 按 gen 過濾鏈池，防越代作弊） */

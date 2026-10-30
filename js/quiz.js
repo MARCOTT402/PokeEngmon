@@ -760,11 +760,12 @@ const Quiz = {
 
     document.getElementById("report-cancel").onclick = () => App.closeModal();
 
-    send.onclick = () => {
-      if (selected.size === 0) return;
+    send.onclick = async () => {
+      if (selected.size === 0 || send.disabled) return;
       const report = {
         id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
         ts: Date.now(),
+        device_id: typeof ensureDeviceId === "function" ? ensureDeviceId() : "",
         qid: q.id || this._key(q),
         type: q.type || "sentence",
         topic: q.topic || "",
@@ -773,14 +774,28 @@ const Quiz = {
         reasons: [...selected],
         detail: detail.value.trim()
       };
-      try {
-        const key = "pokeengmon_reports_v1";
-        const list = JSON.parse(localStorage.getItem(key) || "[]");
-        list.push(report);
-        localStorage.setItem(key, JSON.stringify(list.slice(-200)));
-      } catch (e) { /* storage unavailable */ }
+
+      let uploaded = false;
+      if (window.SupabaseAuth && SupabaseAuth.isEnabled && SupabaseAuth.isEnabled()) {
+        send.disabled = true;
+        send.textContent = "Sending…";
+        uploaded = !!(await SupabaseAuth.submitReport(report));
+        send.textContent = "Send report";
+      }
+
+      if (!uploaded) {
+        /* 離線 / 未設定 Supabase：暫存本機，之後可以補交 */
+        try {
+          const key = "pokeengmon_reports_v1";
+          const list = JSON.parse(localStorage.getItem(key) || "[]");
+          list.push(report);
+          localStorage.setItem(key, JSON.stringify(list.slice(-200)));
+        } catch (e) { /* storage unavailable */ }
+      }
       App.closeModal();
-      App.toast("Thanks! Your report has been saved.");
+      App.toast(uploaded
+        ? "Thanks! Your report was sent."
+        : "Thanks! Your report has been saved on this device.");
     };
   },
 
