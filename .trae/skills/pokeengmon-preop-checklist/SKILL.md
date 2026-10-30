@@ -143,3 +143,12 @@ Lookup with `.find(c => c.key === key)`, NEVER `EVOLUTION_CHAINS[key]` (undefine
 - `RARITY[x]` — there is no `"common"` key; use `RARITY[x] || RARITY.normal` (v141).
 - Short quiz sets: EXP uses `round(score/total×10)` against the /10 tier table; diamond offline fallback uses relative thresholds vs `total` (v136/v139).
 - Gacha: snapshot `pendingExp` into a local const BEFORE clearing it when calling RPC (v138).
+
+## Rule 17 — Feature hubs must close when clicking outside
+
+`App.showModal(html)` installs a backdrop-click handler that closes the modal. Passing a second argument `true` (`App.showModal(html, true)`) disables it.
+
+- Feature hubs / panels (Report a problem, Partner Care, Login Hub, Pokedex detail, My Questions, etc.) MUST stay dismissable by tapping the backdrop — call `App.showModal(html)` WITHOUT `true`.
+- Only destructive or blocking confirmations (Reset Progress name confirmation, quit-quiz confirmation, cloud-overwrite warning) may pass `true`, because an accidental backdrop tap must not wipe or overwrite progress.
+- When adding a new hub, also wire its Cancel/close button to `App.closeModal()` so both dismissal paths exist.
+

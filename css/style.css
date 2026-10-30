@@ -517,6 +517,70 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   to   { transform: rotateX(0deg); opacity: 1; }
 }
 
+/* 題目卡右下角向下 tag：展開卡片工具 */
+.quiz-more-arrow {
+  position: absolute; bottom: -14px; right: 12px; z-index: 4;
+  width: 30px; height: 30px; border: 0; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: #eef3ff; color: #4a5878;
+  font-size: .95rem; font-weight: 900; line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 63, 140, .16);
+  transition: transform .18s ease, background .18s ease;
+}
+.quiz-more-arrow:active { transform: scale(.92); }
+.quiz-more-arrow.open { transform: rotate(180deg); background: #e3ecff; }
+
+/* 卡片下方展開區 */
+.quiz-card-drawer {
+  display: flex; flex-direction: column; gap: 8px;
+  animation: drawer-in .22s ease;
+}
+.quiz-card-drawer.hidden { display: none; }
+.drawer-item {
+  width: 100%; min-height: 48px; padding: 0 14px;
+  border-radius: 12px; border: 2px solid #e2e7ef; background: #fff;
+  color: #3f4a63; font-family: inherit; font-size: .98rem; font-weight: 800;
+  text-align: left; cursor: pointer;
+  transition: transform .12s cubic-bezier(.25, 1, .5, 1), border-color .12s ease;
+}
+.drawer-item:active { transform: scale(.98); border-color: #b6bdd0; }
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 錯誤回報 hub */
+.report-box { text-align: left; }
+.report-box h3 { margin: 0 0 12px; text-align: center; }
+.report-q { background: #f7f9fd; border: 2px solid #e2e7ef; border-radius: 14px; padding: 12px 14px; }
+.report-q-label {
+  font-size: .72rem; font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; color: #7a8299; margin-bottom: 6px;
+}
+.report-sentence { font-size: 1.05rem; font-weight: 800; line-height: 1.5; margin-bottom: 10px; }
+.report-thumb { display: block; max-width: 100%; max-height: 180px; margin: 0 auto 10px; border-radius: 10px; object-fit: contain; }
+.report-row { display: flex; gap: 10px; font-size: .95rem; padding: 3px 0; }
+.report-row > span { flex: 0 0 96px; color: #7a8299; font-weight: 700; }
+.report-row > b { flex: 1; color: var(--ink); word-break: break-word; }
+.report-ask { margin: 16px 0 8px; font-size: 1rem; }
+.report-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-chip {
+  padding: 8px 12px; border-radius: 999px; border: 2px solid #e2e7ef;
+  background: #fff; color: #4a5878; font-family: inherit;
+  font-size: .88rem; font-weight: 800; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.report-chip.on { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+.report-more { margin-top: 12px; animation: drawer-in .22s ease; }
+.report-more.hidden { display: none; }
+.report-detail {
+  width: 100%; box-sizing: border-box; min-height: 96px; resize: vertical;
+  border: 2px solid #dce6f5; border-radius: 12px; padding: 10px 12px;
+  font-family: inherit; font-size: .95rem; color: var(--ink); outline: none;
+}
+.report-detail:focus { border-color: var(--blue); }
+.report-detail::placeholder { color: #9aa3b8; font-weight: 600; }
+
 /* 鍵盤上方工具列 */
 .quiz-toolbar { display: flex; gap: 8px; }
 .quiz-tool {

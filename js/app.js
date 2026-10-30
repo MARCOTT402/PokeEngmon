@@ -1829,6 +1829,8 @@ const App = {
     document.getElementById("btn-quiz-hint").onclick = () => Quiz.hint();
     document.getElementById("btn-quiz-next").onclick = () => Quiz.next();
     document.getElementById("btn-quiz-settings").onclick = () => Quiz.openSettings();
+    document.getElementById("btn-quiz-more").onclick = () => Quiz.toggleCardDrawer();
+    document.getElementById("btn-report-issue").onclick = () => Quiz.openReport();
     /* 圖片單字題：點圖聽聲（可無限重播） */
     document.getElementById("quiz-word-image-btn").onclick = () => {
       if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
@@ -1847,6 +1849,14 @@ const App = {
         quitBtn.click();
         return;
       }
+      /* 錯誤回報彈窗開住：Enter 只可以 Ctrl/Cmd+Enter 送出，唔好跳下一題 */
+      if (document.getElementById("report-box")) {
+        if ((e.ctrlKey || e.metaKey) && document.getElementById("report-send")) {
+          e.preventDefault();
+          document.getElementById("report-send").click();
+        }
+        return;
+      }
       if (Quiz.answered) { e.preventDefault(); Quiz.next(); }
     });
 
@@ -1855,6 +1865,7 @@ const App = {
       if (e.key !== "Escape") return;
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
+      if (document.getElementById("report-box")) return;
       const keep = document.getElementById("quiz-settings-close");
       if (keep) {
         e.preventDefault();
@@ -1870,6 +1881,7 @@ const App = {
       if (!(e.ctrlKey || e.metaKey) || String(e.key).toLowerCase() !== "p") return;
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
+      if (document.getElementById("report-box")) return;
       e.preventDefault();
       Quiz.playWordAudio();
     });
@@ -1879,6 +1891,7 @@ const App = {
       if (!e.ctrlKey || String(e.key).toLowerCase() !== "h") return;
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
+      if (document.getElementById("report-box")) return;
       e.preventDefault();
       Quiz.hint();
     });

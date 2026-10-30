@@ -135,6 +135,7 @@ const Quiz = {
     cardEl.classList.remove("memory-glow", "bad");
     clearTimeout(this._wrongTimer);
     cardEl.style.display = "";
+    this.toggleCardDrawer(false);
 
     if (isWord) {
       wordCard.classList.add("show");
@@ -675,6 +676,127 @@ const Quiz = {
     });
     /* 播完音頻／按語音鍵後，浮標返去輸入格 */
     this._focusCurrent();
+  },
+
+  /* ---------- 卡片右下角工具 / 錯誤回報 ---------- */
+  toggleCardDrawer(force) {
+    const drawer = document.getElementById("quiz-card-drawer");
+    const btn = document.getElementById("btn-quiz-more");
+    if (!drawer) return;
+    const show = typeof force === "boolean" ? force : drawer.classList.contains("hidden");
+    drawer.classList.toggle("hidden", !show);
+    drawer.classList.toggle("show", show);
+    if (btn) {
+      btn.classList.toggle("open", show);
+      btn.setAttribute("aria-expanded", show ? "true" : "false");
+    }
+  },
+
+  openReport() {
+    const item = this.queue[0];
+    if (!item) return;
+    const q = item.q;
+    const isWord = q.type === "word";
+    const answer = isWord ? q.word : q.answer;
+    const explain = (q.explain && q.explain.hint) || "";
+    const content = isWord
+      ? `<img class="report-thumb" src="${escapeHTML(q.image)}" alt="Question picture">`
+      : `<div class="report-sentence">${escapeHTML(q.sentence)}</div>`;
+
+    const reasons = [
+      { key: "image", label: "Image is wrong" },
+      { key: "question", label: "Question is wrong" },
+      { key: "answer", label: "Answer is wrong" },
+      { key: "audio", label: "Listening audio is wrong" },
+      { key: "other", label: "Other" }
+    ];
+    const chips = reasons
+      .map(r => `<button type="button" class="report-chip" data-reason="${r.key}">${r.label}</button>`)
+      .join("");
+
+    App.showModal(`
+      <div class="report-box" id="report-box">
+        <h3>⚠️ Report a problem</h3>
+        <div class="report-q">
+          <div class="report-q-label">Question</div>
+          ${content}
+          <div class="report-row"><span>Answer</span><b>${escapeHTML(answer) || "(blank)"}</b></div>
+          <div class="report-row"><span>Explanation</span><b>${escapeHTML(explain) || "No explanation provided."}</b></div>
+        </div>
+        <h4 class="report-ask">What went wrong?</h4>
+        <div class="report-chips" id="report-chips">${chips}</div>
+        <div class="report-more hidden" id="report-more">
+          <textarea id="report-detail" class="report-detail" rows="4"
+            placeholder="Tell us more about the problem so we can improve and fix it. Please note: abusive or defamatory language may result in restricted app access."></textarea>
+          <div class="confirm-row">
+            <button id="report-send" class="btn-big btn-primary" disabled>Send report</button>
+            <button id="report-cancel" class="btn-big btn-plain">Cancel</button>
+          </div>
+        </div>
+      </div>`);
+
+    const chipsEl = document.getElementById("report-chips");
+    const more = document.getElementById("report-more");
+    const send = document.getElementById("report-send");
+    const detail = document.getElementById("report-detail");
+    const selected = new Set();
+
+    chipsEl.onclick = (e) => {
+      const chip = e.target.closest(".report-chip");
+      if (!chip) return;
+      const key = chip.dataset.reason;
+      if (selected.has(key)) {
+        selected.delete(key);
+        chip.classList.remove("on");
+      } else {
+        selected.add(key);
+        chip.classList.add("on");
+      }
+      const show = selected.size > 0;
+      more.classList.toggle("hidden", !show);
+      send.disabled = !show;
+      if (show) setTimeout(() => detail.focus(), 120);
+    };
+
+    document.getElementById("report-cancel").onclick = () => App.closeModal();
+
+    send.onclick = async () => {
+      if (selected.size === 0 || send.disabled) return;
+      const report = {
+        id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
+        ts: Date.now(),
+        device_id: typeof ensureDeviceId === "function" ? ensureDeviceId() : "",
+        qid: q.id || this._key(q),
+        type: q.type || "sentence",
+        topic: q.topic || "",
+        question: isWord ? q.word : q.sentence,
+        answer: answer || "",
+        reasons: [...selected],
+        detail: detail.value.trim()
+      };
+
+      let uploaded = false;
+      if (window.SupabaseAuth && SupabaseAuth.isEnabled && SupabaseAuth.isEnabled()) {
+        send.disabled = true;
+        send.textContent = "Sending…";
+        uploaded = !!(await SupabaseAuth.submitReport(report));
+        send.textContent = "Send report";
+      }
+
+      if (!uploaded) {
+        /* 離線 / 未設定 Supabase：暫存本機，之後可以補交 */
+        try {
+          const key = "pokeengmon_reports_v1";
+          const list = JSON.parse(localStorage.getItem(key) || "[]");
+          list.push(report);
+          localStorage.setItem(key, JSON.stringify(list.slice(-200)));
+        } catch (e) { /* storage unavailable */ }
+      }
+      App.closeModal();
+      App.toast(uploaded
+        ? "Thanks! Your report was sent."
+        : "Thanks! Your report has been saved on this device.");
+    };
   },
 
   /* ---------- 設定 / 退出 ---------- */
