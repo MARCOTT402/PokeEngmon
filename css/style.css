@@ -2552,33 +2552,39 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   display: flex; gap: 0; width: 100%; max-width: 520px; margin: 0 auto;
   min-height: 140px; border-top: 4px solid #2b2b2b;
 }
+/* FRLG 標準文字框：深藍底 + 金邊 + 白字 */
 .battle-textbox {
-  flex: 1; background: #f8f0dc; border: 3px solid #2b2b2b;
+  flex: 1; background: #2c4a68; border: 4px solid #c8a848;
   border-right: none; padding: 14px 16px;
-  font-size: .92rem; line-height: 1.5; color: #1a1a1a; font-weight: 600;
-  display: flex; align-items: center;
+  font-size: .92rem; line-height: 1.5; color: #fff; font-weight: 600;
+  display: flex; align-items: center; position: relative;
 }
+.battle-caret {
+  position: absolute; right: 10px; bottom: 6px; color: #ff4040;
+  font-size: .9rem; animation: caretBlink .7s steps(2) infinite;
+}
+@keyframes caretBlink { 50% { opacity: 0; } }
 .battle-menubox {
-  width: 46%; background: #2b5cb8; border: 3px solid #2b2b2b;
+  width: 46%; background: #2c4a68; border: 4px solid #c8a848;
   display: flex; align-items: center; justify-content: center; padding: 8px;
 }
 .battle-menu-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
 }
 .battle-menu-btn {
-  background: #2b5cb8; border: 2px solid #1a3d7a; color: #ffe259;
+  background: #2c4a68; border: none; color: #fff;
   font-family: inherit; font-weight: 800; font-size: .95rem;
   padding: 10px 4px; cursor: pointer; letter-spacing: .5px;
   text-align: left; padding-left: 18px; position: relative;
 }
 .battle-menu-btn::before {
   content: "▶"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
-  font-size: .6rem; color: #fff; opacity: 0;
+  font-size: .6rem; color: #ff4040; opacity: 0;
 }
 .battle-menu-btn:hover::before { opacity: 1; }
-.battle-menu-btn:active { background: #1a4a9a; }
+.battle-menu-btn:active { background: #1d3550; }
 .battle-menu-btn:disabled {
-  color: #7a8bb0; cursor: not-allowed; opacity: .55;
+  color: #6b7f96; cursor: not-allowed; opacity: .55;
 }
 .battle-menu-btn:disabled::before { display: none; }
 
@@ -2667,6 +2673,58 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pvp-format-value {
   font-size: 2.2rem; font-weight: 900; color: #2b5cb8; line-height: 1;
   margin-bottom: 8px;
+}
+
+/* ----- 開場 intro：訓練家見面（FRLG） ----- */
+/* intro 期間收埋正常對戰 UI */
+.battle-view.intro-on .battle-hpbox,
+.battle-view.intro-on .battle-sprite { visibility: hidden; }
+.battle-view.intro-on .battle-menubox { display: none; }
+.battle-view.intro-on .battle-textbox { border-right: 4px solid #c8a848; }
+
+.battle-intro { position: absolute; inset: 0; z-index: 6; }
+
+.intro-trainer { position: absolute; transition: transform .55s ease-out; image-rendering: pixelated; }
+.intro-foe-trainer { top: 6%; right: 10%; width: 118px; height: 118px; }
+.intro-my-trainer {
+  bottom: 8%; left: 5%; width: 148px; height: 148px;
+  background: url("../assets/trainers/red_back.png") no-repeat 0 0;
+  background-size: 148px 740px;   /* 5 格 64x64 等比放大 */
+}
+.intro-trainer.off-right { transform: translateX(160%); }
+.intro-trainer.off-left { transform: translateX(-160%); }
+
+/* 精靈球計數（6 格，有 = 彩色球，冇 = 空圈） */
+.intro-balls { position: absolute; display: flex; gap: 7px; align-items: center; }
+.intro-balls-mine { top: 15%; left: 7%; }
+.intro-balls-foe { bottom: 27%; right: 9%; }
+.intro-balls img { width: 15px; height: 15px; image-rendering: pixelated; }
+.intro-balls .ball-empty {
+  width: 12px; height: 12px; border: 2px solid #3a3a3a; border-radius: 50%;
+  background: rgba(255,255,255,.35);
+}
+
+/* 拋出嘅球 + 落地閃光 */
+.intro-ball {
+  position: absolute; width: 26px; height: 26px; z-index: 9;
+  image-rendering: pixelated; transform: translate(-50%, -50%);
+}
+.intro-flash {
+  position: absolute; width: 90px; height: 90px; z-index: 8;
+  border-radius: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #fff 20%, rgba(255,255,255,.75) 45%, rgba(255,255,255,0) 72%);
+  animation: flashFade .38s ease-out forwards;
+}
+@keyframes flashFade {
+  from { opacity: 1; transform: translate(-50%,-50%) scale(.35); }
+  to   { opacity: 0; transform: translate(-50%,-50%) scale(1.25); }
+}
+
+/* 精靈從球彈出 */
+.intro-pop { visibility: visible !important; animation: introPop .38s cubic-bezier(.2,1.4,.4,1); }
+@keyframes introPop {
+  from { transform: scale(.08); opacity: .3; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
 /* 手機細屏微調 */

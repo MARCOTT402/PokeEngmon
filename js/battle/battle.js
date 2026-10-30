@@ -41,11 +41,11 @@ const BattleUI = (() => {
 
   /* ---------- AI Trainers 梯隊 ---------- */
   const AI_TRAINERS = [
-    { id: "youngster", name: "Youngster Timmy", level: 5, team: [{ dexId: 19, level: 5, moves: ["tackle", "tail-whip"] }] },
-    { id: "bugcatcher", name: "Bug Catcher Sid", level: 10, team: [{ dexId: 13, level: 10, moves: ["tackle", "string-shot"] }, { dexId: 10, level: 8, moves: ["tackle", "harden"] }] },
-    { id: "lass", name: "Lass Dana", level: 18, team: [{ dexId: 35, level: 18, moves: ["tackle", "tail-whip", "quick-attack"] }, { dexId: 16, level: 16, moves: ["tackle", "sand-attack"] }] },
-    { id: "gentleman", name: "Gentleman Alfred", level: 28, team: [{ dexId: 96, level: 28, moves: ["confusion", "disable", "psybeam"] }, { dexId: 64, level: 26, moves: ["confusion", "psybeam"] }] },
-    { id: "ace", name: "Ace Trainer Kiera", level: 40, team: [{ dexId: 248, level: 40, moves: ["crunch", "fire-punch", "thunder-punch", "ice-punch"] }, { dexId: 282, level: 38, moves: ["psychic", "shadow-ball", "calm-mind"] }] }
+    { id: "youngster", name: "Youngster Timmy", sprite: "assets/trainers/youngster.png", level: 5, team: [{ dexId: 19, level: 5, moves: ["tackle", "tail-whip"] }] },
+    { id: "bugcatcher", name: "Bug Catcher Sid", sprite: "assets/trainers/bugcatcher.png", level: 10, team: [{ dexId: 13, level: 10, moves: ["tackle", "string-shot"] }, { dexId: 10, level: 8, moves: ["tackle", "harden"] }] },
+    { id: "lass", name: "Lass Dana", sprite: "assets/trainers/lass.png", level: 18, team: [{ dexId: 35, level: 18, moves: ["tackle", "tail-whip", "quick-attack"] }, { dexId: 16, level: 16, moves: ["tackle", "sand-attack"] }] },
+    { id: "gentleman", name: "Gentleman Alfred", sprite: "assets/trainers/gentleman.png", level: 28, team: [{ dexId: 96, level: 28, moves: ["confusion", "disable", "psybeam"] }, { dexId: 64, level: 26, moves: ["confusion", "psybeam"] }] },
+    { id: "ace", name: "Ace Trainer Kiera", sprite: "assets/trainers/ace_f.png", level: 40, team: [{ dexId: 248, level: 40, moves: ["crunch", "fire-punch", "thunder-punch", "ice-punch"] }, { dexId: 282, level: 38, moves: ["psychic", "shadow-ball", "calm-mind"] }] }
   ];
 
   function openAITrainers() {
@@ -151,7 +151,13 @@ const BattleUI = (() => {
       </div>`;
     }).join("");
     const chosen = new Set();
+    /* 如果一定要全選（持有數 = 隊伍大小），預設全選，免得撳錯 toggle */
+    const mustPickAll = teamSize >= owned.length;
     grid.querySelectorAll(".team-slot").forEach(el => {
+      if (mustPickAll) {
+        el.classList.add("picked");
+        chosen.add(+el.dataset.idx);
+      }
       el.onclick = () => {
         const idx = +el.dataset.idx;
         if (el.classList.contains("picked")) {
@@ -173,10 +179,155 @@ const BattleUI = (() => {
   function launchBattle() {
     mySide = "p1"; foeSide = "p2";
     state = BattleState.create(teamEntries, foeTeamEntries);
-    acting = false;
+    acting = true;   /* intro 期間鎖住操作 */
+    document.getElementById("foe-sprite").classList.remove("intro-pop");
+    document.getElementById("my-sprite").classList.remove("intro-pop");
     App.showView("view-battle");
     render();
-    narrate(`A wild ${foeActive().name} appeared!`);
+    playIntro();
+  }
+
+  /* ---------- 開場序列（FRLG：訓練家見面 → 拋球） ---------- */
+  function foeTrainerName() {
+    return (mode === "ai" && aiTrainer) ? aiTrainer.name.toUpperCase() : "RIVAL";
+  }
+  function foeTrainerSprite() {
+    return (mode === "ai" && aiTrainer) ? aiTrainer.sprite : "assets/trainers/rival.png";
+  }
+
+  function introText(msg) {
+    const box = document.getElementById("battle-text");
+    hideCaret();
+    box.innerHTML = msg.replace(/\n/g, "<br>");
+  }
+  function showCaret() {
+    if (document.getElementById("battle-caret")) return;
+    const c = document.createElement("span");
+    c.className = "battle-caret"; c.id = "battle-caret"; c.textContent = "▼";
+    document.getElementById("battle-text").appendChild(c);
+  }
+  function hideCaret() { document.getElementById("battle-caret")?.remove(); }
+  function waitTap() {
+    return new Promise(res => {
+      const zone = document.querySelector(".battle-bottom");
+      const h = () => { zone.removeEventListener("click", h); res(); };
+      zone.addEventListener("click", h);
+    });
+  }
+
+  function renderBallCounter(elId, teamSize) {
+    const el = document.getElementById(elId);
+    let html = "";
+    for (let i = 0; i < 6; i++) {
+      html += i < teamSize
+        ? `<img src="assets/items/poke-ball.png" alt="">`
+        : `<span class="ball-empty"></span>`;
+    }
+    el.innerHTML = html;
+  }
+
+  /* 我方訓練家 5 格拋球動畫（red_back.png sprite sheet） */
+  function animateMyThrow() {
+    const el = document.getElementById("intro-my-trainer");
+    const frameH = el.clientHeight || 148;   /* 1 格高度（已縮放） */
+    let f = 0;
+    const timer = setInterval(() => {
+      f++;
+      if (f > 4) { clearInterval(timer); return; }
+      el.style.backgroundPosition = `0 ${-frameH * f}px`;
+    }, 85);
+  }
+
+  /* 拋球：弧線飛行 → 落地閃光 → 精靈彈出 */
+  function throwBall(side) {
+    return new Promise(res => {
+      const stage = document.querySelector(".battle-stage");
+      const rect = stage.getBoundingClientRect();
+      const ball = document.getElementById("intro-ball");
+      const flash = document.getElementById("intro-flash");
+      /* 起點（訓練家手）→ 終點（精靈企位中央） */
+      const foeSideThrow = side === "foe";
+      const from = foeSideThrow
+        ? { x: rect.width * 0.72, y: rect.height * 0.22 }
+        : { x: rect.width * 0.24, y: rect.height * 0.72 };
+      const to = foeSideThrow
+        ? { x: rect.width - 28 - 55, y: 28 + 60 }            /* = .battle-foe-sprite 中央 */
+        : { x: 30 + 65, y: rect.height - 30 - 60 };          /* = .battle-my-sprite 中央 */
+      const arcH = 70;
+      const t0 = performance.now(), dur = 520;
+      ball.style.display = "block";
+      (function fly(now) {
+        const t = Math.min(1, (now - t0) / dur);
+        const x = from.x + (to.x - from.x) * t;
+        const y = from.y + (to.y - from.y) * t - arcH * 4 * t * (1 - t);
+        ball.style.left = x + "px";
+        ball.style.top = y + "px";
+        if (t < 1) { requestAnimationFrame(fly); return; }
+        /* 落地：閃光 + 精靈彈出 */
+        ball.style.display = "none";
+        flash.style.display = "block";
+        flash.style.left = to.x + "px";
+        flash.style.top = to.y + "px";
+        flash.style.animation = "none"; void flash.offsetWidth; flash.style.animation = "";
+        setTimeout(() => { flash.style.display = "none"; }, 400);
+        const sprite = document.getElementById(foeSideThrow ? "foe-sprite" : "my-sprite");
+        sprite.classList.add("intro-pop");
+        setTimeout(res, 420);
+      })(t0);
+    });
+  }
+
+  function playIntro() {
+    const view = document.getElementById("view-battle");
+    view.classList.add("intro-on");
+    const intro = document.getElementById("battle-intro");
+    intro.style.display = "block";
+
+    renderBallCounter("intro-balls-mine", me().team.length);
+    renderBallCounter("intro-balls-foe", foe().team.length);
+
+    const foeImg = document.getElementById("intro-foe-trainer");
+    const myT = document.getElementById("intro-my-trainer");
+    foeImg.src = foeTrainerSprite();
+    myT.style.backgroundPosition = "0 0";
+    foeImg.classList.add("off-right");
+    myT.classList.add("off-left");
+
+    introText(`${foeTrainerName()}\nwould like to battle!`);
+    /* 雙方滑入：我方由左、對手由右 */
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      foeImg.classList.remove("off-right");
+      myT.classList.remove("off-left");
+    }));
+
+    (async () => {
+      await sleep(650);
+      showCaret();
+      await waitTap();
+      /* 對手拋球 → 精靈彈出 → 對手退場 */
+      hideCaret();
+      await throwBall("foe");
+      foeImg.classList.add("off-right");
+      introText(`${foeTrainerName()} sent out\n${foeActive().name.toUpperCase()}!`);
+      showCaret();
+      await waitTap();
+      /* 我方拋球（5 格動畫）→ 精靈彈出 → 我方退場 */
+      hideCaret();
+      animateMyThrow();
+      await throwBall("mine");
+      myT.classList.add("off-left");
+      introText(`Go! ${myActive().name.toUpperCase()}!`);
+      showCaret();
+      await waitTap();
+      /* 完場：還原正常對戰 UI */
+      hideCaret();
+      intro.style.display = "none";
+      view.classList.remove("intro-on");
+      render();
+      narrate(`What will ${myActive().name.toUpperCase()} do?`);
+      showMainMenu();
+      acting = false;
+    })();
   }
 
   /* ---------- helpers ---------- */

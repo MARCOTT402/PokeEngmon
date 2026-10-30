@@ -115,6 +115,8 @@ const Battle = (() => {
       dexId = cur[0]; name = cur[1] || "";
     } else {
       dexId = entry.dexId;
+      const p = (typeof dexOf === "function") ? dexOf(dexId) : null;
+      name = p ? (p.name || "") : ("#" + dexId);
     }
     const stats = (typeof calcStats === "function")
       ? calcStats(dexId, entry.level, entry.ivs, entry.evs, entry.nature)
