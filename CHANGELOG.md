@@ -1,3 +1,15 @@
+# [1.12.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.11.0...v1.12.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **quiz-junior:** idle balls bounce only inside the ball box; thrown balls may reach the question card ([e801af7](https://github.com/MARCOTT402/PokeEngmon/commit/e801af792a68574b911a13b37cd6129b45eadd42))
+
+
+### Features
+
+* **quiz-junior:** per-blank pokeballs, bounded playfield, livelier physics, L1 removes distractor, L2 master ball, keep hint button ([f3dd6b2](https://github.com/MARCOTT402/PokeEngmon/commit/f3dd6b22a406fa5cf90a6f25351e38de683ff2b9))
+
 # [1.11.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.10.0...v1.11.0) (2026-10-30)
 
 
