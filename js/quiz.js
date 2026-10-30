@@ -722,12 +722,17 @@ const Quiz = {
       b.y += b.vy;
       b.rx += b.vx * (b.flying ? 2 : 1.2);
 
-      /* 邊界反彈：整個活動範圍（題目框 + 精靈球框 + 進度條）*/
-      if (b.x < P.left + R) { b.x = P.left + R; b.vx = Math.abs(b.vx) * rest; }
-      if (b.x > P.right - R) { b.x = P.right - R; b.vx = -Math.abs(b.vx) * rest; }
-      if (b.y < P.top + R) { b.y = P.top + R; b.vy = Math.abs(b.vy) * rest; }
-      if (b.y > P.bottom - R) {
-        b.y = P.bottom - R;
+      /* 邊界反彈：
+         自由彈跳 → 只限精靈球框內（唔會彈高過框頂）
+         拋出飛行 → 整個活動範圍（題目框 + 精靈球框 + 進度條）*/
+      const box = b.flying
+        ? P
+        : { left: 0, right: this._physW, top: 0, bottom: this._physH };
+      if (b.x < box.left + R) { b.x = box.left + R; b.vx = Math.abs(b.vx) * rest; }
+      if (b.x > box.right - R) { b.x = box.right - R; b.vx = -Math.abs(b.vx) * rest; }
+      if (b.y < box.top + R) { b.y = box.top + R; b.vy = Math.abs(b.vy) * rest; }
+      if (b.y > box.bottom - R) {
+        b.y = box.bottom - R;
         b.vy = -Math.abs(b.vy) * rest;
         if (Math.abs(b.vy) < 1.2) b.vy = -3.2; /* 永遠保持彈跳力 */
       }
@@ -735,7 +740,8 @@ const Quiz = {
       if (b.flying) {
         this._checkCatchHit(b);
         b.flyFrames = (b.flyFrames || 0) + 1;
-        if (b.flyFrames > 240 || (!b.el.classList.contains("flying"))) {
+        /* 抛完落返精靈球框內（或超時）就回復自由彈跳 */
+        if ((b.flyFrames > 40 && b.y >= R) || b.flyFrames > 240 || (!b.el.classList.contains("flying"))) {
           b.flying = false;
           b.flyFrames = 0;
           b.el.classList.remove("flying");
