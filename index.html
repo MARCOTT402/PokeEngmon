@@ -136,6 +136,7 @@
           <nav class="pd-menu">
             <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
             <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
+            <button id="btn-home-battle" class="pd-menu-btn">⚔ Battle</button>
             <div class="home-cal-row">
               <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
               <div id="home-streak-wrap" class="home-streak-wrap" hidden>
@@ -389,6 +390,160 @@
       </div>
     </section>
 
+    <!-- ============ 對戰選單 ============ -->
+    <section id="view-battle-menu" class="view battle-menu-view">
+      <header class="topbar">
+        <div class="topbar-name">Battle</div>
+        <div class="topbar-res">
+          <button class="chip chip-diamond">💎 <b id="topbar-diamonds-bm">0</b></button>
+        </div>
+      </header>
+      <div class="battle-menu-inner">
+        <button id="battle-menu-pvp" class="battle-menu-tile">
+          <span class="bmt-icon">🌐</span>
+          <span class="bmt-title">PvP Battle</span>
+          <span class="bmt-sub">Online match · random team size</span>
+        </button>
+        <button id="battle-menu-ai" class="battle-menu-tile">
+          <span class="bmt-icon">🤖</span>
+          <span class="bmt-title">AI Trainers</span>
+          <span class="bmt-sub">Climb the trainer ladder</span>
+        </button>
+        <div id="ai-trainer-list" class="ai-trainer-list"></div>
+        <div class="hub-bar">
+          <button id="battle-menu-back" class="btn-big btn-plain">‹ Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 對戰（火紅版 UI） ============ -->
+    <section id="view-battle" class="view battle-view">
+      <div class="battle-stage">
+        <!-- AI 對戰速度切換（NORMAL／FAST），PvP 會自動隱藏；貼舞台右上角 -->
+        <button id="btn-battle-speed" class="battle-speed-btn" hidden></button>
+        <!-- 敵方 HP box（左上）：FRLG 原裝框 + overlay -->
+        <div class="battle-hpbox battle-hpbox-foe">
+          <span class="battle-pokename" id="foe-name">FOE</span>
+          <img class="battle-status" id="foe-status" alt="" hidden>
+          <span class="battle-lvnum" id="foe-level">5</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="foe-hpbar"></i></div>
+        </div>
+        <!-- 傷害加乘提示（PokeRogue updateEffectiveness：指住招式時喺敵方資料牌右邊彈出） -->
+        <div id="foe-eff" class="battle-eff" style="display:none">x2</div>
+        <!-- 場地狀態 chip 列（天氣 + 釘子/壁標記），無場地效果時隱藏 -->
+        <div id="battle-field" class="battle-field" style="display:none"></div>
+        <!-- 敵方 sprite（右上）：PokeRogue 動畫圖集（canvas 逐幀播放） -->
+        <canvas class="battle-sprite battle-foe-sprite" id="foe-sprite" width="42" height="42"></canvas>
+
+        <!-- 我方 sprite（左下）：PokeRogue 背面動畫圖集 -->
+        <canvas class="battle-sprite battle-my-sprite" id="my-sprite" width="42" height="42"></canvas>
+        <!-- 我方 HP box（右下）：FRLG 原裝框 + overlay -->
+        <div class="battle-hpbox battle-hpbox-mine">
+          <span class="battle-pokename" id="my-name">POKéMON</span>
+          <img class="battle-status" id="my-status" alt="" hidden>
+          <span class="battle-lvnum" id="my-level">5</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="my-hpbar"></i></div>
+          <div class="battle-hpnum"><span id="my-hp-cur">22</span>/<span id="my-hp-max">22</span></div>
+          <div class="battle-expbar-clip"><i class="battle-expbar" id="my-expbar"></i></div>
+        </div>
+
+        <!-- 開場 intro 層：訓練家見面 → 拋球 -->
+        <div class="battle-fx" id="move-fx"></div>
+        <div id="battle-intro" class="battle-intro" style="display:none">
+          <div class="intro-balls intro-balls-mine" id="intro-balls-mine"></div>
+          <div class="intro-balls intro-balls-foe" id="intro-balls-foe"></div>
+          <img class="intro-trainer intro-foe-trainer" id="intro-foe-trainer" alt="foe trainer">
+          <div class="intro-trainer intro-my-trainer" id="intro-my-trainer"></div>
+          <img class="intro-ball" id="intro-ball" src="assets/battle/ui/poke-ball-big.png" alt="" style="display:none">
+          <div class="intro-flash" id="intro-flash" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- 底部：文字框 + 選單 -->
+      <div class="battle-bottom">
+        <div class="battle-textbox" id="battle-text">What will POKéMON do?</div>
+        <div class="battle-menubox">
+          <!-- 主選單 2×2 -->
+          <div id="battle-action-menu" class="battle-menu-grid">
+            <button id="btn-battle-fight" class="battle-menu-btn">FIGHT</button>
+            <button id="btn-battle-bag" class="battle-menu-btn battle-menu-bag" disabled>BAG</button>
+            <button id="btn-battle-pokemon" class="battle-menu-btn">POKéMON</button>
+            <button id="btn-battle-run" class="battle-menu-btn">RUN</button>
+          </div>
+        </div>
+        <!-- FIGHT：左邊招式列表 ＋ 右邊招式資料（PokeRogue FightUiHandler 排版） -->
+        <div id="battle-move-menu" class="battle-move-panel" style="display:none">
+          <div class="bmp-moves">
+            <div class="bmp-move-grid" id="bmp-moves"></div>
+            <button class="bmp-back" id="bmp-back">◀ BACK</button>
+          </div>
+          <div class="bmp-info">
+            <div class="bmp-info-body" id="bmp-info"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PokeRogue 換精靈頁（party select，320×240 design 等比縮放） -->
+      <div id="battle-party" class="battle-party" style="display:none">
+        <div class="party-frame">
+          <div class="party-bg"></div>
+          <div id="party-slots"></div>
+          <div class="party-msgbox">
+            <div class="party-msg-text" id="party-msg-text">Choose a Pokémon.</div>
+          </div>
+          <div class="party-cancel" id="party-cancel" role="button">
+            <span class="party-cancel-pb"></span>
+            <span class="party-cancel-text">CANCEL</span>
+          </div>
+          <div class="party-options" id="party-options" style="display:none">
+            <button class="party-opt" id="party-opt-send">SEND OUT</button>
+            <button class="party-opt" id="party-opt-cancel">CANCEL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 戰鬥結算（PokeRogue 風格）：撳 CONTINUE 先返訓練家列表 -->
+      <div id="battle-result" class="battle-result" style="display:none">
+        <div class="br-card">
+          <div id="br-title" class="br-title br-win">WIN</div>
+          <div id="br-sub" class="br-sub"></div>
+          <div id="br-rows" class="br-rows"></div>
+          <button id="br-continue" class="br-continue">CONTINUE</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 隊伍選擇彈窗 -->
+    <div id="team-select-modal" class="team-select-modal" style="display:none">
+      <div class="team-select-card">
+        <div class="ts-title">Choose your team · <span id="team-size-label">3</span> Pokémon</div>
+        <div id="team-select-grid" class="team-select-grid"></div>
+        <div class="ts-lineup-label">Battle order <span>(first Pokémon goes out first)</span></div>
+        <div id="team-lineup" class="ts-lineup" hidden></div>
+        <div class="ts-actions">
+          <button id="team-select-cancel" class="btn-big btn-plain">Cancel</button>
+          <button id="team-select-confirm" class="btn-big btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PvP 配對面板：matching → 抽場制 → confirm -->
+    <div id="pvp-match-panel" class="pvp-match-panel" style="display:none">
+      <div class="pvp-match-card">
+        <div id="pvp-matching" class="pvp-matching">
+          <div class="pvp-spinner" aria-hidden="true"></div>
+          <div class="pvp-match-text">Searching for opponent…</div>
+          <button id="pvp-match-cancel" class="btn-big btn-plain">Cancel</button>
+        </div>
+        <div id="pvp-matched" class="pvp-matched" style="display:none">
+          <div class="pvp-found-title">Opponent found!</div>
+          <div class="pvp-format-label">Battle format</div>
+          <div class="pvp-format-value" id="pvp-format-value">3v3</div>
+          <button id="pvp-format-confirm" class="btn-big btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Entry gate: one tap unlocks audio + starts BGM -->
     <div id="entry-gate" class="entry-gate hidden">
       <div class="entry-gate-card">
@@ -412,6 +567,11 @@
   <script src="js/data.js?v=1.13.0"></script>
   <script src="js/qimg-db.js?v=1.13.0"></script>
   <script src="js/pokemon.js?v=1.13.0"></script>
+  <script src="js/battle/engine.js?v=1.13.0"></script>
+  <script src="js/battle/state.js?v=1.13.0"></script>
+  <script src="js/battle/moveanim.js?v=1.13.0"></script>
+  <script src="js/battle/sprites.js?v=1.13.0"></script>
+  <script src="js/battle/battle.js?v=1.13.0"></script>
   <script src="js/genpack.js?v=1.13.0"></script>
   <script src="js/storage.js?v=1.13.0"></script>
   <script src="js/pet.js?v=1.13.0"></script>

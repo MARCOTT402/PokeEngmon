@@ -6,6 +6,7 @@
 let POKEMON_DEX = null;
 let MOVES = null;
 let TYPE_CHART = null;   /* {atkType: {defType: mult}}，只記非 1 倍率 */
+let ABILITIES = null;    /* {dexId: [非隱藏特性 slug（slot 順序）]}，data/abilities.json */
 
 const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
 const STAT_LABELS = { hp: "HP", atk: "Atk", def: "Def", spa: "SpA", spd: "SpD", spe: "Spe" };
@@ -52,16 +53,18 @@ const DAMAGE_CLASS_INFO = {
 async function loadPokemonDex() {
   if (POKEMON_DEX) return POKEMON_DEX;
   try {
-    const [dexRes, moveRes, chartRes] = await Promise.all([
+    const [dexRes, moveRes, chartRes, abRes] = await Promise.all([
       fetch("data/pokemon-151.json"),
       fetch("data/moves.json"),
-      fetch("data/type-chart.json")
+      fetch("data/type-chart.json"),
+      fetch("data/abilities.json")
     ]);
     if (!dexRes.ok) throw new Error(`HTTP ${dexRes.status}`);
     POKEMON_DEX = await dexRes.json();
     POKEMON_DEX._loadedGens = { 1: true };   // 記低已載入嘅世代（Gen 1 開 app 即載）
     if (moveRes.ok) MOVES = (await moveRes.json()).moves || {};
     if (chartRes.ok) TYPE_CHART = (await chartRes.json()).chart || {};
+    if (abRes.ok) ABILITIES = await abRes.json();
   } catch (e) {
     console.warn("Pokemon data load failed", e);
     POKEMON_DEX = null;
@@ -101,6 +104,13 @@ function moveInfo(slug) {
     type: "normal", damage_class: "status", target: "selected-pokemon",
     effect_chance: null, desc: ""
   };
+}
+
+/* 精靈特性：data/abilities.json（非隱藏 slot 順序），戰鬥用 slot 1 做預設 */
+function abilityOf(dexId) {
+  if (!ABILITIES) return null;
+  const a = ABILITIES[String(dexId)];
+  return (a && a.length) ? a[0] : null;
 }
 
 /* 攻擊屬性 atkType 對防守方屬性組合嘅總倍率（相剋表未載入 → 當 1） */

@@ -169,3 +169,18 @@ Defenses:
 
 **Move loadouts:** `entry.moves` = held (≤4), `entry.knownMoves` = the move pool (every move learnable by any owned form at the current level). Player-custom loadouts live in `st.moveLoadouts[uid]` (localStorage only, NOT synced to the cloud — moves aren't a server column). After `pull`/`adoptServerEntry` rebuild `moves` from the pool, `applyMoveLoadout(entry)` restores the player's picks if they're still in the pool. `setEntryMoves` validates against the pool, caps at 4, and writes the loadout — never bypass it.
 
+
+## Rule 20 — Browser automation silently mis-fires when the IDE preview window is 0×0
+
+Symptom: every click "succeeds" but nothing happens; no console error; handlers all bound correctly (v1.15.0 party-screen verification burned 3 browser_use agents on this).
+
+- FIRST check innerWidth/innerHeight via rowser_evaluate — if both are 0, the preview window is minimized/zero-sized and elementFromPoint returns null for everything. Fix with rowser_tabs({action:'activate'}) (restores the window), NOT code changes.
+- 	ypeof window.X === 'undefined' is a red herring for scripts whose top-level uses const/let (battle.js's BattleUI is such a global). Probe with bare-identifier eval('typeof X') instead.
+- If the bridge wedges ("WebView is not ready" even on a blank HTML file, navigate timeouts at 60s): close the wedged tab via rowser_tabs close; if still stuck, ask the user to close/reopen the preview panel — do not keep retrying navigations (each costs 60s).
+
+## Rule 21 — Hand-made battle anims: verify in slow-mo; never emit an empty frame 0
+
+Two pitfalls from authoring the 27 custom `assets/battle/anim/*.json` (v1.15.17):
+
+- **Screenshot verification**: battle anims run at 60fps and many are ~260ms total, so browser_use screenshots almost always land between animations and report "nothing renders" for perfectly fine anims. Use the dev harness `tools/_anim_preview.html?slug=<a,b,c>&frameMs=400` (passes `frameMs` to `MoveAnim.play`, 4–6s per move) — screenshots then reliably catch every move mid-animation.
+- **Empty frame 0**: when staggering layer entrances (e.g. trick-room tiles appearing one by one), make sure at least one layer exists in frame 0 — `MoveAnim.play` calls `drawFrame(0)` immediately, and an empty first frame shows a blank beat (and trips `tools/gen_missing_anims.js` validation). Bias stagger formulas so the first element is already visible at i=0.

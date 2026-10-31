@@ -1,0 +1,2326 @@
+{
+"1": [
+"overgrow"
+],
+"2": [
+"overgrow"
+],
+"3": [
+"overgrow"
+],
+"4": [
+"blaze"
+],
+"5": [
+"blaze"
+],
+"6": [
+"blaze"
+],
+"7": [
+"torrent"
+],
+"8": [
+"torrent"
+],
+"9": [
+"torrent"
+],
+"10": [
+"shield-dust"
+],
+"11": [
+"shed-skin"
+],
+"12": [
+"compound-eyes"
+],
+"13": [
+"shield-dust"
+],
+"14": [
+"shed-skin"
+],
+"15": [
+"swarm"
+],
+"16": [
+"keen-eye",
+"tangled-feet"
+],
+"17": [
+"keen-eye",
+"tangled-feet"
+],
+"18": [
+"keen-eye",
+"tangled-feet"
+],
+"19": [
+"run-away",
+"guts"
+],
+"20": [
+"run-away",
+"guts"
+],
+"21": [
+"keen-eye"
+],
+"22": [
+"keen-eye"
+],
+"23": [
+"intimidate",
+"shed-skin"
+],
+"24": [
+"intimidate",
+"shed-skin"
+],
+"25": [
+"static"
+],
+"26": [
+"static"
+],
+"27": [
+"sand-veil"
+],
+"28": [
+"sand-veil"
+],
+"29": [
+"poison-point",
+"rivalry"
+],
+"30": [
+"poison-point",
+"rivalry"
+],
+"31": [
+"poison-point",
+"rivalry"
+],
+"32": [
+"poison-point",
+"rivalry"
+],
+"33": [
+"poison-point",
+"rivalry"
+],
+"34": [
+"poison-point",
+"rivalry"
+],
+"35": [
+"cute-charm",
+"magic-guard"
+],
+"36": [
+"cute-charm",
+"magic-guard"
+],
+"37": [
+"flash-fire"
+],
+"38": [
+"flash-fire"
+],
+"39": [
+"cute-charm",
+"competitive"
+],
+"40": [
+"cute-charm",
+"competitive"
+],
+"41": [
+"inner-focus"
+],
+"42": [
+"inner-focus"
+],
+"43": [
+"chlorophyll"
+],
+"44": [
+"chlorophyll"
+],
+"45": [
+"chlorophyll"
+],
+"46": [
+"effect-spore",
+"dry-skin"
+],
+"47": [
+"effect-spore",
+"dry-skin"
+],
+"48": [
+"compound-eyes",
+"tinted-lens"
+],
+"49": [
+"shield-dust",
+"tinted-lens"
+],
+"50": [
+"sand-veil",
+"arena-trap"
+],
+"51": [
+"sand-veil",
+"arena-trap"
+],
+"52": [
+"pickup",
+"technician"
+],
+"53": [
+"limber",
+"technician"
+],
+"54": [
+"damp",
+"cloud-nine"
+],
+"55": [
+"damp",
+"cloud-nine"
+],
+"56": [
+"vital-spirit",
+"anger-point"
+],
+"57": [
+"vital-spirit",
+"anger-point"
+],
+"58": [
+"intimidate",
+"flash-fire"
+],
+"59": [
+"intimidate",
+"flash-fire"
+],
+"60": [
+"water-absorb",
+"damp"
+],
+"61": [
+"water-absorb",
+"damp"
+],
+"62": [
+"water-absorb",
+"damp"
+],
+"63": [
+"synchronize",
+"inner-focus"
+],
+"64": [
+"synchronize",
+"inner-focus"
+],
+"65": [
+"synchronize",
+"inner-focus"
+],
+"66": [
+"guts",
+"no-guard"
+],
+"67": [
+"guts",
+"no-guard"
+],
+"68": [
+"guts",
+"no-guard"
+],
+"69": [
+"chlorophyll"
+],
+"70": [
+"chlorophyll"
+],
+"71": [
+"chlorophyll"
+],
+"72": [
+"clear-body",
+"liquid-ooze"
+],
+"73": [
+"clear-body",
+"liquid-ooze"
+],
+"74": [
+"rock-head",
+"sturdy"
+],
+"75": [
+"rock-head",
+"sturdy"
+],
+"76": [
+"rock-head",
+"sturdy"
+],
+"77": [
+"run-away",
+"flash-fire"
+],
+"78": [
+"run-away",
+"flash-fire"
+],
+"79": [
+"oblivious",
+"own-tempo"
+],
+"80": [
+"oblivious",
+"own-tempo"
+],
+"81": [
+"magnet-pull",
+"sturdy"
+],
+"82": [
+"magnet-pull",
+"sturdy"
+],
+"83": [
+"keen-eye",
+"inner-focus"
+],
+"84": [
+"run-away",
+"early-bird"
+],
+"85": [
+"run-away",
+"early-bird"
+],
+"86": [
+"thick-fat",
+"hydration"
+],
+"87": [
+"thick-fat",
+"hydration"
+],
+"88": [
+"stench",
+"sticky-hold"
+],
+"89": [
+"stench",
+"sticky-hold"
+],
+"90": [
+"shell-armor",
+"skill-link"
+],
+"91": [
+"shell-armor",
+"skill-link"
+],
+"92": [
+"levitate"
+],
+"93": [
+"levitate"
+],
+"94": [
+"cursed-body"
+],
+"95": [
+"rock-head",
+"sturdy"
+],
+"96": [
+"insomnia",
+"forewarn"
+],
+"97": [
+"insomnia",
+"forewarn"
+],
+"98": [
+"hyper-cutter",
+"shell-armor"
+],
+"99": [
+"hyper-cutter",
+"shell-armor"
+],
+"100": [
+"soundproof",
+"static"
+],
+"101": [
+"soundproof",
+"static"
+],
+"102": [
+"chlorophyll"
+],
+"103": [
+"chlorophyll"
+],
+"104": [
+"rock-head",
+"lightning-rod"
+],
+"105": [
+"rock-head",
+"lightning-rod"
+],
+"106": [
+"limber",
+"reckless"
+],
+"107": [
+"keen-eye",
+"iron-fist"
+],
+"108": [
+"own-tempo",
+"oblivious"
+],
+"109": [
+"levitate",
+"neutralizing-gas"
+],
+"110": [
+"levitate",
+"neutralizing-gas"
+],
+"111": [
+"lightning-rod",
+"rock-head"
+],
+"112": [
+"lightning-rod",
+"rock-head"
+],
+"113": [
+"natural-cure",
+"serene-grace"
+],
+"114": [
+"chlorophyll",
+"leaf-guard"
+],
+"115": [
+"early-bird",
+"scrappy"
+],
+"116": [
+"swift-swim",
+"sniper"
+],
+"117": [
+"poison-point",
+"sniper"
+],
+"118": [
+"swift-swim",
+"water-veil"
+],
+"119": [
+"swift-swim",
+"water-veil"
+],
+"120": [
+"illuminate",
+"natural-cure"
+],
+"121": [
+"illuminate",
+"natural-cure"
+],
+"122": [
+"soundproof",
+"filter"
+],
+"123": [
+"swarm",
+"technician"
+],
+"124": [
+"oblivious",
+"forewarn"
+],
+"125": [
+"static"
+],
+"126": [
+"flame-body"
+],
+"127": [
+"hyper-cutter",
+"mold-breaker"
+],
+"128": [
+"intimidate",
+"anger-point"
+],
+"129": [
+"swift-swim"
+],
+"130": [
+"intimidate"
+],
+"131": [
+"water-absorb",
+"shell-armor"
+],
+"132": [
+"limber"
+],
+"133": [
+"run-away",
+"adaptability"
+],
+"134": [
+"water-absorb"
+],
+"135": [
+"volt-absorb"
+],
+"136": [
+"flash-fire"
+],
+"137": [
+"trace",
+"download"
+],
+"138": [
+"swift-swim",
+"shell-armor"
+],
+"139": [
+"swift-swim",
+"shell-armor"
+],
+"140": [
+"swift-swim",
+"battle-armor"
+],
+"141": [
+"swift-swim",
+"battle-armor"
+],
+"142": [
+"rock-head",
+"pressure"
+],
+"143": [
+"immunity",
+"thick-fat"
+],
+"144": [
+"pressure"
+],
+"145": [
+"pressure"
+],
+"146": [
+"pressure"
+],
+"147": [
+"shed-skin"
+],
+"148": [
+"shed-skin"
+],
+"149": [
+"inner-focus"
+],
+"150": [
+"pressure"
+],
+"151": [
+"synchronize"
+],
+"152": [
+"overgrow"
+],
+"153": [
+"overgrow"
+],
+"154": [
+"overgrow"
+],
+"155": [
+"blaze"
+],
+"156": [
+"blaze"
+],
+"157": [
+"blaze"
+],
+"158": [
+"torrent"
+],
+"159": [
+"torrent"
+],
+"160": [
+"torrent"
+],
+"161": [
+"run-away",
+"keen-eye"
+],
+"162": [
+"run-away",
+"keen-eye"
+],
+"163": [
+"insomnia",
+"keen-eye"
+],
+"164": [
+"insomnia",
+"keen-eye"
+],
+"165": [
+"swarm",
+"early-bird"
+],
+"166": [
+"swarm",
+"early-bird"
+],
+"167": [
+"swarm",
+"insomnia"
+],
+"168": [
+"swarm",
+"insomnia"
+],
+"169": [
+"inner-focus"
+],
+"170": [
+"volt-absorb",
+"illuminate"
+],
+"171": [
+"volt-absorb",
+"illuminate"
+],
+"172": [
+"static"
+],
+"173": [
+"cute-charm",
+"magic-guard"
+],
+"174": [
+"cute-charm",
+"competitive"
+],
+"175": [
+"hustle",
+"serene-grace"
+],
+"176": [
+"hustle",
+"serene-grace"
+],
+"177": [
+"synchronize",
+"early-bird"
+],
+"178": [
+"synchronize",
+"early-bird"
+],
+"179": [
+"static"
+],
+"180": [
+"static"
+],
+"181": [
+"static"
+],
+"182": [
+"chlorophyll"
+],
+"183": [
+"thick-fat",
+"huge-power"
+],
+"184": [
+"thick-fat",
+"huge-power"
+],
+"185": [
+"sturdy",
+"rock-head"
+],
+"186": [
+"water-absorb",
+"damp"
+],
+"187": [
+"chlorophyll",
+"leaf-guard"
+],
+"188": [
+"chlorophyll",
+"leaf-guard"
+],
+"189": [
+"chlorophyll",
+"leaf-guard"
+],
+"190": [
+"run-away",
+"pickup"
+],
+"191": [
+"chlorophyll",
+"solar-power"
+],
+"192": [
+"chlorophyll",
+"solar-power"
+],
+"193": [
+"speed-boost",
+"compound-eyes"
+],
+"194": [
+"damp",
+"water-absorb"
+],
+"195": [
+"damp",
+"water-absorb"
+],
+"196": [
+"synchronize"
+],
+"197": [
+"synchronize"
+],
+"198": [
+"insomnia",
+"super-luck"
+],
+"199": [
+"oblivious",
+"own-tempo"
+],
+"200": [
+"levitate"
+],
+"201": [
+"levitate"
+],
+"202": [
+"shadow-tag"
+],
+"203": [
+"inner-focus",
+"early-bird"
+],
+"204": [
+"sturdy"
+],
+"205": [
+"sturdy"
+],
+"206": [
+"serene-grace",
+"run-away"
+],
+"207": [
+"hyper-cutter",
+"sand-veil"
+],
+"208": [
+"rock-head",
+"sturdy"
+],
+"209": [
+"intimidate",
+"run-away"
+],
+"210": [
+"intimidate",
+"quick-feet"
+],
+"211": [
+"poison-point",
+"swift-swim"
+],
+"212": [
+"swarm",
+"technician"
+],
+"213": [
+"sturdy",
+"gluttony"
+],
+"214": [
+"swarm",
+"guts"
+],
+"215": [
+"inner-focus",
+"keen-eye"
+],
+"216": [
+"pickup",
+"quick-feet"
+],
+"217": [
+"guts",
+"quick-feet"
+],
+"218": [
+"magma-armor",
+"flame-body"
+],
+"219": [
+"magma-armor",
+"flame-body"
+],
+"220": [
+"oblivious",
+"snow-cloak"
+],
+"221": [
+"oblivious",
+"snow-cloak"
+],
+"222": [
+"hustle",
+"natural-cure"
+],
+"223": [
+"hustle",
+"sniper"
+],
+"224": [
+"suction-cups",
+"sniper"
+],
+"225": [
+"vital-spirit",
+"hustle"
+],
+"226": [
+"swift-swim",
+"water-absorb"
+],
+"227": [
+"keen-eye",
+"sturdy"
+],
+"228": [
+"early-bird",
+"flash-fire"
+],
+"229": [
+"early-bird",
+"flash-fire"
+],
+"230": [
+"swift-swim",
+"sniper"
+],
+"231": [
+"pickup"
+],
+"232": [
+"sturdy"
+],
+"233": [
+"trace",
+"download"
+],
+"234": [
+"intimidate",
+"frisk"
+],
+"235": [
+"own-tempo",
+"technician"
+],
+"236": [
+"guts",
+"steadfast"
+],
+"237": [
+"intimidate",
+"technician"
+],
+"238": [
+"oblivious",
+"forewarn"
+],
+"239": [
+"static"
+],
+"240": [
+"flame-body"
+],
+"241": [
+"thick-fat",
+"scrappy"
+],
+"242": [
+"natural-cure",
+"serene-grace"
+],
+"243": [
+"pressure"
+],
+"244": [
+"pressure"
+],
+"245": [
+"pressure"
+],
+"246": [
+"guts"
+],
+"247": [
+"shed-skin"
+],
+"248": [
+"sand-stream"
+],
+"249": [
+"pressure"
+],
+"250": [
+"pressure"
+],
+"251": [
+"natural-cure"
+],
+"252": [
+"overgrow"
+],
+"253": [
+"overgrow"
+],
+"254": [
+"overgrow"
+],
+"255": [
+"blaze"
+],
+"256": [
+"blaze"
+],
+"257": [
+"blaze"
+],
+"258": [
+"torrent"
+],
+"259": [
+"torrent"
+],
+"260": [
+"torrent"
+],
+"261": [
+"run-away",
+"quick-feet"
+],
+"262": [
+"intimidate",
+"quick-feet"
+],
+"263": [
+"pickup",
+"gluttony"
+],
+"264": [
+"pickup",
+"gluttony"
+],
+"265": [
+"shield-dust"
+],
+"266": [
+"shed-skin"
+],
+"267": [
+"swarm"
+],
+"268": [
+"shed-skin"
+],
+"269": [
+"shield-dust"
+],
+"270": [
+"swift-swim",
+"rain-dish"
+],
+"271": [
+"swift-swim",
+"rain-dish"
+],
+"272": [
+"swift-swim",
+"rain-dish"
+],
+"273": [
+"chlorophyll",
+"early-bird"
+],
+"274": [
+"chlorophyll",
+"early-bird"
+],
+"275": [
+"chlorophyll",
+"wind-rider"
+],
+"276": [
+"guts"
+],
+"277": [
+"guts"
+],
+"278": [
+"keen-eye",
+"hydration"
+],
+"279": [
+"keen-eye",
+"drizzle"
+],
+"280": [
+"synchronize",
+"trace"
+],
+"281": [
+"synchronize",
+"trace"
+],
+"282": [
+"synchronize",
+"trace"
+],
+"283": [
+"swift-swim"
+],
+"284": [
+"intimidate"
+],
+"285": [
+"effect-spore",
+"poison-heal"
+],
+"286": [
+"effect-spore",
+"poison-heal"
+],
+"287": [
+"truant"
+],
+"288": [
+"vital-spirit"
+],
+"289": [
+"truant"
+],
+"290": [
+"compound-eyes"
+],
+"291": [
+"speed-boost"
+],
+"292": [
+"wonder-guard"
+],
+"293": [
+"soundproof"
+],
+"294": [
+"soundproof"
+],
+"295": [
+"soundproof"
+],
+"296": [
+"thick-fat",
+"guts"
+],
+"297": [
+"thick-fat",
+"guts"
+],
+"298": [
+"thick-fat",
+"huge-power"
+],
+"299": [
+"sturdy",
+"magnet-pull"
+],
+"300": [
+"cute-charm",
+"normalize"
+],
+"301": [
+"cute-charm",
+"normalize"
+],
+"302": [
+"keen-eye",
+"stall"
+],
+"303": [
+"hyper-cutter",
+"intimidate"
+],
+"304": [
+"sturdy",
+"rock-head"
+],
+"305": [
+"sturdy",
+"rock-head"
+],
+"306": [
+"sturdy",
+"rock-head"
+],
+"307": [
+"pure-power"
+],
+"308": [
+"pure-power"
+],
+"309": [
+"static",
+"lightning-rod"
+],
+"310": [
+"static",
+"lightning-rod"
+],
+"311": [
+"plus"
+],
+"312": [
+"minus"
+],
+"313": [
+"illuminate",
+"swarm"
+],
+"314": [
+"oblivious",
+"tinted-lens"
+],
+"315": [
+"natural-cure",
+"poison-point"
+],
+"316": [
+"liquid-ooze",
+"sticky-hold"
+],
+"317": [
+"liquid-ooze",
+"sticky-hold"
+],
+"318": [
+"rough-skin"
+],
+"319": [
+"rough-skin"
+],
+"320": [
+"water-veil",
+"oblivious"
+],
+"321": [
+"water-veil",
+"oblivious"
+],
+"322": [
+"oblivious",
+"simple"
+],
+"323": [
+"magma-armor",
+"solid-rock"
+],
+"324": [
+"white-smoke",
+"drought"
+],
+"325": [
+"thick-fat",
+"own-tempo"
+],
+"326": [
+"thick-fat",
+"own-tempo"
+],
+"327": [
+"own-tempo",
+"tangled-feet"
+],
+"328": [
+"hyper-cutter",
+"arena-trap"
+],
+"329": [
+"levitate"
+],
+"330": [
+"levitate"
+],
+"331": [
+"sand-veil"
+],
+"332": [
+"sand-veil"
+],
+"333": [
+"natural-cure"
+],
+"334": [
+"natural-cure"
+],
+"335": [
+"immunity"
+],
+"336": [
+"shed-skin"
+],
+"337": [
+"levitate"
+],
+"338": [
+"levitate"
+],
+"339": [
+"oblivious",
+"anticipation"
+],
+"340": [
+"oblivious",
+"anticipation"
+],
+"341": [
+"hyper-cutter",
+"shell-armor"
+],
+"342": [
+"hyper-cutter",
+"shell-armor"
+],
+"343": [
+"levitate"
+],
+"344": [
+"levitate"
+],
+"345": [
+"suction-cups"
+],
+"346": [
+"suction-cups"
+],
+"347": [
+"battle-armor"
+],
+"348": [
+"battle-armor"
+],
+"349": [
+"swift-swim",
+"oblivious"
+],
+"350": [
+"marvel-scale",
+"competitive"
+],
+"351": [
+"forecast"
+],
+"352": [
+"color-change"
+],
+"353": [
+"insomnia",
+"frisk"
+],
+"354": [
+"insomnia",
+"frisk"
+],
+"355": [
+"levitate"
+],
+"356": [
+"pressure"
+],
+"357": [
+"chlorophyll",
+"solar-power"
+],
+"358": [
+"levitate"
+],
+"359": [
+"pressure",
+"super-luck"
+],
+"360": [
+"shadow-tag"
+],
+"361": [
+"inner-focus",
+"ice-body"
+],
+"362": [
+"inner-focus",
+"ice-body"
+],
+"363": [
+"thick-fat",
+"ice-body"
+],
+"364": [
+"thick-fat",
+"ice-body"
+],
+"365": [
+"thick-fat",
+"ice-body"
+],
+"366": [
+"shell-armor"
+],
+"367": [
+"swift-swim"
+],
+"368": [
+"swift-swim"
+],
+"369": [
+"swift-swim",
+"rock-head"
+],
+"370": [
+"swift-swim"
+],
+"371": [
+"rock-head"
+],
+"372": [
+"rock-head"
+],
+"373": [
+"intimidate"
+],
+"374": [
+"clear-body"
+],
+"375": [
+"clear-body"
+],
+"376": [
+"clear-body"
+],
+"377": [
+"clear-body"
+],
+"378": [
+"clear-body"
+],
+"379": [
+"clear-body"
+],
+"380": [
+"levitate"
+],
+"381": [
+"levitate"
+],
+"382": [
+"drizzle"
+],
+"383": [
+"drought"
+],
+"384": [
+"air-lock"
+],
+"385": [
+"serene-grace"
+],
+"386": [
+"pressure"
+],
+"387": [
+"overgrow"
+],
+"388": [
+"overgrow"
+],
+"389": [
+"overgrow"
+],
+"390": [
+"blaze"
+],
+"391": [
+"blaze"
+],
+"392": [
+"blaze"
+],
+"393": [
+"torrent"
+],
+"394": [
+"torrent"
+],
+"395": [
+"torrent"
+],
+"396": [
+"keen-eye"
+],
+"397": [
+"intimidate"
+],
+"398": [
+"intimidate"
+],
+"399": [
+"simple",
+"unaware"
+],
+"400": [
+"simple",
+"unaware"
+],
+"401": [
+"shed-skin"
+],
+"402": [
+"swarm"
+],
+"403": [
+"rivalry",
+"intimidate"
+],
+"404": [
+"rivalry",
+"intimidate"
+],
+"405": [
+"rivalry",
+"intimidate"
+],
+"406": [
+"natural-cure",
+"poison-point"
+],
+"407": [
+"natural-cure",
+"poison-point"
+],
+"408": [
+"mold-breaker"
+],
+"409": [
+"mold-breaker"
+],
+"410": [
+"sturdy"
+],
+"411": [
+"sturdy"
+],
+"412": [
+"shed-skin"
+],
+"413": [
+"anticipation"
+],
+"414": [
+"swarm"
+],
+"415": [
+"honey-gather"
+],
+"416": [
+"pressure"
+],
+"417": [
+"run-away",
+"pickup"
+],
+"418": [
+"swift-swim"
+],
+"419": [
+"swift-swim"
+],
+"420": [
+"chlorophyll"
+],
+"421": [
+"flower-gift"
+],
+"422": [
+"sticky-hold",
+"storm-drain"
+],
+"423": [
+"sticky-hold",
+"storm-drain"
+],
+"424": [
+"technician",
+"pickup"
+],
+"425": [
+"aftermath",
+"unburden"
+],
+"426": [
+"aftermath",
+"unburden"
+],
+"427": [
+"run-away",
+"klutz"
+],
+"428": [
+"cute-charm",
+"klutz"
+],
+"429": [
+"levitate"
+],
+"430": [
+"insomnia",
+"super-luck"
+],
+"431": [
+"limber",
+"own-tempo"
+],
+"432": [
+"thick-fat",
+"own-tempo"
+],
+"433": [
+"levitate"
+],
+"434": [
+"stench",
+"aftermath"
+],
+"435": [
+"stench",
+"aftermath"
+],
+"436": [
+"levitate",
+"heatproof"
+],
+"437": [
+"levitate",
+"heatproof"
+],
+"438": [
+"sturdy",
+"rock-head"
+],
+"439": [
+"soundproof",
+"filter"
+],
+"440": [
+"natural-cure",
+"serene-grace"
+],
+"441": [
+"keen-eye",
+"tangled-feet"
+],
+"442": [
+"pressure"
+],
+"443": [
+"sand-veil"
+],
+"444": [
+"sand-veil"
+],
+"445": [
+"sand-veil"
+],
+"446": [
+"pickup",
+"thick-fat"
+],
+"447": [
+"steadfast",
+"inner-focus"
+],
+"448": [
+"steadfast",
+"inner-focus"
+],
+"449": [
+"sand-stream"
+],
+"450": [
+"sand-stream"
+],
+"451": [
+"battle-armor",
+"sniper"
+],
+"452": [
+"battle-armor",
+"sniper"
+],
+"453": [
+"anticipation",
+"dry-skin"
+],
+"454": [
+"anticipation",
+"dry-skin"
+],
+"455": [
+"levitate"
+],
+"456": [
+"swift-swim",
+"storm-drain"
+],
+"457": [
+"swift-swim",
+"storm-drain"
+],
+"458": [
+"swift-swim",
+"water-absorb"
+],
+"459": [
+"snow-warning"
+],
+"460": [
+"snow-warning"
+],
+"461": [
+"pressure"
+],
+"462": [
+"magnet-pull",
+"sturdy"
+],
+"463": [
+"own-tempo",
+"oblivious"
+],
+"464": [
+"lightning-rod",
+"solid-rock"
+],
+"465": [
+"chlorophyll",
+"leaf-guard"
+],
+"466": [
+"motor-drive"
+],
+"467": [
+"flame-body"
+],
+"468": [
+"hustle",
+"serene-grace"
+],
+"469": [
+"speed-boost",
+"tinted-lens"
+],
+"470": [
+"leaf-guard"
+],
+"471": [
+"snow-cloak"
+],
+"472": [
+"hyper-cutter",
+"sand-veil"
+],
+"473": [
+"oblivious",
+"snow-cloak"
+],
+"474": [
+"adaptability",
+"download"
+],
+"475": [
+"steadfast",
+"sharpness"
+],
+"476": [
+"sturdy",
+"magnet-pull"
+],
+"477": [
+"pressure"
+],
+"478": [
+"snow-cloak"
+],
+"479": [
+"levitate"
+],
+"480": [
+"levitate"
+],
+"481": [
+"levitate"
+],
+"482": [
+"levitate"
+],
+"483": [
+"pressure"
+],
+"484": [
+"pressure"
+],
+"485": [
+"flash-fire"
+],
+"486": [
+"slow-start"
+],
+"487": [
+"pressure"
+],
+"488": [
+"levitate"
+],
+"489": [
+"hydration"
+],
+"490": [
+"hydration"
+],
+"491": [
+"bad-dreams"
+],
+"492": [
+"natural-cure"
+],
+"493": [
+"multitype"
+],
+"494": [
+"victory-star"
+],
+"495": [
+"overgrow"
+],
+"496": [
+"overgrow"
+],
+"497": [
+"overgrow"
+],
+"498": [
+"blaze"
+],
+"499": [
+"blaze"
+],
+"500": [
+"blaze"
+],
+"501": [
+"torrent"
+],
+"502": [
+"torrent"
+],
+"503": [
+"torrent"
+],
+"504": [
+"run-away",
+"keen-eye"
+],
+"505": [
+"illuminate",
+"keen-eye"
+],
+"506": [
+"vital-spirit",
+"pickup"
+],
+"507": [
+"intimidate",
+"sand-rush"
+],
+"508": [
+"intimidate",
+"sand-rush"
+],
+"509": [
+"limber",
+"unburden"
+],
+"510": [
+"limber",
+"unburden"
+],
+"511": [
+"gluttony"
+],
+"512": [
+"gluttony"
+],
+"513": [
+"gluttony"
+],
+"514": [
+"gluttony"
+],
+"515": [
+"gluttony"
+],
+"516": [
+"gluttony"
+],
+"517": [
+"forewarn",
+"synchronize"
+],
+"518": [
+"forewarn",
+"synchronize"
+],
+"519": [
+"big-pecks",
+"super-luck"
+],
+"520": [
+"big-pecks",
+"super-luck"
+],
+"521": [
+"big-pecks",
+"super-luck"
+],
+"522": [
+"lightning-rod",
+"motor-drive"
+],
+"523": [
+"lightning-rod",
+"motor-drive"
+],
+"524": [
+"sturdy",
+"weak-armor"
+],
+"525": [
+"sturdy",
+"weak-armor"
+],
+"526": [
+"sturdy",
+"sand-stream"
+],
+"527": [
+"unaware",
+"klutz"
+],
+"528": [
+"unaware",
+"klutz"
+],
+"529": [
+"sand-rush",
+"sand-force"
+],
+"530": [
+"sand-rush",
+"sand-force"
+],
+"531": [
+"healer",
+"regenerator"
+],
+"532": [
+"guts",
+"sheer-force"
+],
+"533": [
+"guts",
+"sheer-force"
+],
+"534": [
+"guts",
+"sheer-force"
+],
+"535": [
+"swift-swim",
+"hydration"
+],
+"536": [
+"swift-swim",
+"hydration"
+],
+"537": [
+"swift-swim",
+"poison-touch"
+],
+"538": [
+"guts",
+"inner-focus"
+],
+"539": [
+"sturdy",
+"inner-focus"
+],
+"540": [
+"swarm",
+"chlorophyll"
+],
+"541": [
+"leaf-guard",
+"chlorophyll"
+],
+"542": [
+"swarm",
+"chlorophyll"
+],
+"543": [
+"poison-point",
+"swarm"
+],
+"544": [
+"poison-point",
+"swarm"
+],
+"545": [
+"poison-point",
+"swarm"
+],
+"546": [
+"prankster",
+"infiltrator"
+],
+"547": [
+"prankster",
+"infiltrator"
+],
+"548": [
+"chlorophyll",
+"own-tempo"
+],
+"549": [
+"chlorophyll",
+"own-tempo"
+],
+"550": [
+"reckless",
+"adaptability"
+],
+"551": [
+"intimidate",
+"moxie"
+],
+"552": [
+"intimidate",
+"moxie"
+],
+"553": [
+"intimidate",
+"moxie"
+],
+"554": [
+"hustle"
+],
+"555": [
+"sheer-force"
+],
+"556": [
+"water-absorb",
+"chlorophyll"
+],
+"557": [
+"sturdy",
+"shell-armor"
+],
+"558": [
+"sturdy",
+"shell-armor"
+],
+"559": [
+"shed-skin",
+"moxie"
+],
+"560": [
+"shed-skin",
+"moxie"
+],
+"561": [
+"wonder-skin",
+"magic-guard"
+],
+"562": [
+"mummy"
+],
+"563": [
+"mummy"
+],
+"564": [
+"solid-rock",
+"sturdy"
+],
+"565": [
+"solid-rock",
+"sturdy"
+],
+"566": [
+"defeatist"
+],
+"567": [
+"defeatist"
+],
+"568": [
+"stench",
+"sticky-hold"
+],
+"569": [
+"stench",
+"weak-armor"
+],
+"570": [
+"illusion"
+],
+"571": [
+"illusion"
+],
+"572": [
+"cute-charm",
+"technician"
+],
+"573": [
+"cute-charm",
+"technician"
+],
+"574": [
+"frisk",
+"competitive"
+],
+"575": [
+"frisk",
+"competitive"
+],
+"576": [
+"frisk",
+"competitive"
+],
+"577": [
+"overcoat",
+"magic-guard"
+],
+"578": [
+"overcoat",
+"magic-guard"
+],
+"579": [
+"overcoat",
+"magic-guard"
+],
+"580": [
+"keen-eye",
+"big-pecks"
+],
+"581": [
+"keen-eye",
+"big-pecks"
+],
+"582": [
+"ice-body",
+"snow-cloak"
+],
+"583": [
+"ice-body",
+"snow-cloak"
+],
+"584": [
+"ice-body",
+"snow-warning"
+],
+"585": [
+"chlorophyll",
+"sap-sipper"
+],
+"586": [
+"chlorophyll",
+"sap-sipper"
+],
+"587": [
+"static"
+],
+"588": [
+"swarm",
+"shed-skin"
+],
+"589": [
+"swarm",
+"shell-armor"
+],
+"590": [
+"effect-spore"
+],
+"591": [
+"effect-spore"
+],
+"592": [
+"water-absorb",
+"cursed-body"
+],
+"593": [
+"water-absorb",
+"cursed-body"
+],
+"594": [
+"healer",
+"hydration"
+],
+"595": [
+"compound-eyes",
+"unnerve"
+],
+"596": [
+"compound-eyes",
+"unnerve"
+],
+"597": [
+"iron-barbs"
+],
+"598": [
+"iron-barbs"
+],
+"599": [
+"plus",
+"minus"
+],
+"600": [
+"plus",
+"minus"
+],
+"601": [
+"plus",
+"minus"
+],
+"602": [
+"levitate"
+],
+"603": [
+"levitate"
+],
+"604": [
+"levitate"
+],
+"605": [
+"telepathy",
+"synchronize"
+],
+"606": [
+"telepathy",
+"synchronize"
+],
+"607": [
+"flash-fire",
+"flame-body"
+],
+"608": [
+"flash-fire",
+"flame-body"
+],
+"609": [
+"flash-fire",
+"flame-body"
+],
+"610": [
+"rivalry",
+"mold-breaker"
+],
+"611": [
+"rivalry",
+"mold-breaker"
+],
+"612": [
+"rivalry",
+"mold-breaker"
+],
+"613": [
+"snow-cloak",
+"slush-rush"
+],
+"614": [
+"snow-cloak",
+"slush-rush"
+],
+"615": [
+"levitate"
+],
+"616": [
+"hydration",
+"shell-armor"
+],
+"617": [
+"hydration",
+"sticky-hold"
+],
+"618": [
+"static",
+"limber"
+],
+"619": [
+"inner-focus",
+"regenerator"
+],
+"620": [
+"inner-focus",
+"regenerator"
+],
+"621": [
+"rough-skin",
+"sheer-force"
+],
+"622": [
+"iron-fist",
+"klutz"
+],
+"623": [
+"iron-fist",
+"klutz"
+],
+"624": [
+"defiant",
+"inner-focus"
+],
+"625": [
+"defiant",
+"inner-focus"
+],
+"626": [
+"reckless",
+"sap-sipper"
+],
+"627": [
+"keen-eye",
+"sheer-force"
+],
+"628": [
+"keen-eye",
+"sheer-force"
+],
+"629": [
+"big-pecks",
+"overcoat"
+],
+"630": [
+"big-pecks",
+"overcoat"
+],
+"631": [
+"gluttony",
+"flash-fire"
+],
+"632": [
+"swarm",
+"hustle"
+],
+"633": [
+"hustle"
+],
+"634": [
+"hustle"
+],
+"635": [
+"levitate"
+],
+"636": [
+"flame-body"
+],
+"637": [
+"flame-body"
+],
+"638": [
+"justified"
+],
+"639": [
+"justified"
+],
+"640": [
+"justified"
+],
+"641": [
+"prankster"
+],
+"642": [
+"prankster"
+],
+"643": [
+"turboblaze"
+],
+"644": [
+"teravolt"
+],
+"645": [
+"sand-force"
+],
+"646": [
+"pressure"
+],
+"647": [
+"justified"
+],
+"648": [
+"serene-grace"
+],
+"649": [
+"download"
+]
+}

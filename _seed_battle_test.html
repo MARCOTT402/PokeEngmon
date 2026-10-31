@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Seed test Pokémon</title></head>
+<body style="font-family:monospace;background:#111;color:#0f0;padding:24px">
+<p>Seeding 4 test Pokémon (local preview only) → redirecting to / …</p>
+<script>
+const KEY = "pokeengmon_state_v1";
+let st = {};
+try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() :
+  "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+  }));
+const ivs = { hp: 20, atk: 20, def: 20, spa: 20, spd: 20, spe: 20 };
+const evs = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+function entry(chainKey, dexId, level, moves) {
+  return {
+    uid: uuid(), chainKey, stage: 1, exp: 0, level,
+    ivs: Object.assign({}, ivs), evs: Object.assign({}, evs),
+    evPoints: 0, nature: "hardy", moves: moves.slice(), knownMoves: moves.slice(),
+    candies: 0, dupes: 0, stars: 1, ownedSpecies: [dexId], obtainedAt: Date.now()
+  };
+}
+st.entries = [
+  entry("charmander", 4, 14, ["ember", "tackle", "growl", "thunder-shock"]),
+  entry("squirtle", 7, 14, ["water-gun", "tackle", "tail-whip", "confusion"]),
+  entry("bulbasaur", 1, 14, ["vine-whip", "tackle", "leech-seed", "sleep-powder"]),
+  entry("magnemite", 81, 14, ["thunder-shock", "tackle", "thunder-wave", "sonic-boom"])
+];
+st.activeUid = st.entries[0].uid;
+st.diamonds = 99;
+localStorage.setItem(KEY, JSON.stringify(st));
+location.replace("/?seeded=1");
+</script>
+</body>
+</html>
