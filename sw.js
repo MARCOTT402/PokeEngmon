@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-1.13.0";
+const CACHE_NAME = "pokeengmon-1.14.0";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const BATTLE_TYPES = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "unknown", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark"];
 const BATTLE_UI = [

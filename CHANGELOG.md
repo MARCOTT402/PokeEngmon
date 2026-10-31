@@ -1,3 +1,19 @@
+# [1.14.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.13.0...v1.14.0) (2026-10-31)
+
+
+### Features
+
+* **battle:** ability system with 16 abilities ([d4932e3](https://github.com/MARCOTT402/PokeEngmon/commit/d4932e3df9e56f222d572096d82126ade56428d5))
+* **battle:** add Gen 2-5 battle sprite atlases (dex 152-649) ([409d2f4](https://github.com/MARCOTT402/PokeEngmon/commit/409d2f46d66fe8f1413906b7112757dd516da85b))
+* **battle:** AI trainer ladder up to Lv.82 with Gen 2-5 teams ([bd26f53](https://github.com/MARCOTT402/PokeEngmon/commit/bd26f53d472a070de4a8fd6fcb8c954cb0e04a1c))
+* **battle:** complete battle polish, animations and responsive layout ([4f42e2a](https://github.com/MARCOTT402/PokeEngmon/commit/4f42e2ae352948b483df805b7e002062c41a416f))
+* **battle:** custom animations for 27 moves missing from PokeRogue ([a8d1471](https://github.com/MARCOTT402/PokeEngmon/commit/a8d14710ae3fd332f8f68d6aa38676e167f579a0))
+* **battle:** field effects - weather, entry hazards, and screens (Gen 5) ([2d3983a](https://github.com/MARCOTT402/PokeEngmon/commit/2d3983a258536dbe3b1abdc65d022667eb459405))
+* **battle:** FireRed-style battle UI, AI trainer ladder and battle engine ([aa6f2f7](https://github.com/MARCOTT402/PokeEngmon/commit/aa6f2f73abc66c45c08c797508e491e339c2529d))
+* **battle:** FRLG opening intro with trainer sprites and ball throw ([824fac9](https://github.com/MARCOTT402/PokeEngmon/commit/824fac90b3ad3d5da789df82456cfa870aeee99c))
+* **battle:** PvP flow - matchmaking, format draw, then team select ([51d3603](https://github.com/MARCOTT402/PokeEngmon/commit/51d36036ad337d00f46545df6d645e684a890e09))
+* **battle:** use original FRLG sprites for battle UI ([13fe848](https://github.com/MARCOTT402/PokeEngmon/commit/13fe848bc9aa845e05b5a50706e0d52312d3d8b3))
+
 # [1.13.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.12.0...v1.13.0) (2026-10-30)
 
 
