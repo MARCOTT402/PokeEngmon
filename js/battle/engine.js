@@ -34,12 +34,19 @@ const Battle = (() => {
     return Math.max(minHits, Math.min(maxHits, r));
   }
 
-  /* ---------- 輔助：pokemon 嘅有效數值（含 stage + status） ---------- */
-  function effectiveStat(pkmn, key) {
+  /* ---------- 輔助：pokemon 嘅有效數值（含 stage + status + 特性） ---------- */
+  /* ignoreStages：Unaware 專用 —— 只忽略 stat stage，burn/特性倍率照計 */
+  function effectiveStat(pkmn, key, ignoreStages) {
     const base = pkmn.stats[key] || 0;
-    let mult = stageMult(pkmn.statStages[key] || 0);
-    /* burn: physical attack 減半 */
-    if (key === "atk" && pkmn.status === "burn") mult *= 0.5;
+    let mult = ignoreStages ? 1 : stageMult(pkmn.statStages[key] || 0);
+    if (key === "atk") {
+      /* Huge Power / Pure Power：攻擊 ×2 */
+      if (pkmn.ability === "huge-power" || pkmn.ability === "pure-power") mult *= 2;
+      /* Guts：異常狀態時攻擊 ×1.5，而且 burn 唔再扣攻 */
+      if (pkmn.ability === "guts" && pkmn.status) mult *= 1.5;
+      /* burn 嘅減傷喺 computeDamage 統一處理（Gen 3+ 規則：physical 傷害 ×0.5，
+         唔好喺度再 ×0.5，否則 burn 會 double-dip 變 ×0.25） */
+    }
     /* paralyze: speed 減半 */
     if (key === "spe" && pkmn.status === "paralyze") mult *= 0.5;
     return Math.max(1, Math.floor(base * mult));
@@ -61,6 +68,9 @@ const Battle = (() => {
     return Math.random() < acc;
   }
 
+  /* 夾擊系特性（Overgrow/Blaze/Torrent/Swarm）：HP ≤ 1/3 時對應屬性招 ×1.5 */
+  const PINCH_ABILITY = { overgrow: "grass", blaze: "fire", torrent: "water", swarm: "bug" };
+
   /* ---------- 傷害公式（Gen 5） ---------- */
   function computeDamage(attacker, defender, move, opts) {
     opts = opts || {};
@@ -68,8 +78,9 @@ const Battle = (() => {
     const isPhysical = move.damage_class === "physical";
     const atkKey = isPhysical ? "atk" : "spa";
     const defKey = isPhysical ? "def" : "spd";
-    const atk = effectiveStat(attacker, atkKey);
-    const def = Math.max(1, effectiveStat(defender, defKey));
+    /* Unaware：攻方無視防方 stage；防方無視攻方 stage（其餘倍率照計） */
+    const atk = effectiveStat(attacker, atkKey, defender.ability === "unaware");
+    const def = Math.max(1, effectiveStat(defender, defKey, attacker.ability === "unaware"));
     const power = move.power || 0;
 
     let base = Math.floor(((2 * level / 5 + 2) * power * atk / def) / 50) + 2;
@@ -78,16 +89,31 @@ const Battle = (() => {
     const atkTypes = speciesTypes(attacker.dexId);
     if (atkTypes.includes(move.type)) base = Math.floor(base * 1.5);
 
-    /* 相剋 */
+    /* 相剋（0 = 免疫，直接零傷，唔可以俾 min-1 clamp 夾返 1） */
     const defTypes = speciesTypes(defender.dexId);
     const mult = (typeof typeMultiplier === "function") ? typeMultiplier(move.type, defTypes) : 1;
+    if (mult === 0) return { damage: 0, effectiveness: 0 };
     base = Math.floor(base * mult);
+
+    /* 夾擊系特性：HP ≤ 1/3 觸發 */
+    const pinchType = PINCH_ABILITY[attacker.ability];
+    if (pinchType === move.type && attacker.hp <= Math.floor((attacker.maxHp || 1) / 3)) {
+      base = Math.floor(base * 1.5);
+    }
+    /* Flash Fire：吸收火招後，自己火招 ×1.5（換走即消失） */
+    if (attacker.volatile && attacker.volatile.flashFire && move.type === "fire") {
+      base = Math.floor(base * 1.5);
+    }
+    /* Thick Fat：火／冰傷害減半 */
+    if (defender.ability === "thick-fat" && (move.type === "fire" || move.type === "ice")) {
+      base = Math.floor(base * 0.5);
+    }
 
     /* crit: 傷害 ×1.5 (Gen 5), 忽略對方防禦 buff 同我方攻擊 debuff */
     if (opts.crit) base = Math.floor(base * 1.5);
 
-    /* burn: physical 招式威力 ×0.5（除非用 Facade 類，暫略） */
-    if (isPhysical && attacker.status === "burn" && !opts.crit) base = Math.floor(base * 0.5);
+    /* burn: physical 招式威力 ×0.5（除非用 Facade 類，暫略；Guts 喺 effectiveStat 已免疫） */
+    if (isPhysical && attacker.status === "burn" && attacker.ability !== "guts" && !opts.crit) base = Math.floor(base * 0.5);
 
     /* 隨機 0.85 - 1.0 */
     const rand = 0.85 + Math.random() * 0.15;
@@ -140,7 +166,9 @@ const Battle = (() => {
       status: null,          /* burn/paralyze/poison/toxic/sleep/freeze/confusion */
       statusTimer: 0,        /* sleep/freeze/toxic 計數 */
       statStages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
-      volatile: { flinch: false, confusion: 0, substitute: 0 }
+      volatile: { flinch: false, confusion: 0, substitute: 0, flashFire: false },
+      /* 特性（slot 1 預設，PokeAPI 非隱藏特性）；冇資料 → null，全部特性效果 skip */
+      ability: (typeof abilityOf === "function") ? abilityOf(dexId) : null
     };
   }
 
