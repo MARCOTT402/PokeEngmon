@@ -1256,8 +1256,4568 @@
   {
    "path": "data/pokemon-gen5.json",
    "bytes": 118336
+  },
+  {
+   "path": "assets/battle/pkmn/front/494.png",
+   "bytes": 4408
+  },
+  {
+   "path": "assets/battle/pkmn/front/495.png",
+   "bytes": 4284
+  },
+  {
+   "path": "assets/battle/pkmn/front/496.png",
+   "bytes": 8637
+  },
+  {
+   "path": "assets/battle/pkmn/front/497.png",
+   "bytes": 17123
+  },
+  {
+   "path": "assets/battle/pkmn/front/498.png",
+   "bytes": 3058
+  },
+  {
+   "path": "assets/battle/pkmn/front/499.png",
+   "bytes": 4956
+  },
+  {
+   "path": "assets/battle/pkmn/front/500.png",
+   "bytes": 26397
+  },
+  {
+   "path": "assets/battle/pkmn/front/501.png",
+   "bytes": 4807
+  },
+  {
+   "path": "assets/battle/pkmn/front/502.png",
+   "bytes": 4260
+  },
+  {
+   "path": "assets/battle/pkmn/front/503.png",
+   "bytes": 13525
+  },
+  {
+   "path": "assets/battle/pkmn/front/504.png",
+   "bytes": 3437
+  },
+  {
+   "path": "assets/battle/pkmn/front/505.png",
+   "bytes": 5881
+  },
+  {
+   "path": "assets/battle/pkmn/front/506.png",
+   "bytes": 3810
+  },
+  {
+   "path": "assets/battle/pkmn/front/507.png",
+   "bytes": 7307
+  },
+  {
+   "path": "assets/battle/pkmn/front/508.png",
+   "bytes": 7614
+  },
+  {
+   "path": "assets/battle/pkmn/front/509.png",
+   "bytes": 3393
+  },
+  {
+   "path": "assets/battle/pkmn/front/510.png",
+   "bytes": 8857
+  },
+  {
+   "path": "assets/battle/pkmn/front/511.png",
+   "bytes": 6959
+  },
+  {
+   "path": "assets/battle/pkmn/front/512.png",
+   "bytes": 9133
+  },
+  {
+   "path": "assets/battle/pkmn/front/513.png",
+   "bytes": 5693
+  },
+  {
+   "path": "assets/battle/pkmn/front/514.png",
+   "bytes": 8738
+  },
+  {
+   "path": "assets/battle/pkmn/front/515.png",
+   "bytes": 3315
+  },
+  {
+   "path": "assets/battle/pkmn/front/516.png",
+   "bytes": 9871
+  },
+  {
+   "path": "assets/battle/pkmn/front/517.png",
+   "bytes": 8598
+  },
+  {
+   "path": "assets/battle/pkmn/front/518.png",
+   "bytes": 15959
+  },
+  {
+   "path": "assets/battle/pkmn/front/519.png",
+   "bytes": 1857
+  },
+  {
+   "path": "assets/battle/pkmn/front/520.png",
+   "bytes": 8149
+  },
+  {
+   "path": "assets/battle/pkmn/front/521.png",
+   "bytes": 11185
+  },
+  {
+   "path": "assets/battle/pkmn/front/522.png",
+   "bytes": 5305
+  },
+  {
+   "path": "assets/battle/pkmn/front/523.png",
+   "bytes": 9730
+  },
+  {
+   "path": "assets/battle/pkmn/front/524.png",
+   "bytes": 1729
+  },
+  {
+   "path": "assets/battle/pkmn/front/525.png",
+   "bytes": 5130
+  },
+  {
+   "path": "assets/battle/pkmn/front/526.png",
+   "bytes": 15656
+  },
+  {
+   "path": "assets/battle/pkmn/front/527.png",
+   "bytes": 4379
+  },
+  {
+   "path": "assets/battle/pkmn/front/528.png",
+   "bytes": 10394
+  },
+  {
+   "path": "assets/battle/pkmn/front/529.png",
+   "bytes": 6497
+  },
+  {
+   "path": "assets/battle/pkmn/front/530.png",
+   "bytes": 13769
+  },
+  {
+   "path": "assets/battle/pkmn/front/531.png",
+   "bytes": 5294
+  },
+  {
+   "path": "assets/battle/pkmn/front/532.png",
+   "bytes": 6558
+  },
+  {
+   "path": "assets/battle/pkmn/front/533.png",
+   "bytes": 5575
+  },
+  {
+   "path": "assets/battle/pkmn/front/534.png",
+   "bytes": 12816
+  },
+  {
+   "path": "assets/battle/pkmn/front/535.png",
+   "bytes": 1773
+  },
+  {
+   "path": "assets/battle/pkmn/front/536.png",
+   "bytes": 2918
+  },
+  {
+   "path": "assets/battle/pkmn/front/537.png",
+   "bytes": 15728
+  },
+  {
+   "path": "assets/battle/pkmn/front/538.png",
+   "bytes": 8511
+  },
+  {
+   "path": "assets/battle/pkmn/front/539.png",
+   "bytes": 7399
+  },
+  {
+   "path": "assets/battle/pkmn/front/540.png",
+   "bytes": 2509
+  },
+  {
+   "path": "assets/battle/pkmn/front/541.png",
+   "bytes": 6898
+  },
+  {
+   "path": "assets/battle/pkmn/front/542.png",
+   "bytes": 5754
+  },
+  {
+   "path": "assets/battle/pkmn/front/543.png",
+   "bytes": 3396
+  },
+  {
+   "path": "assets/battle/pkmn/front/544.png",
+   "bytes": 8096
+  },
+  {
+   "path": "assets/battle/pkmn/front/545.png",
+   "bytes": 26234
+  },
+  {
+   "path": "assets/battle/pkmn/front/546.png",
+   "bytes": 1665
+  },
+  {
+   "path": "assets/battle/pkmn/front/547.png",
+   "bytes": 10619
+  },
+  {
+   "path": "assets/battle/pkmn/front/548.png",
+   "bytes": 2799
+  },
+  {
+   "path": "assets/battle/pkmn/front/549.png",
+   "bytes": 13042
+  },
+  {
+   "path": "assets/battle/pkmn/front/550.png",
+   "bytes": 5531
+  },
+  {
+   "path": "assets/battle/pkmn/front/551.png",
+   "bytes": 4326
+  },
+  {
+   "path": "assets/battle/pkmn/front/552.png",
+   "bytes": 5980
+  },
+  {
+   "path": "assets/battle/pkmn/front/553.png",
+   "bytes": 15190
+  },
+  {
+   "path": "assets/battle/pkmn/front/554.png",
+   "bytes": 4222
+  },
+  {
+   "path": "assets/battle/pkmn/front/555.png",
+   "bytes": 12997
+  },
+  {
+   "path": "assets/battle/pkmn/front/556.png",
+   "bytes": 9737
+  },
+  {
+   "path": "assets/battle/pkmn/front/557.png",
+   "bytes": 3135
+  },
+  {
+   "path": "assets/battle/pkmn/front/558.png",
+   "bytes": 11909
+  },
+  {
+   "path": "assets/battle/pkmn/front/559.png",
+   "bytes": 3175
+  },
+  {
+   "path": "assets/battle/pkmn/front/560.png",
+   "bytes": 9530
+  },
+  {
+   "path": "assets/battle/pkmn/front/561.png",
+   "bytes": 33462
+  },
+  {
+   "path": "assets/battle/pkmn/front/562.png",
+   "bytes": 8356
+  },
+  {
+   "path": "assets/battle/pkmn/front/563.png",
+   "bytes": 22674
+  },
+  {
+   "path": "assets/battle/pkmn/front/564.png",
+   "bytes": 5181
+  },
+  {
+   "path": "assets/battle/pkmn/front/565.png",
+   "bytes": 11159
+  },
+  {
+   "path": "assets/battle/pkmn/front/566.png",
+   "bytes": 9100
+  },
+  {
+   "path": "assets/battle/pkmn/front/567.png",
+   "bytes": 13606
+  },
+  {
+   "path": "assets/battle/pkmn/front/568.png",
+   "bytes": 6450
+  },
+  {
+   "path": "assets/battle/pkmn/front/569.png",
+   "bytes": 21743
+  },
+  {
+   "path": "assets/battle/pkmn/front/570.png",
+   "bytes": 5369
+  },
+  {
+   "path": "assets/battle/pkmn/front/571.png",
+   "bytes": 12150
+  },
+  {
+   "path": "assets/battle/pkmn/front/572.png",
+   "bytes": 8028
+  },
+  {
+   "path": "assets/battle/pkmn/front/573.png",
+   "bytes": 9889
+  },
+  {
+   "path": "assets/battle/pkmn/front/574.png",
+   "bytes": 2085
+  },
+  {
+   "path": "assets/battle/pkmn/front/575.png",
+   "bytes": 5991
+  },
+  {
+   "path": "assets/battle/pkmn/front/576.png",
+   "bytes": 11219
+  },
+  {
+   "path": "assets/battle/pkmn/front/577.png",
+   "bytes": 5356
+  },
+  {
+   "path": "assets/battle/pkmn/front/578.png",
+   "bytes": 5823
+  },
+  {
+   "path": "assets/battle/pkmn/front/579.png",
+   "bytes": 17247
+  },
+  {
+   "path": "assets/battle/pkmn/front/580.png",
+   "bytes": 3070
+  },
+  {
+   "path": "assets/battle/pkmn/front/581.png",
+   "bytes": 10023
+  },
+  {
+   "path": "assets/battle/pkmn/front/582.png",
+   "bytes": 2631
+  },
+  {
+   "path": "assets/battle/pkmn/front/583.png",
+   "bytes": 11725
+  },
+  {
+   "path": "assets/battle/pkmn/front/584.png",
+   "bytes": 9601
+  },
+  {
+   "path": "assets/battle/pkmn/front/585.png",
+   "bytes": 3288
+  },
+  {
+   "path": "assets/battle/pkmn/front/586.png",
+   "bytes": 6120
+  },
+  {
+   "path": "assets/battle/pkmn/front/587.png",
+   "bytes": 10957
+  },
+  {
+   "path": "assets/battle/pkmn/front/588.png",
+   "bytes": 2545
+  },
+  {
+   "path": "assets/battle/pkmn/front/589.png",
+   "bytes": 10664
+  },
+  {
+   "path": "assets/battle/pkmn/front/590.png",
+   "bytes": 2697
+  },
+  {
+   "path": "assets/battle/pkmn/front/591.png",
+   "bytes": 7256
+  },
+  {
+   "path": "assets/battle/pkmn/front/592.png",
+   "bytes": 16329
+  },
+  {
+   "path": "assets/battle/pkmn/front/593.png",
+   "bytes": 13863
+  },
+  {
+   "path": "assets/battle/pkmn/front/594.png",
+   "bytes": 5671
+  },
+  {
+   "path": "assets/battle/pkmn/front/595.png",
+   "bytes": 975
+  },
+  {
+   "path": "assets/battle/pkmn/front/596.png",
+   "bytes": 10168
+  },
+  {
+   "path": "assets/battle/pkmn/front/597.png",
+   "bytes": 1760
+  },
+  {
+   "path": "assets/battle/pkmn/front/598.png",
+   "bytes": 5505
+  },
+  {
+   "path": "assets/battle/pkmn/front/599.png",
+   "bytes": 3341
+  },
+  {
+   "path": "assets/battle/pkmn/front/600.png",
+   "bytes": 8438
+  },
+  {
+   "path": "assets/battle/pkmn/front/601.png",
+   "bytes": 11990
+  },
+  {
+   "path": "assets/battle/pkmn/front/602.png",
+   "bytes": 1227
+  },
+  {
+   "path": "assets/battle/pkmn/front/603.png",
+   "bytes": 4734
+  },
+  {
+   "path": "assets/battle/pkmn/front/604.png",
+   "bytes": 21807
+  },
+  {
+   "path": "assets/battle/pkmn/front/605.png",
+   "bytes": 6790
+  },
+  {
+   "path": "assets/battle/pkmn/front/606.png",
+   "bytes": 5976
+  },
+  {
+   "path": "assets/battle/pkmn/front/607.png",
+   "bytes": 3676
+  },
+  {
+   "path": "assets/battle/pkmn/front/608.png",
+   "bytes": 8532
+  },
+  {
+   "path": "assets/battle/pkmn/front/609.png",
+   "bytes": 28924
+  },
+  {
+   "path": "assets/battle/pkmn/front/610.png",
+   "bytes": 5452
+  },
+  {
+   "path": "assets/battle/pkmn/front/611.png",
+   "bytes": 9557
+  },
+  {
+   "path": "assets/battle/pkmn/front/612.png",
+   "bytes": 22356
+  },
+  {
+   "path": "assets/battle/pkmn/front/613.png",
+   "bytes": 3975
+  },
+  {
+   "path": "assets/battle/pkmn/front/614.png",
+   "bytes": 15672
+  },
+  {
+   "path": "assets/battle/pkmn/front/615.png",
+   "bytes": 6907
+  },
+  {
+   "path": "assets/battle/pkmn/front/616.png",
+   "bytes": 3820
+  },
+  {
+   "path": "assets/battle/pkmn/front/617.png",
+   "bytes": 7679
+  },
+  {
+   "path": "assets/battle/pkmn/front/618.png",
+   "bytes": 3498
+  },
+  {
+   "path": "assets/battle/pkmn/front/619.png",
+   "bytes": 5468
+  },
+  {
+   "path": "assets/battle/pkmn/front/620.png",
+   "bytes": 17897
+  },
+  {
+   "path": "assets/battle/pkmn/front/621.png",
+   "bytes": 17449
+  },
+  {
+   "path": "assets/battle/pkmn/front/622.png",
+   "bytes": 5522
+  },
+  {
+   "path": "assets/battle/pkmn/front/623.png",
+   "bytes": 13503
+  },
+  {
+   "path": "assets/battle/pkmn/front/624.png",
+   "bytes": 2449
+  },
+  {
+   "path": "assets/battle/pkmn/front/625.png",
+   "bytes": 6450
+  },
+  {
+   "path": "assets/battle/pkmn/front/626.png",
+   "bytes": 9342
+  },
+  {
+   "path": "assets/battle/pkmn/front/627.png",
+   "bytes": 5982
+  },
+  {
+   "path": "assets/battle/pkmn/front/628.png",
+   "bytes": 15150
+  },
+  {
+   "path": "assets/battle/pkmn/front/629.png",
+   "bytes": 7447
+  },
+  {
+   "path": "assets/battle/pkmn/front/630.png",
+   "bytes": 9357
+  },
+  {
+   "path": "assets/battle/pkmn/front/631.png",
+   "bytes": 11279
+  },
+  {
+   "path": "assets/battle/pkmn/front/632.png",
+   "bytes": 3592
+  },
+  {
+   "path": "assets/battle/pkmn/front/633.png",
+   "bytes": 5026
+  },
+  {
+   "path": "assets/battle/pkmn/front/634.png",
+   "bytes": 10162
+  },
+  {
+   "path": "assets/battle/pkmn/front/635.png",
+   "bytes": 30516
+  },
+  {
+   "path": "assets/battle/pkmn/front/636.png",
+   "bytes": 5744
+  },
+  {
+   "path": "assets/battle/pkmn/front/637.png",
+   "bytes": 18102
+  },
+  {
+   "path": "assets/battle/pkmn/front/638.png",
+   "bytes": 17060
+  },
+  {
+   "path": "assets/battle/pkmn/front/639.png",
+   "bytes": 10381
+  },
+  {
+   "path": "assets/battle/pkmn/front/640.png",
+   "bytes": 10855
+  },
+  {
+   "path": "assets/battle/pkmn/front/641.png",
+   "bytes": 11472
+  },
+  {
+   "path": "assets/battle/pkmn/front/642.png",
+   "bytes": 70753
+  },
+  {
+   "path": "assets/battle/pkmn/front/643.png",
+   "bytes": 45430
+  },
+  {
+   "path": "assets/battle/pkmn/front/644.png",
+   "bytes": 44086
+  },
+  {
+   "path": "assets/battle/pkmn/front/645.png",
+   "bytes": 17674
+  },
+  {
+   "path": "assets/battle/pkmn/front/646.png",
+   "bytes": 16571
+  },
+  {
+   "path": "assets/battle/pkmn/front/647.png",
+   "bytes": 10087
+  },
+  {
+   "path": "assets/battle/pkmn/front/648.png",
+   "bytes": 7854
+  },
+  {
+   "path": "assets/battle/pkmn/front/649.png",
+   "bytes": 11868
+  },
+  {
+   "path": "assets/battle/pkmn/back/494.png",
+   "bytes": 4158
+  },
+  {
+   "path": "assets/battle/pkmn/back/495.png",
+   "bytes": 4362
+  },
+  {
+   "path": "assets/battle/pkmn/back/496.png",
+   "bytes": 8544
+  },
+  {
+   "path": "assets/battle/pkmn/back/497.png",
+   "bytes": 16000
+  },
+  {
+   "path": "assets/battle/pkmn/back/498.png",
+   "bytes": 3374
+  },
+  {
+   "path": "assets/battle/pkmn/back/499.png",
+   "bytes": 6209
+  },
+  {
+   "path": "assets/battle/pkmn/back/500.png",
+   "bytes": 23563
+  },
+  {
+   "path": "assets/battle/pkmn/back/501.png",
+   "bytes": 5033
+  },
+  {
+   "path": "assets/battle/pkmn/back/502.png",
+   "bytes": 2653
+  },
+  {
+   "path": "assets/battle/pkmn/back/503.png",
+   "bytes": 9103
+  },
+  {
+   "path": "assets/battle/pkmn/back/504.png",
+   "bytes": 3594
+  },
+  {
+   "path": "assets/battle/pkmn/back/505.png",
+   "bytes": 6755
+  },
+  {
+   "path": "assets/battle/pkmn/back/506.png",
+   "bytes": 4382
+  },
+  {
+   "path": "assets/battle/pkmn/back/507.png",
+   "bytes": 6367
+  },
+  {
+   "path": "assets/battle/pkmn/back/508.png",
+   "bytes": 6024
+  },
+  {
+   "path": "assets/battle/pkmn/back/509.png",
+   "bytes": 2697
+  },
+  {
+   "path": "assets/battle/pkmn/back/510.png",
+   "bytes": 8787
+  },
+  {
+   "path": "assets/battle/pkmn/back/511.png",
+   "bytes": 6976
+  },
+  {
+   "path": "assets/battle/pkmn/back/512.png",
+   "bytes": 9055
+  },
+  {
+   "path": "assets/battle/pkmn/back/513.png",
+   "bytes": 4603
+  },
+  {
+   "path": "assets/battle/pkmn/back/514.png",
+   "bytes": 8527
+  },
+  {
+   "path": "assets/battle/pkmn/back/515.png",
+   "bytes": 2902
+  },
+  {
+   "path": "assets/battle/pkmn/back/516.png",
+   "bytes": 9391
+  },
+  {
+   "path": "assets/battle/pkmn/back/517.png",
+   "bytes": 8586
+  },
+  {
+   "path": "assets/battle/pkmn/back/518.png",
+   "bytes": 14478
+  },
+  {
+   "path": "assets/battle/pkmn/back/519.png",
+   "bytes": 2087
+  },
+  {
+   "path": "assets/battle/pkmn/back/520.png",
+   "bytes": 8251
+  },
+  {
+   "path": "assets/battle/pkmn/back/521.png",
+   "bytes": 13323
+  },
+  {
+   "path": "assets/battle/pkmn/back/522.png",
+   "bytes": 5186
+  },
+  {
+   "path": "assets/battle/pkmn/back/523.png",
+   "bytes": 9712
+  },
+  {
+   "path": "assets/battle/pkmn/back/524.png",
+   "bytes": 1434
+  },
+  {
+   "path": "assets/battle/pkmn/back/525.png",
+   "bytes": 5196
+  },
+  {
+   "path": "assets/battle/pkmn/back/526.png",
+   "bytes": 12021
+  },
+  {
+   "path": "assets/battle/pkmn/back/527.png",
+   "bytes": 2444
+  },
+  {
+   "path": "assets/battle/pkmn/back/528.png",
+   "bytes": 8931
+  },
+  {
+   "path": "assets/battle/pkmn/back/529.png",
+   "bytes": 4667
+  },
+  {
+   "path": "assets/battle/pkmn/back/530.png",
+   "bytes": 12496
+  },
+  {
+   "path": "assets/battle/pkmn/back/531.png",
+   "bytes": 5085
+  },
+  {
+   "path": "assets/battle/pkmn/back/532.png",
+   "bytes": 8634
+  },
+  {
+   "path": "assets/battle/pkmn/back/533.png",
+   "bytes": 5104
+  },
+  {
+   "path": "assets/battle/pkmn/back/534.png",
+   "bytes": 10765
+  },
+  {
+   "path": "assets/battle/pkmn/back/535.png",
+   "bytes": 2445
+  },
+  {
+   "path": "assets/battle/pkmn/back/536.png",
+   "bytes": 3232
+  },
+  {
+   "path": "assets/battle/pkmn/back/537.png",
+   "bytes": 11813
+  },
+  {
+   "path": "assets/battle/pkmn/back/538.png",
+   "bytes": 6366
+  },
+  {
+   "path": "assets/battle/pkmn/back/539.png",
+   "bytes": 6341
+  },
+  {
+   "path": "assets/battle/pkmn/back/540.png",
+   "bytes": 2218
+  },
+  {
+   "path": "assets/battle/pkmn/back/541.png",
+   "bytes": 5560
+  },
+  {
+   "path": "assets/battle/pkmn/back/542.png",
+   "bytes": 4971
+  },
+  {
+   "path": "assets/battle/pkmn/back/543.png",
+   "bytes": 3157
+  },
+  {
+   "path": "assets/battle/pkmn/back/544.png",
+   "bytes": 7998
+  },
+  {
+   "path": "assets/battle/pkmn/back/545.png",
+   "bytes": 23094
+  },
+  {
+   "path": "assets/battle/pkmn/back/546.png",
+   "bytes": 1364
+  },
+  {
+   "path": "assets/battle/pkmn/back/547.png",
+   "bytes": 5571
+  },
+  {
+   "path": "assets/battle/pkmn/back/548.png",
+   "bytes": 2669
+  },
+  {
+   "path": "assets/battle/pkmn/back/549.png",
+   "bytes": 11101
+  },
+  {
+   "path": "assets/battle/pkmn/back/550.png",
+   "bytes": 6332
+  },
+  {
+   "path": "assets/battle/pkmn/back/551.png",
+   "bytes": 4164
+  },
+  {
+   "path": "assets/battle/pkmn/back/552.png",
+   "bytes": 5909
+  },
+  {
+   "path": "assets/battle/pkmn/back/553.png",
+   "bytes": 10272
+  },
+  {
+   "path": "assets/battle/pkmn/back/554.png",
+   "bytes": 3354
+  },
+  {
+   "path": "assets/battle/pkmn/back/555.png",
+   "bytes": 10269
+  },
+  {
+   "path": "assets/battle/pkmn/back/556.png",
+   "bytes": 9839
+  },
+  {
+   "path": "assets/battle/pkmn/back/557.png",
+   "bytes": 2450
+  },
+  {
+   "path": "assets/battle/pkmn/back/558.png",
+   "bytes": 8870
+  },
+  {
+   "path": "assets/battle/pkmn/back/559.png",
+   "bytes": 2661
+  },
+  {
+   "path": "assets/battle/pkmn/back/560.png",
+   "bytes": 6876
+  },
+  {
+   "path": "assets/battle/pkmn/back/561.png",
+   "bytes": 32562
+  },
+  {
+   "path": "assets/battle/pkmn/back/562.png",
+   "bytes": 8170
+  },
+  {
+   "path": "assets/battle/pkmn/back/563.png",
+   "bytes": 17356
+  },
+  {
+   "path": "assets/battle/pkmn/back/564.png",
+   "bytes": 4884
+  },
+  {
+   "path": "assets/battle/pkmn/back/565.png",
+   "bytes": 10078
+  },
+  {
+   "path": "assets/battle/pkmn/back/566.png",
+   "bytes": 8236
+  },
+  {
+   "path": "assets/battle/pkmn/back/567.png",
+   "bytes": 14216
+  },
+  {
+   "path": "assets/battle/pkmn/back/568.png",
+   "bytes": 6378
+  },
+  {
+   "path": "assets/battle/pkmn/back/569.png",
+   "bytes": 30267
+  },
+  {
+   "path": "assets/battle/pkmn/back/570.png",
+   "bytes": 4977
+  },
+  {
+   "path": "assets/battle/pkmn/back/571.png",
+   "bytes": 13171
+  },
+  {
+   "path": "assets/battle/pkmn/back/572.png",
+   "bytes": 6563
+  },
+  {
+   "path": "assets/battle/pkmn/back/573.png",
+   "bytes": 7691
+  },
+  {
+   "path": "assets/battle/pkmn/back/574.png",
+   "bytes": 2340
+  },
+  {
+   "path": "assets/battle/pkmn/back/575.png",
+   "bytes": 5912
+  },
+  {
+   "path": "assets/battle/pkmn/back/576.png",
+   "bytes": 10632
+  },
+  {
+   "path": "assets/battle/pkmn/back/577.png",
+   "bytes": 5102
+  },
+  {
+   "path": "assets/battle/pkmn/back/578.png",
+   "bytes": 5240
+  },
+  {
+   "path": "assets/battle/pkmn/back/579.png",
+   "bytes": 15567
+  },
+  {
+   "path": "assets/battle/pkmn/back/580.png",
+   "bytes": 3280
+  },
+  {
+   "path": "assets/battle/pkmn/back/581.png",
+   "bytes": 8608
+  },
+  {
+   "path": "assets/battle/pkmn/back/582.png",
+   "bytes": 2884
+  },
+  {
+   "path": "assets/battle/pkmn/back/583.png",
+   "bytes": 13311
+  },
+  {
+   "path": "assets/battle/pkmn/back/584.png",
+   "bytes": 9192
+  },
+  {
+   "path": "assets/battle/pkmn/back/585.png",
+   "bytes": 2728
+  },
+  {
+   "path": "assets/battle/pkmn/back/586.png",
+   "bytes": 6061
+  },
+  {
+   "path": "assets/battle/pkmn/back/587.png",
+   "bytes": 11077
+  },
+  {
+   "path": "assets/battle/pkmn/back/588.png",
+   "bytes": 1804
+  },
+  {
+   "path": "assets/battle/pkmn/back/589.png",
+   "bytes": 8302
+  },
+  {
+   "path": "assets/battle/pkmn/back/590.png",
+   "bytes": 2468
+  },
+  {
+   "path": "assets/battle/pkmn/back/591.png",
+   "bytes": 8413
+  },
+  {
+   "path": "assets/battle/pkmn/back/592.png",
+   "bytes": 15267
+  },
+  {
+   "path": "assets/battle/pkmn/back/593.png",
+   "bytes": 11499
+  },
+  {
+   "path": "assets/battle/pkmn/back/594.png",
+   "bytes": 5674
+  },
+  {
+   "path": "assets/battle/pkmn/back/595.png",
+   "bytes": 857
+  },
+  {
+   "path": "assets/battle/pkmn/back/596.png",
+   "bytes": 8590
+  },
+  {
+   "path": "assets/battle/pkmn/back/597.png",
+   "bytes": 2500
+  },
+  {
+   "path": "assets/battle/pkmn/back/598.png",
+   "bytes": 5279
+  },
+  {
+   "path": "assets/battle/pkmn/back/599.png",
+   "bytes": 1198
+  },
+  {
+   "path": "assets/battle/pkmn/back/600.png",
+   "bytes": 3611
+  },
+  {
+   "path": "assets/battle/pkmn/back/601.png",
+   "bytes": 5720
+  },
+  {
+   "path": "assets/battle/pkmn/back/602.png",
+   "bytes": 1134
+  },
+  {
+   "path": "assets/battle/pkmn/back/603.png",
+   "bytes": 4652
+  },
+  {
+   "path": "assets/battle/pkmn/back/604.png",
+   "bytes": 35368
+  },
+  {
+   "path": "assets/battle/pkmn/back/605.png",
+   "bytes": 4882
+  },
+  {
+   "path": "assets/battle/pkmn/back/606.png",
+   "bytes": 4262
+  },
+  {
+   "path": "assets/battle/pkmn/back/607.png",
+   "bytes": 3512
+  },
+  {
+   "path": "assets/battle/pkmn/back/608.png",
+   "bytes": 7717
+  },
+  {
+   "path": "assets/battle/pkmn/back/609.png",
+   "bytes": 29567
+  },
+  {
+   "path": "assets/battle/pkmn/back/610.png",
+   "bytes": 5201
+  },
+  {
+   "path": "assets/battle/pkmn/back/611.png",
+   "bytes": 7916
+  },
+  {
+   "path": "assets/battle/pkmn/back/612.png",
+   "bytes": 22676
+  },
+  {
+   "path": "assets/battle/pkmn/back/613.png",
+   "bytes": 3777
+  },
+  {
+   "path": "assets/battle/pkmn/back/614.png",
+   "bytes": 12158
+  },
+  {
+   "path": "assets/battle/pkmn/back/615.png",
+   "bytes": 5414
+  },
+  {
+   "path": "assets/battle/pkmn/back/616.png",
+   "bytes": 3020
+  },
+  {
+   "path": "assets/battle/pkmn/back/617.png",
+   "bytes": 9568
+  },
+  {
+   "path": "assets/battle/pkmn/back/618.png",
+   "bytes": 2950
+  },
+  {
+   "path": "assets/battle/pkmn/back/619.png",
+   "bytes": 4928
+  },
+  {
+   "path": "assets/battle/pkmn/back/620.png",
+   "bytes": 15694
+  },
+  {
+   "path": "assets/battle/pkmn/back/621.png",
+   "bytes": 15932
+  },
+  {
+   "path": "assets/battle/pkmn/back/622.png",
+   "bytes": 4791
+  },
+  {
+   "path": "assets/battle/pkmn/back/623.png",
+   "bytes": 10904
+  },
+  {
+   "path": "assets/battle/pkmn/back/624.png",
+   "bytes": 2802
+  },
+  {
+   "path": "assets/battle/pkmn/back/625.png",
+   "bytes": 6289
+  },
+  {
+   "path": "assets/battle/pkmn/back/626.png",
+   "bytes": 8527
+  },
+  {
+   "path": "assets/battle/pkmn/back/627.png",
+   "bytes": 4915
+  },
+  {
+   "path": "assets/battle/pkmn/back/628.png",
+   "bytes": 14011
+  },
+  {
+   "path": "assets/battle/pkmn/back/629.png",
+   "bytes": 6763
+  },
+  {
+   "path": "assets/battle/pkmn/back/630.png",
+   "bytes": 10147
+  },
+  {
+   "path": "assets/battle/pkmn/back/631.png",
+   "bytes": 11040
+  },
+  {
+   "path": "assets/battle/pkmn/back/632.png",
+   "bytes": 3017
+  },
+  {
+   "path": "assets/battle/pkmn/back/633.png",
+   "bytes": 4462
+  },
+  {
+   "path": "assets/battle/pkmn/back/634.png",
+   "bytes": 11102
+  },
+  {
+   "path": "assets/battle/pkmn/back/635.png",
+   "bytes": 27474
+  },
+  {
+   "path": "assets/battle/pkmn/back/636.png",
+   "bytes": 7293
+  },
+  {
+   "path": "assets/battle/pkmn/back/637.png",
+   "bytes": 20566
+  },
+  {
+   "path": "assets/battle/pkmn/back/638.png",
+   "bytes": 16787
+  },
+  {
+   "path": "assets/battle/pkmn/back/639.png",
+   "bytes": 10505
+  },
+  {
+   "path": "assets/battle/pkmn/back/640.png",
+   "bytes": 12042
+  },
+  {
+   "path": "assets/battle/pkmn/back/641.png",
+   "bytes": 9768
+  },
+  {
+   "path": "assets/battle/pkmn/back/642.png",
+   "bytes": 61225
+  },
+  {
+   "path": "assets/battle/pkmn/back/643.png",
+   "bytes": 44411
+  },
+  {
+   "path": "assets/battle/pkmn/back/644.png",
+   "bytes": 36040
+  },
+  {
+   "path": "assets/battle/pkmn/back/645.png",
+   "bytes": 14969
+  },
+  {
+   "path": "assets/battle/pkmn/back/646.png",
+   "bytes": 11714
+  },
+  {
+   "path": "assets/battle/pkmn/back/647.png",
+   "bytes": 9810
+  },
+  {
+   "path": "assets/battle/pkmn/back/648.png",
+   "bytes": 5657
+  },
+  {
+   "path": "assets/battle/pkmn/back/649.png",
+   "bytes": 12962
+  },
+  {
+   "path": "assets/battle/anim/absorb.json",
+   "bytes": 4287
+  },
+  {
+   "path": "assets/battle/anim/acid-armor.json",
+   "bytes": 4315
+  },
+  {
+   "path": "assets/battle/anim/acid-spray.json",
+   "bytes": 10005
+  },
+  {
+   "path": "assets/battle/anim/acid.json",
+   "bytes": 3127
+  },
+  {
+   "path": "assets/battle/anim/acrobatics.json",
+   "bytes": 1928
+  },
+  {
+   "path": "assets/battle/anim/acupressure.json",
+   "bytes": 1393
+  },
+  {
+   "path": "assets/battle/anim/aerial-ace.json",
+   "bytes": 1297
+  },
+  {
+   "path": "assets/battle/anim/aeroblast.json",
+   "bytes": 13435
+  },
+  {
+   "path": "assets/battle/anim/after-you.json",
+   "bytes": 805
+  },
+  {
+   "path": "assets/battle/anim/agility.json",
+   "bytes": 31
+  },
+  {
+   "path": "assets/battle/anim/air-cutter.json",
+   "bytes": 3251
+  },
+  {
+   "path": "assets/battle/anim/air-slash.json",
+   "bytes": 7633
+  },
+  {
+   "path": "assets/battle/anim/ally-switch.json",
+   "bytes": 48
+  },
+  {
+   "path": "assets/battle/anim/amnesia.json",
+   "bytes": 1409
+  },
+  {
+   "path": "assets/battle/anim/ancient-power.json",
+   "bytes": 16949
+  },
+  {
+   "path": "assets/battle/anim/aqua-cutter.json",
+   "bytes": 813
+  },
+  {
+   "path": "assets/battle/anim/aqua-jet.json",
+   "bytes": 6292
+  },
+  {
+   "path": "assets/battle/anim/aqua-ring.json",
+   "bytes": 20402
+  },
+  {
+   "path": "assets/battle/anim/aqua-tail.json",
+   "bytes": 4018
+  },
+  {
+   "path": "assets/battle/anim/arm-thrust.json",
+   "bytes": 1399
+  },
+  {
+   "path": "assets/battle/anim/aromatherapy.json",
+   "bytes": 21103
+  },
+  {
+   "path": "assets/battle/anim/aromatic-mist.json",
+   "bytes": 4032
+  },
+  {
+   "path": "assets/battle/anim/assist.json",
+   "bytes": 12748
+  },
+  {
+   "path": "assets/battle/anim/assurance.json",
+   "bytes": 1430
+  },
+  {
+   "path": "assets/battle/anim/astonish.json",
+   "bytes": 492
+  },
+  {
+   "path": "assets/battle/anim/attack-order.json",
+   "bytes": 8313
+  },
+  {
+   "path": "assets/battle/anim/attract.json",
+   "bytes": 4395
+  },
+  {
+   "path": "assets/battle/anim/aura-sphere.json",
+   "bytes": 4379
+  },
+  {
+   "path": "assets/battle/anim/aurora-beam.json",
+   "bytes": 14171
+  },
+  {
+   "path": "assets/battle/anim/aurora-veil.json",
+   "bytes": 56737
+  },
+  {
+   "path": "assets/battle/anim/autotomize.json",
+   "bytes": 8231
+  },
+  {
+   "path": "assets/battle/anim/avalanche.json",
+   "bytes": 7447
+  },
+  {
+   "path": "assets/battle/anim/axe-kick.json",
+   "bytes": 1113
+  },
+  {
+   "path": "assets/battle/anim/baby-doll-eyes.json",
+   "bytes": 17681
+  },
+  {
+   "path": "assets/battle/anim/baton-pass.json",
+   "bytes": 3643
+  },
+  {
+   "path": "assets/battle/anim/beat-up.json",
+   "bytes": 523
+  },
+  {
+   "path": "assets/battle/anim/belch.json",
+   "bytes": 1972
+  },
+  {
+   "path": "assets/battle/anim/belly-drum.json",
+   "bytes": 1759
+  },
+  {
+   "path": "assets/battle/anim/bide.json",
+   "bytes": 4511
+  },
+  {
+   "path": "assets/battle/anim/bind.json",
+   "bytes": 31
+  },
+  {
+   "path": "assets/battle/anim/bite.json",
+   "bytes": 2473
+  },
+  {
+   "path": "assets/battle/anim/blaze-kick.json",
+   "bytes": 5415
+  },
+  {
+   "path": "assets/battle/anim/bleakwind-storm.json",
+   "bytes": 2440
+  },
+  {
+   "path": "assets/battle/anim/blizzard.json",
+   "bytes": 23054
+  },
+  {
+   "path": "assets/battle/anim/block.json",
+   "bytes": 1367
+  },
+  {
+   "path": "assets/battle/anim/blue-flare.json",
+   "bytes": 12795
+  },
+  {
+   "path": "assets/battle/anim/body-press.json",
+   "bytes": 1952
+  },
+  {
+   "path": "assets/battle/anim/body-slam.json",
+   "bytes": 790
+  },
+  {
+   "path": "assets/battle/anim/bolt-strike.json",
+   "bytes": 35377
+  },
+  {
+   "path": "assets/battle/anim/bone-rush.json",
+   "bytes": 4834
+  },
+  {
+   "path": "assets/battle/anim/bonemerang.json",
+   "bytes": 2045
+  },
+  {
+   "path": "assets/battle/anim/boomburst.json",
+   "bytes": 10260
+  },
+  {
+   "path": "assets/battle/anim/bounce.json",
+   "bytes": 1305
+  },
+  {
+   "path": "assets/battle/anim/brave-bird.json",
+   "bytes": 7523
+  },
+  {
+   "path": "assets/battle/anim/breaking-swipe.json",
+   "bytes": 4361
+  },
+  {
+   "path": "assets/battle/anim/brick-break.json",
+   "bytes": 8496
+  },
+  {
+   "path": "assets/battle/anim/brine.json",
+   "bytes": 13965
+  },
+  {
+   "path": "assets/battle/anim/bubble-beam.json",
+   "bytes": 20975
+  },
+  {
+   "path": "assets/battle/anim/bug-bite.json",
+   "bytes": 8208
+  },
+  {
+   "path": "assets/battle/anim/bug-buzz.json",
+   "bytes": 17079
+  },
+  {
+   "path": "assets/battle/anim/bulk-up.json",
+   "bytes": 666
+  },
+  {
+   "path": "assets/battle/anim/bulldoze.json",
+   "bytes": 7610
+  },
+  {
+   "path": "assets/battle/anim/bullet-punch.json",
+   "bytes": 1741
+  },
+  {
+   "path": "assets/battle/anim/bullet-seed.json",
+   "bytes": 4702
+  },
+  {
+   "path": "assets/battle/anim/calm-mind.json",
+   "bytes": 1927
+  },
+  {
+   "path": "assets/battle/anim/camouflage.json",
+   "bytes": 3803
+  },
+  {
+   "path": "assets/battle/anim/captivate.json",
+   "bytes": 10151
+  },
+  {
+   "path": "assets/battle/anim/charge-beam.json",
+   "bytes": 16370
+  },
+  {
+   "path": "assets/battle/anim/charge.json",
+   "bytes": 2249
+  },
+  {
+   "path": "assets/battle/anim/charm.json",
+   "bytes": 4399
+  },
+  {
+   "path": "assets/battle/anim/chatter.json",
+   "bytes": 15689
+  },
+  {
+   "path": "assets/battle/anim/circle-throw.json",
+   "bytes": 1231
+  },
+  {
+   "path": "assets/battle/anim/clamp.json",
+   "bytes": 5608
+  },
+  {
+   "path": "assets/battle/anim/clear-smog.json",
+   "bytes": 12258
+  },
+  {
+   "path": "assets/battle/anim/close-combat.json",
+   "bytes": 8951
+  },
+  {
+   "path": "assets/battle/anim/coil.json",
+   "bytes": 39007
+  },
+  {
+   "path": "assets/battle/anim/comet-punch.json",
+   "bytes": 1501
+  },
+  {
+   "path": "assets/battle/anim/comeuppance.json",
+   "bytes": 1692
+  },
+  {
+   "path": "assets/battle/anim/confide.json",
+   "bytes": 797
+  },
+  {
+   "path": "assets/battle/anim/confuse-ray.json",
+   "bytes": 3262
+  },
+  {
+   "path": "assets/battle/anim/confusion.json",
+   "bytes": 990
+  },
+  {
+   "path": "assets/battle/anim/conversion-2.json",
+   "bytes": 3825
+  },
+  {
+   "path": "assets/battle/anim/conversion.json",
+   "bytes": 1893
+  },
+  {
+   "path": "assets/battle/anim/copycat.json",
+   "bytes": 27
+  },
+  {
+   "path": "assets/battle/anim/cosmic-power.json",
+   "bytes": 9967
+  },
+  {
+   "path": "assets/battle/anim/cotton-guard.json",
+   "bytes": 14081
+  },
+  {
+   "path": "assets/battle/anim/cotton-spore.json",
+   "bytes": 36478
+  },
+  {
+   "path": "assets/battle/anim/counter.json",
+   "bytes": 1027
+  },
+  {
+   "path": "assets/battle/anim/covet.json",
+   "bytes": 4863
+  },
+  {
+   "path": "assets/battle/anim/crabhammer.json",
+   "bytes": 4819
+  },
+  {
+   "path": "assets/battle/anim/crafty-shield.json",
+   "bytes": 63987
+  },
+  {
+   "path": "assets/battle/anim/cross-chop.json",
+   "bytes": 3903
+  },
+  {
+   "path": "assets/battle/anim/cross-poison.json",
+   "bytes": 10187
+  },
+  {
+   "path": "assets/battle/anim/crunch.json",
+   "bytes": 4804
+  },
+  {
+   "path": "assets/battle/anim/crush-claw.json",
+   "bytes": 2181
+  },
+  {
+   "path": "assets/battle/anim/crush-grip.json",
+   "bytes": 1512
+  },
+  {
+   "path": "assets/battle/anim/curse.json",
+   "bytes": 2819
+  },
+  {
+   "path": "assets/battle/anim/cut.json",
+   "bytes": 996
+  },
+  {
+   "path": "assets/battle/anim/dark-pulse.json",
+   "bytes": 9818
+  },
+  {
+   "path": "assets/battle/anim/dark-void.json",
+   "bytes": 2712
+  },
+  {
+   "path": "assets/battle/anim/dazzling-gleam.json",
+   "bytes": 2013
+  },
+  {
+   "path": "assets/battle/anim/defend-order.json",
+   "bytes": 14782
+  },
+  {
+   "path": "assets/battle/anim/defense-curl.json",
+   "bytes": 1236
+  },
+  {
+   "path": "assets/battle/anim/defog.json",
+   "bytes": 19068
+  },
+  {
+   "path": "assets/battle/anim/destiny-bond.json",
+   "bytes": 3995
+  },
+  {
+   "path": "assets/battle/anim/detect.json",
+   "bytes": 1028
+  },
+  {
+   "path": "assets/battle/anim/dig.json",
+   "bytes": 5455
+  },
+  {
+   "path": "assets/battle/anim/disable.json",
+   "bytes": 591
+  },
+  {
+   "path": "assets/battle/anim/disarming-voice.json",
+   "bytes": 7650
+  },
+  {
+   "path": "assets/battle/anim/discharge.json",
+   "bytes": 6888
+  },
+  {
+   "path": "assets/battle/anim/dive.json",
+   "bytes": 5456
+  },
+  {
+   "path": "assets/battle/anim/dizzy-punch.json",
+   "bytes": 5000
+  },
+  {
+   "path": "assets/battle/anim/doom-desire.json",
+   "bytes": 7945
+  },
+  {
+   "path": "assets/battle/anim/double-edge.json",
+   "bytes": 1340
+  },
+  {
+   "path": "assets/battle/anim/double-hit.json",
+   "bytes": 1477
+  },
+  {
+   "path": "assets/battle/anim/double-kick.json",
+   "bytes": 522
+  },
+  {
+   "path": "assets/battle/anim/double-slap.json",
+   "bytes": 999
+  },
+  {
+   "path": "assets/battle/anim/double-team.json",
+   "bytes": 37
+  },
+  {
+   "path": "assets/battle/anim/dragon-ascent.json",
+   "bytes": 1774
+  },
+  {
+   "path": "assets/battle/anim/dragon-breath.json",
+   "bytes": 10355
+  },
+  {
+   "path": "assets/battle/anim/dragon-claw.json",
+   "bytes": 4430
+  },
+  {
+   "path": "assets/battle/anim/dragon-dance.json",
+   "bytes": 3086
+  },
+  {
+   "path": "assets/battle/anim/dragon-pulse.json",
+   "bytes": 19611
+  },
+  {
+   "path": "assets/battle/anim/dragon-rush.json",
+   "bytes": 829
+  },
+  {
+   "path": "assets/battle/anim/dragon-tail.json",
+   "bytes": 4459
+  },
+  {
+   "path": "assets/battle/anim/drain-punch.json",
+   "bytes": 8360
+  },
+  {
+   "path": "assets/battle/anim/draining-kiss.json",
+   "bytes": 8527
+  },
+  {
+   "path": "assets/battle/anim/dream-eater.json",
+   "bytes": 5411
+  },
+  {
+   "path": "assets/battle/anim/drill-peck.json",
+   "bytes": 5891
+  },
+  {
+   "path": "assets/battle/anim/drill-run.json",
+   "bytes": 13137
+  },
+  {
+   "path": "assets/battle/anim/dual-chop.json",
+   "bytes": 3399
+  },
+  {
+   "path": "assets/battle/anim/dual-wingbeat.json",
+   "bytes": 1257
+  },
+  {
+   "path": "assets/battle/anim/dynamic-punch.json",
+   "bytes": 2846
+  },
+  {
+   "path": "assets/battle/anim/earth-power.json",
+   "bytes": 5317
+  },
+  {
+   "path": "assets/battle/anim/earthquake.json",
+   "bytes": 18995
+  },
+  {
+   "path": "assets/battle/anim/echoed-voice.json",
+   "bytes": 2893
+  },
+  {
+   "path": "assets/battle/anim/eerie-impulse.json",
+   "bytes": 8322
+  },
+  {
+   "path": "assets/battle/anim/electric-terrain.json",
+   "bytes": 4082
+  },
+  {
+   "path": "assets/battle/anim/electro-ball.json",
+   "bytes": 7175
+  },
+  {
+   "path": "assets/battle/anim/electroweb.json",
+   "bytes": 8312
+  },
+  {
+   "path": "assets/battle/anim/ember.json",
+   "bytes": 1462
+  },
+  {
+   "path": "assets/battle/anim/encore.json",
+   "bytes": 1945
+  },
+  {
+   "path": "assets/battle/anim/endeavor.json",
+   "bytes": 457
+  },
+  {
+   "path": "assets/battle/anim/endure.json",
+   "bytes": 789
+  },
+  {
+   "path": "assets/battle/anim/energy-ball.json",
+   "bytes": 7116
+  },
+  {
+   "path": "assets/battle/anim/entrainment.json",
+   "bytes": 1006
+  },
+  {
+   "path": "assets/battle/anim/eruption.json",
+   "bytes": 19521
+  },
+  {
+   "path": "assets/battle/anim/explosion.json",
+   "bytes": 3863
+  },
+  {
+   "path": "assets/battle/anim/extrasensory.json",
+   "bytes": 5197
+  },
+  {
+   "path": "assets/battle/anim/extreme-speed.json",
+   "bytes": 3495
+  },
+  {
+   "path": "assets/battle/anim/facade.json",
+   "bytes": 12410
+  },
+  {
+   "path": "assets/battle/anim/fairy-wind.json",
+   "bytes": 13722
+  },
+  {
+   "path": "assets/battle/anim/fake-out.json",
+   "bytes": 2902
+  },
+  {
+   "path": "assets/battle/anim/fake-tears.json",
+   "bytes": 32420
+  },
+  {
+   "path": "assets/battle/anim/false-swipe.json",
+   "bytes": 4866
+  },
+  {
+   "path": "assets/battle/anim/feather-dance.json",
+   "bytes": 13026
+  },
+  {
+   "path": "assets/battle/anim/feint-attack.json",
+   "bytes": 776
+  },
+  {
+   "path": "assets/battle/anim/feint.json",
+   "bytes": 1010
+  },
+  {
+   "path": "assets/battle/anim/fell-stinger.json",
+   "bytes": 6286
+  },
+  {
+   "path": "assets/battle/anim/fiery-dance.json",
+   "bytes": 3505
+  },
+  {
+   "path": "assets/battle/anim/final-gambit.json",
+   "bytes": 6676
+  },
+  {
+   "path": "assets/battle/anim/fire-blast.json",
+   "bytes": 54410
+  },
+  {
+   "path": "assets/battle/anim/fire-fang.json",
+   "bytes": 6760
+  },
+  {
+   "path": "assets/battle/anim/fire-lash.json",
+   "bytes": 5962
+  },
+  {
+   "path": "assets/battle/anim/fire-punch.json",
+   "bytes": 6012
+  },
+  {
+   "path": "assets/battle/anim/fire-spin.json",
+   "bytes": 22270
+  },
+  {
+   "path": "assets/battle/anim/fissure.json",
+   "bytes": 47449
+  },
+  {
+   "path": "assets/battle/anim/flail.json",
+   "bytes": 3485
+  },
+  {
+   "path": "assets/battle/anim/flame-burst.json",
+   "bytes": 13114
+  },
+  {
+   "path": "assets/battle/anim/flame-charge.json",
+   "bytes": 2340
+  },
+  {
+   "path": "assets/battle/anim/flame-wheel.json",
+   "bytes": 5020
+  },
+  {
+   "path": "assets/battle/anim/flamethrower.json",
+   "bytes": 8366
+  },
+  {
+   "path": "assets/battle/anim/flare-blitz.json",
+   "bytes": 8598
+  },
+  {
+   "path": "assets/battle/anim/flash-cannon.json",
+   "bytes": 22312
+  },
+  {
+   "path": "assets/battle/anim/flatter.json",
+   "bytes": 24231
+  },
+  {
+   "path": "assets/battle/anim/fling.json",
+   "bytes": 884
+  },
+  {
+   "path": "assets/battle/anim/flower-shield.json",
+   "bytes": 16260
+  },
+  {
+   "path": "assets/battle/anim/fly.json",
+   "bytes": 6162
+  },
+  {
+   "path": "assets/battle/anim/focus-energy.json",
+   "bytes": 3950
+  },
+  {
+   "path": "assets/battle/anim/focus-punch.json",
+   "bytes": 5296
+  },
+  {
+   "path": "assets/battle/anim/follow-me.json",
+   "bytes": 2958
+  },
+  {
+   "path": "assets/battle/anim/force-palm.json",
+   "bytes": 3399
+  },
+  {
+   "path": "assets/battle/anim/foresight.json",
+   "bytes": 3814
+  },
+  {
+   "path": "assets/battle/anim/foul-play.json",
+   "bytes": 721
+  },
+  {
+   "path": "assets/battle/anim/freeze-dry.json",
+   "bytes": 71727
+  },
+  {
+   "path": "assets/battle/anim/frost-breath.json",
+   "bytes": 7811
+  },
+  {
+   "path": "assets/battle/anim/fury-attack.json",
+   "bytes": 626
+  },
+  {
+   "path": "assets/battle/anim/fury-cutter.json",
+   "bytes": 628
+  },
+  {
+   "path": "assets/battle/anim/fury-swipes.json",
+   "bytes": 2305
+  },
+  {
+   "path": "assets/battle/anim/fusion-bolt.json",
+   "bytes": 2766
+  },
+  {
+   "path": "assets/battle/anim/fusion-flare.json",
+   "bytes": 22845
+  },
+  {
+   "path": "assets/battle/anim/future-sight.json",
+   "bytes": 9714
+  },
+  {
+   "path": "assets/battle/anim/gastro-acid.json",
+   "bytes": 15159
+  },
+  {
+   "path": "assets/battle/anim/gear-grind.json",
+   "bytes": 8250
+  },
+  {
+   "path": "assets/battle/anim/gear-up.json",
+   "bytes": 43098
+  },
+  {
+   "path": "assets/battle/anim/giga-drain.json",
+   "bytes": 44431
+  },
+  {
+   "path": "assets/battle/anim/giga-impact.json",
+   "bytes": 3600
+  },
+  {
+   "path": "assets/battle/anim/glaciate.json",
+   "bytes": 60355
+  },
+  {
+   "path": "assets/battle/anim/glare.json",
+   "bytes": 2394
+  },
+  {
+   "path": "assets/battle/anim/grass-knot.json",
+   "bytes": 2499
+  },
+  {
+   "path": "assets/battle/anim/grassy-terrain.json",
+   "bytes": 18911
+  },
+  {
+   "path": "assets/battle/anim/gravity.json",
+   "bytes": 4885
+  },
+  {
+   "path": "assets/battle/anim/growl.json",
+   "bytes": 3173
+  },
+  {
+   "path": "assets/battle/anim/growth.json",
+   "bytes": 6978
+  },
+  {
+   "path": "assets/battle/anim/grudge.json",
+   "bytes": 17380
+  },
+  {
+   "path": "assets/battle/anim/guard-split.json",
+   "bytes": 4980
+  },
+  {
+   "path": "assets/battle/anim/guard-swap.json",
+   "bytes": 29311
+  },
+  {
+   "path": "assets/battle/anim/guillotine.json",
+   "bytes": 3606
+  },
+  {
+   "path": "assets/battle/anim/gunk-shot.json",
+   "bytes": 51848
+  },
+  {
+   "path": "assets/battle/anim/gust.json",
+   "bytes": 2266
+  },
+  {
+   "path": "assets/battle/anim/gyro-ball.json",
+   "bytes": 6323
+  },
+  {
+   "path": "assets/battle/anim/hail.json",
+   "bytes": 35
+  },
+  {
+   "path": "assets/battle/anim/hammer-arm.json",
+   "bytes": 2782
+  },
+  {
+   "path": "assets/battle/anim/harden.json",
+   "bytes": 910
+  },
+  {
+   "path": "assets/battle/anim/haze.json",
+   "bytes": 5715
+  },
+  {
+   "path": "assets/battle/anim/head-charge.json",
+   "bytes": 644
+  },
+  {
+   "path": "assets/battle/anim/head-smash.json",
+   "bytes": 7302
+  },
+  {
+   "path": "assets/battle/anim/headbutt.json",
+   "bytes": 1280
+  },
+  {
+   "path": "assets/battle/anim/headlong-rush.json",
+   "bytes": 644
+  },
+  {
+   "path": "assets/battle/anim/heal-bell.json",
+   "bytes": 7696
+  },
+  {
+   "path": "assets/battle/anim/heal-pulse.json",
+   "bytes": 5901
+  },
+  {
+   "path": "assets/battle/anim/healing-wish.json",
+   "bytes": 7138
+  },
+  {
+   "path": "assets/battle/anim/heart-swap.json",
+   "bytes": 28976
+  },
+  {
+   "path": "assets/battle/anim/heat-crash.json",
+   "bytes": 1814
+  },
+  {
+   "path": "assets/battle/anim/heat-wave.json",
+   "bytes": 34
+  },
+  {
+   "path": "assets/battle/anim/heavy-slam.json",
+   "bytes": 649
+  },
+  {
+   "path": "assets/battle/anim/helping-hand.json",
+   "bytes": 1541
+  },
+  {
+   "path": "assets/battle/anim/hex.json",
+   "bytes": 8587
+  },
+  {
+   "path": "assets/battle/anim/hidden-power.json",
+   "bytes": 8487
+  },
+  {
+   "path": "assets/battle/anim/high-horsepower.json",
+   "bytes": 1016
+  },
+  {
+   "path": "assets/battle/anim/high-jump-kick.json",
+   "bytes": 821
+  },
+  {
+   "path": "assets/battle/anim/hone-claws.json",
+   "bytes": 2114
+  },
+  {
+   "path": "assets/battle/anim/horn-attack.json",
+   "bytes": 1558
+  },
+  {
+   "path": "assets/battle/anim/horn-drill.json",
+   "bytes": 9250
+  },
+  {
+   "path": "assets/battle/anim/horn-leech.json",
+   "bytes": 25712
+  },
+  {
+   "path": "assets/battle/anim/howl.json",
+   "bytes": 2687
+  },
+  {
+   "path": "assets/battle/anim/hurricane.json",
+   "bytes": 27529
+  },
+  {
+   "path": "assets/battle/anim/hydro-pump.json",
+   "bytes": 44096
+  },
+  {
+   "path": "assets/battle/anim/hyper-beam.json",
+   "bytes": 69798
+  },
+  {
+   "path": "assets/battle/anim/hyper-drill.json",
+   "bytes": 13137
+  },
+  {
+   "path": "assets/battle/anim/hyper-fang.json",
+   "bytes": 1726
+  },
+  {
+   "path": "assets/battle/anim/hyper-voice.json",
+   "bytes": 9823
+  },
+  {
+   "path": "assets/battle/anim/hypnosis.json",
+   "bytes": 11779
+  },
+  {
+   "path": "assets/battle/anim/ice-beam.json",
+   "bytes": 15162
+  },
+  {
+   "path": "assets/battle/anim/ice-fang.json",
+   "bytes": 5512
+  },
+  {
+   "path": "assets/battle/anim/ice-punch.json",
+   "bytes": 5805
+  },
+  {
+   "path": "assets/battle/anim/ice-shard.json",
+   "bytes": 1779
+  },
+  {
+   "path": "assets/battle/anim/icicle-crash.json",
+   "bytes": 11728
+  },
+  {
+   "path": "assets/battle/anim/icicle-spear.json",
+   "bytes": 3770
+  },
+  {
+   "path": "assets/battle/anim/icy-wind.json",
+   "bytes": 8589
+  },
+  {
+   "path": "assets/battle/anim/imprison.json",
+   "bytes": 2279
+  },
+  {
+   "path": "assets/battle/anim/incinerate.json",
+   "bytes": 5239
+  },
+  {
+   "path": "assets/battle/anim/index.json",
+   "bytes": 8651
+  },
+  {
+   "path": "assets/battle/anim/inferno.json",
+   "bytes": 7984
+  },
+  {
+   "path": "assets/battle/anim/infestation.json",
+   "bytes": 11934
+  },
+  {
+   "path": "assets/battle/anim/ingrain.json",
+   "bytes": 8254
+  },
+  {
+   "path": "assets/battle/anim/iron-defense.json",
+   "bytes": 4281
+  },
+  {
+   "path": "assets/battle/anim/iron-head.json",
+   "bytes": 541
+  },
+  {
+   "path": "assets/battle/anim/iron-tail.json",
+   "bytes": 2089
+  },
+  {
+   "path": "assets/battle/anim/judgment.json",
+   "bytes": 27001
+  },
+  {
+   "path": "assets/battle/anim/kinesis.json",
+   "bytes": 5393
+  },
+  {
+   "path": "assets/battle/anim/knock-off.json",
+   "bytes": 2358
+  },
+  {
+   "path": "assets/battle/anim/laser-focus.json",
+   "bytes": 12171
+  },
+  {
+   "path": "assets/battle/anim/last-resort.json",
+   "bytes": 39020
+  },
+  {
+   "path": "assets/battle/anim/lava-plume.json",
+   "bytes": 6854
+  },
+  {
+   "path": "assets/battle/anim/leaf-blade.json",
+   "bytes": 3609
+  },
+  {
+   "path": "assets/battle/anim/leaf-storm.json",
+   "bytes": 45483
+  },
+  {
+   "path": "assets/battle/anim/leaf-tornado.json",
+   "bytes": 55354
+  },
+  {
+   "path": "assets/battle/anim/leafage.json",
+   "bytes": 11255
+  },
+  {
+   "path": "assets/battle/anim/leech-life.json",
+   "bytes": 7971
+  },
+  {
+   "path": "assets/battle/anim/leech-seed.json",
+   "bytes": 11087
+  },
+  {
+   "path": "assets/battle/anim/leer.json",
+   "bytes": 629
+  },
+  {
+   "path": "assets/battle/anim/lick.json",
+   "bytes": 4799
+  },
+  {
+   "path": "assets/battle/anim/life-dew.json",
+   "bytes": 4617
+  },
+  {
+   "path": "assets/battle/anim/light-screen.json",
+   "bytes": 1829
+  },
+  {
+   "path": "assets/battle/anim/liquidation.json",
+   "bytes": 14536
+  },
+  {
+   "path": "assets/battle/anim/lock-on.json",
+   "bytes": 3802
+  },
+  {
+   "path": "assets/battle/anim/lovely-kiss.json",
+   "bytes": 5317
+  },
+  {
+   "path": "assets/battle/anim/low-kick.json",
+   "bytes": 1304
+  },
+  {
+   "path": "assets/battle/anim/low-sweep.json",
+   "bytes": 1312
+  },
+  {
+   "path": "assets/battle/anim/lunar-blessing.json",
+   "bytes": 1073
+  },
+  {
+   "path": "assets/battle/anim/lunar-dance.json",
+   "bytes": 6512
+  },
+  {
+   "path": "assets/battle/anim/lunge.json",
+   "bytes": 445
+  },
+  {
+   "path": "assets/battle/anim/luster-purge.json",
+   "bytes": 19414
+  },
+  {
+   "path": "assets/battle/anim/mach-punch.json",
+   "bytes": 1562
+  },
+  {
+   "path": "assets/battle/anim/magic-coat.json",
+   "bytes": 1827
+  },
+  {
+   "path": "assets/battle/anim/magic-room.json",
+   "bytes": 2145
+  },
+  {
+   "path": "assets/battle/anim/magical-leaf.json",
+   "bytes": 40024
+  },
+  {
+   "path": "assets/battle/anim/magma-storm.json",
+   "bytes": 6660
+  },
+  {
+   "path": "assets/battle/anim/magnet-rise.json",
+   "bytes": 830
+  },
+  {
+   "path": "assets/battle/anim/magnetic-flux.json",
+   "bytes": 1887
+  },
+  {
+   "path": "assets/battle/anim/mean-look.json",
+   "bytes": 2144
+  },
+  {
+   "path": "assets/battle/anim/mega-drain.json",
+   "bytes": 30921
+  },
+  {
+   "path": "assets/battle/anim/mega-kick.json",
+   "bytes": 716
+  },
+  {
+   "path": "assets/battle/anim/mega-punch.json",
+   "bytes": 812
+  },
+  {
+   "path": "assets/battle/anim/megahorn.json",
+   "bytes": 2977
+  },
+  {
+   "path": "assets/battle/anim/memento.json",
+   "bytes": 1728
+  },
+  {
+   "path": "assets/battle/anim/metal-burst.json",
+   "bytes": 46092
+  },
+  {
+   "path": "assets/battle/anim/metal-claw.json",
+   "bytes": 3156
+  },
+  {
+   "path": "assets/battle/anim/metal-sound.json",
+   "bytes": 6560
+  },
+  {
+   "path": "assets/battle/anim/meteor-mash.json",
+   "bytes": 18668
+  },
+  {
+   "path": "assets/battle/anim/metronome.json",
+   "bytes": 1746
+  },
+  {
+   "path": "assets/battle/anim/milk-drink.json",
+   "bytes": 4646
+  },
+  {
+   "path": "assets/battle/anim/mimic.json",
+   "bytes": 1082
+  },
+  {
+   "path": "assets/battle/anim/mind-reader.json",
+   "bytes": 2151
+  },
+  {
+   "path": "assets/battle/anim/minimize.json",
+   "bytes": 857
+  },
+  {
+   "path": "assets/battle/anim/mirror-coat.json",
+   "bytes": 18288
+  },
+  {
+   "path": "assets/battle/anim/mirror-move.json",
+   "bytes": 1466
+  },
+  {
+   "path": "assets/battle/anim/mist-ball.json",
+   "bytes": 1200
+  },
+  {
+   "path": "assets/battle/anim/mist.json",
+   "bytes": 2310
+  },
+  {
+   "path": "assets/battle/anim/misty-terrain.json",
+   "bytes": 36
+  },
+  {
+   "path": "assets/battle/anim/moonblast.json",
+   "bytes": 39466
+  },
+  {
+   "path": "assets/battle/anim/moonlight.json",
+   "bytes": 5755
+  },
+  {
+   "path": "assets/battle/anim/morning-sun.json",
+   "bytes": 40
+  },
+  {
+   "path": "assets/battle/anim/mud-shot.json",
+   "bytes": 17510
+  },
+  {
+   "path": "assets/battle/anim/mud-slap.json",
+   "bytes": 2212
+  },
+  {
+   "path": "assets/battle/anim/muddy-water.json",
+   "bytes": 1722
+  },
+  {
+   "path": "assets/battle/anim/mystical-fire.json",
+   "bytes": 6315
+  },
+  {
+   "path": "assets/battle/anim/mystical-power.json",
+   "bytes": 1343
+  },
+  {
+   "path": "assets/battle/anim/nasty-plot.json",
+   "bytes": 31922
+  },
+  {
+   "path": "assets/battle/anim/natural-gift.json",
+   "bytes": 9559
+  },
+  {
+   "path": "assets/battle/anim/night-daze.json",
+   "bytes": 13447
+  },
+  {
+   "path": "assets/battle/anim/night-shade.json",
+   "bytes": 42
+  },
+  {
+   "path": "assets/battle/anim/night-slash.json",
+   "bytes": 1162
+  },
+  {
+   "path": "assets/battle/anim/noble-roar.json",
+   "bytes": 2671
+  },
+  {
+   "path": "assets/battle/anim/nuzzle.json",
+   "bytes": 1553
+  },
+  {
+   "path": "assets/battle/anim/octazooka.json",
+   "bytes": 12299
+  },
+  {
+   "path": "assets/battle/anim/origin-pulse.json",
+   "bytes": 26580
+  },
+  {
+   "path": "assets/battle/anim/outrage.json",
+   "bytes": 12809
+  },
+  {
+   "path": "assets/battle/anim/overheat.json",
+   "bytes": 7285
+  },
+  {
+   "path": "assets/battle/anim/pain-split.json",
+   "bytes": 3235
+  },
+  {
+   "path": "assets/battle/anim/pay-day.json",
+   "bytes": 33682
+  },
+  {
+   "path": "assets/battle/anim/payback.json",
+   "bytes": 2783
+  },
+  {
+   "path": "assets/battle/anim/peck.json",
+   "bytes": 1114
+  },
+  {
+   "path": "assets/battle/anim/perish-song.json",
+   "bytes": 42750
+  },
+  {
+   "path": "assets/battle/anim/petal-blizzard.json",
+   "bytes": 26603
+  },
+  {
+   "path": "assets/battle/anim/petal-dance.json",
+   "bytes": 32192
+  },
+  {
+   "path": "assets/battle/anim/phantom-force.json",
+   "bytes": 851
+  },
+  {
+   "path": "assets/battle/anim/pin-missile.json",
+   "bytes": 3166
+  },
+  {
+   "path": "assets/battle/anim/play-nice.json",
+   "bytes": 3304
+  },
+  {
+   "path": "assets/battle/anim/play-rough.json",
+   "bytes": 129811
+  },
+  {
+   "path": "assets/battle/anim/pluck.json",
+   "bytes": 2828
+  },
+  {
+   "path": "assets/battle/anim/poison-fang.json",
+   "bytes": 7177
+  },
+  {
+   "path": "assets/battle/anim/poison-gas.json",
+   "bytes": 3166
+  },
+  {
+   "path": "assets/battle/anim/poison-jab.json",
+   "bytes": 3725
+  },
+  {
+   "path": "assets/battle/anim/poison-powder.json",
+   "bytes": 15826
+  },
+  {
+   "path": "assets/battle/anim/poison-sting.json",
+   "bytes": 7803
+  },
+  {
+   "path": "assets/battle/anim/poison-tail.json",
+   "bytes": 7959
+  },
+  {
+   "path": "assets/battle/anim/pound.json",
+   "bytes": 1382
+  },
+  {
+   "path": "assets/battle/anim/powder-snow.json",
+   "bytes": 5496
+  },
+  {
+   "path": "assets/battle/anim/power-gem.json",
+   "bytes": 6573
+  },
+  {
+   "path": "assets/battle/anim/power-split.json",
+   "bytes": 2333
+  },
+  {
+   "path": "assets/battle/anim/power-swap.json",
+   "bytes": 28976
+  },
+  {
+   "path": "assets/battle/anim/power-trick.json",
+   "bytes": 1953
+  },
+  {
+   "path": "assets/battle/anim/power-trip.json",
+   "bytes": 5858
+  },
+  {
+   "path": "assets/battle/anim/power-whip.json",
+   "bytes": 2996
+  },
+  {
+   "path": "assets/battle/anim/precipice-blades.json",
+   "bytes": 4886
+  },
+  {
+   "path": "assets/battle/anim/present.json",
+   "bytes": 807
+  },
+  {
+   "path": "assets/battle/anim/protect.json",
+   "bytes": 1918
+  },
+  {
+   "path": "assets/battle/anim/psybeam.json",
+   "bytes": 5757
+  },
+  {
+   "path": "assets/battle/anim/psych-up.json",
+   "bytes": 2766
+  },
+  {
+   "path": "assets/battle/anim/psychic-terrain.json",
+   "bytes": 19288
+  },
+  {
+   "path": "assets/battle/anim/psychic.json",
+   "bytes": 42
+  },
+  {
+   "path": "assets/battle/anim/psycho-boost.json",
+   "bytes": 12246
+  },
+  {
+   "path": "assets/battle/anim/psycho-cut.json",
+   "bytes": 3140
+  },
+  {
+   "path": "assets/battle/anim/psycho-shift.json",
+   "bytes": 4180
+  },
+  {
+   "path": "assets/battle/anim/psyshock.json",
+   "bytes": 11573
+  },
+  {
+   "path": "assets/battle/anim/psystrike.json",
+   "bytes": 20653
+  },
+  {
+   "path": "assets/battle/anim/quash.json",
+   "bytes": 809
+  },
+  {
+   "path": "assets/battle/anim/quick-attack.json",
+   "bytes": 535
+  },
+  {
+   "path": "assets/battle/anim/quick-guard.json",
+   "bytes": 14320
+  },
+  {
+   "path": "assets/battle/anim/quiver-dance.json",
+   "bytes": 8335
+  },
+  {
+   "path": "assets/battle/anim/rage-fist.json",
+   "bytes": 7999
+  },
+  {
+   "path": "assets/battle/anim/rage-powder.json",
+   "bytes": 15830
+  },
+  {
+   "path": "assets/battle/anim/rage.json",
+   "bytes": 541
+  },
+  {
+   "path": "assets/battle/anim/raging-bull.json",
+   "bytes": 3928
+  },
+  {
+   "path": "assets/battle/anim/raging-fury.json",
+   "bytes": 4664
+  },
+  {
+   "path": "assets/battle/anim/rain-dance.json",
+   "bytes": 37
+  },
+  {
+   "path": "assets/battle/anim/rapid-spin.json",
+   "bytes": 2567
+  },
+  {
+   "path": "assets/battle/anim/razor-leaf.json",
+   "bytes": 17467
+  },
+  {
+   "path": "assets/battle/anim/razor-shell.json",
+   "bytes": 4405
+  },
+  {
+   "path": "assets/battle/anim/recover.json",
+   "bytes": 4617
+  },
+  {
+   "path": "assets/battle/anim/recycle.json",
+   "bytes": 1940
+  },
+  {
+   "path": "assets/battle/anim/reflect-type.json",
+   "bytes": 10330
+  },
+  {
+   "path": "assets/battle/anim/reflect.json",
+   "bytes": 1824
+  },
+  {
+   "path": "assets/battle/anim/relic-song.json",
+   "bytes": 22925
+  },
+  {
+   "path": "assets/battle/anim/rest.json",
+   "bytes": 1968
+  },
+  {
+   "path": "assets/battle/anim/retaliate.json",
+   "bytes": 267
+  },
+  {
+   "path": "assets/battle/anim/revenge.json",
+   "bytes": 12764
+  },
+  {
+   "path": "assets/battle/anim/reversal.json",
+   "bytes": 5499
+  },
+  {
+   "path": "assets/battle/anim/roar-of-time.json",
+   "bytes": 5116
+  },
+  {
+   "path": "assets/battle/anim/roar.json",
+   "bytes": 4615
+  },
+  {
+   "path": "assets/battle/anim/rock-blast.json",
+   "bytes": 896
+  },
+  {
+   "path": "assets/battle/anim/rock-polish.json",
+   "bytes": 1309
+  },
+  {
+   "path": "assets/battle/anim/rock-slide.json",
+   "bytes": 21099
+  },
+  {
+   "path": "assets/battle/anim/rock-smash.json",
+   "bytes": 6323
+  },
+  {
+   "path": "assets/battle/anim/rock-throw.json",
+   "bytes": 2090
+  },
+  {
+   "path": "assets/battle/anim/rock-tomb.json",
+   "bytes": 13667
+  },
+  {
+   "path": "assets/battle/anim/rock-wrecker.json",
+   "bytes": 10356
+  },
+  {
+   "path": "assets/battle/anim/role-play.json",
+   "bytes": 37
+  },
+  {
+   "path": "assets/battle/anim/rollout.json",
+   "bytes": 3795
+  },
+  {
+   "path": "assets/battle/anim/roost.json",
+   "bytes": 13715
+  },
+  {
+   "path": "assets/battle/anim/rototiller.json",
+   "bytes": 38724
+  },
+  {
+   "path": "assets/battle/anim/round.json",
+   "bytes": 15174
+  },
+  {
+   "path": "assets/battle/anim/sacred-fire.json",
+   "bytes": 16258
+  },
+  {
+   "path": "assets/battle/anim/sacred-sword.json",
+   "bytes": 6710
+  },
+  {
+   "path": "assets/battle/anim/safeguard.json",
+   "bytes": 1984
+  },
+  {
+   "path": "assets/battle/anim/sand-attack.json",
+   "bytes": 4135
+  },
+  {
+   "path": "assets/battle/anim/sand-tomb.json",
+   "bytes": 18660
+  },
+  {
+   "path": "assets/battle/anim/sandsear-storm.json",
+   "bytes": 2451
+  },
+  {
+   "path": "assets/battle/anim/sandstorm.json",
+   "bytes": 12983
+  },
+  {
+   "path": "assets/battle/anim/scald.json",
+   "bytes": 13996
+  },
+  {
+   "path": "assets/battle/anim/scary-face.json",
+   "bytes": 7203
+  },
+  {
+   "path": "assets/battle/anim/scratch.json",
+   "bytes": 636
+  },
+  {
+   "path": "assets/battle/anim/screech.json",
+   "bytes": 6556
+  },
+  {
+   "path": "assets/battle/anim/searing-shot.json",
+   "bytes": 25094
+  },
+  {
+   "path": "assets/battle/anim/secret-sword.json",
+   "bytes": 15733
+  },
+  {
+   "path": "assets/battle/anim/seed-bomb.json",
+   "bytes": 10336
+  },
+  {
+   "path": "assets/battle/anim/seed-flare.json",
+   "bytes": 9483
+  },
+  {
+   "path": "assets/battle/anim/seismic-toss.json",
+   "bytes": 44215
+  },
+  {
+   "path": "assets/battle/anim/self-destruct.json",
+   "bytes": 13565
+  },
+  {
+   "path": "assets/battle/anim/shadow-ball.json",
+   "bytes": 7615
+  },
+  {
+   "path": "assets/battle/anim/shadow-claw.json",
+   "bytes": 1213
+  },
+  {
+   "path": "assets/battle/anim/shadow-force.json",
+   "bytes": 811
+  },
+  {
+   "path": "assets/battle/anim/shadow-punch.json",
+   "bytes": 2706
+  },
+  {
+   "path": "assets/battle/anim/shadow-sneak.json",
+   "bytes": 4940
+  },
+  {
+   "path": "assets/battle/anim/sheer-cold.json",
+   "bytes": 19859
+  },
+  {
+   "path": "assets/battle/anim/shell-smash.json",
+   "bytes": 21948
+  },
+  {
+   "path": "assets/battle/anim/shift-gear.json",
+   "bytes": 9543
+  },
+  {
+   "path": "assets/battle/anim/shock-wave.json",
+   "bytes": 11008
+  },
+  {
+   "path": "assets/battle/anim/silver-wind.json",
+   "bytes": 12258
+  },
+  {
+   "path": "assets/battle/anim/simple-beam.json",
+   "bytes": 3402
+  },
+  {
+   "path": "assets/battle/anim/sing.json",
+   "bytes": 18081
+  },
+  {
+   "path": "assets/battle/anim/sketch.json",
+   "bytes": 4211
+  },
+  {
+   "path": "assets/battle/anim/skill-swap.json",
+   "bytes": 29311
+  },
+  {
+   "path": "assets/battle/anim/sky-attack.json",
+   "bytes": 4543
+  },
+  {
+   "path": "assets/battle/anim/slack-off.json",
+   "bytes": 1035
+  },
+  {
+   "path": "assets/battle/anim/slam.json",
+   "bytes": 3906
+  },
+  {
+   "path": "assets/battle/anim/slash.json",
+   "bytes": 435
+  },
+  {
+   "path": "assets/battle/anim/sleep-powder.json",
+   "bytes": 15826
+  },
+  {
+   "path": "assets/battle/anim/sleep-talk.json",
+   "bytes": 1927
+  },
+  {
+   "path": "assets/battle/anim/sludge-bomb.json",
+   "bytes": 14622
+  },
+  {
+   "path": "assets/battle/anim/sludge-wave.json",
+   "bytes": 1749
+  },
+  {
+   "path": "assets/battle/anim/sludge.json",
+   "bytes": 5314
+  },
+  {
+   "path": "assets/battle/anim/smack-down.json",
+   "bytes": 719
+  },
+  {
+   "path": "assets/battle/anim/smart-strike.json",
+   "bytes": 11841
+  },
+  {
+   "path": "assets/battle/anim/smog.json",
+   "bytes": 3629
+  },
+  {
+   "path": "assets/battle/anim/smokescreen.json",
+   "bytes": 4386
+  },
+  {
+   "path": "assets/battle/anim/snarl.json",
+   "bytes": 4362
+  },
+  {
+   "path": "assets/battle/anim/snore.json",
+   "bytes": 8417
+  },
+  {
+   "path": "assets/battle/anim/snowscape.json",
+   "bytes": 4633
+  },
+  {
+   "path": "assets/battle/anim/soak.json",
+   "bytes": 14358
+  },
+  {
+   "path": "assets/battle/anim/soft-boiled.json",
+   "bytes": 8848
+  },
+  {
+   "path": "assets/battle/anim/solar-beam.json",
+   "bytes": 16455
+  },
+  {
+   "path": "assets/battle/anim/spacial-rend.json",
+   "bytes": 23775
+  },
+  {
+   "path": "assets/battle/anim/spark.json",
+   "bytes": 2901
+  },
+  {
+   "path": "assets/battle/anim/spikes.json",
+   "bytes": 7171
+  },
+  {
+   "path": "assets/battle/anim/spiky-shield.json",
+   "bytes": 3582
+  },
+  {
+   "path": "assets/battle/anim/spit-up.json",
+   "bytes": 12978
+  },
+  {
+   "path": "assets/battle/anim/spite.json",
+   "bytes": 1381
+  },
+  {
+   "path": "assets/battle/anim/splash.json",
+   "bytes": 3661
+  },
+  {
+   "path": "assets/battle/anim/spore.json",
+   "bytes": 15824
+  },
+  {
+   "path": "assets/battle/anim/stealth-rock.json",
+   "bytes": 22101
+  },
+  {
+   "path": "assets/battle/anim/steel-wing.json",
+   "bytes": 3348
+  },
+  {
+   "path": "assets/battle/anim/sticky-web.json",
+   "bytes": 6674
+  },
+  {
+   "path": "assets/battle/anim/stockpile.json",
+   "bytes": 17412
+  },
+  {
+   "path": "assets/battle/anim/stomp.json",
+   "bytes": 1209
+  },
+  {
+   "path": "assets/battle/anim/stomping-tantrum.json",
+   "bytes": 18048
+  },
+  {
+   "path": "assets/battle/anim/stone-edge.json",
+   "bytes": 4124
+  },
+  {
+   "path": "assets/battle/anim/stored-power.json",
+   "bytes": 23297
+  },
+  {
+   "path": "assets/battle/anim/storm-throw.json",
+   "bytes": 662
+  },
+  {
+   "path": "assets/battle/anim/strength-sap.json",
+   "bytes": 59837
+  },
+  {
+   "path": "assets/battle/anim/strength.json",
+   "bytes": 647
+  },
+  {
+   "path": "assets/battle/anim/string-shot.json",
+   "bytes": 4732
+  },
+  {
+   "path": "assets/battle/anim/struggle-bug.json",
+   "bytes": 15782
+  },
+  {
+   "path": "assets/battle/anim/stun-spore.json",
+   "bytes": 15830
+  },
+  {
+   "path": "assets/battle/anim/submission.json",
+   "bytes": 2477
+  },
+  {
+   "path": "assets/battle/anim/substitute.json",
+   "bytes": 1851
+  },
+  {
+   "path": "assets/battle/anim/sucker-punch.json",
+   "bytes": 914
+  },
+  {
+   "path": "assets/battle/anim/sunny-day.json",
+   "bytes": 40
+  },
+  {
+   "path": "assets/battle/anim/super-fang.json",
+   "bytes": 3189
+  },
+  {
+   "path": "assets/battle/anim/superpower.json",
+   "bytes": 3832
+  },
+  {
+   "path": "assets/battle/anim/supersonic.json",
+   "bytes": 6559
+  },
+  {
+   "path": "assets/battle/anim/surf.json",
+   "bytes": 2442
+  },
+  {
+   "path": "assets/battle/anim/swagger.json",
+   "bytes": 2801
+  },
+  {
+   "path": "assets/battle/anim/swallow.json",
+   "bytes": 2035
+  },
+  {
+   "path": "assets/battle/anim/sweet-kiss.json",
+   "bytes": 10684
+  },
+  {
+   "path": "assets/battle/anim/sweet-scent.json",
+   "bytes": 18510
+  },
+  {
+   "path": "assets/battle/anim/swift.json",
+   "bytes": 6507
+  },
+  {
+   "path": "assets/battle/anim/switcheroo.json",
+   "bytes": 2749
+  },
+  {
+   "path": "assets/battle/anim/swords-dance.json",
+   "bytes": 7875
+  },
+  {
+   "path": "assets/battle/anim/synchronoise.json",
+   "bytes": 4831
+  },
+  {
+   "path": "assets/battle/anim/synthesis.json",
+   "bytes": 5657
+  },
+  {
+   "path": "assets/battle/anim/tackle.json",
+   "bytes": 337
+  },
+  {
+   "path": "assets/battle/anim/tail-glow.json",
+   "bytes": 8001
+  },
+  {
+   "path": "assets/battle/anim/tail-slap.json",
+   "bytes": 1712
+  },
+  {
+   "path": "assets/battle/anim/tail-whip.json",
+   "bytes": 41
+  },
+  {
+   "path": "assets/battle/anim/tailwind.json",
+   "bytes": 47590
+  },
+  {
+   "path": "assets/battle/anim/take-down.json",
+   "bytes": 427
+  },
+  {
+   "path": "assets/battle/anim/take-heart.json",
+   "bytes": 3399
+  },
+  {
+   "path": "assets/battle/anim/taunt.json",
+   "bytes": 3748
+  },
+  {
+   "path": "assets/battle/anim/tearful-look.json",
+   "bytes": 22538
+  },
+  {
+   "path": "assets/battle/anim/techno-blast.json",
+   "bytes": 15248
+  },
+  {
+   "path": "assets/battle/anim/teeter-dance.json",
+   "bytes": 2334
+  },
+  {
+   "path": "assets/battle/anim/teleport.json",
+   "bytes": 4560
+  },
+  {
+   "path": "assets/battle/anim/thief.json",
+   "bytes": 902
+  },
+  {
+   "path": "assets/battle/anim/thrash.json",
+   "bytes": 4679
+  },
+  {
+   "path": "assets/battle/anim/throat-chop.json",
+   "bytes": 3802
+  },
+  {
+   "path": "assets/battle/anim/thunder-fang.json",
+   "bytes": 7535
+  },
+  {
+   "path": "assets/battle/anim/thunder-punch.json",
+   "bytes": 3418
+  },
+  {
+   "path": "assets/battle/anim/thunder-shock.json",
+   "bytes": 2487
+  },
+  {
+   "path": "assets/battle/anim/thunder-wave.json",
+   "bytes": 2659
+  },
+  {
+   "path": "assets/battle/anim/thunder.json",
+   "bytes": 7143
+  },
+  {
+   "path": "assets/battle/anim/thunderbolt.json",
+   "bytes": 4976
+  },
+  {
+   "path": "assets/battle/anim/tickle.json",
+   "bytes": 2306
+  },
+  {
+   "path": "assets/battle/anim/torment.json",
+   "bytes": 1559
+  },
+  {
+   "path": "assets/battle/anim/toxic-spikes.json",
+   "bytes": 9675
+  },
+  {
+   "path": "assets/battle/anim/toxic-thread.json",
+   "bytes": 6536
+  },
+  {
+   "path": "assets/battle/anim/toxic.json",
+   "bytes": 5043
+  },
+  {
+   "path": "assets/battle/anim/transform.json",
+   "bytes": 1167
+  },
+  {
+   "path": "assets/battle/anim/tri-attack.json",
+   "bytes": 12806
+  },
+  {
+   "path": "assets/battle/anim/trick-room.json",
+   "bytes": 5381
+  },
+  {
+   "path": "assets/battle/anim/trick.json",
+   "bytes": 3428
+  },
+  {
+   "path": "assets/battle/anim/triple-kick.json",
+   "bytes": 534
+  },
+  {
+   "path": "assets/battle/anim/twin-beam.json",
+   "bytes": 44094
+  },
+  {
+   "path": "assets/battle/anim/twister.json",
+   "bytes": 2785
+  },
+  {
+   "path": "assets/battle/anim/u-turn.json",
+   "bytes": 3853
+  },
+  {
+   "path": "assets/battle/anim/uproar.json",
+   "bytes": 14097
+  },
+  {
+   "path": "assets/battle/anim/v-create.json",
+   "bytes": 15342
+  },
+  {
+   "path": "assets/battle/anim/vacuum-wave.json",
+   "bytes": 3341
+  },
+  {
+   "path": "assets/battle/anim/venom-drench.json",
+   "bytes": 25304
+  },
+  {
+   "path": "assets/battle/anim/venoshock.json",
+   "bytes": 22112
+  },
+  {
+   "path": "assets/battle/anim/vice-grip.json",
+   "bytes": 2073
+  },
+  {
+   "path": "assets/battle/anim/vine-whip.json",
+   "bytes": 2398
+  },
+  {
+   "path": "assets/battle/anim/vital-throw.json",
+   "bytes": 376
+  },
+  {
+   "path": "assets/battle/anim/volt-switch.json",
+   "bytes": 9137
+  },
+  {
+   "path": "assets/battle/anim/wake-up-slap.json",
+   "bytes": 2717
+  },
+  {
+   "path": "assets/battle/anim/water-gun.json",
+   "bytes": 11976
+  },
+  {
+   "path": "assets/battle/anim/water-pulse.json",
+   "bytes": 8917
+  },
+  {
+   "path": "assets/battle/anim/water-shuriken.json",
+   "bytes": 1232
+  },
+  {
+   "path": "assets/battle/anim/water-sport.json",
+   "bytes": 6541
+  },
+  {
+   "path": "assets/battle/anim/water-spout.json",
+   "bytes": 17061
+  },
+  {
+   "path": "assets/battle/anim/waterfall.json",
+   "bytes": 53921
+  },
+  {
+   "path": "assets/battle/anim/wave-crash.json",
+   "bytes": 1346
+  },
+  {
+   "path": "assets/battle/anim/weather-ball.json",
+   "bytes": 3394
+  },
+  {
+   "path": "assets/battle/anim/whirlpool.json",
+   "bytes": 2870
+  },
+  {
+   "path": "assets/battle/anim/whirlwind.json",
+   "bytes": 6026
+  },
+  {
+   "path": "assets/battle/anim/wide-guard.json",
+   "bytes": 14767
+  },
+  {
+   "path": "assets/battle/anim/wild-charge.json",
+   "bytes": 7634
+  },
+  {
+   "path": "assets/battle/anim/wildbolt-storm.json",
+   "bytes": 2451
+  },
+  {
+   "path": "assets/battle/anim/will-o-wisp.json",
+   "bytes": 11098
+  },
+  {
+   "path": "assets/battle/anim/wing-attack.json",
+   "bytes": 1257
+  },
+  {
+   "path": "assets/battle/anim/wish.json",
+   "bytes": 3692
+  },
+  {
+   "path": "assets/battle/anim/withdraw.json",
+   "bytes": 3713
+  },
+  {
+   "path": "assets/battle/anim/wonder-room.json",
+   "bytes": 4105
+  },
+  {
+   "path": "assets/battle/anim/wood-hammer.json",
+   "bytes": 7515
+  },
+  {
+   "path": "assets/battle/anim/work-up.json",
+   "bytes": 39
+  },
+  {
+   "path": "assets/battle/anim/worry-seed.json",
+   "bytes": 4429
+  },
+  {
+   "path": "assets/battle/anim/wrap.json",
+   "bytes": 2485
+  },
+  {
+   "path": "assets/battle/anim/wring-out.json",
+   "bytes": 5158
+  },
+  {
+   "path": "assets/battle/anim/x-scissor.json",
+   "bytes": 4940
+  },
+  {
+   "path": "assets/battle/anim/yawn.json",
+   "bytes": 1214
+  },
+  {
+   "path": "assets/battle/anim/zap-cannon.json",
+   "bytes": 4153
+  },
+  {
+   "path": "assets/battle/anim/zen-headbutt.json",
+   "bytes": 1280
+  },
+  {
+   "path": "assets/battle/anim/sheets/!.png",
+   "bytes": 367
+  },
+  {
+   "path": "assets/battle/anim/sheets/022-Darkness01.png",
+   "bytes": 62195
+  },
+  {
+   "path": "assets/battle/anim/sheets/Ancient-PowerFilesheet.png",
+   "bytes": 8238
+  },
+  {
+   "path": "assets/battle/anim/sheets/GEN8- Doom Desire.png",
+   "bytes": 800
+  },
+  {
+   "path": "assets/battle/anim/sheets/GEN8- Fusion Bolt.png",
+   "bytes": 97655
+  },
+  {
+   "path": "assets/battle/anim/sheets/GEN8- Precipice Blades.png",
+   "bytes": 37491
+  },
+  {
+   "path": "assets/battle/anim/sheets/Gen9- Rage Fist.png",
+   "bytes": 2433
+  },
+  {
+   "path": "assets/battle/anim/sheets/Gen9- TwinBeam.png",
+   "bytes": 381
+  },
+  {
+   "path": "assets/battle/anim/sheets/Majesty - Sandsear Storm.png",
+   "bytes": 3912
+  },
+  {
+   "path": "assets/battle/anim/sheets/Majesty - Wildbolt Storm.png",
+   "bytes": 3912
+  },
+  {
+   "path": "assets/battle/anim/sheets/PKR- Blue Flare.png",
+   "bytes": 2728
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Absorption.png",
+   "bytes": 548
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Absorption2.png",
+   "bytes": 1222
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Aeroblast.png",
+   "bytes": 4081
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Air Cutter.png",
+   "bytes": 388
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Air Slash.png",
+   "bytes": 388
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Amnesia.png",
+   "bytes": 1492
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Aqua Jet.png",
+   "bytes": 1497
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Aromatherapy.png",
+   "bytes": 527
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Aura Sphere.png",
+   "bytes": 600
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Autotomize.png",
+   "bytes": 364
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Baby Doll Eyes.png",
+   "bytes": 1502
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Baton Pass.png",
+   "bytes": 949
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Bide.png",
+   "bytes": 1441
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Bite.png",
+   "bytes": 1503
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Blaze Kick.png",
+   "bytes": 469
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- BoneMerang.png",
+   "bytes": 1582
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Brave Bird.png",
+   "bytes": 663
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Brine.png",
+   "bytes": 1569
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Bug Bite.png",
+   "bytes": 781
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Bug Buzz.png",
+   "bytes": 1936
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Bulk Up.png",
+   "bytes": 440
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Charge Beam.png",
+   "bytes": 916
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Chatter.png",
+   "bytes": 4079
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Clear Smog.png",
+   "bytes": 2125
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Coil.png",
+   "bytes": 1153
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Confuse Ray.png",
+   "bytes": 195
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Conversion.png",
+   "bytes": 912
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Cotton Guard.png",
+   "bytes": 282
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Cotton Spore.png",
+   "bytes": 233
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Covet.png",
+   "bytes": 1126
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Crabhammer.png",
+   "bytes": 1019
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Crafty Shield.png",
+   "bytes": 315
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Cross Poison.png",
+   "bytes": 476
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Crush Grip.png",
+   "bytes": 1559
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Curse.png",
+   "bytes": 224
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dark Pulse.png",
+   "bytes": 414
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dark void.png",
+   "bytes": 276
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Defog.png",
+   "bytes": 1279
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Detect.png",
+   "bytes": 496
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dig.png",
+   "bytes": 552
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Disable.png",
+   "bytes": 496
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Discharge.png",
+   "bytes": 1260
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dive.png",
+   "bytes": 800
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dragon Ascent.png",
+   "bytes": 301
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dragon Claw.png",
+   "bytes": 681
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dragon Dance.png",
+   "bytes": 571
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dragon Pulse.png",
+   "bytes": 1084
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dragon Tail.png",
+   "bytes": 862
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dragonbreath.png",
+   "bytes": 455
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Drain Punch.png",
+   "bytes": 668
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Draining Kiss.png",
+   "bytes": 815
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Dream Eater.png",
+   "bytes": 1909
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Earth Power.png",
+   "bytes": 763
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Electric.png",
+   "bytes": 7262
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Electro Ball.png",
+   "bytes": 1270
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Electroweb.png",
+   "bytes": 2571
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Elemental Fangs.png",
+   "bytes": 2728
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Elemental Punch.png",
+   "bytes": 2488
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Encore.png",
+   "bytes": 588
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Energy Ball.png",
+   "bytes": 1277
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Eruption.png",
+   "bytes": 2721
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Explosions.png",
+   "bytes": 1897
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- FAKE TEARS.png",
+   "bytes": 627
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fairy Wind.png",
+   "bytes": 203
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- False Swipe.png",
+   "bytes": 1246
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fell Stinger.png",
+   "bytes": 6052
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fire Spin.png",
+   "bytes": 1764
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fire.png",
+   "bytes": 16722
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fissure.png",
+   "bytes": 14959
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Flash Cannon.png",
+   "bytes": 364
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Flatter.png",
+   "bytes": 827
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fly.png",
+   "bytes": 1263
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Focus Energy.png",
+   "bytes": 409
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Follow Me.png",
+   "bytes": 718
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Force Palm.png",
+   "bytes": 353
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Foresight.png",
+   "bytes": 321
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Freeze Dry.png",
+   "bytes": 653
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Frost Breath.png",
+   "bytes": 1988
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Fusion Flare.png",
+   "bytes": 4663
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Gastro Acid.png",
+   "bytes": 249
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Giga Drain.png",
+   "bytes": 364
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Glaciate.png",
+   "bytes": 2145
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Glare.png",
+   "bytes": 969
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Grass Knot.png",
+   "bytes": 481
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Grass.png",
+   "bytes": 3361
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Grudge.png",
+   "bytes": 573
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Guillotine.png",
+   "bytes": 267
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Gunk Shot.png",
+   "bytes": 1065
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Gust.png",
+   "bytes": 746
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Gyro Ball.png",
+   "bytes": 948
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Hands.png",
+   "bytes": 1195
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Heal Bell.png",
+   "bytes": 1982
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Healing Wish.png",
+   "bytes": 1659
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Hidden Power.png",
+   "bytes": 169
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- High Horse Power.png",
+   "bytes": 702
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Hone Claws.png",
+   "bytes": 767
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Horn Leech.png",
+   "bytes": 989
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Howl.png",
+   "bytes": 609
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Hydro Pump.png",
+   "bytes": 439
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Hyper Beam.png",
+   "bytes": 2899
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Hyper Fang.png",
+   "bytes": 600
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Ice.png",
+   "bytes": 3900
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Icicle Spear.png",
+   "bytes": 340
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Ingrain.png",
+   "bytes": 1014
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Iron Head.png",
+   "bytes": 389
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Iron Tail.png",
+   "bytes": 301
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Judgement.png",
+   "bytes": 2427
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Kenesis.png",
+   "bytes": 1013
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Last Resort.png",
+   "bytes": 712
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Leaf Tornado.png",
+   "bytes": 6213
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Leech Life.png",
+   "bytes": 598
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Leech Seed.png",
+   "bytes": 348
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Leer.png",
+   "bytes": 1065
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Light Screen.png",
+   "bytes": 1961
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Lock On.png",
+   "bytes": 1636
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Love.png",
+   "bytes": 1807
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Lucky Chant.png",
+   "bytes": 394
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Luster Purge.png",
+   "bytes": 1747
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Magic Coat.png",
+   "bytes": 1961
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Magical Leaf.png",
+   "bytes": 1004
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Magma Storm.png",
+   "bytes": 3913
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Me First.png",
+   "bytes": 2235
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mean Look.png",
+   "bytes": 362
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Megahorn.png",
+   "bytes": 776
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Metal Burst.png",
+   "bytes": 1824
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Metal Sound.png",
+   "bytes": 769
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Meteor Mash.png",
+   "bytes": 580
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Milk Drink.png",
+   "bytes": 923
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Miracle Eye.png",
+   "bytes": 866
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mirror Coat.png",
+   "bytes": 785
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mirror Shot.png",
+   "bytes": 1810
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mist.png",
+   "bytes": 260
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Moonblast.png",
+   "bytes": 699
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Moonlight.png",
+   "bytes": 574
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mud Shot.png",
+   "bytes": 277
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mud Slap.png",
+   "bytes": 777
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Mystical Fire.png",
+   "bytes": 1164
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Nasty Plot.png",
+   "bytes": 1636
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Night Daze.png",
+   "bytes": 671
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Octozooka.png",
+   "bytes": 929
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Orbs.png",
+   "bytes": 364
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Origin Pulse.png",
+   "bytes": 1482
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Pay Day.png",
+   "bytes": 482
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Petal Blizzard.png",
+   "bytes": 3944
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Petal Dance.png",
+   "bytes": 527
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Poison Jab.png",
+   "bytes": 1034
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Poison Sting.png",
+   "bytes": 212
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Poison Tail.png",
+   "bytes": 416
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Poison.png",
+   "bytes": 4220
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Powder Snow.png",
+   "bytes": 2164
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Powders.png",
+   "bytes": 612
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Present.png",
+   "bytes": 306
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Protect.png",
+   "bytes": 720
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Psybeam.png",
+   "bytes": 346
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Psychic BG.png",
+   "bytes": 7633
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Psycho Boost.png",
+   "bytes": 2097
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Psycho Cut.png",
+   "bytes": 208
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Psycho Shift.png",
+   "bytes": 208
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Psystrike.png",
+   "bytes": 1657
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Quiver Dance.png",
+   "bytes": 279
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Rage Powder.png",
+   "bytes": 407
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Razor Shell.png",
+   "bytes": 616
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Recovery.png",
+   "bytes": 1266
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Recycle.png",
+   "bytes": 397
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Reflect.png",
+   "bytes": 1961
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Retaliate.png",
+   "bytes": 391
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Revenge.png",
+   "bytes": 2730
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Roar.png",
+   "bytes": 321
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Rock Polish.png",
+   "bytes": 456
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Rock Smash.png",
+   "bytes": 1031
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Rock.png",
+   "bytes": 3640
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Rollout.png",
+   "bytes": 458
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Roost.png",
+   "bytes": 298
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Rototiller .png",
+   "bytes": 495
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sacred Sword.png",
+   "bytes": 539
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Safeguard.png",
+   "bytes": 631
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sand Attack.png",
+   "bytes": 225
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sand Tomb.png",
+   "bytes": 517
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Scald.png",
+   "bytes": 2022
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Scary Face.png",
+   "bytes": 687
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Screech.png",
+   "bytes": 769
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Seed Bomb.png",
+   "bytes": 1008
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Seismic Toss.png",
+   "bytes": 17068
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Shadow Ball.png",
+   "bytes": 2148
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Shadow Claw.png",
+   "bytes": 762
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Shadow Punch.png",
+   "bytes": 2214
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Shadow Sneak.png",
+   "bytes": 472
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sheer Cold.png",
+   "bytes": 2396
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Shell Smash.png",
+   "bytes": 4416
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Silver Wind.png",
+   "bytes": 203
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sketch + Lick.png",
+   "bytes": 590
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Slack Off.png",
+   "bytes": 689
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Slash.png",
+   "bytes": 6285
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sleep Talk.png",
+   "bytes": 206
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sludge Bomb.png",
+   "bytes": 663
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Smog.png",
+   "bytes": 1965
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Smokescreen.png",
+   "bytes": 1798
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Soft Boil.png",
+   "bytes": 2756
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sound.png",
+   "bytes": 3555
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Spacial Rend.png",
+   "bytes": 3835
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Spikes.png",
+   "bytes": 326
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Spiky Shield.png",
+   "bytes": 2810
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Spite.png",
+   "bytes": 628
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Spore.png",
+   "bytes": 450
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Stats.png",
+   "bytes": 986
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Stealth Rock.png",
+   "bytes": 824
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sticky Web.png",
+   "bytes": 2482
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Stomping Tantrum.png",
+   "bytes": 480
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Strike.png",
+   "bytes": 4144
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- String Shot.png",
+   "bytes": 285
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Struggle Bug.png",
+   "bytes": 855
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Stun Powder.png",
+   "bytes": 603
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Substitute.png",
+   "bytes": 682
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- SunnyDay.png",
+   "bytes": 249
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Supersonic.png",
+   "bytes": 751
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Swagger.png",
+   "bytes": 3578
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Swap.png",
+   "bytes": 2909
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Sweet Scent.png",
+   "bytes": 372
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Swift.png",
+   "bytes": 279
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Swords Dance + Signal Beam.png",
+   "bytes": 2961
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Tail Glow.png",
+   "bytes": 492
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Tail slap.png",
+   "bytes": 547
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Tailwind.png",
+   "bytes": 232
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Taunt.png",
+   "bytes": 1100
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Techno Blast.png",
+   "bytes": 7388
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Teleport.png",
+   "bytes": 208
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Torment.png",
+   "bytes": 743
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Tri Attack.png",
+   "bytes": 3613
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Trick.png",
+   "bytes": 609
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Twister.png",
+   "bytes": 3912
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- U-Turn.png",
+   "bytes": 1213
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Uproar.png",
+   "bytes": 2285
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Venom Drench.png",
+   "bytes": 607
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Venoshock.png",
+   "bytes": 538
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Water Pulse.png",
+   "bytes": 414
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Water Shuriken.png",
+   "bytes": 280
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Water.png",
+   "bytes": 9719
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Weather.png",
+   "bytes": 574
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Weatherball.png",
+   "bytes": 6865
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Whirlpool.png",
+   "bytes": 1851
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Will O Wisp.png",
+   "bytes": 776
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Wish.png",
+   "bytes": 181
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Withdraw.png",
+   "bytes": 2230
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Wood Hammer.png",
+   "bytes": 800
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Worry Seed.png",
+   "bytes": 610
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Wrapping.png",
+   "bytes": 641
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- X Scissor.png",
+   "bytes": 388
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- Yawn.png",
+   "bytes": 520
+  },
+  {
+   "path": "assets/battle/anim/sheets/PRAS- sandstorm2.png",
+   "bytes": 1940
+  },
+  {
+   "path": "assets/battle/anim/sheets/block.png",
+   "bytes": 4088
+  },
+  {
+   "path": "assets/battle/anim/sheets/fire5.png",
+   "bytes": 4392
+  },
+  {
+   "path": "assets/battle/anim/sheets/fly copy.png",
+   "bytes": 33725
+  },
+  {
+   "path": "assets/battle/anim/sheets/mixed.png",
+   "bytes": 5380
   }
  ],
- "totalBytes": 11155411,
- "generatedAt": "2026-10-26"
+ "totalBytes": 20150794,
+ "generatedAt": "2026-10-31"
 }
