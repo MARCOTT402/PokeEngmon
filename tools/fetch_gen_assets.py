@@ -128,6 +128,26 @@ def main():
 
     print("[4/4] 生成素材 manifest（assets/gen-packs/gen{N}.json）")
     os.makedirs(PACK_DIR, exist_ok=True)
+    # 對戰用素材：精靈 front/back atlas 同招式動畫 sheets（各代共用，每代 pack 都包一份路徑）
+    battle_extra = []
+    for side in ("front", "back"):
+        for name in sorted(os.listdir(os.path.join(ROOT, "assets", "battle", "pkmn", side))):
+            if name.endswith(".png"):
+                battle_extra.append(os.path.join(ROOT, "assets", "battle", "pkmn", side, name))
+    anim_dir = os.path.join(ROOT, "assets", "battle", "anim")
+    for name in sorted(os.listdir(anim_dir)):
+        if name.endswith(".json"):
+            battle_extra.append(os.path.join(anim_dir, name))
+    sheets_dir = os.path.join(anim_dir, "sheets")
+    for name in sorted(os.listdir(sheets_dir)):
+        if name.endswith(".png"):
+            battle_extra.append(os.path.join(sheets_dir, name))
+    # 精靈圖只包該代（dex 範圍）；招式動畫全代共用 → 全部包
+    def dex_of_pkmn_rel(rel):
+        if not rel.startswith("assets/battle/pkmn/"):
+            return None
+        return int(os.path.splitext(os.path.basename(rel))[0])
+
     for g in range(2, 6):
         lo, hi = GEN_RANGES[g]
         files = []
@@ -141,10 +161,17 @@ def main():
                     total += size
         # 世代圖示同資料 JSON 一併落入 manifest
         extra = [os.path.join(ICON_DIR, f"{g}.png"), os.path.join(ROOT, "data", f"pokemon-gen{g}.json")]
+        extra += battle_extra
         for path in extra:
-            if os.path.exists(path):
-                rel = os.path.relpath(path, ROOT).replace("\\", "/")
-                files.append({"path": rel, "bytes": os.path.getsize(path)})
+            if not os.path.exists(path):
+                continue
+            rel = os.path.relpath(path, ROOT).replace("\\", "/")
+            dex = dex_of_pkmn_rel(rel)
+            if dex is not None and not (lo <= dex <= hi):
+                continue
+            size = os.path.getsize(path)
+            files.append({"path": rel, "bytes": size})
+            total += size
         doc = {"gen": g, "files": files, "totalBytes": total,
                "generatedAt": time.strftime("%Y-%m-%d")}
         out = os.path.join(PACK_DIR, f"gen{g}.json")

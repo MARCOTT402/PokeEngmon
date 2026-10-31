@@ -47,8 +47,50 @@ const BattleUI = (() => {
     { id: "bugcatcher", name: "Bug Catcher Sid", sprite: "assets/trainers/bugcatcher.png", level: 10, team: [{ dexId: 13, level: 10, moves: ["tackle", "string-shot"] }, { dexId: 10, level: 8, moves: ["tackle", "harden"] }] },
     { id: "lass", name: "Lass Dana", sprite: "assets/trainers/lass.png", level: 18, team: [{ dexId: 35, level: 18, moves: ["tackle", "tail-whip", "quick-attack"] }, { dexId: 16, level: 16, moves: ["tackle", "sand-attack"] }] },
     { id: "gentleman", name: "Gentleman Alfred", sprite: "assets/trainers/gentleman.png", level: 28, team: [{ dexId: 96, level: 28, moves: ["confusion", "disable", "psybeam"] }, { dexId: 64, level: 26, moves: ["confusion", "psybeam"] }] },
-    { id: "ace", name: "Ace Trainer Kiera", sprite: "assets/trainers/ace_f.png", level: 40, team: [{ dexId: 248, level: 40, moves: ["crunch", "fire-punch", "thunder-punch", "ice-punch"] }, { dexId: 282, level: 38, moves: ["psychic", "shadow-ball", "calm-mind"] }] }
+    { id: "ace", name: "Ace Trainer Kiera", sprite: "assets/trainers/ace_f.png", level: 40, team: [{ dexId: 248, level: 40, moves: ["crunch", "fire-punch", "thunder-punch", "ice-punch"] }, { dexId: 282, level: 38, moves: ["psychic", "shadow-ball", "calm-mind"] }] },
+    /* --- Gen 2-5 梯隊（承接 Kiera 之後逐個解鎖） --- */
+    { id: "rival_ethan", name: "Rival Ethan", sprite: "assets/trainers/rival.png", level: 50, team: [
+      { dexId: 154, level: 50, moves: ["razor-leaf", "synthesis", "earthquake", "sludge-bomb"] },
+      { dexId: 164, level: 48, moves: ["air-slash", "psychic", "hypnosis", "dream-eater"] },
+      { dexId: 214, level: 50, moves: ["megahorn", "close-combat", "rock-slide", "night-slash"] }
+    ] },
+    { id: "jasmine", name: "Gym Leader Jasmine", sprite: "assets/trainers/lass.png", level: 58, team: [
+      { dexId: 208, level: 58, moves: ["iron-tail", "earthquake", "rock-slide", "curse"] },
+      { dexId: 227, level: 56, moves: ["steel-wing", "air-slash", "spikes", "roost"] },
+      { dexId: 82, level: 56, moves: ["thunderbolt", "flash-cannon", "thunder-wave", "tri-attack"] }
+    ] },
+    { id: "steven", name: "Champion Steven", sprite: "assets/trainers/gentleman.png", level: 66, team: [
+      { dexId: 376, level: 68, moves: ["meteor-mash", "psychic", "earthquake", "bullet-punch"] },
+      { dexId: 306, level: 66, moves: ["iron-head", "earthquake", "stone-edge", "thunder-wave"] },
+      { dexId: 344, level: 64, moves: ["earth-power", "psychic", "ice-beam", "toxic"] },
+      { dexId: 227, level: 64, moves: ["steel-wing", "air-slash", "spikes", "roost"] }
+    ] },
+    { id: "cynthia", name: "Champion Cynthia", sprite: "assets/trainers/ace_f.png", level: 74, team: [
+      { dexId: 445, level: 78, moves: ["earthquake", "dragon-claw", "stone-edge", "swords-dance"] },
+      { dexId: 448, level: 74, moves: ["close-combat", "flash-cannon", "extreme-speed", "swords-dance"] },
+      { dexId: 468, level: 72, moves: ["air-slash", "aura-sphere", "thunder-wave", "roost"] },
+      { dexId: 350, level: 74, moves: ["surf", "ice-beam", "recover", "toxic"] },
+      { dexId: 442, level: 72, moves: ["dark-pulse", "shadow-ball", "will-o-wisp", "hypnosis"] }
+    ] },
+    { id: "alder", name: "Champion Alder", sprite: "assets/trainers/gentleman.png", level: 82, team: [
+      { dexId: 637, level: 84, moves: ["fiery-dance", "bug-buzz", "psychic", "quiver-dance"] },
+      { dexId: 534, level: 80, moves: ["close-combat", "mach-punch", "rock-slide", "bulk-up"] },
+      { dexId: 621, level: 80, moves: ["dragon-claw", "crunch", "earthquake", "rock-slide"] },
+      { dexId: 626, level: 80, moves: ["head-charge", "earthquake", "megahorn", "zen-headbutt"] },
+      { dexId: 584, level: 80, moves: ["ice-beam", "blizzard", "flash-cannon", "toxic"] }
+    ] }
   ];
+
+  /* 隊伍可能跨代（Gen 2-5）→ 開戰前要確保該代圖鑑資料已載入，否則算唔到 stats / types */
+  function gensForTeam(team) {
+    if (typeof GENS === "undefined") return [];
+    const gens = new Set();
+    team.forEach(m => {
+      const g = GENS.find(x => m.dexId >= x.range[0] && m.dexId <= x.range[1]);
+      if (g) gens.add(g.gen);
+    });
+    return Array.from(gens);
+  }
 
   function openAITrainers() {
     const st = loadState();
@@ -78,7 +120,12 @@ const BattleUI = (() => {
     mode = "ai";
     aiTrainer = trainer;
     foeTeamEntries = trainer.team.map(m => ({ dexId: m.dexId, level: m.level, ivs: {}, evs: {}, nature: "hardy", moves: m.moves }));
-    openTeamSelect(() => launchBattle());
+    /* Gen 2-5 訓練家：先確保對應世代圖鑑資料載入（failed 就照開，唔好卡死揀隊） */
+    const gens = gensForTeam(trainer.team);
+    const ready = (typeof ensureGenDataLoaded === "function")
+      ? Promise.all(gens.map(g => ensureGenDataLoaded(g)))
+      : Promise.resolve();
+    ready.catch(() => {}).then(() => openTeamSelect(() => launchBattle()));
   }
 
   /* ---------- PvP 流程：配對 → 抽場制 → confirm → 揀隊 → 開戰 ---------- */
@@ -564,6 +611,8 @@ const BattleUI = (() => {
       sprite.style.visibility = "";
       hpSlideIn(who);
       await tap2;
+      /* 上場特性（Intimidate）：逐句出訊息等玩家 click */
+      for (const m of BattleState.onSwitchIn(state, side)) await say(m);
     })();
   }
 
@@ -606,6 +655,9 @@ const BattleUI = (() => {
       myT.classList.add("off-left");
       introText(`Go! ${myActive().name.toUpperCase()}!`);
       await waitTap();
+      /* 開場上場特性（Intimidate）：按出場次序觸發（對手先、我方後） */
+      for (const m of BattleState.onSwitchIn(state, foeSide)) await say(m);
+      for (const m of BattleState.onSwitchIn(state, mySide)) await say(m);
       /* 完場：還原正常對戰 UI */
       hideCaret();
       intro.style.display = "none";
@@ -646,8 +698,8 @@ const BattleUI = (() => {
   /* FRLG HP 條顏色：綠 → 黃 → 紅 */
   function hpColor(pct) { return pct > 50 ? "#58d080" : pct > 20 ? "#f8c038" : "#f84040"; }
 
-  /* 對戰精靈圖：Gen 1（≤151）有本地動態 GIF；Gen 2+ 冇，用 PokeAPI 靜態圖 fallback */
-  function battleSprite(dexId) { return dexId <= 151 ? animatedURL(dexId) : spriteURL(dexId); }
+  /* 對戰精靈圖：Gen 1-5（≤649）有本地動態 GIF；其餘用 PokeAPI 靜態圖 fallback */
+  function battleSprite(dexId) { return dexId <= 649 ? animatedURL(dexId) : spriteURL(dexId); }
 
   /* ---------- render ---------- */
   function render() {
