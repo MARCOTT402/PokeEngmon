@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.15.17**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.15.18**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -157,6 +157,7 @@
 - **PokeRogue 換精靈頁 + 文字框排版（v1.15.0）**：底部改為 PokeRogue 原版排版 —— message window 全寬（高 = 闊度 15%）、command window 冚喺右邊上面（冇中間縫），講對話時成個 command window 收埋。撳 POKéMON 入換精靈頁，UI/UX 全抄 PokeRogue `PartyUiHandler`（320×240 design 等比縮放，`container-type: inline-size` + cqw 單位）：`party_bg` 冚底部 75%；出戰緊嗰隻喺左邊大格 `party_slot_main` (9,91.5) 110×49；後備右欄 5 格 `party_slot` x=143、top=44+28i 175×24；訊息框 (1,209) 262×30 顯示 "Choose a Pokémon."；右下 CANCEL 掣（中心 (291,224) 52×16 + `party_pb`）；暈咗用 `_fnt` 幀、HP 條／數值收埋；格子內部照抄偏移（icon 中心 (4,4)、名 (24,10)、Lv label (32,22)、HP 條 (8,31) 100×7 + `party_slot_hp_overlay` 按 ratio 橫向壓縮、HP 數值右對齊 (105,36)；後備格名 (21,2)、HP 條 (72,6)）；點格 → 右下 options window（SEND OUT / CANCEL，`addWindow` 闊 ≥94、高 16n+13）→ SEND OUT 接現有拋球換寵流程；暈咗強制換寵時冇 CANCEL。素材 `assets/battle/party/` 來源 `pagefaultgames/pokerogue-assets`（beta）。
 - **AI 訓練家梯隊（v1.15.15）**：10 個訓練家逐個解鎖（擊敗前一個先開下一個），由 Lv.5 Youngster Timmy 一路升到 Lv.82 Champion Alder；後 5 個用 Gen 2–5 精靈砌隊（Rival Ethan → Gym Leader Jasmine → Champion Steven → Champion Cynthia → Champion Alder）。開戰前會 `ensureGenDataLoaded()` 載入對應世代圖鑑資料，避免未解鎖世代嘅 stats／屬性算唔到。
 - **精靈特性系統（v1.15.16）**：`data/abilities.json`（PokeAPI 非隱藏特性，slot 1 預設，`tools/fetch_abilities.py` 抽取，649 隻全齊）＋ battle engine 實裝 16 個常見特性 —— 免疫類：Levitate（地面）、Volt Absorb（電，吸返 1/4 HP）、Water Absorb（水，吸返 1/4 HP）、Flash Fire（火，吸後自己火招 ×1.5，換走消失）、Lightning Rod（電，SpA+1）；數值類：Huge Power／Pure Power（攻 ×2）、Guts（異常時攻 ×1.5 且 burn 唔扣攻）、Thick Fat（火冰傷半）、Overgrow／Blaze／Torrent／Swarm（HP≤1/3 對應屬性 ×1.5）、Unaware（無視對方 stat stage）；觸發類：Intimidate（上場對手攻 -1）、Sturdy（滿 HP 致命傷留 1）、Speed Boost（回合完速 +1）；防禦類：Hyper Cutter（攻唔會被降）、Insomnia／Vital Spirit（唔瞓）、Limber（唔麻痺）、Immunity（唔中毒）。特性觸發全部有對戰文字訊息。同期修咗三個遺留 bug：`stat_changes` 嘅 PokeAPI stat 名（`attack` 等）從未 map 落 `statStages.atk` → 所有升降能力招形同虛設；屬性 0 倍免疫被 min-1 clamp 夾成 1 傷；status 類異常招（Spore／Thunder Wave 等）`ailment_chance=0` 被當 0% → 從未中過（依 PokeAPI 慣例改為必中附加）；burn 減攻 double-dip（effectiveStat × computeDamage 各減一次 → ×0.25）改為只喺 computeDamage 減一次。
+- **場地效果系統（v1.15.18，Gen 5 規則）**：**天氣** —— Sunny Day／Rain Dance／Sandstorm／Hail／Snowscape 開 5 回合天氣（互斥、新蓋舊，同一天氣重出失敗）；晴天火招 ×1.5／水招 ×0.5，雨天反轉；沙暴回合末磨非岩／地／鋼寵 1/16 HP，雹磨非冰寵 1/16 HP；Solar Beam 雨／沙／雹下威力減半，Thunder 雨天必中，Blizzard 雹天必中，Weather Ball 跟天氣轉屬性（火／水／岩／冰）兼威力 50→100。**場地陷阱** —— Spikes 撒對面最多 3 層（換入分別扣 1/8、1/6、1/4 max HP，飛行屬性／Levitate 免疫）、Stealth Rock 按岩屬性對換入寵相性 ×1/8 max HP 扣血（4× 弱岩直接半血）；換入先食釘子、後觸發上場特性（Gen 順序），釘死直接入 faint 流程。**光牆／反射壁** —— 開喺自己嗰邊 5 回合，Reflect 物理傷半、Light Screen 特殊傷半，critical hit 無視壁。對戰畫面中上位置有場地狀態 chip 列：天氣 icon＋回合倒數、雙方各自 Reflect／Light Screen 回合數、Spikes 層數、Stealth Rock 標記，無場地效果時收埋。
 - 無障礙：`user-scalable=no` 已移除；所有 hover 動效只用 `@media (hover:hover)` 觸發；支援 `prefers-reduced-motion`
 
 ---

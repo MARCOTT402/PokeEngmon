@@ -4,10 +4,16 @@
    ============================================================ */
 
 const BattleState = (() => {
+  /* 場地邊狀態（每邊獨立）：釘子層數 0-3、隱形岩、光牆/反射壁回合數 */
+  function freshSide() {
+    return { spikes: 0, stealthRock: false, reflect: 0, lightScreen: 0 };
+  }
   function create(p1Team, p2Team) {
     return {
-      p1: { team: p1Team.map(Battle.makeBattlePokemon), active: 0 },
-      p2: { team: p2Team.map(Battle.makeBattlePokemon), active: 0 },
+      p1: { team: p1Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide() },
+      p2: { team: p2Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide() },
+      /* 天氣：{ name: "sun"|"rain"|"sandstorm"|"hail", turns }；null = 無天氣 */
+      weather: null,
       turn: 0,
       log: [],
       finished: false,
@@ -60,6 +66,87 @@ const BattleState = (() => {
     return true;
   }
 
+  /* ---------- 場地招式效果表（status 類，喺 executeMove 度攔截） ---------- */
+  /* 天氣招：互斥，新蓋舊，重設 5 回合（Gen 5 無天氣石加成） */
+  const WEATHER_LOG = {
+    sun: "The sunlight turned harsh!",
+    rain: "It started to rain!",
+    sandstorm: "A sandstorm brewed!",
+    hail: "It started to hail!"
+  };
+  function setWeather(state, name) {
+    /* 同一個天氣再出 = 失敗（Gen 5 規則：同天氣覆蓋失敗） */
+    if (state.weather && state.weather.name === name) {
+      log(state, "But it failed!");
+      return;
+    }
+    state.weather = { name, turns: 5 };
+    log(state, WEATHER_LOG[name]);
+  }
+  const FIELD_MOVES = {
+    "sunny-day": (st) => setWeather(st, "sun"),
+    "rain-dance": (st) => setWeather(st, "rain"),
+    "sandstorm": (st) => setWeather(st, "sandstorm"),
+    "hail": (st) => setWeather(st, "hail"),
+    "snowscape": (st) => setWeather(st, "hail"),
+    /* 釘子：撒喺對面嗰邊，最多 3 層 */
+    "spikes": (st, side, foeSide, actor, target) => {
+      const fs = st[foeSide].side;
+      if (fs.spikes >= 3) { log(st, "But it failed!"); return; }
+      fs.spikes += 1;
+      log(st, `Spikes were scattered all around ${target.name}'s team!`);
+    },
+    "stealth-rock": (st, side, foeSide, actor, target) => {
+      const fs = st[foeSide].side;
+      if (fs.stealthRock) { log(st, "But it failed!"); return; }
+      fs.stealthRock = true;
+      log(st, `Pointed stones float in the air around ${target.name}'s team!`);
+    },
+    /* 壁：開喺自己嗰邊，5 回合 */
+    "reflect": (st, side) => {
+      const ms = st[side].side;
+      if (ms.reflect > 0) { log(st, "But it failed!"); return; }
+      ms.reflect = 5;
+      log(st, "Reflect raised your team's Defense!" );
+    },
+    "light-screen": (st, side) => {
+      const ms = st[side].side;
+      if (ms.lightScreen > 0) { log(st, "But it failed!"); return; }
+      ms.lightScreen = 5;
+      log(st, "Light Screen raised your team's Sp. Def!");
+    }
+  };
+
+  /* ---------- 入場釘子傷害（spikes / stealth-rock） ---------- */
+  /* 回傳訊息 list（俾 UI 逐句 narrate）；會直接扣血 */
+  function applyEntryHazards(state, side) {
+    const msgs = [];
+    const p = active(state, side);
+    const sd = state[side].side;
+    if (!p || p.hp <= 0) return msgs;
+    /* Spikes：飛行屬性同 Levitate 免疫（Gen 5） */
+    if (sd.spikes > 0) {
+      const grounded = !p.types.includes("flying") && p.ability !== "levitate";
+      if (grounded) {
+        const frac = [0, 1 / 8, 1 / 6, 1 / 4][sd.spikes];
+        const dmg = Math.max(1, Math.floor(p.maxHp * frac));
+        p.hp = Math.max(0, p.hp - dmg);
+        msgs.push(`${p.name} is hurt by spikes!`);
+      }
+    }
+    /* Stealth Rock：岩屬性對入場寵嘅相性 × 1/8 max HP */
+    if (sd.stealthRock && p.hp > 0) {
+      const mult = (typeof typeMultiplier === "function") ? typeMultiplier("rock", p.types) : 1;
+      if (mult > 0) {
+        const dmg = Math.max(1, Math.floor(p.maxHp * mult / 8));
+        p.hp = Math.max(0, p.hp - dmg);
+        msgs.push(`Pointed stones dug into ${p.name}!`);
+      }
+    }
+    if (p.hp <= 0) msgs.push(`${p.name} fainted!`);
+    return msgs;
+  }
+
   /* ---------- 單招執行（含多段） ---------- */
   /* 冇晒 PP 時嘅 Struggle：50 威力、無屬性、反動 1/4 傷害（原版行為） */
   const STRUGGLE = {
@@ -74,6 +161,8 @@ const BattleState = (() => {
   function executeMove(state, side, moveIdx) {
     const actor = active(state, side);
     const target = active(state, otherSide(side));
+    /* 目標已暈（例如被入場釘子打死）：招落空，唔重複計傷 */
+    if (actor.hp <= 0 || target.hp <= 0) return;
     let moveObj = actor.moves[moveIdx];
     /* 呢隻 4 招全部冇 PP → 自動出 Struggle，唔會白食回合 */
     const anyPp = actor.moves.some(m => m.pp > 0);
@@ -112,11 +201,24 @@ const BattleState = (() => {
 
     log(state, `${actor.name} used ${move.name}!`);
 
+    /* ---------- 場地招式（天氣／釘子／壁） ---------- */
+    const foeSideKey = otherSide(side);
+    if (move.damage_class === "status" && FIELD_MOVES[moveObj.slug]) {
+      FIELD_MOVES[moveObj.slug](state, side, foeSideKey, actor, target);
+      return;
+    }
+    /* Weather Ball：有場地天氣時轉屬性＋威力 50→100（Gen 5） */
+    let effMove = move;
+    if (moveObj.slug === "weather-ball" && state.weather) {
+      const wType = { sun: "fire", rain: "water", sandstorm: "rock", hail: "ice" }[state.weather.name];
+      if (wType) effMove = Object.assign({}, move, { type: wType, power: 100 });
+    }
+
     /* 特性免疫（Levitate / Volt Absorb / Water Absorb / Flash Fire / Lightning Rod）：
        成招無效，唔進 hit loop */
-    if (move.power && move.damage_class !== "status") {
+    if (effMove.power && effMove.damage_class !== "status") {
       const abType = ABIL_IMMUNE_TYPE[target.ability];
-      if (abType && abType === move.type) {
+      if (abType && abType === effMove.type) {
         if (target.ability === "volt-absorb" || target.ability === "water-absorb") {
           target.hp = Math.min(target.maxHp, target.hp + Math.floor(target.maxHp / 4));
           log(state, `${target.name} absorbed the attack with ${abilityLabel(target.ability)}!`);
@@ -134,16 +236,28 @@ const BattleState = (() => {
     }
 
     /* status 類招式（damage_class = status）：無傷害，只出效果 */
-    const hitCount = (move.damage_class === "status") ? 1 : Battle.rollHitCount(move.meta && move.meta.min_hits, move.meta && move.meta.max_hits);
+    const hitCount = (effMove.damage_class === "status") ? 1 : Battle.rollHitCount(effMove.meta && effMove.meta.min_hits, effMove.meta && effMove.meta.max_hits);
+
+    /* 天氣必中（Gen 5）：Blizzard 雹天必中、Thunder 雨天必中 */
+    const wName = state.weather && state.weather.name;
+    const neverMiss = (moveObj.slug === "blizzard" && wName === "hail") || (moveObj.slug === "thunder" && wName === "rain");
 
     for (let hit = 0; hit < hitCount; hit++) {
-      if (!hitCheckFor(move, actor, target)) {
+      if (!neverMiss && !hitCheckFor(effMove, actor, target)) {
         log(state, `${actor.name}'s attack missed!`);
         continue;
       }
-      const crit = Math.random() < Battle.critChance(move.meta && move.meta.crit_rate);
-      if (move.power && move.damage_class !== "status") {
-        const { damage, effectiveness } = Battle.computeDamage(actor, target, move, { crit });
+      const crit = Math.random() < Battle.critChance(effMove.meta && effMove.meta.crit_rate);
+      if (effMove.power && effMove.damage_class !== "status") {
+        /* 受壁嗰邊：reflect 擋物理、lightScreen 擋特殊（crit 會喺 engine 無視） */
+        const defSide = state[foeSideKey].side;
+        const { damage, effectiveness } = Battle.computeDamage(actor, target, effMove, {
+          crit,
+          weather: wName,
+          slug: moveObj.slug,
+          reflect: defSide.reflect > 0,
+          lightScreen: defSide.lightScreen > 0
+        });
         /* 屬性免疫（0 倍）：成招落空，後續效果一律唔出 */
         if (effectiveness === 0) { log(state, `It doesn't affect ${target.name}...`); break; }
         /* Sturdy：滿 HP 食致命傷留 1 HP（Gen 5 規則） */
@@ -234,7 +348,36 @@ const BattleState = (() => {
       p.statStages.spe += 1;
       log(state, `${p.name}'s Speed Boost raised its Speed!`);
     }
+    /* 天氣 chip damage（Gen 5）：沙暴 1/16（岩/地/鋼免疫）；雹 1/16（冰免疫） */
+    if (p.hp > 0 && state.weather) {
+      const w = state.weather.name;
+      const immune = (w === "sandstorm") ? p.types.some(t => t === "rock" || t === "ground" || t === "steel")
+        : (w === "hail") ? p.types.includes("ice") : true;
+      if (!immune) {
+        p.hp = Math.max(0, p.hp - Math.max(1, Math.floor(p.maxHp / 16)));
+        log(state, `${p.name} is buffeted by the ${w === "sandstorm" ? "sandstorm" : "hail"}!`);
+      }
+    }
+    /* 壁倒數（每邊各自計） */
+    const sd = state[side].side;
+    if (sd.reflect > 0 && --sd.reflect === 0) log(state, `Reflect on ${side === "p1" ? "your" : "the foe's"} side wore off!`);
+    if (sd.lightScreen > 0 && --sd.lightScreen === 0) log(state, `Light Screen on ${side === "p1" ? "your" : "the foe's"} side wore off!`);
     if (p.hp <= 0) log(state, `${p.name} fainted!`);
+  }
+
+  /* ---------- 全場回合末處理（每回合一次）：天氣倒數 ---------- */
+  const WEATHER_END_LOG = {
+    sun: "The sunlight faded.",
+    rain: "The rain stopped.",
+    sandstorm: "The sandstorm subsided.",
+    hail: "The hail stopped."
+  };
+  function endTurnField(state) {
+    if (!state.weather) return;
+    if (--state.weather.turns <= 0) {
+      log(state, WEATHER_END_LOG[state.weather.name]);
+      state.weather = null;
+    }
   }
 
   /* ---------- 換 Pokémon ---------- */
@@ -294,8 +437,8 @@ const BattleState = (() => {
 
   return {
     create, active, otherSide, log,
-    executeMove, endTurnResidual, switchTo, onSwitchIn,
-    hasUsable, checkFinished, statusLabel
+    executeMove, endTurnResidual, endTurnField, switchTo, onSwitchIn,
+    applyEntryHazards, hasUsable, checkFinished, statusLabel
   };
 })();
 

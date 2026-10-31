@@ -2607,6 +2607,25 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   font-size: clamp(8px, 2vw, 11px); line-height: 1.1;
   text-shadow: 1px 1px 0 #6b5a73; white-space: nowrap;
 }
+/* 場地狀態 chip 列：天氣（中）+ 雙方釘子/壁標記，貼舞台中上位置 */
+.battle-field {
+  position: absolute; z-index: 6; left: 50%; top: 15%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  pointer-events: none;
+}
+.bf-row { display: flex; gap: 3px; }
+.bf-chip {
+  padding: 1px 6px 2px;
+  border: clamp(5px, 1.5vw, 8px) solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+  color: #f8f8f8; font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: clamp(7px, 1.8vw, 10px); line-height: 1.1;
+  text-shadow: 1px 1px 0 #6b5a73; white-space: nowrap;
+}
+.bf-weather { color: #ffe08a; }
+.bf-foe { color: #f8a8a8; }
+.bf-mine { color: #a8d8f8; }
 /* EXP 條槽：x24-86, y33-34 原圖量度 */
 .battle-expbar-clip {
   position: absolute; left: 22.2%; top: 84.6%; width: 57.4%; height: 5.1%;

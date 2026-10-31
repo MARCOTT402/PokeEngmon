@@ -159,6 +159,104 @@ ogA.hp = Math.floor(ogA.maxHp / 3);
 const ogPinch = Battle.computeDamage(ogA, ogB, vwInfo, {}).damage;
 t("Overgrow pinch 草招加強", ogPinch >= ogFull * 1.3);
 
+/* ---------- 場地效果（v1.15.18）：天氣 + 釘子 + 壁 ---------- */
+
+/* TR-F1: 天氣招設定 + 互斥（新蓋舊） */
+const fw = BattleState.create([mk(4, 30, ["sunny-day", "rain-dance"])], [mk(1, 30, [])]);
+BattleState.executeMove(fw, "p1", 0);
+t("Sunny Day 出太陽", fw.weather && fw.weather.name === "sun" && fw.weather.turns === 5);
+BattleState.executeMove(fw, "p1", 1);
+t("Rain Dance 蓋過太陽", fw.weather && fw.weather.name === "rain" && fw.weather.turns === 5);
+t("晴天 log 出咗", fw.log.some(l => /sunlight turned harsh/.test(l.msg)));
+
+/* TR-F2: 晴天火×1.5／水×0.5；雨天反轉 */
+const sunA = Battle.makeBattlePokemon(mk(4, 30, []));   /* Charmander */
+const sunB = Battle.makeBattlePokemon(mk(7, 30, []));   /* Squirtle */
+const emberI = ctx.moveInfo("ember");
+const noW = Battle.computeDamage(sunA, sunB, emberI, {}).damage;
+const inSun = Battle.computeDamage(sunA, sunB, emberI, { weather: "sun" }).damage;
+const inRain = Battle.computeDamage(sunA, sunB, emberI, { weather: "rain" }).damage;
+t("晴天火招加強 ~×1.5", inSun >= noW * 1.3);
+t("雨天火招減弱 ~×0.5", inRain <= noW * 0.7);
+
+/* TR-F3: 天氣倒數 + 5 回合後消散 */
+const fw3 = BattleState.create([mk(4, 30, [])], [mk(1, 30, [])]);
+fw3.weather = { name: "sandstorm", turns: 1 };
+BattleState.endTurnField(fw3);
+t("沙暴 1 回合後消散", fw3.weather === null);
+t("出消散 log", fw3.log.some(l => /subsided/.test(l.msg)));
+
+/* TR-F4: 沙暴 chip 1/16，岩/地/鋼免疫 */
+const chip = BattleState.create([mk(4, 30, [])], [mk(95, 30, [])]);   /* p2 Onix = rock/ground */
+chip.weather = { name: "sandstorm", turns: 5 };
+const cHp1 = chip.p1.team[0].hp;
+BattleState.endTurnResidual(chip, "p1");
+BattleState.endTurnResidual(chip, "p2");
+t("Charmander 被沙暴磨 1/16", cHp1 - chip.p1.team[0].hp === Math.floor(chip.p1.team[0].maxHp / 16));
+t("Onix 岩屬性免疫沙暴", chip.p2.team[0].hp === chip.p2.team[0].maxHp);
+
+/* TR-F5: Reflect 物理半減（crit 無視）；Light Screen 特殊半減 */
+const scA = Battle.makeBattlePokemon(mk(4, 30, []));
+const scB = Battle.makeBattlePokemon(mk(1, 30, []));
+const tackleI = ctx.moveInfo("tackle");
+const noRef = Battle.computeDamage(scA, scB, tackleI, {}).damage;
+const withRef = Battle.computeDamage(scA, scB, tackleI, { reflect: true }).damage;
+const critRef = Battle.computeDamage(scA, scB, tackleI, { reflect: true, crit: true }).damage;
+t("Reflect 物理半減", withRef <= noRef * 0.65);
+t("crit 無視 Reflect", critRef > withRef);
+const noLS = Battle.computeDamage(scA, scB, emberI, {}).damage;
+const withLS = Battle.computeDamage(scA, scB, emberI, { lightScreen: true }).damage;
+t("Light Screen 特殊半減", withLS <= noLS * 0.65);
+
+/* TR-F6: 壁招式開喺自己嗰邊 + 5 回合倒數 */
+const scr = BattleState.create([mk(4, 30, ["reflect"])], [mk(1, 30, [])]);
+BattleState.executeMove(scr, "p1", 0);
+t("Reflect 開喺 p1 側", scr.p1.side.reflect === 5 && scr.p2.side.reflect === 0);
+BattleState.executeMove(scr, "p1", 0);
+t("重複開壁失敗", scr.log.filter(l => /But it failed/.test(l.msg)).length === 1 && scr.p1.side.reflect === 5);
+
+/* TR-F7: Spikes 分層傷害 + 飛行免疫 */
+const spk = BattleState.create([mk(4, 30, ["spikes"]), mk(1, 30, [])], [mk(1, 30, [])]);
+BattleState.executeMove(spk, "p1", 0);
+BattleState.executeMove(spk, "p1", 0);
+t("Spikes 疊到 2 層", spk.p2.side.spikes === 2);
+BattleState.switchTo(spk, "p2", 0);
+const spkMsgs = BattleState.applyEntryHazards(spk, "p2");
+t("2 層 spikes 扣 1/6", spk.p2.team[0].hp === spk.p2.team[0].maxHp - Math.max(1, Math.floor(spk.p2.team[0].maxHp / 6)));
+t("出 spikes log", spkMsgs.some(m => /spikes/.test(m)));
+/* 飛行免疫 */
+const fly = BattleState.create([mk(4, 30, [])], [mk(16, 30, [])]);   /* Pidgey */
+fly.p2.side.spikes = 3;
+const flyMsgs = BattleState.applyEntryHazards(fly, "p2");
+t("飛行屬性免疫 spikes", fly.p2.team[0].hp === fly.p2.team[0].maxHp && flyMsgs.length === 0);
+
+/* TR-F8: Stealth Rock 按岩相性扣血（火 2× 弱岩 → 1/4） */
+const sr = BattleState.create([mk(4, 30, [])], [mk(6, 30, [])]);   /* Charizard fire/flying 4× 弱岩 */
+sr.p2.side.stealthRock = true;
+const srMsgs = BattleState.applyEntryHazards(sr, "p2");
+t("Charizard 4× 弱岩食 1/2", sr.p2.team[0].hp === sr.p2.team[0].maxHp - Math.max(1, Math.floor(sr.p2.team[0].maxHp / 2)));
+t("出 stones log", srMsgs.some(m => /Pointed stones/.test(m)));
+
+/* TR-F9: Weather Ball 有場時轉屬性＋100 威力 */
+const wb = BattleState.create([mk(4, 30, ["weather-ball"])], [mk(1, 30, [])]);
+wb.weather = { name: "sun", turns: 5 };
+const wbHp0 = wb.p2.team[0].hp;
+BattleState.executeMove(wb, "p1", 0);
+t("Weather Ball 晴天打出傷害（100 威力火）", wb.p2.team[0].hp < wbHp0);
+t("出 super effective（火打草）", wb.log.some(l => /super effective/.test(l.msg)));
+
+/* TR-F10: Blizzard 雹天必中 */
+const blz = BattleState.create([mk(4, 30, ["blizzard"])], [mk(1, 30, [])]);
+blz.weather = { name: "hail", turns: 5 };
+let blzHit = 0;
+for (let i = 0; i < 50; i++) {
+  const s = BattleState.create([mk(4, 30, ["blizzard"])], [mk(1, 30, [])]);
+  s.weather = { name: "hail", turns: 5 };
+  BattleState.executeMove(s, "p1", 0);
+  if (!s.log.some(l => /missed/.test(l.msg))) blzHit++;
+}
+t("Blizzard 雹天 50/50 必中", blzHit === 50);
+
 /* 完整對戰模擬：Charmander vs Bulbasaur */
 const state = BattleState.create(
   [{ dexId: 4, level: 15, ivs: {}, evs: {}, nature: "hardy", moves: ["ember", "scratch", "growl", "smokescreen"] }],

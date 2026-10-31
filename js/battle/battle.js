@@ -611,6 +611,16 @@ const BattleUI = (() => {
       sprite.style.visibility = "";
       hpSlideIn(who);
       await tap2;
+      /* 入場釘子（spikes / stealth-rock）：先食傷害，之後先輪到上場特性（Gen 順序） */
+      for (const m of BattleState.applyEntryHazards(state, side)) {
+        render();
+        await say(m);
+      }
+      if (inn.hp <= 0) {
+        sprite.classList.add("anim-faint");
+        await sleep(600);
+        return;   /* 釘死：由外層 faint 流程接力（強制換／AI 換） */
+      }
       /* 上場特性（Intimidate）：逐句出訊息等玩家 click */
       for (const m of BattleState.onSwitchIn(state, side)) await say(m);
     })();
@@ -731,7 +741,35 @@ const BattleUI = (() => {
     /* status badges（FRLG 原裝 icon） */
     setStatusBadge("foe-status", foe.status);
     setStatusBadge("my-status", mine.status);
+    renderFieldChips();
     updateMyExpBar();
+  }
+
+  /* 場地狀態 chip：天氣（含回合數）+ 雙方釘子/壁標記；無效果時成列收埋 */
+  function renderFieldChips() {
+    const el = document.getElementById("battle-field");
+    if (!el || !state) return;
+    const rows = [];
+    if (state.weather) {
+      const icon = { sun: "☀", rain: "🌧", sandstorm: "🌪", hail: "❄" }[state.weather.name] || "";
+      const label = { sun: "SUN", rain: "RAIN", sandstorm: "SANDSTORM", hail: "HAIL" }[state.weather.name];
+      rows.push(`<div class="bf-row"><span class="bf-chip bf-weather">${icon} ${label} ${state.weather.turns}</span></div>`);
+    }
+    const sideChips = (side, cls) => {
+      const s = state[side].side;
+      const chips = [];
+      if (s.reflect > 0) chips.push(`Reflect ${s.reflect}`);
+      if (s.lightScreen > 0) chips.push(`Light Screen ${s.lightScreen}`);
+      if (s.spikes > 0) chips.push(`Spikes ×${s.spikes}`);
+      if (s.stealthRock) chips.push("S. Rock");
+      return chips.length ? `<div class="bf-row">${chips.map(c => `<span class="bf-chip ${cls}">${c}</span>`).join("")}</div>` : "";
+    };
+    const foeRow = sideChips(foeSide, "bf-foe");
+    const myRow = sideChips(mySide, "bf-mine");
+    if (foeRow) rows.push(foeRow);
+    if (myRow) rows.push(myRow);
+    el.innerHTML = rows.join("");
+    el.style.display = rows.length ? "flex" : "none";
   }
 
   /* EXP 條：同主頁一樣顯示「呢一級入面行咗幾多」（into / span），唔係齋得個殼 */
@@ -1028,6 +1066,7 @@ const BattleUI = (() => {
         const resStart = state.log.length;
         BattleState.endTurnResidual(state, mySide);
         BattleState.endTurnResidual(state, foeSide);
+        BattleState.endTurnField(state);
         render();
         /* residual（燒傷/毒）打死都要播倒下 */
         let residualFaint = false;

@@ -81,7 +81,13 @@ const Battle = (() => {
     /* Unaware：攻方無視防方 stage；防方無視攻方 stage（其餘倍率照計） */
     const atk = effectiveStat(attacker, atkKey, defender.ability === "unaware");
     const def = Math.max(1, effectiveStat(defender, defKey, attacker.ability === "unaware"));
-    const power = move.power || 0;
+    /* Solar Beam：雨／沙暴／雹 下威力減半（Gen 5） */
+    const weather = opts.weather || null;
+    let power = move.power || 0;
+    if ((opts.slug === "solar-beam" || move.slug === "solar-beam") &&
+        (weather === "rain" || weather === "sandstorm" || weather === "hail")) {
+      power = Math.floor(power / 2);
+    }
 
     let base = Math.floor(((2 * level / 5 + 2) * power * atk / def) / 50) + 2;
 
@@ -107,6 +113,22 @@ const Battle = (() => {
     /* Thick Fat：火／冰傷害減半 */
     if (defender.ability === "thick-fat" && (move.type === "fire" || move.type === "ice")) {
       base = Math.floor(base * 0.5);
+    }
+
+    /* 天氣倍率（Gen 5）：日照火×1.5／水×0.5；下雨水×1.5／火×0.5 */
+    if (weather === "sun") {
+      if (move.type === "fire") base = Math.floor(base * 1.5);
+      else if (move.type === "water") base = Math.floor(base * 0.5);
+    } else if (weather === "rain") {
+      if (move.type === "water") base = Math.floor(base * 1.5);
+      else if (move.type === "fire") base = Math.floor(base * 0.5);
+    }
+
+    /* 光牆／反射壁：受壁嗰邊受到嘅物理（Reflect）／特殊（Light Screen）傷害減半；
+       crit 會無視壁（Gen 5 規則），所以喺 crit 倍率之前、且 crit 時唔乘 */
+    if (!opts.crit) {
+      if (isPhysical && opts.reflect) base = Math.floor(base * 0.5);
+      if (!isPhysical && opts.lightScreen) base = Math.floor(base * 0.5);
     }
 
     /* crit: 傷害 ×1.5 (Gen 5), 忽略對方防禦 buff 同我方攻擊 debuff */
