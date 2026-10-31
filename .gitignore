@@ -9,5 +9,8 @@ node_modules/
 # PokéAPI move cache (regenerable, 560+ small json)
 tools/.cache_pokeapi/
 
+# PokeRogue atlas 下載暫存（重跑 fetch_pkmn_sprites.py 可再生）
+tools/.cache_pkmn/
+
 # Trae temp share artifacts
 .trae-html-share-packages/
