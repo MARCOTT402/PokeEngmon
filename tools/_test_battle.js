@@ -43,7 +43,7 @@ for (let i = 0; i < turns; i++) {
   const s = BattleState.create([{ dexId: 4, level: 15, ivs: {}, evs: {}, nature: "hardy", moves: ["tackle"] }], [{ dexId: 1, level: 15, ivs: {}, evs: {}, nature: "hardy", moves: [] }]);
   s.p1.team[0].status = "paralyze";
   BattleState.executeMove(s, "p1", 0);
-  const skipped = !s.log.some(l => /使出/.test(l.msg));
+  const skipped = !s.log.some(l => /used /.test(l.msg));
   if (skipped) skips++;
 }
 const rate = skips / turns;

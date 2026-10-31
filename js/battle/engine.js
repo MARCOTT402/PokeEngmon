@@ -25,6 +25,9 @@ const Battle = (() => {
   /* multi-hit distribution: 2-5 hits (Gen 5) */
   const HIT_ROLLS = [2, 2, 2, 3, 3, 3, 4, 5];  /* 3/8 two, 3/8 three, 1/8 four, 1/8 five */
   function rollHitCount(minHits, maxHits) {
+    /* 一般招式嘅 meta.min_hits / max_hits 係 null → 單發；
+       只有真正連擊招（fury-attack 等 20 招）先會有多段 */
+    if (!minHits && !maxHits) return 1;
     minHits = minHits || 2; maxHits = maxHits || 5;
     if (minHits === maxHits) return minHits;
     const r = HIT_ROLLS[Math.floor(Math.random() * HIT_ROLLS.length)];

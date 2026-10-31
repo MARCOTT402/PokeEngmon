@@ -21,8 +21,12 @@ const BattleState = (() => {
   function log(state, msg) { state.log.push({ turn: state.turn, msg }); }
 
   /* ---------- status 賦予 ---------- */
+  /* PokeAPI 嘅 ailment 名稱 → 引擎內部 status key
+     （moves.json 用 "paralysis"，引擎同 UI 用 "paralyze"） */
+  const AILMENT_ALIAS = { paralysis: "paralyze", "bad-poison": "toxic" };
   function applyStatus(defender, ailment) {
     if (!ailment || ailment === "none") return false;
+    ailment = AILMENT_ALIAS[ailment] || ailment;
     /* 已有 status 唔再覆蓋（除咗 toxic 覆蓋 poison） */
     if (defender.status) {
       if (ailment === "toxic" && defender.status === "poison") { defender.status = "toxic"; defender.statusTimer = 0; return true; }
@@ -35,26 +39,39 @@ const BattleState = (() => {
   }
 
   /* ---------- 單招執行（含多段） ---------- */
+  /* 冇晒 PP 時嘅 Struggle：50 威力、無屬性、反動 1/4 傷害（原版行為） */
+  const STRUGGLE = {
+    slug: "struggle", name: "Struggle", type: "???", power: 50, accuracy: null, pp: null,
+    priority: 0, damage_class: "physical", target: "selected-pokemon", effect_chance: null,
+    stat_changes: [],
+    meta: {
+      ailment: "none", ailment_chance: 0, crit_rate: 0, drain: -25,
+      flinch_chance: 0, healing: 0, stat_chance: 0, min_hits: null, max_hits: null
+    }
+  };
   function executeMove(state, side, moveIdx) {
     const actor = active(state, side);
     const target = active(state, otherSide(side));
-    const moveObj = actor.moves[moveIdx];
-    if (!moveObj || moveObj.pp <= 0) { log(state, `${actor.name} 冇 PP 了！`); return; }
-    moveObj.pp -= 1;
-    const move = (typeof moveInfo === "function") ? moveInfo(moveObj.slug) : { name: moveObj.name, type: "normal", power: 0, damage_class: "physical", accuracy: null, priority: 0, meta: {}, stat_changes: [] };
+    let moveObj = actor.moves[moveIdx];
+    /* 呢隻 4 招全部冇 PP → 自動出 Struggle，唔會白食回合 */
+    const anyPp = actor.moves.some(m => m.pp > 0);
+    if ((!moveObj || moveObj.pp <= 0) && !anyPp) moveObj = STRUGGLE;
+    if (!moveObj) { log(state, `${actor.name} has no PP left!`); return; }
+    if (moveObj !== STRUGGLE) moveObj.pp -= 1;
+    const move = moveObj === STRUGGLE ? STRUGGLE : ((typeof moveInfo === "function") ? moveInfo(moveObj.slug) : { name: moveObj.name, type: "normal", power: 0, damage_class: "physical", accuracy: null, priority: 0, meta: {}, stat_changes: [] });
 
     /* status 阻礙 */
     if (actor.status === "sleep") {
       actor.statusTimer -= 1;
-      if (actor.statusTimer <= 0) { actor.status = null; log(state, `${actor.name} 醒返！`); }
-      else { log(state, `${actor.name} 訓緊覺...`); return; }
+      if (actor.statusTimer <= 0) { actor.status = null; log(state, `${actor.name} woke up!`); }
+      else { log(state, `${actor.name} is fast asleep.`); return; }
     }
     if (actor.status === "freeze") {
-      if (Math.random() < 0.2) { actor.status = null; log(state, `${actor.name} 解凍！`); }
-      else { log(state, `${actor.name} 結凍咗！`); return; }
+      if (Math.random() < 0.2) { actor.status = null; log(state, `${actor.name} thawed out!`); }
+      else { log(state, `${actor.name} is frozen solid!`); return; }
     }
     if (actor.status === "paralyze" && Math.random() < 0.25) {
-      log(state, `${actor.name} 麻痺咗郁唔到！`); return;
+      log(state, `${actor.name} is paralyzed! It can't move!`); return;
     }
 
     /* confusion: 50% 打自己 */
@@ -63,48 +80,55 @@ const BattleState = (() => {
       if (Math.random() < 0.5) {
         const selfDmg = Math.floor(actor.maxHp * 0.125);
         actor.hp = Math.max(0, actor.hp - selfDmg);
-        log(state, `${actor.name} 混亂攻擊自己！受到 ${selfDmg} 傷害`);
+        log(state, `${actor.name} is confused! It hurt itself in its confusion!`);
         return;
       }
     }
 
     /* flinch */
-    if (actor.volatile.flinch) { actor.volatile.flinch = false; log(state, `${actor.name} 嚇到縮！`); return; }
+    if (actor.volatile.flinch) { actor.volatile.flinch = false; log(state, `${actor.name} flinched!`); return; }
 
-    log(state, `${actor.name} 使出 ${move.name}！`);
+    log(state, `${actor.name} used ${move.name}!`);
 
     /* status 類招式（damage_class = status）：無傷害，只出效果 */
     const hitCount = (move.damage_class === "status") ? 1 : Battle.rollHitCount(move.meta && move.meta.min_hits, move.meta && move.meta.max_hits);
 
     for (let hit = 0; hit < hitCount; hit++) {
       if (!hitCheckFor(move, actor, target)) {
-        log(state, `${actor.name} 嘅攻擊唔夠準，打唔中！`);
+        log(state, `${actor.name}'s attack missed!`);
         continue;
       }
       const crit = Math.random() < Battle.critChance(move.meta && move.meta.crit_rate);
       if (move.power && move.damage_class !== "status") {
         const { damage, effectiveness } = Battle.computeDamage(actor, target, move, { crit });
         target.hp = Math.max(0, target.hp - damage);
-        log(state, `對 ${target.name} 造成 ${damage} 傷害` + (effectiveness > 1 ? "（效果絕佳！）" : effectiveness < 1 && effectiveness > 0 ? "（效果唔好...）" : ""));
-        /* drain */
+        if (crit) log(state, "A critical hit!");
+        log(state, `${target.name} took ${damage} damage!` + (effectiveness > 1 ? " It's super effective!" : effectiveness < 1 && effectiveness > 0 ? " It's not very effective..." : ""));
+        /* drain（正數吸血／負數反動，Struggle 用 -25） */
         if (move.meta && move.meta.drain) {
-          const heal = Math.floor(damage * (move.meta.drain / 100));
-          actor.hp = Math.min(actor.maxHp, actor.hp + heal);
-          if (heal > 0) log(state, `${actor.name} 吸取咗 ${heal} HP！`);
+          const delta = Math.floor(damage * (move.meta.drain / 100));
+          if (delta > 0) {
+            actor.hp = Math.min(actor.maxHp, actor.hp + delta);
+            log(state, `${actor.name} drained ${delta} HP!`);
+          } else if (delta < 0) {
+            actor.hp = Math.max(0, actor.hp + delta);
+            log(state, `${actor.name} is hit with recoil!`);
+            if (actor.hp <= 0) { log(state, `${actor.name} fainted!`); break; }
+          }
         }
       }
       /* healing */
       if (move.meta && move.meta.healing) {
         const heal = Math.floor(actor.maxHp * (move.meta.healing / 100));
         actor.hp = Math.min(actor.maxHp, actor.hp + heal);
-        if (heal > 0) log(state, `${actor.name} 回復咗 ${heal} HP！`);
+        if (heal > 0) log(state, `${actor.name} recovered ${heal} HP!`);
       }
       /* ailment */
       if (move.meta && move.meta.ailment && move.meta.ailment !== "none") {
         const chance = (move.meta.ailment_chance == null) ? 100 : move.meta.ailment_chance;
         if (Math.random() * 100 < chance) {
           if (applyStatus(target, move.meta.ailment)) {
-            log(state, `${target.name} 陷入 ${statusLabel(move.meta.ailment)} 狀態！`);
+            log(state, `${target.name} is ${statusLabel(move.meta.ailment)}!`);
           }
         }
       }
@@ -112,13 +136,13 @@ const BattleState = (() => {
       (move.stat_changes || []).forEach(sc => {
         const tgt = sc.change < 0 ? target : actor;
         tgt.statStages[sc.stat] = Math.max(-6, Math.min(6, (tgt.statStages[sc.stat] || 0) + sc.change));
-        log(state, `${tgt.name} 嘅 ${sc.stat} ${sc.change > 0 ? "上升" : "下降"}！`);
+        log(state, `${tgt.name}'s ${statLabel(sc.stat)} ${sc.change > 0 ? "rose" : "fell"}!`);
       });
       /* flinch */
       if (move.meta && move.meta.flinch_chance && Math.random() * 100 < move.meta.flinch_chance) {
         target.volatile.flinch = true;
       }
-      if (target.hp <= 0) { log(state, `${target.name} 倒下喇！`); break; }
+      if (target.hp <= 0) { log(state, `${target.name} fainted!`); break; }
     }
   }
 
@@ -133,18 +157,18 @@ const BattleState = (() => {
     if (p.status === "burn") {
       const dmg = Math.floor(p.maxHp / 16);
       p.hp = Math.max(0, p.hp - dmg);
-      log(state, `${p.name} 被燒傷，受到 ${dmg} 傷害`);
+      log(state, `${p.name} is hurt by its burn!`);
     } else if (p.status === "poison") {
       const dmg = Math.floor(p.maxHp / 8);
       p.hp = Math.max(0, p.hp - dmg);
-      log(state, `${p.name} 中毒，受到 ${dmg} 傷害`);
+      log(state, `${p.name} is hurt by poison!`);
     } else if (p.status === "toxic") {
       p.statusTimer = (p.statusTimer || 0) + 1;
       const dmg = Math.floor(p.maxHp * Math.min(15, p.statusTimer) / 16);
       p.hp = Math.max(0, p.hp - dmg);
-      log(state, `${p.name} 劇毒發作，受到 ${dmg} 傷害`);
+      log(state, `${p.name} is hurt by poison!`);
     }
-    if (p.hp <= 0) log(state, `${p.name} 倒下喇！`);
+    if (p.hp <= 0) log(state, `${p.name} fainted!`);
   }
 
   /* ---------- 換 Pokémon ---------- */
@@ -155,7 +179,7 @@ const BattleState = (() => {
     const p = team[idx];
     /* 換人重置 volatile，但保留 status */
     p.volatile.flinch = false;
-    log(state, `換上 ${p.name}！`);
+    log(state, `Go! ${p.name}!`);
     return true;
   }
 
@@ -171,7 +195,15 @@ const BattleState = (() => {
   }
 
   function statusLabel(s) {
-    return { burn: "燒傷", paralyze: "麻痺", poison: "中毒", toxic: "劇毒", sleep: "睡眠", freeze: "冰凍", confusion: "混亂" }[s] || s;
+    return { burn: "burned", paralyze: "paralyzed", paralysis: "paralyzed", poison: "poisoned", toxic: "badly poisoned", sleep: "asleep", freeze: "frozen", confusion: "confused" }[s] || s;
+  }
+
+  function statLabel(stat) {
+    return {
+      hp: "HP", attack: "Attack", defense: "Defense",
+      "special-attack": "Sp. Atk", "special-defense": "Sp. Def", speed: "Speed",
+      accuracy: "accuracy", evasion: "evasiveness"
+    }[stat] || stat;
   }
 
   return {

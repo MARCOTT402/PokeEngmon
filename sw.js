@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-1.12.3";
+const CACHE_NAME = "pokeengmon-1.15.13";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const BATTLE_TYPES = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "unknown", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark"];
 const BATTLE_UI = [
@@ -8,6 +8,12 @@ const BATTLE_UI = [
   "status-psn", "status-par", "status-slp", "status-frz", "status-brn", "status-tox", "status-fnt"
 ];
 const TRAINERS = ["red_back", "rival", "youngster", "bugcatcher", "lass", "gentleman", "ace_f"];
+const BATTLE_FX = [
+  "fx-normal", "fx-fire", "fx-fire-ring", "fx-water", "fx-water2", "fx-wave", "fx-electric",
+  "fx-grass", "fx-bug", "fx-ice", "fx-ice2", "fx-rock", "fx-rock2", "fx-steel", "fx-fighting",
+  "fx-dark", "fx-poison", "fx-ghost", "fx-psychic", "fx-fairy", "fx-flying", "fx-dragon",
+  "fx-smoke", "fx-eyes"
+];
 const ASSETS = [
   "./",
   "./index.html",
@@ -38,6 +44,8 @@ const ASSETS = [
   "./js/capture.js",
   "./js/battle/engine.js",
   "./js/battle/state.js",
+  "./js/battle/moveanim.js",
+  "./js/battle/sprites.js",
   "./js/battle/battle.js",
   "./vendor/gsap/gsap.min.js",
   "./vendor/three/three.module.js",
@@ -55,6 +63,28 @@ const ASSETS = [
   "./vendor/three/addons/shaders/BokehShader.js",
   "./manifest.json",
   "./assets/fonts/inter-latin-var.woff2",
+  "./assets/fonts/dotgothic16-latin.woff2",
+  "./assets/fonts/pokemon-emerald-pro.ttf",
+  "./assets/battle/ui/pr-msg-bg.png",
+  "./assets/battle/ui/pr-window-1.png",
+  "./assets/battle/ui/pr-prompt.png",
+  "./assets/battle/sfx/select.wav",
+  "./assets/battle/sfx/pb_throw.wav",
+  "./assets/battle/sfx/pb_rel.wav",
+  "./assets/battle/sfx/hit.wav",
+  "./assets/battle/sfx/hit_weak.wav",
+  "./assets/battle/sfx/hit_strong.wav",
+  "./assets/battle/sfx/faint.wav",
+  "./assets/battle/sfx/stat_up.wav",
+  "./assets/battle/sfx/stat_down.wav",
+  "./assets/battle/party/party_bg.png",
+  "./assets/battle/party/party_slot.png",
+  "./assets/battle/party/party_slot_main.png",
+  "./assets/battle/party/party_pb.png",
+  "./assets/battle/party/party_cancel.png",
+  "./assets/battle/party/party_slot_hp_bar.png",
+  "./assets/battle/party/party_slot_hp_overlay.png",
+  "./assets/battle/party/party_slot_overlay_lv.png",
   "./assets/audio/wrong-answer.mp3",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -70,6 +100,9 @@ const ASSETS = [
   ...TRAINERS.map(t => `./assets/trainers/${t}.png`),
   ...BATTLE_TYPES.map(t => `./assets/battle/ui/type-${t}.png`),
   ...BATTLE_UI.map(u => `./assets/battle/ui/${u}.png`),
+  ...BATTLE_FX.map(f => `./assets/battle/fx/${f}.png`),
+  "./assets/battle/anim/index.json",
+  "./assets/battle/pkmn/index.json",
   ...Array.from({ length: 16 }, (_, i) => `./assets/badges/${i + 1}.png`),
   ...Array.from({ length: 151 }, (_, i) => `./assets/cries/${i + 1}.mp3`)
 ];

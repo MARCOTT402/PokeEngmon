@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "1.12.3";
+const APP_VERSION = "1.15.13";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -1866,10 +1866,12 @@ const App = {
         <h4>Data &amp; Image Credits</h4>
         <p>Pokémon base stats, moves, evolution data, sprites, and type icons are provided by <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>.</p>
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
-        <p>Battle UI frames, HP boxes, battle backgrounds, trainer sprites, and Poké Ball graphics are original assets from Pokémon FireRed/LeafGreen (© Nintendo / Creatures Inc. / GAME FREAK inc.), ripped from <a href="https://www.spriters-resource.com/game_boy_advance/pokemonfireredleafgreen/" target="_blank" rel="noopener">The Spriters Resource</a> (rippers: redblueyellow, desgardes, Superjustinbros, Spherical Ice, EternalLight) and the pret/pokefirered decompilation project.</p>
+        <p>Battle UI frames, HP boxes, battle backgrounds, trainer sprites, Poké Ball graphics, and move attack-effect sprites are original assets from Pokémon FireRed/LeafGreen (© Nintendo / Creatures Inc. / GAME FREAK inc.), ripped from <a href="https://www.spriters-resource.com/game_boy_advance/pokemonfireredleafgreen/" target="_blank" rel="noopener">The Spriters Resource</a> (rippers: redblueyellow, desgardes, Superjustinbros, Spherical Ice, EternalLight, wormintheworks) and the pret/pokefirered decompilation project.</p>
+        <p>Per-move battle animations (frame data + spritesheets), in-battle Pokémon sprite animations, the battle dialogue window, the party (switch Pokémon) screen UI, the "emerald" dialogue font and battle sound effects are adapted from the open-source assets of the Pokémon fan games <a href="https://www.pokerogue.net/" target="_blank" rel="noopener">PokeRogue</a> and Pokémon Reborn (<a href="https://github.com/pagefaultgames/pokerogue-assets" target="_blank" rel="noopener">pokerogue-assets</a>, beta branch). All Pokémon-related artwork remains © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
 
         <h4>Font</h4>
         <p><i>Inter</i> by Rasmus Andersson, licensed under the SIL Open Font License 1.1.</p>
+        <p>Battle screen font: <i>pokemon-emerald-pro</i> (PokeRogue's "emerald" font), with <i>DotGothic16</i> by Fontworks Inc. (SIL Open Font License 1.1) as a fallback.</p>
 
         <h4>Music &amp; Sound Credits</h4>
         <p>Background music: <i>Flat Water</i> by BGM channel (official music video). All rights belong to their respective owners.</p>

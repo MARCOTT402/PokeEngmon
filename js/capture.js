@@ -114,6 +114,70 @@ class CaptureAudio {
     if (this.sfxBus) this.sfxBus.gain.value = this._sfxScale;
   }
 
+  /* 對戰對話逐字彈出嘅 tick 聲（FRLG 風）：高頻短促方波，行 sfxBus 受 SFX 音量控制 */
+  textBlip() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(1318, { type: "square", dur: 0.025, gain: 0.04 });
+  }
+
+  /* 精靈球打開：短促 pop + 上揚閃光音（對戰拋球落地用） */
+  ballOpen() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(660, { type: "square", dur: 0.06, gain: 0.09 });
+    this._tone(1320, { type: "square", dur: 0.1, gain: 0.06, delay: 0.05, slideTo: 1980 });
+  }
+
+  /* 收回精靈：紅色光束向下 sweep（對戰換寵用） */
+  recallBeam() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(1560, { type: "sawtooth", dur: 0.28, gain: 0.06, slideTo: 220 });
+  }
+
+  /* 招式命中音效（按屬性變化，配合對戰特效） */
+  moveHit(type) {
+    this.ensure();
+    if (!this.ctx) return;
+    switch (type) {
+      case "fire":
+        this._noiseHit({ freq: 620, q: 0.4, gain: 0.16, dur: 0.5, type: "lowpass" });
+        this._tone(200, { type: "sawtooth", dur: 0.42, gain: 0.05, slideTo: 520 });
+        break;
+      case "water":
+        this._noiseHit({ freq: 1500, q: 0.6, gain: 0.15, dur: 0.45, type: "highpass" });
+        this._noiseSweep(600, 2400, 0.4, 0.08);
+        break;
+      case "electric":
+        this._tone(1900, { type: "square", dur: 0.16, gain: 0.1, slideTo: 520 });
+        this._noiseHit({ freq: 2600, q: 1.4, gain: 0.12, dur: 0.22, type: "highpass" });
+        break;
+      case "ice":
+        this._tone(2500, { type: "triangle", dur: 0.2, gain: 0.09, slideTo: 1300 });
+        this._noiseHit({ freq: 3200, q: 1.7, gain: 0.1, dur: 0.28, type: "highpass" });
+        break;
+      case "grass":
+      case "bug":
+        this.rustle(1.3);
+        this._tone(520, { type: "triangle", dur: 0.28, gain: 0.06, slideTo: 900 });
+        break;
+      case "psychic":
+      case "ghost":
+        this._tone(700, { type: "sine", dur: 0.5, gain: 0.1, slideTo: 1900 });
+        break;
+      case "fighting":
+      case "rock":
+      case "ground":
+      case "steel":
+        this._tone(160, { type: "square", dur: 0.22, gain: 0.14, slideTo: 60 });
+        this._noiseHit({ freq: 800, q: 0.7, gain: 0.16, dur: 0.26, type: "lowpass" });
+        break;
+      default:
+        this.impact();
+    }
+  }
+
   _makeNoise(seconds) {
     const ctx = this.ctx;
     const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));

@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.12.3**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.15.13**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -149,7 +149,12 @@
 - 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）
 - 圖片題 TTS：Azure `en-US-JennyNeural` rate -10%，本地 mp3 + **v116 起 speechSynthesis 兜底**（mp3 缺失都唔會靜音）
 - 寶可夢叫聲：本地 1-151 mp3，僅首次解鎖播放
-- 對戰 UI 素材（feat/battle-system branch）：HP 框、對話框、對戰背景、訓練家、精靈球、屬性／狀態徽章均為 Pokémon FireRed/LeafGreen 原裝圖（© Nintendo / Creatures Inc. / GAME FREAK inc.），來源 The Spriters Resource（rippers: redblueyellow、desgardes、Superjustinbros、Spherical Ice、EternalLight）及 pret/pokefirered decomp；存於 `assets/battle/ui/`、`assets/trainers/`
+- 對戰 UI 素材（feat/battle-system branch）：HP 框、對話框、對戰背景、訓練家、精靈球、屬性／狀態徽章、**招式特效圖**均為 Pokémon FireRed/LeafGreen 原裝圖（© Nintendo / Creatures Inc. / GAME FREAK inc.），來源 The Spriters Resource（rippers: redblueyellow、desgardes、Superjustinbros、Spherical Ice、EternalLight、wormintheworks）及 pret/pokefirered decomp；存於 `assets/battle/ui/`、`assets/battle/fx/`、`assets/trainers/`；對戰字體用 DotGothic16（Fontworks，SIL OFL，Google Fonts，存 `assets/fonts/dotgothic16-latin.woff2`）
+- 對戰文字全英文（Gen 3 風格："X used Y!"、"It's super effective!"、"X fainted!"）；命中音效跟 PokeRogue `se/` 取樣（`hit` / `hit_weak` / `hit_strong`，按相剋強弱選）
+- **逐招原裝動畫（v1.12.7）**：536 招使用 Pokémon Reborn / PokeRogue 的 `battle-anims` 影格資料（`assets/battle/anim/<slug>.json` + `sheets/` 96px spritesheet，60fps、GRAPHIC 圖層、focus anchor、blend/mirror/angle 全保留），由 `js/battle/moveanim.js` 播放；冇資源嘅 27 招 fallback 去屬性特效圖。素材來源 `pagefaultgames/pokerogue-assets`（beta）；all Pokémon artwork © Nintendo / Creatures Inc. / GAME FREAK inc.
+- **PokeRogue 對戰精靈圖 + 召出／換寵流程（v1.13.0）**：對戰畫面上我方用 back sprite、對手用 front sprite，素材為 PokeRogue 動畫圖集（1-151，`assets/battle/pkmn/<side>/<dex>.png` + `index.json` atlas 影格），由 `js/battle/sprites.js` 以 canvas 逐幀播放（frameRate 10，跟 PokeRogue）。召出流程抄 PokeRogue `SummonPhase`：拋球 650ms 水平飛 → 150ms Cubic.easeOut 落定 → 500ms 自轉 1440°/Cubic.easeIn 跌落 → 開球閃光音效 → 精靈 scale 0.5→1（250ms Sine.easeIn）+ 球色 tint 淡出；HP 資訊框跟 `showInfo`/`hideInfo` 滑入（1000ms Cubic.easeOut）／滑走（500ms Cubic.easeIn）。換寵跟 `leaveField`：舊寵即時消失（無 FRLG 紅光收回）→ HP 框滑走 → 拋新球召出。
+- **PokeRogue 對戰文字框／字體／音效（v1.14.0）**：對話框改用 PokeRogue `ui-window`（`images/ui/bg.png` 320×48 style 1）9-slice（`borderSize 8` → 13px）；文字用 `TextStyle.MESSAGE`（`pokemon-emerald-pro.ttf`＝PokeRogue "emerald" 字體，#f8f8f8 字 + #6b5a73 影，shadow 4,5 @96 ≈ 字高 4~5%）；打字機 delay 20ms／字（`MessageUiHandler` 預設），打完先跟尾出 `prompt` 精靈（7×9 4 幀）；SFX 全部取 PokeRogue `audio/ui`、`audio/se`（`select`、`pb_throw`、`pb_rel`、`hit`／`hit_weak`／`hit_strong`、`faint`、`stat_up`／`stat_down`，經 `CaptureAudio.playOnce` 走 SFX 音量）。素材來源 `pagefaultgames/pokerogue-assets`（beta）；字體版權見 `assets/fonts/`。
+- **PokeRogue 換精靈頁 + 文字框排版（v1.15.0）**：底部改為 PokeRogue 原版排版 —— message window 全寬（高 = 闊度 15%）、command window 冚喺右邊上面（冇中間縫），講對話時成個 command window 收埋。撳 POKéMON 入換精靈頁，UI/UX 全抄 PokeRogue `PartyUiHandler`（320×240 design 等比縮放，`container-type: inline-size` + cqw 單位）：`party_bg` 冚底部 75%；出戰緊嗰隻喺左邊大格 `party_slot_main` (9,91.5) 110×49；後備右欄 5 格 `party_slot` x=143、top=44+28i 175×24；訊息框 (1,209) 262×30 顯示 "Choose a Pokémon."；右下 CANCEL 掣（中心 (291,224) 52×16 + `party_pb`）；暈咗用 `_fnt` 幀、HP 條／數值收埋；格子內部照抄偏移（icon 中心 (4,4)、名 (24,10)、Lv label (32,22)、HP 條 (8,31) 100×7 + `party_slot_hp_overlay` 按 ratio 橫向壓縮、HP 數值右對齊 (105,36)；後備格名 (21,2)、HP 條 (72,6)）；點格 → 右下 options window（SEND OUT / CANCEL，`addWindow` 闊 ≥94、高 16n+13）→ SEND OUT 接現有拋球換寵流程；暈咗強制換寵時冇 CANCEL。素材 `assets/battle/party/` 來源 `pagefaultgames/pokerogue-assets`（beta）。
 - 無障礙：`user-scalable=no` 已移除；所有 hover 動效只用 `@media (hover:hover)` 觸發；支援 `prefers-reduced-motion`
 
 ---

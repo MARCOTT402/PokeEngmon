@@ -10,6 +10,23 @@
   font-display: swap;
   src: url("../assets/fonts/inter-latin-var.woff2") format("woff2");
 }
+/* 對戰畫面專用：GBA 風像素字（DotGothic16，SIL OFL） */
+@font-face {
+  font-family: "DotGothic16";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/dotgothic16-latin.woff2") format("woff2");
+}
+
+/* PokeRogue 對戰字體（pokemon-emerald-pro，即 PokeRogue 嘅 "emerald"） */
+@font-face {
+  font-family: "PokeRogueEmerald";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/pokemon-emerald-pro.ttf") format("truetype");
+}
 
 :root {
   --yellow: #ffcb05;
@@ -2488,9 +2505,17 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ----- 對戰主畫面（FRLG 原裝素材） ----- */
 .battle-view {
-  min-height: 100vh; padding: 0; gap: 0;
+  position: relative;
+  /* 填滿整個視窗：負 margin 抵銷 #app 嘅 12/16/20px padding，
+     咁就唔會因為 padding 而多出一條 32px 嘅滾動（手機最容易察覺） */
+  margin: -12px -16px calc(-20px - env(safe-area-inset-bottom));
+  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  min-height: 100vh; gap: 0;
+  /* 舞台＋文字框當成「遊戲畫面」整體垂直置中（PokeRogue 式 letterbox），
+     唔會喺高身手機出現「全部擠喺最上、下面一大片空」 */
+  justify-content: center;
   background: #285068;
-  font-family: "Courier New", "Consolas", monospace;
+  font-family: "PokeRogueEmerald", "DotGothic16", "Courier New", monospace;
 }
 .battle-stage {
   position: relative;
@@ -2498,15 +2523,28 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   aspect-ratio: 240 / 112;
   background: url("../assets/battle/ui/bg-grass.png") center / 100% 100% no-repeat;
   image-rendering: pixelated;
+  overflow: hidden;   /* 所有嘢（HP 框滑出/精靈衝刺）一律喺邊框內裁走，唔會畫出畫面外 */
 }
+
+/* 橫屏矮機（手機打橫）：用可用高度反推舞台最大闊度，令文字框唔會被推到畫面外
+   （保留文字框原本高度，避免 22px 字被壓到兩行時出界） */
+@media (orientation: landscape) and (max-height: 520px) {
+  .battle-stage { max-width: min(520px, calc((100vh - 84px) * 2.142857)); }
+}
+
 
 /* HP info box — FRLG 原裝米色框（背景圖 + 百分比 overlay） */
 .battle-hpbox {
   position: absolute; z-index: 5;
   background-repeat: no-repeat; background-size: 100% 100%;
   image-rendering: pixelated;
-  color: #283030; font-weight: 800;
-  font-size: clamp(9px, 2.8vw, 14px);
+  color: #404040; font-weight: 400;   /* PokeRogue legacy BATTLE_INFO：#404040 字 + 米色影 */
+  /* PokeRogue TextStyle.BATTLE_INFO：emerald 字（名 12px@320、Lv/HP 數字 8px@320） */
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: clamp(9px, 2.7vw, 13px);   /* 對返框圖原生 7px 字高，唔好再放大 */
+  overflow: hidden;   /* 保證名/數字唔會出框 */
+  /* PokeRogue showInfo：由側邊滑入 1000ms Cubic.easeOut / 滑走 500ms Cubic.easeIn */
+  transition: transform var(--hp-slide, 1000ms) var(--hp-ease, cubic-bezier(.33,1,.68,1));
 }
 .battle-hpbox-foe {
   top: 3%; left: 2%;
@@ -2514,40 +2552,65 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background-image: url("../assets/battle/ui/foe-hp-box.png");
 }
 .battle-hpbox-mine {
-  bottom: 4%; right: 2%;
-  width: 50%; max-width: 260px; aspect-ratio: 108 / 39;
+  bottom: 4%; right: -3.54%;
+  /* 闊度同敵方框一樣（46% / 240px），高度跟原圖 108/39 比例 → 自然高少少，
+     容納 HP 數值；右邊 13/108 透明像素，右移 3.54% 後可見底板離右邊框 2%，
+     同敵方框離左邊框一樣 */
+  width: 46%; max-width: 240px; aspect-ratio: 108 / 39;
   background-image: url("../assets/battle/ui/my-hp-box.png");
 }
 .battle-pokename {
   position: absolute; left: 6%; top: 2%;
-  font-size: 1em; letter-spacing: .5px; text-transform: uppercase;
-  max-width: 62%; white-space: nowrap; overflow: hidden;
+  font-size: 1.5em; letter-spacing: 0; text-transform: uppercase;
+  max-width: 58%; white-space: nowrap; overflow: hidden;
+  text-shadow: 1px 1px 0 #ded6b5;
 }
+/* Lv 數值：左對齊喺框圖「Lv」glyph 右側（foe 框 100 闊→glyph 到 86% / my 框 108 闊→到 75%） */
 .battle-lvnum {
-  position: absolute; right: 4.5%; top: 2%;
-  font-size: 1em;
+  position: absolute; top: 14%;
+  /* PokeRogue 嘅 Lv／HP 數字係 8px bitmap sprite，唔係 emerald 細字；
+     字高要同原圖「Lv」glyph 一樣，先唔會出現「大 Lv + 細數字」 */
+  font-size: 1.6em; letter-spacing: 0; line-height: 1;
+  text-shadow: 1px 1px 0 #ded6b5;
 }
+.battle-hpbox-foe .battle-lvnum { left: 83%; }
+.battle-hpbox-mine .battle-lvnum { left: 76%; top: 10%; }
+/* 狀態徽章：FRLG 放喺資料牌左下角（HP 條下面），唔會冚住名字／HP 條 */
 .battle-status {
-  position: absolute; right: 20%; top: 6%;
-  height: 26%; width: auto; image-rendering: pixelated;
+  position: absolute; left: 3%; top: 70%; z-index: 3;
+  height: 20%; width: auto; image-rendering: pixelated;
 }
-/* HP 條：遮住框圖上嘅綠條，白底 + 彩色 fill */
+.battle-hpbox-mine .battle-status { top: 56%; height: 17%; }
+/* HP 條：精準冚住框圖上嘅條槽（x39-86, y17-19 原圖量度），白底 + 彩色 fill */
 .battle-hpbar-clip {
   position: absolute; background: #f8f8f8; overflow: hidden;
 }
-.battle-hpbox-foe .battle-hpbar-clip { left: 38.5%; top: 53%; width: 49.5%; height: 10%; }
-.battle-hpbox-mine .battle-hpbar-clip { left: 33.3%; top: 42.5%; width: 44.5%; height: 8.5%; }
+.battle-hpbox-foe .battle-hpbar-clip { left: 39%; top: 54.8%; width: 48%; height: 9.7%; }
+.battle-hpbox-mine .battle-hpbar-clip { left: 36.1%; top: 43.6%; width: 44.4%; height: 7.7%; }
 .battle-hpbar {
   display: block; height: 100%; width: 100%; background: #58d080;
   transition: width .5s ease, background .3s ease;
 }
+/* HP 數值：HP 條正下方、貼框右邊（同 PokeRogue 8px 數字一樣大細） */
 .battle-hpnum {
-  position: absolute; right: 7%; top: 55%;
-  font-size: .92em; letter-spacing: .5px;
+  position: absolute; right: 17.5%; top: 52%;
+  font-size: 1.6em; letter-spacing: 0; line-height: 1;
+  text-shadow: 1px 1px 0 #ded6b5;
 }
+/* 傷害加乘提示：PokeRogue EnemyBattleInfo effectiveness window（敵方資料牌右邊小窗） */
+.battle-eff {
+  position: absolute; z-index: 6; left: 50%; top: 3.5%;
+  padding: 1px 6px 2px;
+  border: clamp(6px, 1.8vw, 9px) solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+  color: #f8f8f8; font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: clamp(8px, 2vw, 11px); line-height: 1.1;
+  text-shadow: 1px 1px 0 #6b5a73; white-space: nowrap;
+}
+/* EXP 條槽：x24-86, y33-34 原圖量度 */
 .battle-expbar-clip {
-  position: absolute; left: 23%; top: 84%; width: 71.5%; height: 5.5%;
-  overflow: hidden;
+  position: absolute; left: 22.2%; top: 84.6%; width: 57.4%; height: 5.1%;
+  overflow: hidden; background: rgba(248,240,200,.55);
 }
 .battle-expbar {
   display: block; height: 100%; width: 0%;
@@ -2555,50 +2618,95 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: width .5s ease;
 }
 
-/* 精靈圖（企喺平台位） */
-.battle-sprite { position: absolute; image-rendering: pixelated; z-index: 4; }
-.battle-foe-sprite { top: 4%; right: 9%; width: 26%; max-width: 128px; aspect-ratio: 1; object-fit: contain; }
-.battle-my-sprite { bottom: 6%; left: 7%; width: 30%; max-width: 148px; aspect-ratio: 1; object-fit: contain; }
+/* ----- 招式特效層（FRLG Attack Effects 裁圖） ----- */
+.battle-fx { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
+.battle-fx img {
+  position: absolute; transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  animation: fxBurst .6s ease-out forwards;
+}
+/* 原裝逐招動畫圖層（moveanim.js）：每格一張 spritesheet 裁切 */
+.battle-fx .moveanim-layer {
+  position: absolute; pointer-events: none;
+  background-repeat: no-repeat;
+  transform-origin: center center;
+  image-rendering: pixelated;
+  will-change: transform, opacity;
+}
+@keyframes fxBurst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--fx-x, 0px)), calc(-50% + var(--fx-y, 0px))) scale(var(--fx-s, 1.1)) rotate(var(--fx-r, 0deg)); }
+}
 
-/* ----- 底部：文字框 + 選單（FRLG 深藍金邊框） ----- */
+/* 精靈圖（企喺平台位；尺寸由 PokeSprite 依 PokeRogue 比例計出） */
+.battle-sprite { position: absolute; display: block; image-rendering: pixelated; z-index: 4; }
+.battle-foe-sprite { top: 4%; right: 9%; }
+/* 我方精靈貼實底下文字框（frame 底邊就係精靈腳底，冇透明留白） */
+.battle-my-sprite { bottom: 0; left: 7%; }
+
+/* ----- 底部：文字框 + 選單（PokeRogue window 1 紅橙框） -----
+   PokeRogue 原版排版：message window 全寬（320×48 = 闊度 15%），
+   command window 冚喺右邊上面（冇中間縫）；選單收起時文字框用返全寬 */
 .battle-bottom {
-  display: flex; gap: 0; width: 100%; max-width: 520px; margin: 0 auto;
-  min-height: 140px;
+  position: relative; width: 100%; max-width: 520px; margin: 0 auto;
+  height: clamp(62px, 15vw, 78px);
 }
 .battle-textbox, .battle-menubox {
-  border-style: solid;
-  border-width: 14px;
-  border-image: url("../assets/battle/ui/textbox-blue.png") 9 fill stretch;
   background: none; color: #fff;
 }
+/* PokeRogue 文字框：window 1（紅橙）9-slice + emerald 字 16px@320、白字 + 紫灰影 */
 .battle-textbox {
-  flex: 1; border-right-width: 7px; padding: 6px 10px;
-  font-size: .92rem; line-height: 1.5; font-weight: 700;
-  display: flex; align-items: center; position: relative;
+  position: absolute; inset: 0;
+  /* PokeRogue addWindow：borderSize 8（= 闊度 2.5%） */
+  border-style: solid; border-color: transparent;
+  border-width: clamp(9px, 2.5vw, 13px);
+  border-image: url("../assets/battle/ui/pr-msg-bg.png") 8 fill stretch;
+  padding: 0 7px;
+  background: none;
+  color: #f8f8f8;
+  /* PokeRogue TextStyle.MESSAGE：shadow (4,5) @ fontSize 96 → 4.17%/5.2% 字高 */
+  text-shadow: 1px 1.5px 0 #6b5a73;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: clamp(13px, 4.2vw, 22px); line-height: 1.15;
+  display: flex; align-items: center;
+  white-space: pre-line;   /* 打字機用 textContent，靠 pre-line 渲染 \n 換行 */
 }
+/* 選單開緊：文字唔好走入 menubox 底（PokeRogue 都係咁避） */
+.battle-bottom.menu-open .battle-textbox { padding-right: 39%; }
+/* PokeRogue prompt 精靈（7×9 4 幀，接住最後一個字）；動畫 2 幀上下跳 */
 .battle-caret {
-  position: absolute; right: 8px; bottom: 4px;
-  width: 14px; height: auto; image-rendering: pixelated;
-  animation: caretBlink .7s steps(2) infinite;
+  display: inline-block; vertical-align: middle;
+  width: 15px; height: 19px; margin-left: 3px;
+  background: url("../assets/battle/ui/pr-prompt.png") 0 0 / 15px auto no-repeat;
+  image-rendering: pixelated;
+  animation: promptBounce .5s steps(1) infinite;
 }
-@keyframes caretBlink { 50% { opacity: 0; } }
+@keyframes promptBounce {
+  0%, 49%  { transform: translateY(0); }
+  50%, 99% { transform: translateY(2px); }
+}
 .battle-menubox {
-  width: 46%; border-left-width: 7px;
+  position: absolute; top: 0; right: 0; bottom: 0; width: 37%;
+  border: clamp(9px, 2.5vw, 13px) solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
   display: flex; align-items: center; justify-content: center;
-  padding: 2px;
+  padding: 0;
 }
+/* 選單收起時：成個 menubox 收埋（PokeRogue 講對話時冇 command window） */
+.battle-bottom:not(.menu-open) .battle-menubox { display: none; }
 .battle-menu-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%;
 }
 .battle-menu-btn {
   background: none; border: none; color: #fff;
-  font-family: inherit; font-weight: 800; font-size: .95rem;
-  padding: 8px 4px; cursor: pointer; letter-spacing: .5px;
-  text-align: left; padding-left: 20px; position: relative;
+  font-family: inherit; font-weight: 400; font-size: clamp(13px, 3.4vw, 18px);
+  padding: 2px 1px 2px 9px; cursor: pointer; letter-spacing: 0;
+  text-align: left; position: relative;
 }
 .battle-menu-btn::before {
-  content: "▶"; position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
-  font-size: .6rem; color: #ff4040; opacity: 0;
+  content: "▶"; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  font-size: .6em; color: #ff4040; opacity: 0;
 }
 .battle-menu-btn:hover::before { opacity: 1; }
 .battle-menu-btn:active { background: rgba(0,0,0,.25); }
@@ -2607,45 +2715,197 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .battle-menu-btn:disabled::before { display: none; }
 
-/* 招式選單：白字 + 原裝屬性徽章 */
-.battle-move-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%;
+/* ----- FIGHT：左邊招式列表 ＋ 右邊招式資料（抄 PokeRogue FightUiHandler：招式 2×2 在左，資料在右） ----- */
+.battle-bottom.move-open .battle-textbox,
+.battle-bottom.move-open .battle-menubox { display: none; }
+/* FIGHT 面板字放大咗，面板要高返少少先裝得落 4 行資料 */
+.battle-bottom.move-open { height: clamp(88px, 20vw, 106px); }
+.battle-move-panel {
+  position: absolute; inset: 0;
+  display: flex; gap: 1.5%;
 }
-.battle-move-btn {
-  display: flex; flex-direction: column; gap: 1px;
-  background: none; border: none;
-  color: #fff; font-family: inherit; font-weight: 700; font-size: .78rem;
-  padding: 4px 2px 4px 20px; cursor: pointer; text-align: left;
-  position: relative;
+.bmp-moves, .bmp-info {
+  border: clamp(9px, 2.5vw, 13px) solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+  color: #f8f8f8;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  text-shadow: 1px 1.5px 0 #6b5a73;
 }
-.battle-move-btn::before {
-  content: "▶"; position: absolute; left: 6px; top: 8px;
-  font-size: .6rem; color: #ff4040; opacity: 0;
+/* 左：4 招 2×2 + BACK（PokeRogue movesContainer：x 18/132、y 由底 38.7 起，每行 16） */
+.bmp-moves {
+  flex: 0 0 66%; position: relative;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 4px;
 }
-.battle-move-btn:hover::before { opacity: 1; }
-.battle-move-btn .bm-name { font-size: .82rem; line-height: 1.1; }
-.battle-move-btn .bm-sub { display: flex; align-items: center; gap: 4px; }
-.battle-move-btn .bm-type { width: 36px; height: auto; image-rendering: pixelated; }
-.battle-move-btn .bm-pp { font-size: .65rem; opacity: .85; }
-.battle-move-btn:disabled { opacity: .4; cursor: not-allowed; }
+.bmp-move-grid {
+  flex: 1 1 auto; display: grid;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+}
+.bmp-move-btn {
+  background: none; border: none; color: inherit; font: inherit;
+  font-size: clamp(12px, 4.2vw, 22px); line-height: 1.1;
+  text-align: left; padding: 0 2px 0 15px; cursor: pointer;
+  position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bmp-move-btn::before {
+  content: "▶"; position: absolute; left: 2px; top: 50%; transform: translateY(-50%);
+  font-size: .6em; color: #ff4040; opacity: 0;
+}
+.bmp-move-btn:hover::before, .bmp-move-btn.cur::before { opacity: 1; }
+.bmp-move-btn:disabled { opacity: .35; cursor: not-allowed; }
+.bmp-move-btn:disabled::before { display: none; }
+/* 第 4 招（第二行右格）預留位俾 BACK，唔好畀個名壓住 */
+.bmp-move-btn:nth-of-type(4) { padding-right: 54px; }
+/* 右：屬性徽章 + PHYSICAL/SPECIAL/STATUS + POWER / ACC / PP */
+.bmp-info {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 6px; font-size: clamp(10px, 3vw, 15px); line-height: 1.2;
+}
+.bmp-info-head { display: flex; align-items: center; gap: 5px; }
+.bmp-info-head img { height: clamp(12px, 3vw, 16px); width: auto; image-rendering: pixelated; }
+.bmp-cat { font-size: .85em; opacity: .9; }
+.bmp-info-row { display: flex; justify-content: space-between; gap: 6px; }
+.bmp-info-row b { font-weight: 400; opacity: .8; }
+/* BACK：放喺左框第二行右邊（疊喺第 4 招右側空位） */
+.bmp-back {
+  position: absolute; right: 6px; top: 75%; transform: translateY(-50%);
+  background: none; border: none; color: inherit; font: inherit;
+  font-size: clamp(10px, 3vw, 15px); text-align: left;
+  padding: 1px 0 0 2px; cursor: pointer; opacity: .85;
+}
+.bmp-back:hover { opacity: 1; }
 
-/* 切換選單 */
-.battle-switch-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;
-  max-height: 130px; overflow-y: auto;
+/* ----- PokeRogue 換精靈頁（party select） -----
+   幾何全抄 PokeRogue party-ui-handler（320×240 design，由 frame 等比縮放）：
+   partyBg 冚底部 75%；主格 (9,91.5) 110×49；後備格 x=143、top=44+28i 175×24；
+   訊息框 (1,209) 262×30；CANCEL 掣中心 (291,224) 52×16；options 右下角 94×45 */
+.battle-party { position: fixed; inset: 0; z-index: 30; }
+.party-frame {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 520px; aspect-ratio: 320 / 240;
+  container-type: inline-size;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
 }
-.battle-switch-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  background: #f8f0dc; border: 2px solid #1a1a1a; border-radius: 6px;
-  padding: 4px 2px; cursor: pointer; font-family: inherit; font-size: .66rem;
-  color: #1a1a1a; font-weight: 700;
+.party-bg {
+  position: absolute; left: 0; top: 25%; width: 100%; height: 75%;
+  background: url("../assets/battle/party/party_bg.png") 0 0 / 100% 100% no-repeat;
+  image-rendering: pixelated;
 }
-.battle-switch-btn img { width: 36px; height: 36px; image-rendering: pixelated; }
-.battle-switch-btn .bs-hp { font-size: .58rem; color: #444; display: flex; align-items: center; gap: 3px; }
-.battle-switch-btn .bs-hp .bs-status { width: 24px; height: auto; image-rendering: pixelated; }
-.battle-switch-btn.fainted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
-.battle-switch-btn.active { border-color: #d9534f; background: #fde8e8; }
-.battle-switch-btn:disabled { cursor: not-allowed; }
+
+/* 格子底框：6 幀直排圖集（normal / sel / fnt / fnt_sel / swap / swap_sel） */
+.party-slot { position: absolute; cursor: pointer; background-repeat: no-repeat; }
+.ps-main {
+  aspect-ratio: 110 / 49;
+  background-image: url("../assets/battle/party/party_slot_main.png");
+  background-size: 100% 600%;
+}
+.ps-bench {
+  aspect-ratio: 175 / 24;
+  background-image: url("../assets/battle/party/party_slot.png");
+  background-size: 100% 600%;
+}
+.party-slot.sel { background-position-y: 20%; }
+.party-slot.fnt { background-position-y: 40%; }
+.party-slot.fnt.sel { background-position-y: 60%; }
+
+/* 格子內部（TextStyle.PARTY：emerald 8px@320、白字 #f8f8f8 + 灰影 #707070） */
+.party-slot .ps-name, .party-slot .ps-lv, .party-slot .ps-hptext {
+  position: absolute; font-size: 2.5cqw; line-height: 1;
+  color: #f8f8f8; text-shadow: .2cqw .3cqw 0 #707070; white-space: nowrap;
+}
+.ps-icon { position: absolute; aspect-ratio: 1; }
+.ps-icon img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.ps-lvlabel { position: absolute; aspect-ratio: 1; image-rendering: pixelated; }
+.ps-status { position: absolute; image-rendering: pixelated; }
+.ps-hpbar {
+  position: absolute; aspect-ratio: 100 / 7;
+  background: url("../assets/battle/party/party_slot_hp_bar.png") 0 0 / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+.ps-hpoverlay {
+  position: absolute;
+  background: url("../assets/battle/party/party_slot_hp_overlay.png") no-repeat;
+  background-size: 100% 300%; image-rendering: pixelated;
+}
+.ps-hpoverlay.hi { background-position-y: 0; }
+.ps-hpoverlay.mid { background-position-y: 50%; }
+.ps-hpoverlay.lo { background-position-y: 100%; }
+
+/* 主格（110×49）：icon 上下置中（高 = 29.09% × 110/49 = 65.31% → top 17.35%）、
+   名 (24,10)、Lv (32,22)、等級 (41,22)、狀態 (87,22)、HP 條 (8,31) 100×7、
+   overlay (24,33) 80×3、HP 數值右對齊 (105,36) */
+.ps-main .ps-icon { left: -10.91%; top: 17.35%; width: 29.09%; }
+.ps-main .ps-name { left: 21.82%; top: 20.41%; max-width: 69.1%; overflow: hidden; }
+.ps-main .ps-lvlabel { left: 29.09%; top: 44.9%; width: 7.27%; }
+.ps-main .ps-lv { left: 37.27%; top: 44.9%; transform: translateY(-25%); }
+.ps-main .ps-status { left: 79.09%; top: 44.9%; width: 21.82%; }
+.ps-main .ps-hpbar { left: 7.27%; top: 63.27%; width: 90.91%; }
+.ps-main .ps-hpoverlay { left: 21.82%; top: 67.35%; height: 6.12%; }
+.ps-main .ps-hptext { right: 4.55%; top: 73.47%; }
+
+/* 後備格（175×24）：icon 中心 (2,12)、名 (21,2)、Lv (29,14)、等級 (38,14)、
+   狀態 (72,14)、HP 條 (72,6) 100×7、overlay (88,8) 80×3、HP 數值右對齊 (169,11) */
+.ps-bench .ps-icon { left: -8%; top: -16.67%; width: 18.29%; }
+.ps-bench .ps-name { left: 12%; top: 8.33%; max-width: 29.71%; overflow: hidden; }
+.ps-bench .ps-lvlabel { left: 16.57%; top: 58.33%; width: 4.57%; }
+.ps-bench .ps-lv { left: 21.71%; top: 58.33%; transform: translateY(-25%); }
+.ps-bench .ps-status { left: 41.14%; top: 58.33%; width: 13.71%; }
+.ps-bench .ps-hpbar { left: 41.14%; top: 25%; width: 57.14%; }
+.ps-bench .ps-hpoverlay { left: 50.29%; top: 33.33%; height: 12.5%; }
+.ps-bench .ps-hptext { right: 3.43%; top: 45.83%; }
+
+/* 訊息框 (1,209) 262×30：window 1 9-slice + WINDOW 字（16px@320） */
+.party-msgbox {
+  position: absolute; left: .3125%; top: 87.08%; width: 81.875%; height: 12.5%;
+  border: 2.5cqw solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+}
+.party-msg-text {
+  position: absolute; left: 3.44%; top: 23.3%;
+  font-size: 5cqw; line-height: 1.1; color: #f8f8f8;
+  text-shadow: .2cqw .3cqw 0 #6b5a73; white-space: nowrap;
+}
+
+/* CANCEL 掣：bg 中心 (291,224) 52×16、pb 中心偏左 17、CANCEL 字 (281,217) */
+.party-cancel {
+  position: absolute; left: 82.8125%; top: 90%; width: 16.25%; aspect-ratio: 52 / 16;
+  background: url("../assets/battle/party/party_cancel.png") 0 0 / 100% 200% no-repeat;
+  image-rendering: pixelated; cursor: pointer;
+}
+.party-cancel:hover { background-position-y: 100%; }
+.party-cancel-pb {
+  position: absolute; left: -1.92%; top: -18.75%; width: 38.46%; aspect-ratio: 20 / 22;
+  background: url("../assets/battle/party/party_pb.png") 0 100% / 100% 209.09% no-repeat;
+  image-rendering: pixelated;
+}
+.party-cancel:hover .party-cancel-pb {
+  aspect-ratio: 20 / 24;
+  background-size: 100% 191.67%; background-position-y: 0;
+}
+.party-cancel-text {
+  position: absolute; left: 30.77%; top: 6.25%;
+  font-size: 2cqw; line-height: 1; color: #f8f8f8;
+  text-shadow: .2cqw .3cqw 0 #707070; white-space: nowrap;
+}
+
+/* 點格後嘅 options window（右下角，闊 94、高 16×n+13；SEND OUT / CANCEL → 94×45） */
+.party-options {
+  position: absolute; right: .3125%; bottom: .4167%; width: 29.375%; height: 18.75%;
+  border: 2.5cqw solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.party-opt {
+  background: none; border: none; padding: 0 0 0 20.2%; cursor: pointer;
+  font-family: inherit; font-size: 5cqw; line-height: 1.1; text-align: left;
+  color: #f8f8f8; text-shadow: .2cqw .3cqw 0 #6b5a73; position: relative;
+}
+.party-opt::before {
+  content: "▶"; position: absolute; left: 8.5%; top: 50%; transform: translateY(-50%);
+  font-size: .5em; color: #ff4040; opacity: 0;
+}
+.party-opt:hover::before { opacity: 1; }
 
 /* ----- 隊伍選擇彈窗 ----- */
 .team-select-modal {
@@ -2666,13 +2926,44 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 8px 4px; border: 2px solid #dfe6f2; border-radius: 10px;
   background: #f8fafc; cursor: pointer; font-size: .7rem; font-weight: 700;
-  color: #1a2a44; text-align: center;
+  color: #1a2a44; text-align: center; position: relative;
 }
 .team-slot img { width: 48px; height: 48px; image-rendering: pixelated; }
 .team-slot.picked {
   border-color: #4caf50; background: #f1fbf3;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, .25);
 }
+/* 出戰次序：揀中嘅格仔左上角顯示 1/2/3… */
+.ts-order {
+  position: absolute; top: 4px; left: 4px;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; background: #4caf50; color: #fff;
+  font-size: .62rem; font-weight: 800; line-height: 18px; text-align: center;
+}
+.ts-order[hidden] { display: none; }
+/* 出戰次序列（第一隻 = 首位出場）；箭嘴可以前後調位 */
+.ts-lineup-label { font-size: .72rem; font-weight: 700; color: #6b7590; text-align: center; }
+.ts-lineup-label span { font-weight: 500; }
+.ts-lineup { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
+.ts-lineup[hidden] { display: none; }
+.tl-chip {
+  position: relative;
+  display: flex; align-items: center; gap: 3px; flex: 0 0 auto;
+  padding: 3px 4px; border: 2px solid #dfe6f2; border-radius: 12px; background: #fff;
+}
+.tl-num {
+  position: absolute; left: 1px; top: 1px;
+  min-width: 14px; height: 14px; line-height: 14px; padding: 0 3px;
+  border-radius: 7px; background: #4caf50; color: #fff;
+  font-size: .55rem; font-weight: 800; text-align: center;
+}
+.tl-chip img { width: 26px; height: 26px; image-rendering: pixelated; }
+.tl-mv {
+  width: 24px; height: 24px; border-radius: 7px; cursor: pointer;
+  border: 1px solid #dfe6f2; background: #f3f6fb; color: #1a2a44; font-size: .6rem;
+  line-height: 1; padding: 0;
+}
+.tl-mv:disabled { opacity: .35; cursor: default; }
 .ts-actions { display: flex; gap: 10px; margin-top: 4px; }
 
 /* ----- PvP 配對面板 ----- */
@@ -2707,9 +2998,71 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .battle-view.intro-on .battle-hpbox,
 .battle-view.intro-on .battle-sprite { visibility: hidden; }
 .battle-view.intro-on .battle-menubox { display: none; }
-.battle-view.intro-on .battle-textbox { border-right-width: 14px; }
 
-.battle-intro { position: absolute; inset: 0; z-index: 6; }
+/* ----- 暴擊震動（A critical hit!）：PokeRogue 用整塊 battle 畫面輕震 ----- */
+@keyframes battle-crit-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 1px); }
+  40% { transform: translate(3px, -1px); }
+  60% { transform: translate(-2px, -1px); }
+  80% { transform: translate(2px, 1px); }
+}
+.battle-stage.anim-crit { animation: battle-crit-shake .4s steps(2, end); }
+
+/* ----- AI 對戰速度切換（NORMAL 1×／FAST 2×） ----- */
+/* 放喺 battle-stage 入面，貼住舞台右上角（唔會喺高身手機飄到畫面最頂） */
+.battle-speed-btn {
+  position: absolute; top: 8px; right: 8px; z-index: 25;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: 11px; letter-spacing: .04em;
+  padding: 4px 8px; border-radius: 999px; cursor: pointer;
+  color: #f8f8f8; background: rgba(20, 32, 48, .55);
+  border: 2px solid rgba(248, 248, 248, .35);
+}
+.battle-speed-btn.fast {
+  background: rgba(238, 64, 53, .75);
+  border-color: #ffd54f; color: #fff;
+}
+
+/* ----- 戰鬥結算（PokeRogue 風格 WIN／LOSE 卡） ----- */
+.battle-result {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: rgba(10, 20, 32, .66);
+}
+.br-card {
+  width: 100%; max-width: 340px; padding: 20px 18px 18px;
+  border-radius: 12px; border: 3px solid #4b3d28;
+  background: linear-gradient(180deg, #fdf8e6, #f3ead1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+  text-align: center;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  color: #404040;
+}
+.br-title { font-size: 38px; line-height: 1; letter-spacing: .04em; margin-bottom: 6px; }
+.br-title.br-win { color: #2f7d3a; text-shadow: 1px 2px 0 #cfe6c8; }
+.br-title.br-lose { color: #8a3a34; text-shadow: 1px 2px 0 #ecd2cd; }
+.br-sub { font-size: 14px; margin-bottom: 14px; }
+.br-rows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.br-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  font-size: 14px; padding: 5px 8px;
+  background: rgba(255, 255, 255, .55); border: 1px solid #e2d7ba; border-radius: 6px;
+}
+.br-row b { font-weight: 400; color: #23252b; }
+.br-lvup { background: #fff6cf; border-color: #e2c46a; }
+.br-continue {
+  width: 100%; min-height: 48px; border-radius: 10px; cursor: pointer;
+  font-family: inherit; font-size: 15px;
+  background: linear-gradient(180deg, #ffe259, #ffcb05);
+  border: 3px solid #e6ac00; color: #23252b;
+}
+.br-continue:active { transform: scale(.98); }
+
+.battle-intro { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+/* 對戰中途重用 intro 層（拋球/白閃）：收埋訓練家同球計數 */
+.battle-intro.mid-only .intro-trainer,
+.battle-intro.mid-only .intro-balls { display: none; }
 
 .intro-trainer { position: absolute; transition: transform .55s ease-out; image-rendering: pixelated; }
 .intro-foe-trainer { top: 6%; right: 10%; width: 118px; height: 118px; }
@@ -2744,16 +3097,36 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   to   { opacity: 0; transform: translate(-50%,-50%) scale(1.25); }
 }
 
-/* 精靈從球彈出 */
-.intro-pop { visibility: visible !important; animation: introPop .38s cubic-bezier(.2,1.4,.4,1); }
-@keyframes introPop {
-  from { transform: scale(.08); opacity: .3; }
-  to   { transform: scale(1); opacity: 1; }
+/* 精靈從球彈出（PokeRogue：scale 0.5 → 1、250ms Sine.easeIn；同時球色 tint 淡出） */
+.intro-pop { visibility: visible !important; animation: pkrSendOut .25s cubic-bezier(.47,0,.74,.71) both; }
+@keyframes pkrSendOut {
+  from { transform: scale(.5); filter: brightness(2.2) saturate(.6); }
+  to   { transform: scale(1); filter: none; }
 }
+
+/* ----- 招式 / 換寵動畫（FRLG 風） ----- */
+/* 攻方衝前撞一下 */
+@keyframes lungeFoe { 30% { transform: translate(-14%, 10%); } }
+@keyframes lungeMine { 30% { transform: translate(14%, -10%); } }
+.anim-lunge-foe { animation: lungeFoe .32s ease-out; }
+.anim-lunge-mine { animation: lungeMine .32s ease-out; }
+/* 守方中招：左右震 */
+@keyframes hitShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+.anim-hit { animation: hitShake .4s linear; }
+/* 收回：縮細 + 向上消失（紅光束音效配合） */
+@keyframes recallOut { to { transform: translateY(-8%) scale(.05); opacity: 0; } }
+.anim-recall { animation: recallOut .38s ease-in forwards; }
+/* 倒下：沉落 + 淡出 */
+@keyframes faintDown { to { transform: translateY(18%); opacity: 0; } }
+.anim-faint { animation: faintDown .5s ease-in forwards; }
 
 /* 手機細屏微調 */
 @media (max-width: 420px) {
-  .battle-hpbox { font-size: clamp(8px, 2.9vw, 11px); }
-  .battle-textbox { font-size: .82rem; }
-  .battle-menu-btn { font-size: .82rem; padding: 7px 4px 7px 16px; }
+  .battle-hpbox { font-size: clamp(8px, 3vw, 12px); }
 }
