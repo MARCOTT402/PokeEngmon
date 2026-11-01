@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.23.0...v1.24.0) (2026-11-01)
+
+
+### Features
+
+* **friends:** add friends dashboard with partner, presence and outgoing requests ([3296964](https://github.com/MARCOTT402/PokeEngmon/commit/32969649dcac9e689c186ddaa10d41767a32e091))
+
 # [1.23.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.22.0...v1.23.0) (2026-11-01)
 
 
