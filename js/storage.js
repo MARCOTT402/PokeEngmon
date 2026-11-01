@@ -720,8 +720,14 @@ function addPracticeRecord(record) {
   st.practiceDays[key] = (st.practiceDays[key] || 0) + 1;
   /* 答題 → 能量點：今日每滿 10 題 +1 EP（Energy 模組負責每日 3 次上限） */
   if (typeof Energy !== "undefined") {
+    const hadBank = !!(st.energy && typeof st.energy === "object");
+    const before = hadBank ? (Number(st.energy.points) || 0) : 0;
     const qToday = (st.records[key] || []).reduce((n, r) => n + (Number(r.total) || 0), 0);
     Energy.syncQuiz(st, qToday);
+    const after = st.energy ? (Number(st.energy.points) || 0) : 0;
+    if (hadBank && after > before && typeof App !== "undefined" && App.toast) {
+      App.toast(`⚡ +${after - before} Energy (${after}/${Energy.POOL_MAX})`);
+    }
   }
   const streak = calcStreak();
   if (streak > (st.bestStreak || 0)) st.bestStreak = streak;
