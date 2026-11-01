@@ -400,6 +400,8 @@ window.Sync = (() => {
     if (fields.branch !== undefined && fields.branch !== null) body.branch = fields.branch;
     /* nature 由 v1.4.1 起可以直寫（column-level grant 只開放呢一欄，非經濟數值） */
     if (typeof fields.nature === "string" && fields.nature) body.nature = fields.nature;
+    /* 特性（非經濟數值）：同 nature 一樣開放直寫 */
+    if (typeof fields.ability === "string" && fields.ability) body.ability = fields.ability;
     /* 石進化：branch 以外，記住用咗邊粒石（pull 重推 stage 嘅必要輸入） */
     if (typeof fields.stone_used === "string" && fields.stone_used) body.stone_used = fields.stone_used;
     /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */

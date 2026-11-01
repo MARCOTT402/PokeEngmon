@@ -9,6 +9,8 @@ const src = ["js/gens-data.js", "js/data.js", "js/pokemon.js", "js/battle/rng.js
 vm.runInContext(src, ctx, { filename: "battle-bundle.js" });
 const { Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats } =
   vm.runInContext("({Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats})", ctx);
+const { IMPLEMENTED_ABILITIES, abilityPool, rollEntryAbility, abilityName } =
+  vm.runInContext("({IMPLEMENTED_ABILITIES, abilityPool, rollEntryAbility, abilityName})", ctx);
 
 const POKEMON_DEX = JSON.parse(fs.readFileSync("data/pokemon-151.json"));
 const MOVES = JSON.parse(fs.readFileSync("data/moves.json")).moves;
@@ -158,6 +160,172 @@ const ogFull = Battle.computeDamage(ogA, ogB, vwInfo, {}).damage;
 ogA.hp = Math.floor(ogA.maxHp / 3);
 const ogPinch = Battle.computeDamage(ogA, ogB, vwInfo, {}).damage;
 t("Overgrow pinch 草招加強", ogPinch >= ogFull * 1.3);
+
+/* ---------- 特性擴充（v1.15.20）：派發池閘門 + 新效果 ---------- */
+const avgDmg = (atk, def, mv, opts, n) => {
+  let s = 0; const runs = n || 60;
+  for (let i = 0; i < runs; i++) s += Battle.computeDamage(atk, def, mv, opts || {}).damage;
+  return s / runs;
+};
+
+/* TR-AB15: 派發池只含白名單 slug（保證「唔會派到冇效果嘅特性」） */
+const dexAll = Object.keys(ABILITIES);
+t("派發池只含已實作特性", dexAll.every(d => abilityPool(d).every(a => IMPLEMENTED_ABILITIES.includes(a))));
+
+/* TR-AB16: 池保留官方槽位順序（slot1 排先） */
+t("池保留官方槽位順序", abilityPool(58).join(",") === "intimidate,flash-fire" && abilityPool(66).join(",") === "guts");
+
+/* TR-AB17: 覆蓋率回歸閘（新擴特性唔可以令覆蓋跌返落去） */
+const covered = dexAll.filter(d => abilityPool(d).length > 0).length;
+t("已實作特性覆蓋 ≥ 390 隻", covered >= 390);
+console.log("特性覆蓋:", covered + "/" + dexAll.length);
+
+/* TR-AB18: 無已實作特性嘅精靈 → null（Caterpie 只有 shield-dust） */
+t("池空 → rollEntryAbility 回 null", rollEntryAbility(10) === null);
+
+/* TR-AB19: 兩個候選按 slot1 70% / slot2 30% */
+let rollFirst = 0;
+for (let i = 0; i < 2000; i++) if (rollEntryAbility(58) === "intimidate") rollFirst++;
+t("slot1 派發率 ~70%", rollFirst / 2000 > 0.63 && rollFirst / 2000 < 0.77);
+console.log("slot1 派發率:", ((rollFirst / 2000) * 100).toFixed(1) + "%");
+
+/* TR-AB20: entry.ability 優先（個體特性，唔再永遠食 slot1） */
+const epEntry = Battle.makeBattlePokemon(Object.assign(mk(58, 30, []), { ability: "flash-fire" }));
+t("entry.ability 蓋過 slot1", epEntry.ability === "flash-fire");
+
+/* TR-AB21: Technician 威力 ≤60 的招 ×1.5 */
+const techA = Battle.makeBattlePokemon(mk(4, 30, []));
+const techB = Battle.makeBattlePokemon(mk(1, 30, []));
+const tackleMv = ctx.moveInfo("tackle");
+const noTech = avgDmg(techA, techB, tackleMv);
+techA.ability = "technician";
+const withTech = avgDmg(techA, techB, tackleMv);
+t("Technician 弱招威力 ×1.5", withTech >= noTech * 1.35);
+
+/* TR-AB22: Adaptability STAB 1.5 → 2.0 */
+const adaA = Battle.makeBattlePokemon(mk(4, 30, []));
+const adaB = Battle.makeBattlePokemon(mk(1, 30, []));
+const noAda = avgDmg(adaA, adaB, emberMv());
+adaA.ability = "adaptability";
+const withAda = avgDmg(adaA, adaB, emberMv());
+t("Adaptability STAB ×2", withAda >= noAda * 1.25);
+function emberMv() { return ctx.moveInfo("ember"); }
+
+/* TR-AB23: Sniper crit 傷害 1.5 → 2.25 */
+const snA = Battle.makeBattlePokemon(mk(4, 30, []));
+const snB = Battle.makeBattlePokemon(mk(1, 30, []));
+const critNoSn = avgDmg(snA, snB, tackleMv, { crit: true });
+snA.ability = "sniper";
+const critSn = avgDmg(snA, snB, tackleMv, { crit: true });
+t("Sniper crit ×2.25", critSn >= critNoSn * 1.35);
+
+/* TR-AB24: Battle Armor 完全免疫 crit（100 場零 crit，且 RNG 照消耗） */
+let baCrit = 0;
+for (let i = 0; i < 100; i++) {
+  const s = BattleState.create([mk(4, 30, ["tackle"])], [mk(1, 30, [])]);
+  s.p2.team[0].ability = "battle-armor";
+  BattleState.executeMove(s, "p1", 0);
+  if (s.log.some(l => /critical hit/.test(l.msg))) baCrit++;
+}
+t("Battle Armor 零 crit", baCrit === 0);
+
+/* TR-AB25: Moxie 擊倒對手 atk +1 */
+const mox = BattleState.create([mk(4, 30, ["ember"])], [mk(1, 1, [])]);
+mox.p1.team[0].ability = "moxie";
+BattleState.executeMove(mox, "p1", 0);
+t("Moxie 擊倒後 atk +1", mox.p1.team[0].statStages.atk === 1);
+t("Moxie 出訊息", mox.log.some(l => /Moxie/.test(l.msg)));
+
+/* TR-AB26: Regenerator 換走回 1/3 HP */
+const rg = BattleState.create([mk(4, 30, []), mk(1, 30, [])], [mk(7, 30, [])]);
+rg.p1.team[0].ability = "regenerator";
+rg.p1.team[0].hp = 10;
+const rgMax = rg.p1.team[0].maxHp;
+BattleState.switchTo(rg, "p1", 1);
+t("Regenerator 換走回 1/3", rg.p1.team[0].hp === Math.min(rgMax, 10 + Math.floor(rgMax / 3)));
+
+/* TR-AB27: Natural Cure 換走清狀態 */
+const nc = BattleState.create([mk(4, 30, []), mk(1, 30, [])], [mk(7, 30, [])]);
+nc.p1.team[0].ability = "natural-cure";
+nc.p1.team[0].status = "poison";
+BattleState.switchTo(nc, "p1", 1);
+t("Natural Cure 換走清狀態", nc.p1.team[0].status === null);
+t("Natural Cure 出訊息", nc.log.some(l => /Natural Cure/.test(l.msg)));
+
+/* TR-AB28: Hydration 雨天回合末解狀態（唔再食 burn 傷） */
+const hyd = BattleState.create([mk(4, 30, [])], [mk(1, 30, [])]);
+hyd.p1.team[0].ability = "hydration";
+hyd.p1.team[0].status = "burn";
+hyd.weather = { name: "rain", turns: 5 };
+const hydHp = hyd.p1.team[0].hp;
+BattleState.endTurnResidual(hyd, "p1");
+t("Hydration 雨天清狀態", hyd.p1.team[0].status === null);
+t("Hydration 唔食 burn 傷", hyd.p1.team[0].hp === hydHp);
+
+/* TR-AB29: Rain Dish 雨天回 1/16／Ice Body 雹天回 1/16 */
+const rd = BattleState.create([mk(4, 30, [])], [mk(1, 30, [])]);
+rd.p1.team[0].ability = "rain-dish";
+rd.p1.team[0].hp = 10;
+rd.weather = { name: "rain", turns: 5 };
+BattleState.endTurnResidual(rd, "p1");
+t("Rain Dish 雨天回 1/16", rd.p1.team[0].hp === 10 + Math.max(1, Math.floor(rd.p1.team[0].maxHp / 16)));
+const ib = BattleState.create([mk(131, 30, [])], [mk(1, 30, [])]);   /* Lapras 水/冰，免疫雹傷 */
+ib.p1.team[0].ability = "ice-body";
+ib.p1.team[0].hp = 10;
+ib.weather = { name: "hail", turns: 5 };
+BattleState.endTurnResidual(ib, "p1");
+t("Ice Body 雹天淨回 1/16", ib.p1.team[0].hp === 10 + Math.max(1, Math.floor(ib.p1.team[0].maxHp / 16)));
+
+/* TR-AB30: Solar Power 晴特攻 ×1.5、回合末 -1/8 */
+const sol = Battle.makeBattlePokemon(mk(4, 30, []));
+const spaNoSun = Battle.effectiveStat(sol, "spa");
+sol.ability = "solar-power";
+const spaSun = Battle.effectiveStat(sol, "spa", false, "sun");
+t("Solar Power 晴 SpA ×1.5", spaSun === Math.floor(spaNoSun * 1.5) || Math.abs(spaSun - spaNoSun * 1.5) <= 1);
+const sol2 = BattleState.create([mk(4, 30, [])], [mk(1, 30, [])]);
+sol2.p1.team[0].ability = "solar-power";
+sol2.weather = { name: "sun", turns: 5 };
+BattleState.endTurnResidual(sol2, "p1");
+t("Solar Power 晴 -1/8", sol2.p1.team[0].hp === sol2.p1.team[0].maxHp - Math.max(1, Math.floor(sol2.p1.team[0].maxHp / 8)));
+
+/* TR-AB31: 天氣速度特性 ×2（Chlorophyll／Swift Swim／Sand Rush） */
+const wA = Battle.makeBattlePokemon(mk(4, 30, []));
+const speBase = Battle.effectiveStat(wA, "spe");
+[["chlorophyll", "sun"], ["swift-swim", "rain"], ["sand-rush", "sandstorm"]].forEach(([ab, w]) => {
+  wA.ability = ab;
+  t(`${abilityName(ab)} 晴/雨/沙速度 ×2`, Battle.effectiveStat(wA, "spe", false, w) >= speBase * 2 - 1);
+});
+
+/* TR-AB32: Sand Veil／Snow Cloak 對應天氣命中 ×0.8 */
+const defend = Battle.makeBattlePokemon(mk(1, 30, []));
+let hitSand = 0, hitHail = 0;
+defend.ability = "sand-veil";
+for (let i = 0; i < 2000; i++) if (Battle.hitCheck(tackleMv, techA, defend, "sandstorm")) hitSand++;
+t("Sand Veil 沙暴命中 ~80%", hitSand / 2000 > 0.72 && hitSand / 2000 < 0.87);
+defend.ability = "snow-cloak";
+for (let i = 0; i < 2000; i++) if (Battle.hitCheck(tackleMv, techA, defend, "hail")) hitHail++;
+t("Snow Cloak 雹命中 ~80%", hitHail / 2000 > 0.72 && hitHail / 2000 < 0.87);
+
+/* TR-AB33: Keen Eye 擋降命中 */
+const ke = BattleState.create([mk(1, 30, ["smokescreen"])], [mk(16, 30, [])]);
+ke.p2.team[0].ability = "keen-eye";
+BattleState.executeMove(ke, "p1", 0);
+t("Keen Eye 唔跌 acc", ke.p2.team[0].statStages.acc === 0);
+t("Keen Eye 出訊息", ke.log.some(l => /Keen Eye/.test(l.msg)));
+
+/* TR-AB34: Own Tempo 擋混亂 */
+const ot = BattleState.create([mk(1, 30, ["confuse-ray"])], [mk(96, 30, [])]);
+ot.p2.team[0].ability = "own-tempo";
+BattleState.executeMove(ot, "p1", 0);
+t("Own Tempo 唔會混亂", ot.p2.team[0].status === null);
+t("Own Tempo 出訊息", ot.log.some(l => /Own Tempo/.test(l.msg)));
+
+/* TR-AB35: Lightning Rod 吸電免疫 + SpA +1（原本模型留低嘅特性都要真係有作用） */
+const lr = BattleState.create([mk(25, 30, ["thunderbolt"])], [mk(1, 30, [])]);
+lr.p2.team[0].ability = "lightning-rod";
+BattleState.executeMove(lr, "p1", 0);
+t("Lightning Rod 零傷", lr.p2.team[0].hp === lr.p2.team[0].maxHp);
+t("Lightning Rod SpA +1", lr.p2.team[0].statStages.spa === 1);
 
 /* ---------- 場地效果（v1.15.18）：天氣 + 釘子 + 壁 ---------- */
 
