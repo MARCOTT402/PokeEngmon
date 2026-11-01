@@ -1,3 +1,10 @@
+## [1.21.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.21.0...v1.21.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **battle:** do not consume Full Restore when the active Pokemon is at full HP with no status ([f7f8463](https://github.com/MARCOTT402/PokeEngmon/commit/f7f8463778d696f19969a5e13485a638430367de))
+
 # [1.21.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.20.1...v1.21.0) (2026-11-01)
 
 
