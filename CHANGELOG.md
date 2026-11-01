@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.18.0...v1.19.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** daily battle quota via 50-question batches ([cb308e8](https://github.com/MARCOTT402/PokeEngmon/commit/cb308e82c4087b26cfa3cc7da689890a00e9b49f))
+
 # [1.18.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.17.0...v1.18.0) (2026-11-01)
 
 
