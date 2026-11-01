@@ -21,33 +21,35 @@ const BattleUI = (() => {
   let pvpBattle = null;      /* 真 PvP：battles row（含 seed） */
   let pvpSide = "p1";        /* 我喺 row 入面係 p1 定 p2 */
   let pvpCancel = null;      /* 配對輪詢取消 fn */
+  let pvpFoeUid = null;      /* 對手 uid（隨機 PvP 用嚟加好友） */
+  let pvpFoeName = null;     /* 對手名（好友局由邀請帶入） */
+  let pvpIsFriend = false;   /* 好友局（is_friend = true，獎勵唔同） */
   const toast = (m) => App.toast(m);
 
   /* ---------- 入口 ---------- */
   function openMenu() {
+    levelSyncLevel = null;
     App.showView("view-battle-menu");
     renderMenu();
   }
 
-  /* ---------- 每日對戰配額（結算先扣，開戰唔扣） ---------- */
+  /* ---------- 能量點 EP（結算先扣，開戰唔扣） ---------- */
+  let aiTier = "normal";       /* 目前挑戰嘅難度 */
+  let levelSyncLevel = null;   /* Inferno：玩家隊伍臨時同步等級 */
+  let aiPotions = 0;           /* Inferno：AI 得 1 支 Potion */
+  let myFullRestores = 0;      /* Inferno：玩家得 1 支 Full Restore */
+
   function gateStatus() {
-    const st = loadState();
-    const day = dateKey(Date.now());
-    const curve = (typeof getCurveMode === "function") ? getCurveMode() : (st.curveMode || "standard");
-    return BattleGate.status(st, day, curve);
+    return Energy.status(loadState());
   }
 
   function quotaText(g) {
-    if (g.unlimited) return "Daily battles: unlimited";
-    if (!g.allowed) {
-      if (g.capped) return `Daily battles ${g.used}/${g.cap} · Daily limit reached — come back tomorrow`;
-      return `Daily battles ${g.used}/${g.cap} · Answer ${g.needQuestions} more questions to unlock ${BattleGate.BATTLES_PER_BATCH} more`;
-    }
-    const tail = g.capped ? "" : ` · ${g.needQuestions} questions for +${BattleGate.BATTLES_PER_BATCH} more`;
-    return `Daily battles ${g.used}/${g.cap}${tail}`;
+    if (g.allowed) return `⚡ ${g.points}/${g.max} Energy · 1 per battle · +1 every 10 questions`;
+    if (g.noPoints) return `⚡ Out of Energy — answer 10 questions to earn 1 more`;
+    return `⚡ Daily battle limit ${g.spentToday}/${g.spendCap} reached — come back tomorrow`;
   }
 
-  /* 入口閘門：冇配額就 toast 講原因，唔開戰 */
+  /* 入口閘門：冇 EP 就 toast 講原因，唔開戰 */
   function blockedByQuota() {
     const g = gateStatus();
     if (g.allowed) return false;
@@ -57,17 +59,36 @@ const BattleUI = (() => {
 
   function renderMenu() {
     const st = loadState();
+    const topDia = document.getElementById("topbar-diamonds-bm");
+    if (topDia) topDia.textContent = st.diamonds;
     /* PvP 戰績（server 記錄，pull / settle_battle 回應入咗本地 state） */
     const pvpSub = document.getElementById("battle-menu-pvp-sub");
     if (pvpSub && window.SupabaseAuth && SupabaseAuth.isLoggedIn() && st.pvpWins != null) {
       pvpSub.textContent = `Online · ${st.pvpWins || 0}W – ${st.pvpLosses || 0}L`;
     }
-    /* 每日配額行 */
-    const quotaEl = document.getElementById("battle-quota");
-    if (quotaEl) {
-      const g = gateStatus();
-      quotaEl.textContent = quotaText(g);
-      quotaEl.classList.toggle("quota-blocked", !g.allowed);
+    /* 好友 tile：朋友數 + 待處理邀請 badge（app.js 負責綁 click） */
+    const fs = document.getElementById("battle-menu-friends-sub");
+    const fb = document.getElementById("battle-menu-friends-badge");
+    if (fs && fb) {
+      if (window.SupabaseAuth && SupabaseAuth.isLoggedIn() && window.Friends && Friends.summary) {
+        const s = Friends.summary();
+        fs.textContent = `${s.friends} friend${s.friends === 1 ? "" : "s"} · ${s.requests} request${s.requests === 1 ? "" : "s"}`;
+        const n = (s.requests || 0) + (s.invites || 0);
+        fb.hidden = n <= 0;
+        fb.textContent = String(n);
+      } else {
+        fs.textContent = "Log in to add friends";
+        fb.hidden = true;
+      }
+    }
+    renderEnergy();
+    renderMasterySummary();
+    /* 登入用戶：用 server ledger 校正 EP（跨機一致 + 防改 localStorage 刷場） */
+    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn() && SupabaseAuth.energyStatus) {
+      const q = BattleGate.questionsToday(st, dateKey(Date.now()));
+      SupabaseAuth.energyStatus(q).then(s => {
+        if (s && s.points != null && Energy.adopt) { Energy.adopt(st, s); renderEnergy(); }
+      }).catch(() => {});
     }
 
     const havePokemon = st.entries.some(e => e.ownedSpecies && e.ownedSpecies.length);
@@ -76,56 +97,262 @@ const BattleUI = (() => {
       startPvP();
     };
     const trainerList = document.getElementById("ai-trainer-list");
-    document.getElementById("battle-menu-ai").onclick = () => {
-      if (!havePokemon) { toast("You need Pokémon first! Pull or capture one."); return; }
-      /* 梯隊預設已展開，撳 AI Trainers 只係收合／再展開 */
-      trainerList.hidden = !trainerList.hidden;
-    };
     document.getElementById("battle-menu-back").onclick = () => { App.renderHome(); App.showView("view-home"); };
     /* 梯隊一入 Battle 頁就列出，唔使先撳 AI Trainers 先見到 */
-    trainerList.hidden = false;
+    if (trainerList) trainerList.hidden = false;
     renderTrainerList();
   }
 
-  /* ---------- AI Trainers 梯隊 ---------- */
+  /* ---------- AI Trainers 梯隊：14 位，等級同隊伍數刻意脫鈎 ---------- */
   const AI_TRAINERS = [
-    { id: "youngster", name: "Youngster Timmy", sprite: "assets/trainers/youngster.png", level: 5, team: [{ dexId: 19, level: 5, moves: ["tackle", "tail-whip"] }] },
-    { id: "bugcatcher", name: "Bug Catcher Sid", sprite: "assets/trainers/bugcatcher.png", level: 10, team: [{ dexId: 13, level: 10, moves: ["tackle", "string-shot"] }, { dexId: 10, level: 8, moves: ["tackle", "harden"] }] },
-    { id: "lass", name: "Lass Dana", sprite: "assets/trainers/lass.png", level: 18, team: [{ dexId: 35, level: 18, moves: ["tackle", "tail-whip", "quick-attack"] }, { dexId: 16, level: 16, moves: ["tackle", "sand-attack"] }] },
-    { id: "gentleman", name: "Gentleman Alfred", sprite: "assets/trainers/gentleman.png", level: 28, team: [{ dexId: 96, level: 28, moves: ["confusion", "disable", "psybeam"] }, { dexId: 64, level: 26, moves: ["confusion", "psybeam"] }] },
-    { id: "ace", name: "Ace Trainer Kiera", sprite: "assets/trainers/ace_f.png", level: 40, team: [{ dexId: 248, level: 40, moves: ["crunch", "fire-punch", "thunder-punch", "ice-punch"] }, { dexId: 282, level: 38, moves: ["psychic", "shadow-ball", "calm-mind"] }] },
-    /* --- Gen 2-5 梯隊（承接 Kiera 之後逐個解鎖） --- */
-    { id: "rival_ethan", name: "Rival Ethan", sprite: "assets/trainers/rival.png", level: 50, team: [
-      { dexId: 154, level: 50, moves: ["razor-leaf", "synthesis", "earthquake", "sludge-bomb"] },
-      { dexId: 164, level: 48, moves: ["air-slash", "psychic", "hypnosis", "dream-eater"] },
-      { dexId: 214, level: 50, moves: ["megahorn", "close-combat", "rock-slide", "night-slash"] }
+    { id: "youngster", name: "Youngster Timmy", sprite: "assets/trainers/ai-youngster.png", baseLevel: 5, zone: "Boot Camp", team: [
+      { dexId: 19, moves: ["tackle", "tail-whip", "quick-attack", "bite"] }
     ] },
-    { id: "jasmine", name: "Gym Leader Jasmine", sprite: "assets/trainers/lass.png", level: 58, team: [
-      { dexId: 208, level: 58, moves: ["iron-tail", "earthquake", "rock-slide", "curse"] },
-      { dexId: 227, level: 56, moves: ["steel-wing", "air-slash", "spikes", "roost"] },
-      { dexId: 82, level: 56, moves: ["thunderbolt", "flash-cannon", "thunder-wave", "tri-attack"] }
+    { id: "bugcatcher", name: "Bug Catcher Wade", sprite: "assets/trainers/ai-bugcatcher.png", baseLevel: 8, zone: "Boot Camp", team: [
+      { dexId: 10, moves: ["tackle", "string-shot"] },
+      { dexId: 11, moves: ["tackle", "harden"] },
+      { dexId: 13, moves: ["poison-sting", "string-shot", "tackle"] },
+      { dexId: 14, moves: ["poison-sting", "harden"] },
+      { dexId: 46, moves: ["scratch", "stun-spore", "absorb"] },
+      { dexId: 48, moves: ["tackle", "confusion", "supersonic"] }
     ] },
-    { id: "steven", name: "Champion Steven", sprite: "assets/trainers/gentleman.png", level: 66, team: [
-      { dexId: 376, level: 68, moves: ["meteor-mash", "psychic", "earthquake", "bullet-punch"] },
-      { dexId: 306, level: 66, moves: ["iron-head", "earthquake", "stone-edge", "thunder-wave"] },
-      { dexId: 344, level: 64, moves: ["earth-power", "psychic", "ice-beam", "toxic"] },
-      { dexId: 227, level: 64, moves: ["steel-wing", "air-slash", "spikes", "roost"] }
+    { id: "lass", name: "Lass Dana", sprite: "assets/trainers/ai-lass.png", baseLevel: 14, zone: "Boot Camp", team: [
+      { dexId: 133, moves: ["tackle", "quick-attack", "bite", "sand-attack"] },
+      { dexId: 16, moves: ["tackle", "gust", "quick-attack", "sand-attack"] }
     ] },
-    { id: "cynthia", name: "Champion Cynthia", sprite: "assets/trainers/ace_f.png", level: 74, team: [
-      { dexId: 445, level: 78, moves: ["earthquake", "dragon-claw", "stone-edge", "swords-dance"] },
-      { dexId: 448, level: 74, moves: ["close-combat", "flash-cannon", "extreme-speed", "swords-dance"] },
-      { dexId: 468, level: 72, moves: ["air-slash", "aura-sphere", "thunder-wave", "roost"] },
-      { dexId: 350, level: 74, moves: ["surf", "ice-beam", "recover", "toxic"] },
-      { dexId: 442, level: 72, moves: ["dark-pulse", "shadow-ball", "will-o-wisp", "hypnosis"] }
+    { id: "hiker", name: "Hiker Marcos", sprite: "assets/trainers/ai-hiker.png", baseLevel: 22, zone: "Boot Camp", team: [
+      { dexId: 74, moves: ["tackle", "rock-throw", "defense-curl", "low-kick"] },
+      { dexId: 95, moves: ["tackle", "rock-throw", "harden", "screech"] },
+      { dexId: 66, moves: ["low-kick", "leer", "focus-energy", "tackle"] }
     ] },
-    { id: "alder", name: "Champion Alder", sprite: "assets/trainers/gentleman.png", level: 82, team: [
-      { dexId: 637, level: 84, moves: ["fiery-dance", "bug-buzz", "psychic", "quiver-dance"] },
-      { dexId: 534, level: 80, moves: ["close-combat", "mach-punch", "rock-slide", "bulk-up"] },
-      { dexId: 621, level: 80, moves: ["dragon-claw", "crunch", "earthquake", "rock-slide"] },
-      { dexId: 626, level: 80, moves: ["head-charge", "earthquake", "megahorn", "zen-headbutt"] },
-      { dexId: 584, level: 80, moves: ["ice-beam", "blizzard", "flash-cannon", "toxic"] }
+    { id: "gentleman", name: "Gentleman Alfred", sprite: "assets/trainers/ai-gentleman.png", baseLevel: 30, zone: "Local League", team: [
+      { dexId: 96, moves: ["confusion", "disable", "headbutt", "hypnosis"] },
+      { dexId: 41, moves: ["leech-life", "supersonic", "bite", "wing-attack"] }
+    ] },
+    { id: "swimmer", name: "Swimmer Barry", sprite: "assets/trainers/ai-swimmer.png", baseLevel: 38, zone: "Local League", team: [
+      { dexId: 129, moves: ["splash", "tackle", "water-gun"] },
+      { dexId: 60, moves: ["water-gun", "hypnosis", "body-slam", "bubble-beam"] },
+      { dexId: 120, moves: ["water-gun", "swift", "recover", "bubble-beam"] },
+      { dexId: 116, moves: ["water-gun", "smokescreen", "twister", "bubble-beam"] },
+      { dexId: 90, moves: ["tackle", "water-gun", "icicle-spear", "clamp"] },
+      { dexId: 98, moves: ["water-gun", "vice-grip", "stomp", "crabhammer"] }
+    ] },
+    { id: "ace", name: "Ace Trainer Kiera", sprite: "assets/trainers/ai-ace.png", baseLevel: 46, zone: "Local League", team: [
+      { dexId: 359, moves: ["night-slash", "slash", "swords-dance", "quick-attack"] },
+      { dexId: 282, moves: ["psychic", "calm-mind", "shadow-ball", "thunderbolt"] },
+      { dexId: 306, moves: ["iron-head", "rock-slide", "earthquake", "thunder-wave"] },
+      { dexId: 130, moves: ["waterfall", "crunch", "ice-fang", "dragon-dance"] }
+    ] },
+    { id: "jasmine", name: "Gym Leader Jasmine", sprite: "assets/trainers/ai-jasmine.png", baseLevel: 55, zone: "Gym Circuit", team: [
+      { dexId: 208, moves: ["iron-tail", "earthquake", "rock-slide", "curse"] },
+      { dexId: 227, moves: ["steel-wing", "air-slash", "spikes", "roost"] },
+      { dexId: 82, moves: ["thunderbolt", "flash-cannon", "thunder-wave", "tri-attack"] }
+    ] },
+    { id: "psychic", name: "Psychic Sarah", sprite: "assets/trainers/ai-psychic.png", baseLevel: 64, zone: "Gym Circuit", team: [
+      { dexId: 65, moves: ["psychic", "shadow-ball", "calm-mind", "thunder-wave"] },
+      { dexId: 196, moves: ["psychic", "shadow-ball", "calm-mind", "morning-sun"] },
+      { dexId: 97, moves: ["psychic", "hypnosis", "dream-eater", "thunder-wave"] },
+      { dexId: 80, moves: ["surf", "psychic", "slack-off", "thunder-wave"] },
+      { dexId: 121, moves: ["surf", "psychic", "ice-beam", "thunderbolt"] },
+      { dexId: 282, moves: ["psychic", "shadow-ball", "thunderbolt", "calm-mind"] }
+    ] },
+    { id: "cynthia", name: "Champion Cynthia", sprite: "assets/trainers/ai-cynthia.png", baseLevel: 76, zone: "Champion Road", team: [
+      { dexId: 445, moves: ["earthquake", "dragon-claw", "stone-edge", "swords-dance"] },
+      { dexId: 448, moves: ["close-combat", "flash-cannon", "extreme-speed", "swords-dance"] },
+      { dexId: 468, moves: ["air-slash", "aura-sphere", "thunder-wave", "roost"] },
+      { dexId: 350, moves: ["surf", "ice-beam", "recover", "toxic"] },
+      { dexId: 442, moves: ["dark-pulse", "shadow-ball", "will-o-wisp", "hypnosis"] }
+    ] },
+    { id: "alder", name: "Champion Alder", sprite: "assets/trainers/ai-alder.png", baseLevel: 82, zone: "Champion Road", team: [
+      { dexId: 637, moves: ["fiery-dance", "bug-buzz", "psychic", "quiver-dance"] },
+      { dexId: 534, moves: ["close-combat", "mach-punch", "rock-slide", "bulk-up"] },
+      { dexId: 621, moves: ["dragon-claw", "crunch", "earthquake", "rock-slide"] },
+      { dexId: 626, moves: ["head-charge", "earthquake", "megahorn", "zen-headbutt"] },
+      { dexId: 584, moves: ["ice-beam", "blizzard", "flash-cannon", "toxic"] },
+      { dexId: 571, moves: ["dark-pulse", "flamethrower", "shadow-ball", "night-slash"] }
+    ] },
+    { id: "drake", name: "Elite Four Drake", sprite: "assets/trainers/ai-drake.png", baseLevel: 90, zone: "Elite Road", team: [
+      { dexId: 373, moves: ["dragon-claw", "earthquake", "fire-blast", "dragon-dance"] },
+      { dexId: 149, moves: ["outrage", "earthquake", "thunder-punch", "extreme-speed"] },
+      { dexId: 445, moves: ["earthquake", "dragon-claw", "stone-edge", "swords-dance"] },
+      { dexId: 635, moves: ["dark-pulse", "dragon-claw", "flamethrower", "crunch"] },
+      { dexId: 230, moves: ["surf", "ice-beam", "dragon-claw", "smokescreen"] },
+      { dexId: 330, moves: ["earthquake", "dragon-claw", "rock-slide", "quick-attack"] }
+    ] },
+    { id: "anabel", name: "Frontier Brain Anabel", sprite: "assets/trainers/ai-anabel.png", baseLevel: 95, zone: "Elite Road", team: [
+      { dexId: 65, moves: ["psychic", "shadow-ball", "calm-mind", "thunder-wave"] },
+      { dexId: 381, moves: ["psychic", "dragon-claw", "ice-beam", "calm-mind"] },
+      { dexId: 380, moves: ["psychic", "dragon-claw", "ice-beam", "recover"] },
+      { dexId: 143, moves: ["body-slam", "earthquake", "crunch", "rest"] },
+      { dexId: 245, moves: ["surf", "ice-beam", "calm-mind", "rest"] },
+      { dexId: 376, moves: ["meteor-mash", "earthquake", "bullet-punch", "zen-headbutt"] }
+    ] },
+    { id: "red", name: "Champion Red", sprite: "assets/trainers/ai-red.png", baseLevel: 99, zone: "Elite Road", team: [
+      { dexId: 25, moves: ["thunderbolt", "quick-attack", "iron-tail", "thunder-wave"] },
+      { dexId: 143, moves: ["body-slam", "earthquake", "crunch", "rest"] },
+      { dexId: 6, moves: ["flamethrower", "dragon-claw", "air-slash", "fire-blast"] },
+      { dexId: 9, moves: ["surf", "ice-beam", "flash-cannon", "earthquake"] },
+      { dexId: 3, moves: ["energy-ball", "sludge-bomb", "earthquake", "sleep-powder"] },
+      { dexId: 131, moves: ["surf", "ice-beam", "thunderbolt", "body-slam"] }
     ] }
   ];
+
+  /* ---------- 難度矩陣 ---------- */
+  const TIERS = ["easy", "normal", "hard", "inferno"];
+  const TIER_META = {
+    easy: { label: "Easy", short: "E", mult: 0.7, note: "Warm-up · foe levels lowered" },
+    normal: { label: "Normal", short: "N", mult: 1.0, note: "Standard test" },
+    hard: { label: "Hard", short: "H", mult: 1.6, note: "Outnumbered · smarter foe" },
+    inferno: { label: "Inferno", short: "I", mult: 2.5, note: "Level Sync · perfect foe" }
+  };
+  const DIFFICULTY_PRESETS = {
+    easy: { ivs: "zero", evs: "none", nature: "neutral", moves: "weak2", iq: 0 },
+    normal: { ivs: "random", evs: "none", nature: "random", moves: "full", iq: 1 },
+    hard: { ivs: "perfect", evs: "main", nature: "best", moves: "full", iq: 2 },
+    inferno: { ivs: "perfect", evs: "main", nature: "best", moves: "full", iq: 3 }
+  };
+
+  /* 難度 → 敵人等級（Easy 大隊有額外 -10% 飽和補償） */
+  function foeLevel(trainer, tier) {
+    const base = trainer.baseLevel;
+    if (tier === "easy") {
+      const v = Math.round(base * 0.9 * (trainer.team.length >= 6 ? 0.9 : 1));
+      return Math.max(1, Math.min(100, v));
+    }
+    if (tier === "hard") return Math.max(1, Math.min(100, Math.round(base * 1.1)));
+    return base;
+  }
+  function levelRangeText(trainer) {
+    const lo = foeLevel(trainer, "easy");
+    const hi = foeLevel(trainer, "hard");
+    return lo === hi ? `Lv. ${lo}` : `Lv. ${lo}–${hi}`;
+  }
+  /* Inferno 玩家 Level Sync：敵人平均等級 +2（上限 100） */
+  function infernoSyncLevel(trainer) {
+    return Math.min(100, trainer.baseLevel + 2);
+  }
+  /* 玩家出戰數：Easy +1、Hard/Inferno −1（最少 1） */
+  function playerSlots(aiCount, tier) {
+    if (tier === "easy") return Math.min(6, aiCount + 1);
+    if (tier === "hard" || tier === "inferno") return Math.max(1, aiCount - 1);
+    return aiCount;
+  }
+
+  function trainerProgress(st, id) {
+    const tp = (st.trainerProgress || {})[id] || {};
+    return {
+      easy: Number(tp.easy) || 0, normal: Number(tp.normal) || 0,
+      hard: Number(tp.hard) || 0, inferno: Number(tp.inferno) || 0,
+      flawless: Array.isArray(tp.flawless) ? tp.flawless : []
+    };
+  }
+  function trainerUnlockedAt(st, index) {
+    if (index <= 0) return true;
+    return trainerProgress(st, AI_TRAINERS[index - 1].id).normal > 0;
+  }
+  function tierUnlocked(st, trainer, tier) {
+    if (tier === "easy" || tier === "normal") return true;
+    const tp = trainerProgress(st, trainer.id);
+    return tier === "hard" ? tp.normal > 0 : tp.hard > 0;
+  }
+
+  /* 敵隊生成：等級／IV／EV／性格／招式一律由 PRESET 套公式 */
+  function ivsFor(mode) {
+    const o = {};
+    STAT_KEYS.forEach(k => {
+      o[k] = mode === "perfect" ? MAX_IV : mode === "zero" ? 0 : Math.floor(Math.random() * (MAX_IV + 1));
+    });
+    return o;
+  }
+  function evsFor(mode, dexId) {
+    const o = emptyEvs();
+    if (mode === "main") {
+      const p = dexOf(dexId) || {};
+      const bs = p.baseStats || {};
+      const physical = (bs.atk || 0) >= (bs.spa || 0);
+      o[physical ? "atk" : "spa"] = 252;
+      o.spe = 252;
+      o.hp = 6;
+    }
+    return o;
+  }
+  function natureFor(mode, dexId) {
+    if (mode === "random") return randomNature();
+    if (mode === "neutral") return "hardy";
+    const p = dexOf(dexId) || {};
+    const bs = p.baseStats || {};
+    const physical = (bs.atk || 0) >= (bs.spa || 0);
+    const speedy = (bs.spe || 0) >= 80;
+    if (physical) return speedy ? "jolly" : "adamant";
+    return speedy ? "timid" : "modest";
+  }
+  function weakestMoves(moves, count) {
+    return (moves || [])
+      .slice()
+      .sort((a, b) => ((moveInfo(a) || {}).power || 0) - ((moveInfo(b) || {}).power || 0))
+      .slice(0, Math.min(count, (moves || []).length));
+  }
+  function buildFoeTeam(trainer, tier) {
+    const preset = DIFFICULTY_PRESETS[tier] || DIFFICULTY_PRESETS.normal;
+    const lv = foeLevel(trainer, tier);
+    return trainer.team.map(mon => ({
+      dexId: mon.dexId,
+      level: lv,
+      ivs: ivsFor(preset.ivs),
+      evs: evsFor(preset.evs, mon.dexId),
+      nature: natureFor(preset.nature, mon.dexId),
+      moves: preset.moves === "weak2" ? weakestMoves(mon.moves, 2) : mon.moves.slice(0, 4)
+    }));
+  }
+
+  /* ---------- 能量點計量條 ---------- */
+  function renderEnergy() {
+    const g = gateStatus();
+    const pips = document.getElementById("energy-pips");
+    if (!pips) return;
+    let html = "";
+    for (let i = 0; i < g.max; i++) html += `<i class="energy-pip${i < g.points ? " on" : ""}"></i>`;
+    pips.innerHTML = html;
+    const count = document.getElementById("energy-count");
+    if (count) count.textContent = `${g.points} / ${g.max}`;
+    const note = document.getElementById("energy-note");
+    if (note) {
+      note.textContent = g.allowed
+        ? `1 EP per battle · 1 EP every 10 questions · ${g.spentToday}/${g.spendCap} used today`
+        : g.noPoints
+          ? "Out of Energy — answer 10 questions to earn 1 EP"
+          : `Daily battle limit ${g.spentToday}/${g.spendCap} — resets tomorrow`;
+    }
+    const card = document.getElementById("battle-energy");
+    if (card) card.classList.toggle("energy-empty", !g.allowed);
+  }
+
+  function renderMasterySummary() {
+    const st = loadState();
+    let done = 0;
+    AI_TRAINERS.forEach(t => {
+      const tp = trainerProgress(st, t.id);
+      TIERS.forEach(x => { if (tp[x] > 0) done++; });
+    });
+    const total = AI_TRAINERS.length * TIERS.length;
+    const el = document.getElementById("mastery-count");
+    if (el) el.textContent = `${done} / ${total}`;
+    const bar = document.getElementById("mastery-bar");
+    if (bar) bar.style.width = `${Math.round((done / total) * 100)}%`;
+  }
+
+  /* ---------- Inferno 解鎖演出（一次性彩虹火） ---------- */
+  function playInfernoUnlock(trainer) {
+    const el = document.getElementById("inferno-unlock");
+    if (!el) return;
+    el.querySelector(".iu-name").textContent = trainer.name;
+    el.classList.remove("show");
+    void el.offsetWidth;
+    el.classList.add("show");
+    const close = () => { el.classList.remove("show"); el.onclick = null; };
+    el.onclick = close;
+    setTimeout(close, 2400);
+  }
 
   /* 隊伍可能跨代（Gen 2-5）→ 開戰前要確保該代圖鑑資料已載入，否則算唔到 stats / types */
   function gensForTeam(team) {
@@ -138,27 +365,137 @@ const BattleUI = (() => {
     return Array.from(gens);
   }
 
+  function tierChip(tp, tier, open) {
+    const cleared = tp[tier] > 0;
+    const cls = cleared ? "cleared" : open ? "open" : "unknown";
+    return `<span class="at-tier ${tier} ${cls}" title="${TIER_META[tier].label}">${open ? TIER_META[tier].short : "?"}</span>`;
+  }
+
   function renderTrainerList() {
     const st = loadState();
-    const beaten = st.aiTrainersBeaten || [];
     const havePokemon = st.entries.some(e => e.ownedSpecies && e.ownedSpecies.length);
     const list = document.getElementById("ai-trainer-list");
-    list.innerHTML = AI_TRAINERS.map((t, i) => {
-      const unlocked = i === 0 || beaten.includes(AI_TRAINERS[i - 1].id);
-      const done = beaten.includes(t.id);
-      return `<div class="ai-trainer-card ${unlocked ? "" : "locked"} ${done ? "done" : ""}" data-id="${t.id}">
-        <div class="at-name">${unlocked ? t.name : "???"}${done ? " ✓" : ""}</div>
-        <div class="at-lvl">Lv. ${t.level}${unlocked ? " · " + t.team.length + " Pokémon" : " · Locked"}</div>
-      </div>`;
-    }).join("");
+    if (!list) return;
+    let html = "";
+    let lastZone = null;
+    let zoneIdx = -1;
+    AI_TRAINERS.forEach((t, i) => {
+      /* 每個地區加一條分隔標題，令 14 張卡有層次而唔係一望無際嘅清單 */
+      if (t.zone !== lastZone) {
+        lastZone = t.zone;
+        zoneIdx += 1;
+        const inZone = AI_TRAINERS.filter(x => x.zone === t.zone);
+        const lo = Math.min(...inZone.map(x => foeLevel(x, "easy")));
+        const hi = Math.max(...inZone.map(x => foeLevel(x, "hard")));
+        const zoneDone = inZone.filter(x => trainerProgress(st, x.id).normal > 0).length;
+        html += `<div class="ladder-zone z${zoneIdx}">
+          <span>${t.zone}</span>
+          <small>Lv. ${lo}–${hi} · ${zoneDone}/${inZone.length} beaten</small>
+        </div>`;
+      }
+      const unlocked = trainerUnlockedAt(st, i);
+      const tp = trainerProgress(st, t.id);
+      const clearedCount = TIERS.filter(x => tp[x] > 0).length;
+      const hardOpen = unlocked && tierUnlocked(st, t, "hard");
+      const infernoOpen = unlocked && tierUnlocked(st, t, "inferno");
+      const frame = infernoOpen ? "frame-rainbow" : hardOpen ? "frame-purple" : "";
+      const rank = String(i + 1).padStart(2, "0");
+      const mastery = unlocked
+        ? `${TIERS.map(x => tierChip(tp, x, tierUnlocked(st, t, x))).join("")}<span class="at-count">${clearedCount}/4</span>`
+        : `<span class="at-lock">🔒 Beat #${String(i).padStart(2, "0")} to unlock</span>`;
+      return html += `<button type="button" class="ai-trainer-card ${unlocked ? "" : "locked"} ${frame}" data-id="${t.id}">
+        <span class="at-portrait"><i class="at-rank">${rank}</i><img src="${t.sprite}" alt="" loading="lazy"></span>
+        <span class="at-main">
+          <span class="at-name">${unlocked ? t.name : "???"}</span>
+          <span class="at-meta">
+            <span class="at-lv">${unlocked ? levelRangeText(t) : "??"}</span>
+            <span class="at-team">${t.team.length} mon${t.team.length > 1 ? "s" : ""}</span>
+          </span>
+          <span class="at-mastery">${mastery}</span>
+        </span>
+        <span class="at-go" aria-hidden="true">›</span>
+        ${frame ? `<span class="fire-band" aria-hidden="true"><i></i><i></i><b></b></span>` : ""}
+      </button>`;
+    });
+    list.innerHTML = html;
     list.querySelectorAll(".ai-trainer-card").forEach(card => {
       card.onclick = () => {
         if (!havePokemon) { toast("You need Pokémon first! Pull or capture one."); return; }
-        const unlocked = card.classList.contains("locked") === false;
-        if (!unlocked) return;
-        startAI(AI_TRAINERS.find(t => t.id === card.dataset.id));
+        if (card.classList.contains("locked")) return;
+        openTierPicker(AI_TRAINERS.find(t => t.id === card.dataset.id));
       };
     });
+  }
+
+  /* ---------- 難度選擇（Trainer → 四級挑戰） ---------- */
+  function openTierPicker(trainer) {
+    if (!trainer) return;
+    const st = loadState();
+    const tp = trainerProgress(st, trainer.id);
+    const body = document.getElementById("tier-select-body");
+    const title = document.getElementById("tier-select-title");
+    if (!body) return;
+    if (title) title.textContent = trainer.name;
+
+    const pips = TIERS.map(x =>
+      `<span class="hero-pip ${tp[x] > 0 ? "on" : ""} ${tp.flawless.includes(x) ? "star" : ""}">${tp[x] > 0 ? "★" : "◇"}</span>`
+    ).join("");
+    const roster = trainer.team.map(m => {
+      const p = dexOf(m.dexId) || {};
+      return `<img src="${spriteURL(m.dexId)}" alt="${p.name || ""}" title="${p.name || ""}">`;
+    }).join("");
+
+    const cards = TIERS.map(tier => {
+      const open = tierUnlocked(st, trainer, tier);
+      const cleared = tp[tier] > 0;
+      const flawless = tp.flawless.includes(tier);
+      const meta = TIER_META[tier];
+      const lv = foeLevel(trainer, tier);
+      const slots = playerSlots(trainer.team.length, tier);
+      const frame = open ? (tier === "inferno" ? "frame-rainbow" : tier === "hard" ? "frame-purple" : "") : "";
+      const state = cleared ? (flawless ? "★ Flawless" : "✓ Cleared") : open ? "Challenge" : "Locked";
+      const need = tier === "hard" ? "Clear Normal first" : "Clear Hard first";
+      return `<button type="button" class="tier-card tier-${tier} ${frame} ${open ? "" : "locked"}" data-tier="${tier}"
+          ${open ? "" : "disabled"}>
+        <span class="tc-top">
+          <span class="tc-name">${open ? meta.label : "???"}</span>
+          <span class="tc-state ${cleared ? "done" : open ? "" : "lock"}">${open ? state : "Locked"}</span>
+        </span>
+        <span class="tc-stats">${open
+          ? `Foe Lv. ${lv} · ${trainer.team.length} Pokémon · You bring ${slots}`
+          : need}</span>
+        ${open ? `<span class="tc-note">${meta.note}</span>` : ""}
+        ${open && tier === "inferno" ? `<span class="tc-sync">Level Sync → Lv. ${infernoSyncLevel(trainer)} <small>(levels restored after battle)</small></span>` : ""}
+        ${open ? `<span class="tc-foot"><span class="tc-reward">First clear 💎10 · EXP ×${meta.mult}</span><span class="tc-ep">⚡ 1</span></span>` : ""}
+        ${frame ? `<span class="fire-band" aria-hidden="true"><i></i><i></i><b></b></span>` : ""}
+      </button>`;
+    }).join("");
+
+    body.innerHTML = `
+      <div class="tier-hero">
+        <div class="tier-hero-portrait"><img src="${trainer.sprite}" alt=""></div>
+        <div class="tier-hero-info">
+          <div class="tier-hero-zone">${trainer.zone}</div>
+          <div class="tier-hero-meta">${levelRangeText(trainer)} · ${trainer.team.length} Pokémon</div>
+          <div class="tier-hero-pips">${pips}</div>
+          <div class="tier-hero-roster">${roster}</div>
+        </div>
+      </div>
+      <div class="tier-grid">${cards}</div>`;
+
+    body.querySelectorAll(".tier-card").forEach(el => {
+      el.onclick = () => {
+        if (el.disabled) return;
+        closeTierPicker();
+        startAI(trainer, el.dataset.tier);
+      };
+    });
+    document.getElementById("tier-select-modal").style.display = "flex";
+  }
+
+  function closeTierPicker() {
+    const m = document.getElementById("tier-select-modal");
+    if (m) m.style.display = "none";
   }
 
   function openAITrainers() {
@@ -167,13 +504,22 @@ const BattleUI = (() => {
   }
 
   /* ---------- 開始對戰 ---------- */
-  function startAI(trainer) {
+  function startAI(trainer, tier) {
+    if (!trainer) return;
     if (blockedByQuota()) return;
     mode = "ai";
     aiTrainer = trainer;
-    foeTeamEntries = trainer.team.map(m => ({ dexId: m.dexId, level: m.level, ivs: {}, evs: {}, nature: "hardy", moves: m.moves }));
+    aiTier = TIERS.includes(tier) ? tier : "normal";
+    if (!tierUnlocked(loadState(), trainer, aiTier)) {
+      toast(`Clear ${aiTier === "inferno" ? "Hard" : "Normal"} first to unlock this tier.`);
+      return;
+    }
+    levelSyncLevel = aiTier === "inferno" ? infernoSyncLevel(trainer) : null;
+    aiPotions = aiTier === "inferno" ? 1 : 0;
+    myFullRestores = aiTier === "inferno" ? 1 : 0;
+    foeTeamEntries = buildFoeTeam(trainer, aiTier);
     /* Gen 2-5 訓練家：先確保對應世代圖鑑資料載入（failed 就照開，唔好卡死揀隊） */
-    const gens = gensForTeam(trainer.team);
+    const gens = gensForTeam(foeTeamEntries);
     const ready = (typeof ensureGenDataLoaded === "function")
       ? Promise.all(gens.map(g => ensureGenDataLoaded(g)))
       : Promise.resolve();
@@ -185,6 +531,9 @@ const BattleUI = (() => {
     if (blockedByQuota()) return;
     mode = "pvp";
     aiTrainer = null;
+    aiTier = "normal";
+    levelSyncLevel = null;
+    myFullRestores = 0;
     showMatchPanel();
   }
 
@@ -197,6 +546,9 @@ const BattleUI = (() => {
     document.getElementById("pvp-match-panel").style.display = "flex";
     document.getElementById("pvp-matching").style.display = "flex";
     document.getElementById("pvp-matched").style.display = "none";
+    /* 好友局會改過標題，隨機配對要還原 */
+    const foundTitle = document.querySelector(".pvp-found-title");
+    if (foundTitle) foundTitle.textContent = "Opponent found!";
     /* 場制隨機抽 1/3/6，唔會多過自己持有數 */
     const st = loadState();
     const ownedCount = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length).length;
@@ -230,9 +582,43 @@ const BattleUI = (() => {
     pvpBattle = battle;
     pvpSide = side;
     pvpTeamSize = battle.team_size;
+    /* 隨機 PvP：記低對手，完場可以加好友 */
+    pvpFoeUid = foeUid || null;
+    pvpFoeName = null;
+    pvpIsFriend = !!battle.is_friend;
     document.getElementById("pvp-matching").style.display = "none";
     document.getElementById("pvp-matched").style.display = "flex";
     document.getElementById("pvp-format-value").textContent = battle.team_size + "v" + battle.team_size;
+  }
+
+  /* 好友局：server 已開好 row，唔使配對，亦唔檢查每日答題配額 */
+  function openFriendMatch(battle, foeName) {
+    if (!battle) return;
+    mode = "pvp";
+    aiTrainer = null;
+    aiTier = "normal";
+    levelSyncLevel = null;
+    myFullRestores = 0;
+    pvpCancel = null;
+    const me = (window.SupabaseAuth && SupabaseAuth.currentUser) ? SupabaseAuth.currentUser() : null;
+    const myId = me ? me.id : null;
+    pvpBattle = battle;
+    pvpSide = battle.p1_uid === myId ? "p1" : "p2";
+    pvpTeamSize = battle.team_size;
+    pvpIsFriend = true;
+    pvpFoeName = foeName || null;
+    pvpFoeUid = battle.p1_uid === myId ? battle.p2_uid : battle.p1_uid;
+    /* 借用隨機配對面板顯示場制；之後等玩家撳 #pvp-format-confirm */
+    const panel = document.getElementById("pvp-match-panel");
+    if (panel) panel.style.display = "flex";
+    const matching = document.getElementById("pvp-matching");
+    if (matching) matching.style.display = "none";
+    const matched = document.getElementById("pvp-matched");
+    if (matched) matched.style.display = "flex";
+    const fmt = document.getElementById("pvp-format-value");
+    if (fmt) fmt.textContent = battle.team_size + "v" + battle.team_size;
+    const title = document.querySelector(".pvp-found-title");
+    if (title) title.textContent = "Friend challenge!";
   }
 
   function confirmFormat() {
@@ -240,19 +626,54 @@ const BattleUI = (() => {
     openTeamSelect(() => launchBattle(), pvpTeamSize);
   }
 
+  /* 揀隊頂部：對手預覽（訓練家 / 難度 / 敵方等級 / 敵方隊伍 / EP 成本） */
+  function renderBattleInfo() {
+    const box = document.getElementById("ts-battle-info");
+    if (!box) return;
+    if (mode !== "ai" || !aiTrainer) { box.hidden = true; box.innerHTML = ""; return; }
+    const meta = TIER_META[aiTier] || TIER_META.normal;
+    const frame = aiTier === "inferno" ? "frame-rainbow" : aiTier === "hard" ? "frame-purple" : "";
+    const lv = foeTeamEntries.length ? foeTeamEntries[0].level : 1;
+    const roster = foeTeamEntries.map(m => {
+      const p = dexOf(m.dexId) || {};
+      return `<img src="${spriteURL(m.dexId)}" alt="${p.name || ""}" title="${p.name || ""}">`;
+    }).join("");
+    box.hidden = false;
+    box.innerHTML = `
+      <div class="tsb-card ${frame}">
+        <div class="tsb-head">
+          <img class="tsb-portrait" src="${aiTrainer.sprite}" alt="">
+          <div class="tsb-text">
+            <div class="tsb-name">${aiTrainer.name}</div>
+            <div class="tsb-meta"><span class="tsb-tier tier-${aiTier}">${meta.label}</span> Foe Lv. ${lv} · ${foeTeamEntries.length} vs you</div>
+          </div>
+          <div class="tsb-ep">⚡ 1</div>
+        </div>
+        <div class="tsb-roster">${roster}</div>
+        ${levelSyncLevel ? `<div class="tsb-sync">Level Sync → Lv. ${levelSyncLevel} · levels restored after the battle</div>` : ""}
+        ${frame ? `<span class="fire-band" aria-hidden="true"><i></i><i></i><b></b></span>` : ""}
+      </div>`;
+  }
+
   function openTeamSelect(cb, fixedSize) {
     const st = loadState();
     const owned = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length);
-    /* PvP 用抽中嘅場制；AI 隨機 1/3/6 — 都唔會多過玩家擁有嘅寶可夢數量 */
-    const teamSize = Math.min(fixedSize || [1, 3, 6][Math.floor(Math.random() * 3)], owned.length);
+    /* PvP 用抽中嘅場制；AI 依難度決定出戰數（Easy +1、Normal 同數、Hard/Inferno −1） */
+    const want = (mode === "ai" && aiTrainer && !fixedSize)
+      ? playerSlots(foeTeamEntries.length, aiTier)
+      : fixedSize;
+    const teamSize = Math.min(want || 1, owned.length);
+    renderBattleInfo();
     document.getElementById("team-size-label").textContent = teamSize;
+    const lvSync = levelSyncLevel;
     const grid = document.getElementById("team-select-grid");
     grid.innerHTML = owned.map((e, i) => {
       const cur = entryCurrentSpecies(e);
       return `<div class="team-slot" data-idx="${i}">
         <span class="ts-order" hidden></span>
         <img src="${spriteURL(cur[0])}" alt="${cur[1]}">
-        <span>${cur[1]} Lv.${e.level}</span>
+        <span>${cur[1]}</span>
+        <span class="ts-lv">Lv.${lvSync || e.level}${lvSync ? " ↑" : ""}</span>
       </div>`;
     }).join("");
     /* order = 出戰次序（第 0 隻 = 首位出場）；撳邊隻先，邊隻就排先 */
@@ -310,7 +731,11 @@ const BattleUI = (() => {
   function launchBattle() {
     if (mode === "pvp") { launchPvpBattle(); return; }
     mySide = "p1"; foeSide = "p2";
-    state = BattleState.create(teamEntries, foeTeamEntries, { seed: (Math.random() * 0xFFFFFFFF) >>> 0 });
+    /* Inferno Level Sync：只改開戰用嘅副本，玩家真實等級唔受影響 */
+    const myTeam = levelSyncLevel
+      ? teamEntries.map(e => Object.assign({}, e, { level: levelSyncLevel }))
+      : teamEntries;
+    state = BattleState.create(myTeam, foeTeamEntries, { seed: (Math.random() * 0xFFFFFFFF) >>> 0 });
     afterLaunch();
   }
 
@@ -325,7 +750,14 @@ const BattleUI = (() => {
       w.cancel && w.cancel();
       if (!b || b.state === "finished") { toast("Opponent left. Battle cancelled."); pvpBattle = null; openMenu(); return; }
       const foeTeam = (pvpSide === "p1" ? b.p2_team : b.p1_team) || [];
-      if (!foeTeam.length) { toast("Opponent left. Battle cancelled."); pvpBattle = null; openMenu(); return; }
+      /* 對手冇交隊＝走佬：我當贏，寫完場避免 row 殘留 active */
+      if (!foeTeam.length) {
+        toast("Opponent left. Battle cancelled.");
+        await PvpNet.finishBattleRow(pvpBattle.id, pvpSide);
+        pvpBattle = null;
+        openMenu();
+        return;
+      }
       foeTeamEntries = foeTeam;
       mySide = pvpSide; foeSide = pvpSide === "p1" ? "p2" : "p1";
       /* 注意：state 嘅 p1/p2 要跟 row（唔係跟我邊邊），兩邊客戶端先會一致 */
@@ -359,6 +791,7 @@ const BattleUI = (() => {
   function afterLaunch() {
     acting = true;   /* intro 期間鎖住操作 */
     forfeited = false;
+    refreshBagButton();   /* BAG 只有 Inferno 先會亮起 */
     /* 速度切換只限 AI 對戰；結算畫面重設 */
     battleSpeed = (mode === "ai" && localStorage.getItem("pokeengmon_battle_speed") === "2") ? 2 : 1;
     syncSpeedButton();
@@ -382,6 +815,8 @@ const BattleUI = (() => {
 
   /* ---------- 開場序列（FRLG：訓練家見面 → 拋球） ---------- */
   function foeTrainerName() {
+    /* 好友局用邀請帶入嘅名，隨機 PvP 冇名就顯示 RIVAL */
+    if (mode === "pvp" && pvpFoeName) return pvpFoeName.toUpperCase();
     return (mode === "ai" && aiTrainer) ? aiTrainer.name.toUpperCase() : "RIVAL";
   }
   function foeTrainerSprite() {
@@ -924,6 +1359,8 @@ const BattleUI = (() => {
   function hideActionMenus() {
     document.getElementById("battle-action-menu").style.display = "none";
     document.getElementById("battle-move-menu").style.display = "none";
+    const bag = document.getElementById("battle-bag-menu");
+    if (bag) bag.style.display = "none";
     const bottom = document.querySelector(".battle-bottom");
     bottom.classList.remove("menu-open", "move-open");
     updateEffBox(null);
@@ -932,6 +1369,8 @@ const BattleUI = (() => {
   function showMainMenu() {
     document.getElementById("battle-action-menu").style.display = "grid";
     document.getElementById("battle-move-menu").style.display = "none";
+    const bag = document.getElementById("battle-bag-menu");
+    if (bag) bag.style.display = "none";
     const bottom = document.querySelector(".battle-bottom");
     bottom.classList.add("menu-open");
     bottom.classList.remove("move-open");
@@ -1103,6 +1542,48 @@ const BattleUI = (() => {
     resolveTurn(action);
   }
 
+  /* ---------- BAG：Inferno 限定，1 支 Full Restore ---------- */
+  function refreshBagButton() {
+    const btn = document.getElementById("btn-battle-bag");
+    if (!btn) return;
+    btn.disabled = !(mode === "ai" && myFullRestores > 0);
+  }
+
+  function showBagMenu() {
+    if (myFullRestores <= 0) { toast("Your bag is empty for this battle."); return; }
+    const list = document.getElementById("bbp-list");
+    list.innerHTML = `<button class="bmp-move-btn" data-item="full-restore">
+        Full Restore ×${myFullRestores}
+      </button>`;
+    list.querySelector(".bmp-move-btn").onclick = () => chooseItem("full-restore");
+    const info = document.getElementById("bbp-info");
+    info.innerHTML = `
+      <div class="bmp-info-head"><span class="bmp-cat">ITEM</span></div>
+      <div class="bmp-info-row"><b>Full Restore</b><span>×${myFullRestores}</span></div>
+      <div class="bmp-info-row"><b>HEAL</b><span>FULL</span></div>
+      <div class="bmp-info-row"><b>STATUS</b><span>CURE</span></div>
+      <div class="bmp-info-row"><b>TIER</b><span>INFERNO</span></div>`;
+    document.getElementById("battle-action-menu").style.display = "none";
+    document.getElementById("battle-move-menu").style.display = "none";
+    document.getElementById("battle-bag-menu").style.display = "flex";
+    const bottom = document.querySelector(".battle-bottom");
+    bottom.classList.add("menu-open", "move-open");
+    updateEffBox(null);
+    const back = document.getElementById("bbp-back");
+    back.onclick = () => { showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`); };
+  }
+
+  function chooseItem(itemId) {
+    if (acting) return;
+    if (myFullRestores <= 0) return;
+    if (myActive().hp <= 0) { toast("This Pokémon can't use an item."); return; }
+    acting = true;
+    myFullRestores -= 1;
+    hideActionMenus();
+    refreshBagButton();
+    resolveTurn({ kind: "item", itemId });
+  }
+
   /* ---------- 回合 resolve ---------- */
   function resolveTurn(playerAction) {
     state.turn += 1;
@@ -1114,6 +1595,8 @@ const BattleUI = (() => {
   async function resolvePvpTurn(playerAction) {
     const turnNo = state.turn;
     narrate("Waiting for opponent…");
+    /* 延遲量測：由交 action 到收到對手 row（timeout 分支唔計） */
+    const tLat = (window.performance && performance.now) ? performance.now() : Date.now();
     try {
       await PvpNet.submitAction(pvpBattle.id, pvpSide, turnNo, playerAction);
       const foeCol = pvpSide === "p1" ? "p2_action" : "p1_action";
@@ -1128,6 +1611,11 @@ const BattleUI = (() => {
         finishBattle();
         return;
       }
+      /* 成功收到 row：記一次回合延遲（只留最近 20 次） */
+      const nowT = (window.performance && performance.now) ? performance.now() : Date.now();
+      const ms = Math.round(nowT - tLat);
+      window.__pvpLatency = (window.__pvpLatency || []).concat(ms).slice(-20);
+      console.debug("[PvP] turn latency", ms + "ms");
       if (b.state === "finished") {
         /* 對手投降／完場：用 row 嘅 winner */
         state.finished = true;
@@ -1166,10 +1654,16 @@ const BattleUI = (() => {
         const side = act.player ? mySide : foeSide;
         /* 已經倒下：冇得再出招（後攻者被先攻招打死就唔應該反擊）；
            但換寵例外 —— 暈咗之後嘅強制換寵一定要照做，唔係會卡死喺換寵頁 */
-        if (act.action.kind === "move" && active(state, side).hp <= 0) continue;
+        if ((act.action.kind === "move" || act.action.kind === "item") && active(state, side).hp <= 0) continue;
         if (act.action.kind === "switch") {
           /* FRLG 原版：收回舊寵 → 拋新球召出（animatedSwitch 自己 narrate） */
           await animatedSwitch(side, act.action.idx);
+        } else if (act.action.kind === "item") {
+          const logStart = state.log.length;
+          BattleState.useItem(state, side, act.action.itemId);
+          render();
+          for (const l of state.log.slice(logStart)) await say(l.msg);
+          await sleep(320);
         } else {
           const moveObj = active(state, side).moves[act.action.moveIdx];
           /* 全招冇 PP → 引擎會出 Struggle，動畫都用 Struggle 嘅無屬性特效 */
@@ -1249,14 +1743,25 @@ const BattleUI = (() => {
   }
 
   function pickAIAction() {
-    /* AI：相剋／STAB／高威力優先；冇血會治療；唔會對已中狀態嘅對手再放狀態招 */
+    /* AI：相剋／STAB／高威力優先；冇血會治療；唔會對已中狀態嘅對手再放狀態招
+       IQ 分級：T0 亂打、T1 有少少隨機、T2 最佳解、T3 85% 最佳解 + 15% 亂打 */
     const foe = foeActive();
     const target = myActive();
     const usable = foe.moves.filter(m => m.pp > 0);
     if (!usable.length) return { kind: "move", moveIdx: 0 };   /* 引擎會自動變 Struggle */
+    const iq = (DIFFICULTY_PRESETS[aiTier] || DIFFICULTY_PRESETS.normal).iq;
+    const randomMove = () => usable[Math.floor(Math.random() * usable.length)];
+    /* Inferno 專屬：血量低就用唯一一支 Potion（AI 一回合只能揀一件事） */
+    if (aiPotions > 0 && foe.hp <= foe.maxHp * 0.4) {
+      aiPotions -= 1;
+      return { kind: "item", itemId: "potion" };
+    }
+    if (iq <= 0) return { kind: "move", moveIdx: foe.moves.indexOf(randomMove()) };
+    if (iq >= 3 && Math.random() < 0.15) return { kind: "move", moveIdx: foe.moves.indexOf(randomMove()) };
+
     let best = usable[0], bestScore = -Infinity;
     for (const m of usable) {
-      const info = moveInfo(m.slug);
+      const info = moveInfo(m.slug) || {};
       let score;
       if (info.damage_class === "status") {
         if (info.meta && info.meta.healing) score = foe.hp < foe.maxHp * 0.5 ? 260 : 20;
@@ -1267,7 +1772,7 @@ const BattleUI = (() => {
         score *= (typeof typeMultiplier === "function") ? typeMultiplier(info.type, target.types) : 1;
         if (foe.types.includes(info.type)) score *= 1.5; /* STAB */
       }
-      score *= 0.85 + Math.random() * 0.3;   /* 少少隨機，唔會每次都同一招 */
+      if (iq <= 1) score *= 0.85 + Math.random() * 0.3;   /* 少少隨機，唔會每次都同一招 */
       if (score > bestScore) { bestScore = score; best = m; }
     }
     return { kind: "move", moveIdx: foe.moves.indexOf(best) };
@@ -1307,16 +1812,34 @@ const BattleUI = (() => {
       if (same) rows.push(`<div class="br-row"><span>EXP ×${gains.length}</span><b>+${gains[0].gain}</b></div>`);
       else gains.forEach(g => rows.push(`<div class="br-row"><span>${g.name}</span><b>+${g.gain} EXP</b></div>`));
     }
-    if (reward && reward.diamonds > 0) rows.push(`<div class="br-row"><span>DIAMONDS</span><b>+${reward.diamonds} 💎</b></div>`);
+    if (reward && reward.diamonds > 0) {
+      const tag = reward.firstClear ? " · FIRST CLEAR" : "";
+      rows.push(`<div class="br-row"><span>DIAMONDS${tag}</span><b>+${reward.diamonds} 💎</b></div>`);
+    }
     if (reward) reward.levelUps.forEach(lu =>
       rows.push(`<div class="br-row br-lvup"><span>${lu.name}</span><b>Lv.${lu.from} → ${lu.to}</b></div>`));
     if (!rows.length) rows.push(`<div class="br-row"><span>REWARD</span><b>None</b></div>`);
-    /* 每日對戰配額（打完先扣，顯示返剩幾多） */
-    if (reward && reward.quota) {
-      const q = reward.quota;
-      rows.push(`<div class="br-row"><span>DAILY BATTLES</span><b>${q.unlimited ? "Unlimited" : q.remaining + " left"}</b></div>`);
+    /* 能量點（打完先扣，顯示返剩幾多） */
+    if (reward && reward.energy) {
+      const e = reward.energy;
+      rows.push(`<div class="br-row"><span>⚡ ENERGY</span><b>${e.points} / ${e.max}</b></div>`);
     }
     document.getElementById("br-rows").innerHTML = rows.join("");
+    /* 隨機 PvP 完場：可加對手做朋友（好友局已經係朋友，照 spec 只睇 foeUid） */
+    const addBtn = document.getElementById("br-add-foe");
+    if (addBtn) {
+      if (mode === "pvp" && pvpFoeUid) {
+        addBtn.style.display = "";
+        addBtn.textContent = pvpFoeName ? "＋ " + pvpFoeName.toUpperCase() : "＋ ADD FRIEND";
+        addBtn.onclick = () => {
+          if (window.Friends && Friends.addByUid) Friends.addByUid(pvpFoeUid, pvpFoeName);
+          addBtn.style.display = "none";
+        };
+      } else {
+        addBtn.style.display = "none";
+        addBtn.onclick = null;
+      }
+    }
     document.getElementById("battle-result").style.display = "flex";
     acting = false;
   }
@@ -1336,19 +1859,25 @@ const BattleUI = (() => {
   }
 
   /* 結算獎勵：贏先派 EXP；鑽石 PvP 贏 3／輸 1（投降唔入嚟），
-     AI 訓練家 = 首次擊敗一次性 10💎、重複擊敗 0💎。
+     AI 訓練家 = 每隻難度（Easy/Normal/Hard/Inferno）首通一次性 10💎、重複 0💎。
      EXP 派法（v1.15.24 起，原莊 per-enemy 制）：每擊倒一隻敵寵，凡面對過佢嘅我寵
-     均分 baseExp × 敵LV / 7，以弱勝強 ×(1+等級差/50) cap ×3 —— 輸／投降都照攞（一隻一隻計）。
+     均分 baseExp × 敵LV / 7，以弱勝強 ×(1+等級差/50) cap ×3 —— 輸／投降都照攞（一隻一隻計）；
+     AI 對戰再乘難度倍率（Easy ×0.7、Normal ×1、Hard ×1.6、Inferno ×2.5）。
      PvP 贏額外固定 30／隻（唔按敵寵計，防互讓刷 EXP）。
      登入時鑽石經 settle_battle RPC（server 計公式 + 記低邊個打過 + 權威 balance），
      EXP 經 add_entry_exp RPC；RPC 失敗唔本地加（避免同雲端脫節後 pull 打回，同 quiz 一樣）。 */
   async function applyRewards(won) {
     const st = loadState();
     const isPvp = mode === "pvp";
+    const isFriend = isPvp && pvpIsFriend;   /* 好友局：賺 1／輸 0，受 server 每日 5 場上限 */
     const loggedIn = window.SupabaseAuth && SupabaseAuth.isLoggedIn();
-    const beatenBefore = !!(aiTrainer && (st.aiTrainersBeaten || []).includes(aiTrainer.id));
-    let diamonds = isPvp ? (won ? 3 : 1)
-      : ((won && aiTrainer && !beatenBefore) ? 10 : 0);
+    const tier = isPvp ? null : aiTier;
+    const tpBefore = aiTrainer ? trainerProgress(st, aiTrainer.id) : null;
+    const firstClear = !!(won && aiTrainer && tier && tpBefore[tier] === 0);
+    const expMult = (!isPvp && tier && TIER_META[tier]) ? TIER_META[tier].mult : 1;
+    let diamonds = isFriend ? (won ? 1 : 0)
+      : isPvp ? (won ? 3 : 1)
+      : (firstClear ? 10 : 0);
     const levelUps = [];
     const expGains = [];   /* {name, gain} 逐隻記錄，結算畫面用 */
     /* 引擎喺每隻敵寵 faint 嗰陣已記落 state[mySide].pendingExp；呢度一次過派。
@@ -1361,6 +1890,7 @@ const BattleUI = (() => {
       if (!e) return;
       let gain = gainByUid[e.uid] || 0;
       if (isPvp && won) gain += 30;   /* PvP 贏嘅固定 30（唔按敵寵計） */
+      if (gain > 0 && expMult > 1) gain = Math.round(gain * expMult);
       if (gain <= 0) return;
       const lvBefore = e.level || 1;
       const dexId = entryCurrentSpecies(e)[0];
@@ -1371,23 +1901,58 @@ const BattleUI = (() => {
       if (e.level > lvBefore) levelUps.push({ name, from: lvBefore, to: e.level });
       if (loggedIn) SupabaseAuth.addEntryExp(e.uid, gain);
     });
-    /* ---- 每日配額：打完先扣（開戰唔扣，中途斷線唔會白扣） ---- */
+    /* ---- 能量點：打完先扣 1 EP（開戰唔扣，中途斷線唔會白扣）；好友局唔扣 ---- */
     const day = dateKey(Date.now());
     const kind = isPvp ? "pvp" : "ai";
     const questionsTodayN = BattleGate.questionsToday(st, day);
-    BattleGate.record(st, day, kind);
+    /* server RPC 會寫返 battleDays[day].used，所以要保證個格存在 */
+    if (!st.battleDays[day]) st.battleDays[day] = { used: 0, ai: 0, pvp: 0 };
+    let energySpent = false;
+    if (!isFriend) energySpent = Energy.spend(st, 1);
+    /* 全員無倒 = Flawless（輸／投降唔算） */
+    const mineTeam = (state && state[mySide] && state[mySide].team) || [];
+    const flawless = !!won && mineTeam.every(p => p.hp > 0);
 
-    /* 登入：一律 call settle_battle（server 計鑽石 + 記配額 + 記累積場數）；
+    /* 登入：一律 call RPC（server 計鑽石 + 記配額 + 記累積場數）；
        匿名：本地加鑽石。AI 首通由 server 判斷（本地記錄可能跨機唔齊） */
-    if (loggedIn) {
-      const res = await SupabaseAuth.settleBattle(kind, won ? "win" : "lose", aiTrainer ? aiTrainer.id : null, questionsTodayN);
+    if (loggedIn && isFriend) {
+      /* 好友局：server 專用結算（每日 5 場計鑽、唔扣答題配額） */
+      const res = (window.SupabaseAuth && SupabaseAuth.settleFriendBattle)
+        ? await SupabaseAuth.settleFriendBattle(won ? "win" : "lose")
+        : null;
       if (res && typeof res.balance === "number") {
-        diamonds = res.bonus;
+        diamonds = typeof res.bonus === "number" ? res.bonus : diamonds;
+        st.diamonds = res.balance;
+        if (res.wins != null) { st.pvpWins = res.wins; st.pvpLosses = res.losses; }
+        if (typeof res.paid_today === "number") st.friendDiamondsToday = res.paid_today;
+      } else {
+        diamonds = 0;
+        if (window.App && App.toast) App.toast("Cloud sync hiccup — battle rewards not saved");
+      }
+    } else if (loggedIn) {
+      /* v2：server 認 (訓練家, 難度) 首通 + 扣 EP；未 migrate 就 fallback 舊 RPC */
+      let v2 = null;
+      if (SupabaseAuth.settleBattleV2) {
+        try {
+          v2 = await SupabaseAuth.settleBattleV2(
+            kind, won ? "win" : "lose", aiTrainer ? aiTrainer.id : null,
+            tier, questionsTodayN, flawless, false);
+        } catch (e) { console.warn("[Battle] settle_battle_v2 failed:", e.message); }
+      }
+      const res = v2 || await SupabaseAuth.settleBattle(
+        kind, won ? "win" : "lose", aiTrainer ? aiTrainer.id : null, questionsTodayN);
+      if (res && typeof res.balance === "number") {
+        diamonds = res.allowed === false ? 0 : res.bonus;
+        if (res.allowed === false) {
+          if (window.App && App.toast) App.toast("No energy left — this battle won't count");
+        }
         st.diamonds = res.balance;   /* server 權威，唔係本地 += */
         if (res.wins != null) { st.pvpWins = res.wins; st.pvpLosses = res.losses; }
         if (typeof res.used === "number") st.battleDays[day].used = res.used;
         if (typeof res.ai_total === "number") st.battleAiTotal = res.ai_total;
         if (typeof res.pvp_total === "number") st.battlePvpTotal = res.pvp_total;
+        /* EP ledger 用 server 做準（防止改 localStorage 刷場） */
+        if (res.energy && Energy.adopt) Energy.adopt(st, res.energy);
       } else {
         diamonds = 0;
         if (window.App && App.toast) App.toast("Cloud sync hiccup — battle rewards not saved");
@@ -1395,13 +1960,34 @@ const BattleUI = (() => {
     } else {
       st.diamonds = (st.diamonds || 0) + diamonds;
     }
-    if (won && aiTrainer) {
+    /* ---- 精通記錄：每個難度分開計；全員無倒下次再贏就標 Flawless ---- */
+    let unlockedInferno = false;
+    if (won && aiTrainer && tier) {
+      const tp = trainerProgress(st, aiTrainer.id);
+      st.trainerProgress = st.trainerProgress || {};
+      if (tier === "hard" && tp.hard === 0) unlockedInferno = true;
+      st.trainerProgress[aiTrainer.id] = {
+        easy: tp.easy + (tier === "easy" ? 1 : 0),
+        normal: tp.normal + (tier === "normal" ? 1 : 0),
+        hard: tp.hard + (tier === "hard" ? 1 : 0),
+        inferno: tp.inferno + (tier === "inferno" ? 1 : 0),
+        flawless: tp.flawless.slice()
+      };
+      /* 冇任何一隻我方寶可夢倒下 = Flawless（投降／輸唔會入嚟） */
+      if (flawless && !tp.flawless.includes(tier)) {
+        st.trainerProgress[aiTrainer.id].flawless.push(tier);
+      }
+      /* 舊欄位保持向後兼容（其他頁面仍會睇） */
       st.aiTrainersBeaten = st.aiTrainersBeaten || [];
       if (!st.aiTrainersBeaten.includes(aiTrainer.id)) st.aiTrainersBeaten.push(aiTrainer.id);
     }
     saveState();
-    const curve = (typeof getCurveMode === "function") ? getCurveMode() : (st.curveMode || "standard");
-    return { expGains, diamonds, levelUps, quota: BattleGate.status(st, day, curve) };
+    if (unlockedInferno) playInfernoUnlock(aiTrainer);
+    /* 好友局唔扣 EP，所以唔顯示能量點那行 */
+    return {
+      expGains, diamonds, levelUps, firstClear,
+      energy: (!isFriend && energySpent) ? Energy.status(st) : null
+    };
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms / battleSpeed)); }
@@ -1424,11 +2010,18 @@ const BattleUI = (() => {
     };
     document.getElementById("br-continue").onclick = () => {
       document.getElementById("battle-result").style.display = "none";
+      /* 清走上一場嘅對手資料（加好友掣都收埋） */
+      const addFoe = document.getElementById("br-add-foe");
+      if (addFoe) { addFoe.style.display = "none"; addFoe.onclick = null; }
+      pvpBattle = null; pvpFoeUid = null; pvpFoeName = null; pvpIsFriend = false;
       /* AI 對戰返訓練家梯隊（重建列表 → 顯示新解鎖／✓）；PvP 返對戰主選單 */
       if (mode === "ai") openAITrainers(); else openMenu();
     };
     document.getElementById("btn-battle-fight").onclick = showMoveMenu;
-    document.getElementById("btn-battle-bag").onclick = () => toast("BAG is not available yet.");
+    document.getElementById("btn-battle-bag").onclick = () => {
+      if (myFullRestores <= 0) { toast("BAG is empty — only Inferno battles give you an item."); return; }
+      showBagMenu();
+    };
     document.getElementById("btn-battle-pokemon").onclick = () => showSwitchMenu(false);
     /* RUN：撳一下彈確認窗（modal 唔可以撳外面關），再撳 RUN 先算投降認輸 */
     document.getElementById("btn-battle-run").onclick = () => {
@@ -1450,7 +2043,18 @@ const BattleUI = (() => {
       };
     };
     document.getElementById("battle-menu-back").onclick = () => { App.renderHome(); App.showView("view-home"); };
-    document.getElementById("team-select-cancel").onclick = () => { document.getElementById("team-select-modal").style.display = "none"; openMenu(); };
+    /* 難度選擇彈窗：關閉／撳背景＝取消（唔會亂開戰） */
+    const tierClose = document.getElementById("tier-select-close");
+    if (tierClose) tierClose.onclick = closeTierPicker;
+    const tierModal = document.getElementById("tier-select-modal");
+    if (tierModal) {
+      tierModal.onclick = (ev) => { if (ev.target === tierModal) closeTierPicker(); };
+    }
+    document.getElementById("team-select-cancel").onclick = () => {
+      document.getElementById("team-select-modal").style.display = "none";
+      levelSyncLevel = null;
+      openMenu();
+    };
     document.getElementById("pvp-match-cancel").onclick = cancelMatch;
     document.getElementById("pvp-format-confirm").onclick = confirmFormat;
     /* PokeRogue 換精靈頁：options（SEND OUT / CANCEL）+ 右下 CANCEL 掣 */
@@ -1473,5 +2077,5 @@ const BattleUI = (() => {
     };
   }
 
-  return { openMenu, bind, renderMenu, openAITrainers };
+  return { openMenu, bind, renderMenu, openAITrainers, openFriendMatch };
 })();

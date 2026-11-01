@@ -1,7 +1,7 @@
 ﻿# PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.19.0**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.19.7**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -160,11 +160,52 @@
 - **特性擴充 + 個體特性（v1.15.20）**：白名單 `IMPLEMENTED_ABILITIES` 擴到 **40 個**（新增 Solar Power（晴 SpA×1.5、回合末 -1/8）、Chlorophyll／Swift Swim／Sand Rush（對應天氣速 ×2）、Technician（威力≤60 招 ×1.5）、Adaptability（STAB 2.0）、Sniper（crit ×2.25）、Battle Armor（免 crit，RNG 照消耗保 PvP 同步）、Moxie（擊倒後攻 +1）、Regenerator（換走回 1/3 HP）、Natural Cure（換走清狀態）、Hydration（雨天回合末解狀態）、Rain Dish／Ice Body（雨／雹回 1/16）、Sand Veil／Snow Cloak（對應天氣命中 ×0.8）、Keen Eye（唔可被降命中）、Own Tempo（唔會混亂））。**特性由「物種 slot 1」改為「個體」**：捕捉時 `rollEntryAbility()` 由「官方 slot1/slot2 ∩ 白名單」池抽出（1 個候選固定、2 個按 70%／30%），池空即 null —— 保證唔會派到「有名冇效」嘅死特性；`entry.ability` 存 Supabase `user_entries`（migration `20261101b`），換機／重登會跟 cloud 返，PvP 經 `serializeEntry` 同步。圖鑑詳情只顯示白名單內嘅特性同 `abilityName()` 顯示名。
 - **場地效果系統（v1.15.18，Gen 5 規則）**：**天氣** —— Sunny Day／Rain Dance／Sandstorm／Hail／Snowscape 開 5 回合天氣（互斥、新蓋舊，同一天氣重出失敗）；晴天火招 ×1.5／水招 ×0.5，雨天反轉；沙暴回合末磨非岩／地／鋼寵 1/16 HP，雹磨非冰寵 1/16 HP；Solar Beam 雨／沙／雹下威力減半，Thunder 雨天必中，Blizzard 雹天必中，Weather Ball 跟天氣轉屬性（火／水／岩／冰）兼威力 50→100。**場地陷阱** —— Spikes 撒對面最多 3 層（換入分別扣 1/8、1/6、1/4 max HP，飛行屬性／Levitate 免疫）、Stealth Rock 按岩屬性對換入寵相性 ×1/8 max HP 扣血（4× 弱岩直接半血）；換入先食釘子、後觸發上場特性（Gen 順序），釘死直接入 faint 流程。**光牆／反射壁** —— 開喺自己嗰邊 5 回合，Reflect 物理傷半、Light Screen 特殊傷半，critical hit 無視壁。對戰畫面中上位置有場地狀態 chip 列：天氣 icon＋回合倒數、雙方各自 Reflect／Light Screen 回合數、Spikes 層數、Stealth Rock 標記，無場地效果時收埋。
 - **PvP 真聯機（v1.15.19，種子同步制）**：接駁 Supabase `battles`／`matchmaking` 表（REST polling，唔使 websocket）。配對：入池後由 uid 細嗰方開 battle row（p1）防撞單，90s 死屍池員無視、60s 配唔到退出。開局由 p1 生成 32-bit seed 寫落 row，雙方客戶端用同一 seed 各自模擬 —— 引擎全部隨機（命中、傷害 roll、crit、連擊、狀態機率、同速 tiebreak）改用 `js/battle/rng.js`（mulberry32 PRNG），保證兩邊結果逐 bit 一致（node 測試驗證同 seed 兩場：勝者／每句 log／尾血／RNG 尾態全同）。每回合只交換 action `{turn, kind, moveIdx|idx}`，舊 turn 無視。對手 faint 後由佢自己客戶端揀替補（switch 做下一 turn action）；45s 冇動作當斷線判負；投降即寫 winner 落 row 對面即知。需先跑 migration `supabase-migrate-20261101a-battles-seed.sql`（battles 加 seed 欄）。
+- **PvP 同步方式（Realtime 先行，見 §3.12 好友局）**：`battles` row 共享同一個 32-bit seed，雙方客戶端用 `js/battle/rng.js`（mulberry32）各自模擬，結果逐 bit 一致；每回合只交換 action `{turn, kind, moveIdx|idx}`（舊 turn 無視），唔同步整份 battle state。等對手主要靠 **Supabase Realtime** —— `js/battle/realtime.js` 原生 WebSocket（唔引入 supabase-js），訂閱 `battles` 嘅 UPDATE，`filter = id=eq.<battleId>`，join 帶 access token（RLS 擋非參與者）；每 25s heartbeat、斷線指數退避重連、連 3 次失敗標記 `degraded`。REST 輪詢降為 **safety fallback**：首次 1.2s → ×1.6 → cap 2.2s，realtime 收到即 cleanup。延遲目標 **p50 < 700ms、p95 < 1500ms**（`window.__pvpLatency` 記最近 20 次量測）。`battles.is_friend=true` 嘅好友局永遠唔會落入隨機配對池（配對查詢一律 `is_friend=eq.false`）。
 - **對戰獎勵上雲（v1.15.22）**：之前對戰鑽石／EXP 係純本地加法，登入用戶下次 `pull()` 被雲端冚咗等同冇獎；改為同 quiz 一樣經 RPC —— 新 `settle_battle(p_kind, p_result, p_trainer_id)`（migration `20261101c`）由 server 計鑽石公式兼回傳權威 balance：**PvP 贏 3💎／輸 1💎、投降當輸；AI 訓練家首次擊敗一次性 10💎、重複擊敗 0💎**（server 用 `user_account.ai_trainers_beaten` 陣列記錄邊個打過，10 個 trainer id 白名單校驗，防重複攞同跨機刷）。EXP 每次贏都有，經現有 `add_entry_exp` RPC 逐隻出戰 entry 上雲；登入但 RPC 失敗 → 唔本地加鑽＋toast（同 quiz v140 規矩），匿名先本地加（本地用 `st.aiTrainersBeaten` 判斷首通）。結算畫面改為按實際獎勵顯示（PvP 輸都會出 `+1 💎` 行）。
 - **對戰 EXP 改比例制（v1.15.23）**：舊制 AI 戰固定 `trainer.level×12`／PvP 30，中後期對經驗曲線（Lv.50 升一級約 7.5k）近乎冇意義；改為同 quiz 一樣按比例派 —— AI 戰每隻出戰寵各攞「佢自己升一級所需（`levelSpan`）× 訓練家等級%」（Timmy=5%、Alder=82%≈一級），任何等級都有感，後期玩家可以帶低等級寵搵高級訓練家刷 EXP；PvP 維持固定 30（唔按比例，防相熟玩家互讓速刷）。結算畫面 EXP 改逐隻顯示（全部相同先合併 `+N ×3`）。
 - **對戰 EXP 改逐敵寵制（v1.15.24，取代 v1.15.23 嘅 span% 制）**：每擊倒一隻敵寵即記一筆 EXP —— 原莊公式 `baseExp × 敵LV / 7`，凡係**面對過嗰隻敵寵**嘅我寵均分（參與＝正選自動計＋換入過，敵方換人即重設，齋坐後備冇份 —— Gen 1–5 switch-training 規則）；**以弱勝強加成**：收 EXP 嗰隻等級低過敵寵 → `×(1 + 等級差/50)`，cap ×3。**輸／投降都照攞已擊倒嘅 EXP**（一隻一隻計；鑽石先係最後結算、投降當輸）；PvP 贏維持額外固定 30／隻（唔按敵寵計，防互讓刷）。`baseExp` 資料：`tools/fetch_base_exp.py` 由 PokéAPI 抽入 5 個 dex JSON，649 隻全齊（引擎內置梯隊物種速查表做後備）。**PvP 戰績**：`user_account.pvp_wins / pvp_losses` 兩欄由 `settle_battle` RPC 累積（migration `20261101c` 已更新），對戰主選單 PvP 格顯示 `W–L`，數據留俾下一步 leaderboard / friends system 用。下一步預告：每日答題閘門（5 回合 50 題英文 → 解鎖 4 場對戰，再做 5 回合 → 再 4 場，每日上限 8 場）。
 - **每日對戰配額（v1.17.2）**：junior / standard 模式下，**今日答題數每滿 50 題解鎖 4 場對戰，每日上限 8 場**（teen / adult 無上限）。用**題數**唔用回合數 —— 自訂組題可能不足 10 題，所以 50 題先係準則。配額以**完成結算先扣**（`applyRewards`），開戰唔扣，中途斷線／中途走佬唔會白扣；投降當輸但照扣。純函數 `js/battle/gate.js`（`BattleGate`）計配額，對戰主選單頂部顯示 `Daily battles 3 / 8` 同「仲差幾多題解鎖 +4」，冇配額撳入口即 toast 原因。每日場數記 `st.battleDays["YYYY-MM-DD"] = {used, ai, pvp}`（本機 mirror）＋server `user_account.battle_days` jsonb（跨機一致）；另加 `battle_ai_total / battle_pvp_total` 累積場數，留俾 leaderboard / friends system 用。`settle_battle` RPC 加 `p_questions_today` 參數、server 夾死上限（最多 8），cap 未夠時回傳 `allowed=false` 唔派鑽。migration `supabase-migrate-20261101d-battle-daily-quota.sql`。
 
+
+### 3.12 好友系統（Friends）
+
+- **目標（MVP，本期）**：好友清單／請求／刪除、4 路加好友入口、好友邀請制 PvP
+- **非目標（留待後續）**：禮物、觀戰、好友排行榜、即時聊天、在線狀態（online presence）
+- **登入閘**：好友功能要 uid，匿名 `device_id` 用唔到；未登入撳 Friends → toast + 打開 Login Hub
+- **入口**：對戰主選單加 `👥 Friends` tile（sub 顯示 `N friends · M requests`）；`#view-friends` 獨立 view，有返回掣
+
+**Friend Code**
+- 8 字元，字母表 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`（剔除 `O`／`0`／`I`／`1` 等易撈亂字元）
+- **Lazy 生成**：`ensure_friend_code()` 見自己冇 code 才 loop 擲 8 字（最多 50 次）＋檢查全表唯一；partial unique index 保證唔會重複
+- Friends view 顯示自己 code ＋ Copy 掣（`navigator.clipboard`，失敗 fallback toast）
+
+**4 路加好友**
+1. **Friend Code**：輸入 8 字 → `resolve_friend_code` → 確認對象 → `send_friend_request`（輸入自己 code 回 `self`）
+2. **排行榜一鍵加**：Leaderboard 每行（非自己、有 `accountUuid`）`＋` 掣 → 直接送請求
+3. **訓練員名搜尋**：≥2 字，`search_trainers` 用名 ILIKE、排除自己、`limit 20`；每行標示關係（`friend`／`pending_out`／`pending_in`／`none`）＋ `＋`
+4. **PvP 完場結果卡**：配對時記低 `pvpFoeUid`／`pvpFoeName`，結果卡出「Add opponent」（只 PvP 且有 foe uid 先顯示）
+
+**請求流程**
+- `send` → `pending` → 對方 `accept`（轉 `accepted`）／`decline`（刪 row，之後可再請求）
+- **對方已經向我請求** → 我再送時自動互相接受（回 `auto_accepted`），唔會卡住兩個 pending
+- **上限（server 夾死）**：好友 **50**；自己發出嘅 pending **20**
+- `respond_friend_request` 只認「對方 requester ＋ 自己 addressee ＋ pending」嘅 row；`remove_friend` 刪整個 pair → **雙方清單即時消失**
+
+**好友邀請 PvP**
+- 好友清單每行 `⚔ Invite` → modal 揀 **1v1 / 3v3 / 6v6** → `send_battle_invite`
+- 邀請 **10 分鐘**有效；同一 pair（任何方向）同時只可以有一個 pending（回 `pending_exists`）；發起方可 `cancel_battle_invite`
+- 對方 ACCEPT → `respond_battle_invite` 由 **server** 擲 seed 並 insert `battles(mode='pvp', is_friend=true, p1=from, p2=to)`，回 `{battle_id, seed, side:'p2'}` → 兩邊 `BattleUI.openFriendMatch` 直接開局（共同 seed，同步方式見 §3.11）
+- 通知：登入後每 20s 拉 `get_battle_invites`（friends view 開住時 8s），新 pending 出 toast ＋ tile badge
+
+**獎勵（`settle_friend_battle`）**
+- 贏 **1💎**、輸 **0💎**；每日最多 **5 場**計鑽（`user_account.friend_daily` 按日累計，輸都佔一場）；`pvp_wins / pvp_losses` 照計
+- 好友局**不受每日答題配額限制**（邀請制）；用獨立 RPC，唔改每日配額版 `settle_battle`（避免 overload 撞簽名）
+- 登入但 RPC 失敗 → 唔本地補鑽 ＋ toast（同 v140 規矩）
+
+**安全邊界**
+- `friendships` / `battle_invites` 開 RLS 並 `revoke all from anon, authenticated` —— 前端**零直接讀寫**，全部經 `security definer` RPC
+- RPC 一覽：`ensure_friend_code`、`resolve_friend_code`、`search_trainers`、`send_friend_request`、`respond_friend_request`、`remove_friend`、`get_my_friends`、`get_friend_requests`、`send_battle_invite`、`get_battle_invites`、`respond_battle_invite`、`cancel_battle_invite`、`settle_friend_battle`（只 `grant execute` 俾 `authenticated`）
+- migration `supabase-migrate-20261101e-friends.sql`；`battles` 加 `is_friend boolean default false`，隨機配對查詢一定要過濾走
 
 ---
 

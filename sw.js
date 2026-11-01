@@ -1,5 +1,5 @@
 /* PokeEngmon Service Worker - 離線快取 */
-const CACHE_NAME = "pokeengmon-1.19.0";
+const CACHE_NAME = "pokeengmon-1.19.7";
 const TYPE_ICONS = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
 const BATTLE_TYPES = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "unknown", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark"];
 const BATTLE_UI = [
@@ -7,7 +7,9 @@ const BATTLE_UI = [
   "bg-grass", "bg-building", "bg-water", "bg-cave", "bg-pond", "bg-ice", "bg-sand", "bg-psychic", "bg-teal", "bg-plain",
   "status-psn", "status-par", "status-slp", "status-frz", "status-brn", "status-tox", "status-fnt"
 ];
-const TRAINERS = ["red_back", "rival", "youngster", "bugcatcher", "lass", "gentleman", "ace_f"];
+const TRAINERS = ["red_back", "rival", "youngster", "bugcatcher", "lass", "gentleman", "ace_f",
+  "ai-youngster", "ai-bugcatcher", "ai-lass", "ai-hiker", "ai-gentleman", "ai-swimmer", "ai-ace",
+  "ai-jasmine", "ai-psychic", "ai-cynthia", "ai-alder", "ai-drake", "ai-anabel", "ai-red"];
 const BATTLE_FX = [
   "fx-normal", "fx-fire", "fx-fire-ring", "fx-water", "fx-water2", "fx-wave", "fx-electric",
   "fx-grass", "fx-bug", "fx-ice", "fx-ice2", "fx-rock", "fx-rock2", "fx-steel", "fx-fighting",
@@ -39,12 +41,15 @@ const ASSETS = [
   "./js/gacha.js",
   "./js/pokedex.js",
   "./js/leaderboard.js",
+  "./js/friends.js",
   "./js/calendar.js",
   "./js/evolve-scene.js",
   "./js/app.js",
   "./js/capture.js",
   "./js/battle/rng.js",
   "./js/battle/gate.js",
+  "./js/battle/energy.js",
+  "./js/battle/realtime.js",
   "./js/battle/pvp.js",
   "./js/battle/engine.js",
   "./js/battle/state.js",

@@ -55,6 +55,8 @@ function defaultState() {
     battleDays: {},          // "YYYY-MM-DD" -> { used, ai, pvp }：每日對戰配額（結算先扣）
     battleAiTotal: 0,        // 累積 AI 對戰場數（server 權威，pull 覆寫）
     battlePvpTotal: 0,       // 累積 PvP 對戰場數（server 權威，pull 覆寫）
+    energy: null,            // 能量點：首次由 Energy.ensure() 補 5 點
+    trainerProgress: {},     // trainer mastery：id -> { easy, normal, hard, inferno, flawless: [] }
     customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
     unlockedGen: 1,          // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
     gymBadges: [],           // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges
@@ -82,6 +84,21 @@ function loadState() {
   /* Migration: 舊 entries 嘅 uid 唔係 valid UUID，要換成 UUID 先 push 到 Supabase */
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let needSave = false;
+  /* Migration: 舊 aiTrainersBeaten（陣列）→ trainerProgress（四級 mastery）。
+     舊存檔每個 trainer id 視為「Normal 已破」。 */
+  if (!_state.trainerProgress || typeof _state.trainerProgress !== "object") {
+    _state.trainerProgress = {};
+    needSave = true;
+  }
+  if (Array.isArray(_state.aiTrainersBeaten)) {
+    _state.aiTrainersBeaten.forEach(id => {
+      const tp = _state.trainerProgress[id];
+      if (!tp || !tp.normal) {
+        _state.trainerProgress[id] = Object.assign({}, tp, { normal: 1 });
+        needSave = true;
+      }
+    });
+  }
   if (Array.isArray(_state.entries)) {
     _state.entries.forEach(e => {
       if (e.uid && !uuidRe.test(e.uid)) {
@@ -694,6 +711,11 @@ function addPracticeRecord(record) {
   /* 日曆色階：確保當日至少有一筆「有練習」標記（雲端合併用） */
   if (!st.practiceDays) st.practiceDays = {};
   st.practiceDays[key] = (st.practiceDays[key] || 0) + 1;
+  /* 答題 → 能量點：今日每滿 10 題 +1 EP（Energy 模組負責每日 3 次上限） */
+  if (typeof Energy !== "undefined") {
+    const qToday = (st.records[key] || []).reduce((n, r) => n + (Number(r.total) || 0), 0);
+    Energy.syncQuiz(st, qToday);
+  }
   const streak = calcStreak();
   if (streak > (st.bestStreak || 0)) st.bestStreak = streak;
   saveState();

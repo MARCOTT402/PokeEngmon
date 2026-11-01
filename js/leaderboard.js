@@ -100,6 +100,10 @@ const Leaderboard = {
           `<img src="${gymBadgeSpriteURL(m)}" alt="×${m}" title="Gym ×${m}" loading="lazy"
                 onerror="this.remove()">`).join("")}</span>`
       : "";
+    /* 加好友掣：只有真帳號（有 uuid）同唔係自己先顯示 */
+    const addBtn = (r.accountUuid && !r.isYou)
+      ? `<button class="lb-add" data-uid="${r.accountUuid}" data-name="${escapeHTML(r.name)}" aria-label="Add friend" title="Add friend">＋</button>`
+      : "";
     return `<div class="lb-row${r.isYou ? " lb-you" : ""}${rank <= 3 ? " lb-top" + rank : ""}">
       <div class="lb-rank">${medal}</div>
       ${img}
@@ -107,7 +111,7 @@ const Leaderboard = {
         <div class="lb-name">${escapeHTML(r.name)}${badgeHTML}${r.isYou ? ' <span class="lb-you-tag">YOU</span>' : ""}</div>
         <div class="lb-partner">${escapeHTML(r.partnerName)} · Lv.${r.partnerLevel}</div>
       </div>
-      <div class="lb-count"><b>${r.totalOwned}</b><span>Pokémon</span></div>
+      <div class="lb-count"><b>${r.totalOwned}</b><span>Pokémon</span></div>${addBtn}
     </div>`;
   },
 
@@ -149,11 +153,23 @@ const Leaderboard = {
       list.innerHTML = top.map((r, i) => this._rowHTML(r, i + 1)).join("");
     }
 
+    /* 榜上＋掣：事件委派式逐粒綁，撳咗就送好友邀請 */
+    const bindAddBtns = (el) => {
+      el.querySelectorAll(".lb-add").forEach(btn => {
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          if (window.Friends && Friends.addByUid) Friends.addByUid(btn.dataset.uid, btn.dataset.name);
+        };
+      });
+    };
+    bindAddBtns(list);
+
     const youCard = document.getElementById("lb-you");
     if (youRank > 50) {
       youCard.hidden = false;
       youCard.innerHTML = `<div class="lb-you-rank">Your Rank: #${youRank}</div>` +
         this._rowHTML(rows[youRank - 1], youRank);
+      bindAddBtns(youCard);
     } else {
       youCard.hidden = true;
       youCard.innerHTML = "";

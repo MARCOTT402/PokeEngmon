@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "1.19.0";
+const APP_VERSION = "1.19.7";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -1617,6 +1617,8 @@ const App = {
     if (!btn) return;
     btn.textContent = "✅";
     btn.title = "Connected — tap to manage";
+    /* 登入後先開始好友背景輪詢（帶來新邀請／請求數） */
+    if (window.Friends && Friends.startPolling) Friends.startPolling();
   },
 
   /* OAuth redirect 返嚟之後嘅雲端合併。一定要等首屏 render 完、loading 淡出後才跑：
@@ -1673,6 +1675,7 @@ const App = {
             if (!confirmed) {
               /* 用戶拒絕 → sign out，保留本地進度 */
               await SupabaseAuth.signOut();
+              if (window.Friends && Friends.stopPolling) Friends.stopPolling();
               st._googleMigrated = false;
               saveState();
               this.renderHome();
@@ -1772,6 +1775,7 @@ const App = {
       document.getElementById("lh-signout").onclick = async () => {
         try {
           await SupabaseAuth.signOut();
+          if (window.Friends && Friends.stopPolling) Friends.stopPolling();
           /* 登出後清除本地遊戲進度，防止再登入另一個帳戶時將舊進度複製過去（cheat） */
           clearGameProgress();
           /* clearGameProgress 會建立新 state 物件，要重新 load */
@@ -1945,6 +1949,7 @@ const App = {
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
     document.getElementById("btn-home-battle").onclick = () => { if (typeof BattleUI !== "undefined") BattleUI.openMenu(); };
+    document.getElementById("battle-menu-friends").onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
     if (typeof BattleUI !== "undefined") BattleUI.bind();
     document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
@@ -1991,6 +1996,8 @@ const App = {
       document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     }
     document.getElementById("btn-lb-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    document.getElementById("friends-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    document.getElementById("friends-back-bottom").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-review-back").onclick = () => {
       /* 由結算入嚟 → 返結算；由日曆入嚟 → 返主頁 */
