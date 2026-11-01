@@ -1,3 +1,10 @@
+## [1.20.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.20.0...v1.20.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **battle:** wrap long trainer names and show fire frames only for cleared tiers ([3a9d391](https://github.com/MARCOTT402/PokeEngmon/commit/3a9d391f0f15665040c12bc79dc729cc371395e1))
+
 # [1.20.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.19.0...v1.20.0) (2026-11-01)
 
 
