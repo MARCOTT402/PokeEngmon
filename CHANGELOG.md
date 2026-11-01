@@ -1,3 +1,11 @@
+# [1.23.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.22.0...v1.23.0) (2026-11-01)
+
+
+### Features
+
+* **dex:** unify sorting/filters across Pokédex, team picker and Partner Care ([8bf32e1](https://github.com/MARCOTT402/PokeEngmon/commit/8bf32e13b17abc4faa89690d9cdbd8f078d66ba8))
+* **energy:** toast earned Energy after quiz practice ([74cbf65](https://github.com/MARCOTT402/PokeEngmon/commit/74cbf65be285adb1a773771f9854b244ddada746))
+
 # [1.22.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.21.2...v1.22.0) (2026-11-01)
 
 
