@@ -83,11 +83,21 @@ const BattleUI = (() => {
     }
     renderEnergy();
     renderMasterySummary();
-    /* 登入用戶：用 server ledger 校正 EP（跨機一致 + 防改 localStorage 刷場） */
-    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn() && SupabaseAuth.energyStatus) {
+    /* 登入用戶：用 server ledger 校正 EP + 精通（跨機一致、清 cache 都保得住進度） */
+    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
       const q = BattleGate.questionsToday(st, dateKey(Date.now()));
-      SupabaseAuth.energyStatus(q).then(s => {
-        if (s && s.points != null && Energy.adopt) { Energy.adopt(st, s); renderEnergy(); }
+      const pull = SupabaseAuth.battleProgress
+        ? SupabaseAuth.battleProgress(q)
+        : (SupabaseAuth.energyStatus ? SupabaseAuth.energyStatus(q) : null);
+      if (pull) pull.then(r => {
+        if (!r) return;
+        const st2 = loadState();
+        const e = r.energy || r;
+        if (e && e.points != null && Energy.adopt) Energy.adopt(st2, e);
+        if (r.mastery) adoptMastery(st2, r.mastery);
+        renderEnergy();
+        renderMasterySummary();
+        renderTrainerList();
       }).catch(() => {});
     }
 
@@ -245,6 +255,25 @@ const BattleUI = (() => {
       hard: Number(tp.hard) || 0, inferno: Number(tp.inferno) || 0,
       flawless: Array.isArray(tp.flawless) ? tp.flawless : []
     };
+  }
+  /* 同 server 記錄合併：次數取大、flawless 取聯集（換機／清 cache 都唔會倒退） */
+  function adoptMastery(st, srv) {
+    if (!srv || typeof srv !== "object") return;
+    const store = st.trainerProgress || (st.trainerProgress = {});
+    let changed = false;
+    Object.keys(srv).forEach(id => {
+      const s = srv[id] || {};
+      const cur = trainerProgress(st, id);
+      const merged = {
+        easy: Math.max(cur.easy, Number(s.easy) || 0),
+        normal: Math.max(cur.normal, Number(s.normal) || 0),
+        hard: Math.max(cur.hard, Number(s.hard) || 0),
+        inferno: Math.max(cur.inferno, Number(s.inferno) || 0),
+        flawless: Array.from(new Set([].concat(cur.flawless, Array.isArray(s.flawless) ? s.flawless : [])))
+      };
+      if (JSON.stringify(merged) !== JSON.stringify(cur)) { store[id] = merged; changed = true; }
+    });
+    if (changed) saveState(st);
   }
   function trainerUnlockedAt(st, index) {
     if (index <= 0) return true;

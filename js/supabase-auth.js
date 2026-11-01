@@ -279,6 +279,15 @@ const SupabaseAuth = {
   },
 
 
+  /* ---------- RPC：EP + 訓練家精通一齊拎（換機／清 cache 都保得住進度） ---------- */
+  async battleProgress(questionsToday) {
+    if (!this.currentUser()) return null;
+    return this._rpc("battle_progress", {
+      p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0))
+    });
+  },
+
+
   /* ---------- 好友／邀請（全部要求登入，失敗 return null） ---------- */
 
   /* 取得（必要時生成）自己嘅 8 字好友碼 */
