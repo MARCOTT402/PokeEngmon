@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.16.0...v1.17.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** per-KO EXP rewards, cloud battle settlement, and post-faint switch fix ([50e93b3](https://github.com/MARCOTT402/PokeEngmon/commit/50e93b3923d2fbae420b8b0f6a15a4e81bd43144))
+
 # [1.16.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.15.0...v1.16.0) (2026-11-01)
 
 
