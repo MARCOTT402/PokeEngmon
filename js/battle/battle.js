@@ -299,7 +299,9 @@ const BattleUI = (() => {
     return {
       chainKey: e.chainKey || null, stage: e.stage || 1, branch: e.branch || 0, dexId: e.dexId,
       level: e.level, ivs: e.ivs || {}, evs: e.evs || {},
-      nature: e.nature || "hardy", moves: (e.moves || []).filter(Boolean).slice(0, 4)
+      nature: e.nature || "hardy", moves: (e.moves || []).filter(Boolean).slice(0, 4),
+      /* 特性要一齊過去，否則 PvP 兩邊特性唔同 → 即時 desync */
+      ability: (typeof e.ability === "string" && e.ability) ? e.ability : null
     };
   }
 
@@ -1097,8 +1099,9 @@ const BattleUI = (() => {
   function runTurnResolution(playerAction, foeAction) {
     const myMove = playerAction.kind === "move" ? moveInfo(myActive().moves[playerAction.moveIdx].slug) : null;
     const foeMove = foeAction.kind === "move" ? moveInfo(foeActive().moves[foeAction.moveIdx].slug) : null;
-    const myAct = { kind: playerAction.kind, priority: myMove ? myMove.priority : 6, speed: Battle.effectiveStat(myActive(), "spe"), player: true, action: playerAction };
-    const foeAct = { kind: foeAction.kind, priority: foeMove ? foeMove.priority : 6, speed: Battle.effectiveStat(foeActive(), "spe"), player: false, action: foeAction };
+    const wName = state.weather && state.weather.name;
+    const myAct = { kind: playerAction.kind, priority: myMove ? myMove.priority : 6, speed: Battle.effectiveStat(myActive(), "spe", false, wName), player: true, action: playerAction };
+    const foeAct = { kind: foeAction.kind, priority: foeMove ? foeMove.priority : 6, speed: Battle.effectiveStat(foeActive(), "spe", false, wName), player: false, action: foeAction };
     /* PvP 同步關鍵：turnOrder 同速 tiebreak 食 RNG，
        兩邊客戶端必須用同一次序傳參（p1 行先），否則同一個 random 會出相反結果 */
     const firstAct = mySide === "p1" ? myAct : foeAct;

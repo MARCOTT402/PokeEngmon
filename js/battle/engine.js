@@ -36,7 +36,7 @@ const Battle = (() => {
 
   /* ---------- 輔助：pokemon 嘅有效數值（含 stage + status + 特性） ---------- */
   /* ignoreStages：Unaware 專用 —— 只忽略 stat stage，burn/特性倍率照計 */
-  function effectiveStat(pkmn, key, ignoreStages) {
+  function effectiveStat(pkmn, key, ignoreStages, weather) {
     const base = pkmn.stats[key] || 0;
     let mult = ignoreStages ? 1 : stageMult(pkmn.statStages[key] || 0);
     if (key === "atk") {
@@ -47,8 +47,15 @@ const Battle = (() => {
       /* burn 嘅減傷喺 computeDamage 統一處理（Gen 3+ 規則：physical 傷害 ×0.5，
          唔好喺度再 ×0.5，否則 burn 會 double-dip 變 ×0.25） */
     }
-    /* paralyze: speed 減半 */
-    if (key === "spe" && pkmn.status === "paralyze") mult *= 0.5;
+    /* Solar Power：晴天下特攻 ×1.5（扣血喺 endTurnResidual） */
+    if (key === "spa" && pkmn.ability === "solar-power" && weather === "sun") mult *= 1.5;
+    if (key === "spe") {
+      /* paralyze: speed 減半 */
+      if (pkmn.status === "paralyze") mult *= 0.5;
+      /* 天氣速度特性 ×2（Gen 5） */
+      const wSpeed = { sun: "chlorophyll", rain: "swift-swim", sandstorm: "sand-rush" }[weather];
+      if (wSpeed && pkmn.ability === wSpeed) mult *= 2;
+    }
     return Math.max(1, Math.floor(base * mult));
   }
 
@@ -58,11 +65,14 @@ const Battle = (() => {
   }
 
   /* ---------- 命中判定 ---------- */
-  function hitCheck(move, attacker, defender) {
+  function hitCheck(move, attacker, defender, weather) {
     /* 必中招 */
     if (move.accuracy == null) return true;  /* 例如 Swift, 必定命中 */
     const accStage = (attacker.statStages.acc || 0) - (defender.statStages.eva || 0);
     let acc = move.accuracy * accMult(accStage);
+    /* Sand Veil / Snow Cloak：對應天氣下迴避 ×1.25（即攻方命中 ×0.8） */
+    if (defender.ability === "sand-veil" && weather === "sandstorm") acc *= 0.8;
+    if (defender.ability === "snow-cloak" && weather === "hail") acc *= 0.8;
     /* 最低 33%、最高 100% */
     acc = Math.max(0.33, Math.min(1, acc / 100));
     return BattleRng.next() < acc;
@@ -88,12 +98,16 @@ const Battle = (() => {
         (weather === "rain" || weather === "sandstorm" || weather === "hail")) {
       power = Math.floor(power / 2);
     }
+    /* Technician：威力 ≤ 60 嘅招 ×1.5（Gen 5 計喺基礎威力） */
+    if (attacker.ability === "technician" && power > 0 && power <= 60) {
+      power = Math.floor(power * 1.5);
+    }
 
     let base = Math.floor(((2 * level / 5 + 2) * power * atk / def) / 50) + 2;
 
-    /* STAB */
+    /* STAB（Adaptability 由 1.5 → 2.0） */
     const atkTypes = speciesTypes(attacker.dexId);
-    if (atkTypes.includes(move.type)) base = Math.floor(base * 1.5);
+    if (atkTypes.includes(move.type)) base = Math.floor(base * (attacker.ability === "adaptability" ? 2 : 1.5));
 
     /* 相剋（0 = 免疫，直接零傷，唔可以俾 min-1 clamp 夾返 1） */
     const defTypes = speciesTypes(defender.dexId);
@@ -131,8 +145,8 @@ const Battle = (() => {
       if (!isPhysical && opts.lightScreen) base = Math.floor(base * 0.5);
     }
 
-    /* crit: 傷害 ×1.5 (Gen 5), 忽略對方防禦 buff 同我方攻擊 debuff */
-    if (opts.crit) base = Math.floor(base * 1.5);
+    /* crit: 傷害 ×1.5 (Gen 5), 忽略對方防禦 buff 同我方攻擊 debuff；Sniper 再 ×1.5 */
+    if (opts.crit) base = Math.floor(base * (attacker.ability === "sniper" ? 2.25 : 1.5));
 
     /* burn: physical 招式威力 ×0.5（除非用 Facade 類，暫略；Guts 喺 effectiveStat 已免疫） */
     if (isPhysical && attacker.status === "burn" && attacker.ability !== "guts" && !opts.crit) base = Math.floor(base * 0.5);
@@ -189,8 +203,10 @@ const Battle = (() => {
       statusTimer: 0,        /* sleep/freeze/toxic 計數 */
       statStages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
       volatile: { flinch: false, confusion: 0, substitute: 0, flashFire: false },
-      /* 特性（slot 1 預設，PokeAPI 非隱藏特性）；冇資料 → null，全部特性效果 skip */
-      ability: (typeof abilityOf === "function") ? abilityOf(dexId) : null
+      /* 特性：entry 已經 roll 咗嘅就用嗰個；未 roll（舊存檔／新捕捉）先用 slot 1 */
+      ability: (typeof entry.ability === "string" && entry.ability)
+        ? entry.ability
+        : ((typeof abilityOf === "function") ? abilityOf(dexId) : null)
     };
   }
 

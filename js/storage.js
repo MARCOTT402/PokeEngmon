@@ -221,6 +221,8 @@ function obtainPokemon(chainKey, mode) {
     evs: emptyEvs(),
     evPoints: 0,
     nature: randomNature(),
+    /* 特性由已實作白名單池抽出（空池 = 冇，key 唔會寫入） */
+    ability: rollEntryAbility(dexId) || undefined,
     moves: initialMoves(dexId),
     knownMoves: initialMoves(dexId),   // 招式池：等級夠學嘅全部招（配招嘅來源）
     candies: 0,
@@ -474,6 +476,7 @@ function localEntryFromServer(e) {
     branch: (e.branch === 0 || e.branch) ? e.branch : null,
     stone: e.stone_used || null,
     nature: e.nature || null,
+    ability: (typeof e.ability === "string" && e.ability) ? e.ability : undefined,
     obtainedAt: e.obtained_at
   });
   /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0 */
@@ -551,6 +554,8 @@ function adoptServerEntry(serverRow) {
     const old = st.entries[idx];
     /* nature 已上雲（v1.4.1）：以 server 為準；server 未有（舊資料）才沿用本地性格 */
     if (!mapped.nature) mapped.nature = old.nature;
+    /* 特性同上：server 未有就沿用本地（dupe 抽到舊寵唔可以重抽特性） */
+    if (!mapped.ability) mapped.ability = old.ability;
     /* pet 已上雲：較新 updatedAt 為準；雲端未上過（null）就保留本機，避免清空進度 */
     mapped.pet = mergePet(old.pet, mapped.pet);
     if (st.activeUid === old.uid) st.activeUid = mapped.uid;
@@ -563,6 +568,10 @@ function adoptServerEntry(serverRow) {
   /* server 未有 nature（舊存檔 / 新捕捉）→ 用本地性格補寫，之後換裝置都保持一致 */
   if (!serverRow.nature && mapped.nature && window.Sync && Sync.isEnabled && Sync.isEnabled()) {
     try { Sync.patchEntry(mapped.uid, { nature: mapped.nature }); } catch (e) {}
+  }
+  /* 特性一樣要補寫，否則下次 pull 由 server 還原會被清走 */
+  if (!serverRow.ability && mapped.ability && window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+    try { Sync.patchEntry(mapped.uid, { ability: mapped.ability }); } catch (e) {}
   }
   /* server 派寵（gacha_pull / obtain_capture RPC）落地後都要檢查世代解鎖 */
   recomputeUnlockedGen();

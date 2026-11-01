@@ -44,7 +44,8 @@ const BattleState = (() => {
   /* 特性擋異常：ability slug → 免疫嘅 status list */
   const STATUS_IMMUNE = {
     insomnia: ["sleep"], "vital-spirit": ["sleep"],
-    limber: ["paralyze"], immunity: ["poison", "toxic"]
+    limber: ["paralyze"], immunity: ["poison", "toxic"],
+    "own-tempo": ["confusion"]
   };
   /* 特性擋招（屬性免疫）：absorb 類回復 1/4 HP；flash-fire 儲起强化火招；
      lightning-rod 吸收並 SpA+1；levitate 純免疫 */
@@ -248,11 +249,13 @@ const BattleState = (() => {
     const neverMiss = (moveObj.slug === "blizzard" && wName === "hail") || (moveObj.slug === "thunder" && wName === "rain");
 
     for (let hit = 0; hit < hitCount; hit++) {
-      if (!neverMiss && !hitCheckFor(effMove, actor, target)) {
+      if (!neverMiss && !hitCheckFor(state, effMove, actor, target)) {
         log(state, `${actor.name}'s attack missed!`);
         continue;
       }
-      const crit = BattleRng.next() < Battle.critChance(effMove.meta && effMove.meta.crit_rate);
+      /* crit：Battle Armor 一律免疫（RNG 照樣消耗，PvP 兩邊序列先一致） */
+      let crit = BattleRng.next() < Battle.critChance(effMove.meta && effMove.meta.crit_rate);
+      if (target.ability === "battle-armor") crit = false;
       if (effMove.power && effMove.damage_class !== "status") {
         /* 受壁嗰邊：reflect 擋物理、lightScreen 擋特殊（crit 會喺 engine 無視） */
         const defSide = state[foeSideKey].side;
@@ -315,6 +318,11 @@ const BattleState = (() => {
           log(state, `${tgt.name}'s Hyper Cutter prevents Attack loss!`);
           return;
         }
+        /* Keen Eye：唔可以被降命中 */
+        if (sc.change < 0 && key === "acc" && tgt.ability === "keen-eye") {
+          log(state, `${tgt.name}'s Keen Eye prevents accuracy loss!`);
+          return;
+        }
         tgt.statStages[key] = Math.max(-6, Math.min(6, (tgt.statStages[key] || 0) + sc.change));
         log(state, `${tgt.name}'s ${statLabel(sc.stat)} ${sc.change > 0 ? "rose" : "fell"}!`);
       });
@@ -322,18 +330,32 @@ const BattleState = (() => {
       if (move.meta && move.meta.flinch_chance && BattleRng.next() * 100 < move.meta.flinch_chance) {
         target.volatile.flinch = true;
       }
-      if (target.hp <= 0) { log(state, `${target.name} fainted!`); break; }
+      if (target.hp <= 0) {
+        log(state, `${target.name} fainted!`);
+        /* Moxie：擊倒對手後攻擊 +1 */
+        if (actor.ability === "moxie" && (actor.statStages.atk || 0) < 6) {
+          actor.statStages.atk = (actor.statStages.atk || 0) + 1;
+          log(state, `${actor.name}'s Moxie raised its Attack!`);
+        }
+        break;
+      }
     }
   }
 
-  function hitCheckFor(move, attacker, defender) {
-    return Battle.hitCheck(move, attacker, defender);
+  function hitCheckFor(state, move, attacker, defender) {
+    return Battle.hitCheck(move, attacker, defender, state.weather && state.weather.name);
   }
 
   /* ---------- 回合殘留狀態傷害 ---------- */
   function endTurnResidual(state, side) {
     const p = active(state, side);
     if (p.hp <= 0) return;
+    const wName = state.weather && state.weather.name;
+    /* Hydration：雨天回合結束自動解狀態（所以唔會再食燒傷／毒傷） */
+    if (p.ability === "hydration" && wName === "rain" && p.status) {
+      p.status = null;
+      log(state, `${p.name}'s Hydration cured its status!`);
+    }
     if (p.status === "burn") {
       const dmg = Math.floor(p.maxHp / 16);
       p.hp = Math.max(0, p.hp - dmg);
@@ -363,6 +385,21 @@ const BattleState = (() => {
         log(state, `${p.name} is buffeted by the ${w === "sandstorm" ? "sandstorm" : "hail"}!`);
       }
     }
+    /* 天氣回復／代價（Gen 5）：Rain Dish 雨 +1/16、Ice Body 雹 +1/16、
+       Solar Power 晴 -1/8 */
+    if (p.hp > 0 && wName) {
+      const healAb = wName === "rain" ? "rain-dish" : wName === "hail" ? "ice-body" : null;
+      if (healAb && p.ability === healAb) {
+        const heal = Math.max(1, Math.floor(p.maxHp / 16));
+        p.hp = Math.min(p.maxHp, p.hp + heal);
+        log(state, `${p.name} restored a little HP with ${abilityLabel(p.ability)}!`);
+      }
+      if (wName === "sun" && p.ability === "solar-power") {
+        const chip = Math.max(1, Math.floor(p.maxHp / 8));
+        p.hp = Math.max(0, p.hp - chip);
+        log(state, `${p.name} is hurt by its Solar Power!`);
+      }
+    }
     /* 壁倒數（每邊各自計） */
     const sd = state[side].side;
     if (sd.reflect > 0 && --sd.reflect === 0) log(state, `Reflect on ${side === "p1" ? "your" : "the foe's"} side wore off!`);
@@ -389,9 +426,22 @@ const BattleState = (() => {
   function switchTo(state, side, idx) {
     const team = state[side].team;
     if (idx < 0 || idx >= team.length || team[idx].hp <= 0) return false;
-    /* 離場方清 volatile（Flash Fire 等換走即消失） */
+    /* 離場方清 volatile（Flash Fire 等換走即消失）+ 離場特性 */
     const out = team[state[side].active];
-    if (out && out.volatile) out.volatile.flashFire = false;
+    if (out) {
+      /* Regenerator：換走時回復 1/3 最大 HP */
+      if (out.ability === "regenerator" && out.hp > 0 && out.hp < out.maxHp) {
+        const heal = Math.floor(out.maxHp / 3);
+        out.hp = Math.min(out.maxHp, out.hp + heal);
+        log(state, `${out.name} restored HP with Regenerator!`);
+      }
+      /* Natural Cure：換走時清除所有狀態 */
+      if (out.ability === "natural-cure" && out.status) {
+        out.status = null;
+        log(state, `${out.name} was cured of its status by Natural Cure!`);
+      }
+      if (out.volatile) out.volatile.flashFire = false;
+    }
     state[side].active = idx;
     const p = team[idx];
     /* 換人重置 volatile，但保留 status */

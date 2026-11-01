@@ -1,6 +1,6 @@
 {
   "name": "pokeengmon",
-  "version": "1.15.19",
+  "version": "1.15.20",
   "private": true,
   "description": "Pokémon-themed English learning PWA (static + Supabase)",
   "repository": {

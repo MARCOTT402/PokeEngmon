@@ -106,11 +106,54 @@ function moveInfo(slug) {
   };
 }
 
+/* 已實作效果嘅特性白名單 —— 引擎（engine.js / state.js）真係會影響戰鬥嘅 slug。
+   新增特性嘅唯一流程：① 引擎寫邏輯 ② 加入呢個清單 ③ tools/_test_battle.js 加測試。
+   唔喺清單嘅特性一律唔會派俾精靈，避免「有特性名但打落去冇反應」嘅死功能。 */
+const IMPLEMENTED_ABILITIES = [
+  /* 能力值類 */
+  "huge-power", "pure-power", "guts", "unaware", "thick-fat",
+  "solar-power", "swift-swim", "chlorophyll", "sand-rush",
+  /* 夾擊／儲力 */
+  "overgrow", "blaze", "torrent", "swarm", "flash-fire",
+  /* 屬性免疫 */
+  "levitate", "volt-absorb", "water-absorb", "lightning-rod",
+  /* 狀態免疫 */
+  "insomnia", "vital-spirit", "limber", "immunity", "own-tempo",
+  "hydration", "natural-cure",
+  /* 招式類 */
+  "sturdy", "hyper-cutter", "keen-eye", "technician", "adaptability",
+  "sniper", "battle-armor",
+  /* 場地／回合類 */
+  "speed-boost", "moxie", "regenerator", "rain-dish", "ice-body",
+  "sand-veil", "snow-cloak", "intimidate"
+];
+
 /* 精靈特性：data/abilities.json（非隱藏 slot 順序），戰鬥用 slot 1 做預設 */
 function abilityOf(dexId) {
   if (!ABILITIES) return null;
   const a = ABILITIES[String(dexId)];
   return (a && a.length) ? a[0] : null;
+}
+
+/* 可用特性池：官方 slot 順序 ∩ 已實作白名單（0／1／2 個）。
+   entry.ability 就係由呢個池抽出嚟；池空 = 呢隻精靈冇有效特性。 */
+function abilityPool(dexId) {
+  if (!ABILITIES) return [];
+  const list = ABILITIES[String(dexId)] || [];
+  return list.filter(a => IMPLEMENTED_ABILITIES.includes(a));
+}
+
+/* slug → 顯示名（"lightning-rod" → "Lightning Rod"） */
+function abilityName(slug) {
+  return (slug || "").split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+/* 由可用池抽特性：1 個 → 固定；2 個 → slot1 70% / slot2 30%；池空 → null（呢隻冇有效特性） */
+function rollEntryAbility(dexId) {
+  const pool = abilityPool(dexId);
+  if (!pool.length) return null;
+  if (pool.length === 1) return pool[0];
+  return Math.random() < 0.7 ? pool[0] : pool[1];
 }
 
 /* 攻擊屬性 atkType 對防守方屬性組合嘅總倍率（相剋表未載入 → 當 1） */
@@ -314,6 +357,18 @@ function ensureEntryPokemonData(entry) {
     /* 新補的性格要即刻上雲，否則換裝置／重新登入又會再抽一次 */
     if (window.Sync && Sync.isEnabled && Sync.isEnabled() && entry.uid) {
       try { Sync.patchEntry(entry.uid, { nature: entry.nature }); } catch (e) {}
+    }
+  }
+  /* 特性：本功能之前建立嘅舊 entry 未有 → 由可用池抽一個並上雲。
+     池空（冇已實作特性）就保持 undefined，行為同以前一樣（冇特性效果）。 */
+  if (!entry.ability) {
+    const rolled = rollEntryAbility(dexId);
+    if (rolled) {
+      entry.ability = rolled;
+      changed = true;
+      if (window.Sync && Sync.isEnabled && Sync.isEnabled() && entry.uid) {
+        try { Sync.patchEntry(entry.uid, { ability: rolled }); } catch (e) {}
+      }
     }
   }
   if (typeof entry.level !== "number") {

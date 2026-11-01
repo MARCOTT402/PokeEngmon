@@ -236,6 +236,11 @@ const Pokedex = {
         <button class="ev-btn" data-stat="${k}" ${canAddEv(k) ? "" : "disabled"}>
           <span>${STAT_LABELS[k]}</span><b>${entry.evs[k] || 0}</b><i>+1</i>
         </button>`).join("");
+      /* 特性：只顯示白名單（已實作效果）嘅，唔會俾玩家見到「有名冇效果」嘅特性 */
+      const abSlug = (typeof entry.ability === "string" && entry.ability) ? entry.ability
+        : (typeof abilityOf === "function" ? abilityOf(dexId) : null);
+      const abLine = (abSlug && typeof IMPLEMENTED_ABILITIES !== "undefined" && IMPLEMENTED_ABILITIES.includes(abSlug))
+        ? `<div class="dex-sub">Ability: <b>${abilityName(abSlug)}</b></div>` : "";
 
       extraHTML = `
         <div class="dex-level-line">Lv.<span class="dex-level">${level}</span> / ${MAX_LEVEL}
@@ -243,6 +248,7 @@ const Pokedex = {
         <div class="expbar"><i style="width:${pct}%"></i></div>
         <div class="hero-exp-text">${level >= MAX_LEVEL ? "Lv.MAX" : `EXP ${into} / ${span} to next Lv.`}</div>
         <div class="dex-sub">Nature: <b>${capitalizeWord(entry.nature)}</b> ・ IV ${ivTotal(entry.ivs)} / ${MAX_IV * 6} ・ EV ${evTotal(entry.evs)} / ${MAX_EV_TOTAL}</div>
+        ${abLine}
         <div class="dex-stats">${statCells}</div>
 
         <div class="dex-ev">
