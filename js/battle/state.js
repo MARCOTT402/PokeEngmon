@@ -9,17 +9,9 @@ const BattleState = (() => {
     return { spikes: 0, stealthRock: false, reflect: 0, lightScreen: 0 };
   }
   /* ---------- 擊倒經驗（v1.15.24，原莊 per-enemy 制） ---------- */
-  /* PokéAPI base_exp 速查表：AI 梯隊用開嘅物種。冇嘅話落返 dex JSON 嘅 baseExp 欄
-     （tools/fetch_base_exp.py 抽入 data/*.json），再冇先畀 64。 */
-  const BASE_EXP = {
-    1: 64, 2: 142, 3: 236, 4: 62, 5: 142, 6: 240, 7: 63, 8: 142, 9: 239,
-    10: 39, 13: 39, 16: 50, 19: 51, 25: 112, 35: 113, 59: 194, 64: 140,
-    65: 225, 68: 227, 82: 163, 94: 225, 96: 66, 129: 40, 130: 189, 131: 187,
-    143: 189, 149: 270, 154: 236, 164: 158, 208: 179, 214: 175, 227: 163,
-    248: 270, 282: 233
-  };
+  /* baseExp 由 data/pokemon-*.json 嘅 baseExp 欄（tools/fetch_base_exp.py 抽自 PokéAPI CSV，649 隻全齊）；
+     讀唔到先用 64 做後備 */
   function baseExpOf(dexId) {
-    if (BASE_EXP[dexId] != null) return BASE_EXP[dexId];
     const p = (typeof dexOf === "function") ? dexOf(dexId) : null;
     return (p && p.baseExp) || 64;
   }
