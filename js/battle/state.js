@@ -8,10 +8,15 @@ const BattleState = (() => {
   function freshSide() {
     return { spikes: 0, stealthRock: false, reflect: 0, lightScreen: 0 };
   }
-  function create(p1Team, p2Team) {
+  function create(p1Team, p2Team, opts) {
+    /* 播種：PvP 由 battles row 攞共同 seed；AI 戰由 UI 層整個隨機 seed 传入。
+       冇俾就用時間做種（node 測試／獨立用嘅後備） */
+    const sd = (opts && typeof opts.seed === "number") ? opts.seed : ((Date.now() ^ (Math.random() * 0xFFFFFFFF)) >>> 0);
+    BattleRng.seed(sd);
     return {
       p1: { team: p1Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide() },
       p2: { team: p2Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide() },
+      seed: sd,
       /* 天氣：{ name: "sun"|"rain"|"sandstorm"|"hail", turns }；null = 無天氣 */
       weather: null,
       turn: 0,
@@ -62,7 +67,7 @@ const BattleState = (() => {
     }
     defender.status = ailment;
     defender.statusTimer = 0;
-    if (ailment === "sleep") defender.statusTimer = 1 + Math.floor(Math.random() * 3);
+    if (ailment === "sleep") defender.statusTimer = 1 + Math.floor(BattleRng.next() * 3);
     return true;
   }
 
@@ -178,17 +183,17 @@ const BattleState = (() => {
       else { log(state, `${actor.name} is fast asleep.`); return; }
     }
     if (actor.status === "freeze") {
-      if (Math.random() < 0.2) { actor.status = null; log(state, `${actor.name} thawed out!`); }
+      if (BattleRng.next() < 0.2) { actor.status = null; log(state, `${actor.name} thawed out!`); }
       else { log(state, `${actor.name} is frozen solid!`); return; }
     }
-    if (actor.status === "paralyze" && Math.random() < 0.25) {
+    if (actor.status === "paralyze" && BattleRng.next() < 0.25) {
       log(state, `${actor.name} is paralyzed! It can't move!`); return;
     }
 
     /* confusion: 50% 打自己 */
     if (actor.volatile.confusion > 0) {
       actor.volatile.confusion -= 1;
-      if (Math.random() < 0.5) {
+      if (BattleRng.next() < 0.5) {
         const selfDmg = Math.floor(actor.maxHp * 0.125);
         actor.hp = Math.max(0, actor.hp - selfDmg);
         log(state, `${actor.name} is confused! It hurt itself in its confusion!`);
@@ -247,7 +252,7 @@ const BattleState = (() => {
         log(state, `${actor.name}'s attack missed!`);
         continue;
       }
-      const crit = Math.random() < Battle.critChance(effMove.meta && effMove.meta.crit_rate);
+      const crit = BattleRng.next() < Battle.critChance(effMove.meta && effMove.meta.crit_rate);
       if (effMove.power && effMove.damage_class !== "status") {
         /* 受壁嗰邊：reflect 擋物理、lightScreen 擋特殊（crit 會喺 engine 無視） */
         const defSide = state[foeSideKey].side;
@@ -293,7 +298,7 @@ const BattleState = (() => {
          直接當 100% 處理；傷害招先至用 chance（thunderbolt 10% 等，全部 >0，已驗證） */
       if (move.meta && move.meta.ailment && move.meta.ailment !== "none") {
         const chance = (move.meta.ailment_chance == null || move.meta.ailment_chance === 0) ? 100 : move.meta.ailment_chance;
-        if (Math.random() * 100 < chance) {
+        if (BattleRng.next() * 100 < chance) {
           const ail = AILMENT_ALIAS[move.meta.ailment] || move.meta.ailment;
           if ((STATUS_IMMUNE[target.ability] || []).includes(ail)) {
             log(state, `${target.name} is unaffected due to its ${abilityLabel(target.ability)}!`);
@@ -314,7 +319,7 @@ const BattleState = (() => {
         log(state, `${tgt.name}'s ${statLabel(sc.stat)} ${sc.change > 0 ? "rose" : "fell"}!`);
       });
       /* flinch */
-      if (move.meta && move.meta.flinch_chance && Math.random() * 100 < move.meta.flinch_chance) {
+      if (move.meta && move.meta.flinch_chance && BattleRng.next() * 100 < move.meta.flinch_chance) {
         target.volatile.flinch = true;
       }
       if (target.hp <= 0) { log(state, `${target.name} fainted!`); break; }

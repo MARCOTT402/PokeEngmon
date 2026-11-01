@@ -30,7 +30,7 @@ const Battle = (() => {
     if (!minHits && !maxHits) return 1;
     minHits = minHits || 2; maxHits = maxHits || 5;
     if (minHits === maxHits) return minHits;
-    const r = HIT_ROLLS[Math.floor(Math.random() * HIT_ROLLS.length)];
+    const r = HIT_ROLLS[Math.floor(BattleRng.next() * HIT_ROLLS.length)];
     return Math.max(minHits, Math.min(maxHits, r));
   }
 
@@ -65,7 +65,7 @@ const Battle = (() => {
     let acc = move.accuracy * accMult(accStage);
     /* 最低 33%、最高 100% */
     acc = Math.max(0.33, Math.min(1, acc / 100));
-    return Math.random() < acc;
+    return BattleRng.next() < acc;
   }
 
   /* 夾擊系特性（Overgrow/Blaze/Torrent/Swarm）：HP ≤ 1/3 時對應屬性招 ×1.5 */
@@ -138,7 +138,7 @@ const Battle = (() => {
     if (isPhysical && attacker.status === "burn" && attacker.ability !== "guts" && !opts.crit) base = Math.floor(base * 0.5);
 
     /* 隨機 0.85 - 1.0 */
-    const rand = 0.85 + Math.random() * 0.15;
+    const rand = 0.85 + BattleRng.next() * 0.15;
     base = Math.max(1, Math.floor(base * rand));
 
     return { damage: base, effectiveness: mult };
@@ -155,7 +155,7 @@ const Battle = (() => {
     const as = a.speed || 0, bs = b.speed || 0;
     if (as !== bs) return as > bs ? [a, b] : [b, a];
     /* 同速：隨機 */
-    return Math.random() < 0.5 ? [a, b] : [b, a];
+    return BattleRng.next() < 0.5 ? [a, b] : [b, a];
   }
 
   /* ---------- 用 entry 建立戰鬥用 pokemon ---------- */

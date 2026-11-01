@@ -1,7 +1,7 @@
 # PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.15.18**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.15.19**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -158,6 +158,7 @@
 - **AI 訓練家梯隊（v1.15.15）**：10 個訓練家逐個解鎖（擊敗前一個先開下一個），由 Lv.5 Youngster Timmy 一路升到 Lv.82 Champion Alder；後 5 個用 Gen 2–5 精靈砌隊（Rival Ethan → Gym Leader Jasmine → Champion Steven → Champion Cynthia → Champion Alder）。開戰前會 `ensureGenDataLoaded()` 載入對應世代圖鑑資料，避免未解鎖世代嘅 stats／屬性算唔到。
 - **精靈特性系統（v1.15.16）**：`data/abilities.json`（PokeAPI 非隱藏特性，slot 1 預設，`tools/fetch_abilities.py` 抽取，649 隻全齊）＋ battle engine 實裝 16 個常見特性 —— 免疫類：Levitate（地面）、Volt Absorb（電，吸返 1/4 HP）、Water Absorb（水，吸返 1/4 HP）、Flash Fire（火，吸後自己火招 ×1.5，換走消失）、Lightning Rod（電，SpA+1）；數值類：Huge Power／Pure Power（攻 ×2）、Guts（異常時攻 ×1.5 且 burn 唔扣攻）、Thick Fat（火冰傷半）、Overgrow／Blaze／Torrent／Swarm（HP≤1/3 對應屬性 ×1.5）、Unaware（無視對方 stat stage）；觸發類：Intimidate（上場對手攻 -1）、Sturdy（滿 HP 致命傷留 1）、Speed Boost（回合完速 +1）；防禦類：Hyper Cutter（攻唔會被降）、Insomnia／Vital Spirit（唔瞓）、Limber（唔麻痺）、Immunity（唔中毒）。特性觸發全部有對戰文字訊息。同期修咗三個遺留 bug：`stat_changes` 嘅 PokeAPI stat 名（`attack` 等）從未 map 落 `statStages.atk` → 所有升降能力招形同虛設；屬性 0 倍免疫被 min-1 clamp 夾成 1 傷；status 類異常招（Spore／Thunder Wave 等）`ailment_chance=0` 被當 0% → 從未中過（依 PokeAPI 慣例改為必中附加）；burn 減攻 double-dip（effectiveStat × computeDamage 各減一次 → ×0.25）改為只喺 computeDamage 減一次。
 - **場地效果系統（v1.15.18，Gen 5 規則）**：**天氣** —— Sunny Day／Rain Dance／Sandstorm／Hail／Snowscape 開 5 回合天氣（互斥、新蓋舊，同一天氣重出失敗）；晴天火招 ×1.5／水招 ×0.5，雨天反轉；沙暴回合末磨非岩／地／鋼寵 1/16 HP，雹磨非冰寵 1/16 HP；Solar Beam 雨／沙／雹下威力減半，Thunder 雨天必中，Blizzard 雹天必中，Weather Ball 跟天氣轉屬性（火／水／岩／冰）兼威力 50→100。**場地陷阱** —— Spikes 撒對面最多 3 層（換入分別扣 1/8、1/6、1/4 max HP，飛行屬性／Levitate 免疫）、Stealth Rock 按岩屬性對換入寵相性 ×1/8 max HP 扣血（4× 弱岩直接半血）；換入先食釘子、後觸發上場特性（Gen 順序），釘死直接入 faint 流程。**光牆／反射壁** —— 開喺自己嗰邊 5 回合，Reflect 物理傷半、Light Screen 特殊傷半，critical hit 無視壁。對戰畫面中上位置有場地狀態 chip 列：天氣 icon＋回合倒數、雙方各自 Reflect／Light Screen 回合數、Spikes 層數、Stealth Rock 標記，無場地效果時收埋。
+- **PvP 真聯機（v1.15.19，種子同步制）**：接駁 Supabase `battles`／`matchmaking` 表（REST polling，唔使 websocket）。配對：入池後由 uid 細嗰方開 battle row（p1）防撞單，90s 死屍池員無視、60s 配唔到退出。開局由 p1 生成 32-bit seed 寫落 row，雙方客戶端用同一 seed 各自模擬 —— 引擎全部隨機（命中、傷害 roll、crit、連擊、狀態機率、同速 tiebreak）改用 `js/battle/rng.js`（mulberry32 PRNG），保證兩邊結果逐 bit 一致（node 測試驗證同 seed 兩場：勝者／每句 log／尾血／RNG 尾態全同）。每回合只交換 action `{turn, kind, moveIdx|idx}`，舊 turn 無視。對手 faint 後由佢自己客戶端揀替補（switch 做下一 turn action）；45s 冇動作當斷線判負；投降即寫 winner 落 row 對面即知。需先跑 migration `supabase-migrate-20261101a-battles-seed.sql`（battles 加 seed 欄）。
 - 無障礙：`user-scalable=no` 已移除；所有 hover 動效只用 `@media (hover:hover)` 觸發；支援 `prefers-reduced-motion`
 
 ---
