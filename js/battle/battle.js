@@ -31,16 +31,26 @@ const BattleUI = (() => {
 
   function renderMenu() {
     const st = loadState();
+    /* PvP 戰績（server 記錄，pull / settle_battle 回應入咗本地 state） */
+    const pvpSub = document.getElementById("battle-menu-pvp-sub");
+    if (pvpSub && window.SupabaseAuth && SupabaseAuth.isLoggedIn() && st.pvpWins != null) {
+      pvpSub.textContent = `Online · ${st.pvpWins || 0}W – ${st.pvpLosses || 0}L`;
+    }
     const havePokemon = st.entries.some(e => e.ownedSpecies && e.ownedSpecies.length);
     document.getElementById("battle-menu-pvp").onclick = () => {
       if (!havePokemon) { toast("You need Pokémon first! Pull or capture one."); return; }
       startPvP();
     };
+    const trainerList = document.getElementById("ai-trainer-list");
     document.getElementById("battle-menu-ai").onclick = () => {
       if (!havePokemon) { toast("You need Pokémon first! Pull or capture one."); return; }
-      openAITrainers();
+      /* 梯隊預設已展開，撳 AI Trainers 只係收合／再展開 */
+      trainerList.hidden = !trainerList.hidden;
     };
     document.getElementById("battle-menu-back").onclick = () => { App.renderHome(); App.showView("view-home"); };
+    /* 梯隊一入 Battle 頁就列出，唔使先撳 AI Trainers 先見到 */
+    trainerList.hidden = false;
+    renderTrainerList();
   }
 
   /* ---------- AI Trainers 梯隊 ---------- */
@@ -94,9 +104,10 @@ const BattleUI = (() => {
     return Array.from(gens);
   }
 
-  function openAITrainers() {
+  function renderTrainerList() {
     const st = loadState();
     const beaten = st.aiTrainersBeaten || [];
+    const havePokemon = st.entries.some(e => e.ownedSpecies && e.ownedSpecies.length);
     const list = document.getElementById("ai-trainer-list");
     list.innerHTML = AI_TRAINERS.map((t, i) => {
       const unlocked = i === 0 || beaten.includes(AI_TRAINERS[i - 1].id);
@@ -108,13 +119,17 @@ const BattleUI = (() => {
     }).join("");
     list.querySelectorAll(".ai-trainer-card").forEach(card => {
       card.onclick = () => {
+        if (!havePokemon) { toast("You need Pokémon first! Pull or capture one."); return; }
         const unlocked = card.classList.contains("locked") === false;
         if (!unlocked) return;
         startAI(AI_TRAINERS.find(t => t.id === card.dataset.id));
       };
     });
-    document.getElementById("battle-menu-back").onclick = () => openMenu();
-    App.showView("view-battle-menu");
+  }
+
+  function openAITrainers() {
+    /* 同一個 Battle 選單頁，梯隊由 renderMenu 直接列出 */
+    openMenu();
   }
 
   /* ---------- 開始對戰 ---------- */
@@ -1113,8 +1128,9 @@ const BattleUI = (() => {
       for (const act of order) {
         if (state.finished) break;
         const side = act.player ? mySide : foeSide;
-        /* 已經倒下：冇得再行動（後攻者被先攻招打死就唔應該反擊） */
-        if (active(state, side).hp <= 0) continue;
+        /* 已經倒下：冇得再出招（後攻者被先攻招打死就唔應該反擊）；
+           但換寵例外 —— 暈咗之後嘅強制換寵一定要照做，唔係會卡死喺換寵頁 */
+        if (act.action.kind === "move" && active(state, side).hp <= 0) continue;
         if (act.action.kind === "switch") {
           /* FRLG 原版：收回舊寵 → 拋新球召出（animatedSwitch 自己 narrate） */
           await animatedSwitch(side, act.action.idx);
@@ -1234,7 +1250,7 @@ const BattleUI = (() => {
       await say(forfeited ? "You gave up and ran away..." : won ? "You won the battle!" : "You lost...");
       /* 對戰完：淡出 battle BGM，恢復全域 town BGM */
       try { if (window.CaptureScene) { CaptureScene.audio.stopBGM(400); CaptureScene.audio.startTownBGM(); } } catch (e) {}
-      const reward = (won && !forfeited) ? applyRewards() : null;
+      const reward = forfeited ? null : await applyRewards(won);
       showResult(won && !forfeited, forfeited, reward);
     })();
   }
@@ -1247,9 +1263,15 @@ const BattleUI = (() => {
       ? "You ran away from the battle."
       : win ? `${foeTrainerName()} was defeated!` : "You lost the battle...";
     const rows = [];
-    if (reward) {
-      rows.push(`<div class="br-row"><span>EXP</span><b>+${reward.exp}</b></div>`);
-      rows.push(`<div class="br-row"><span>DIAMONDS</span><b>+${reward.diamonds} 💎</b></div>`);
+    const gains = (reward && reward.expGains) || [];
+    if (reward && (gains.length || reward.diamonds > 0)) {
+      /* EXP 逐隻唔同（按等級比例派）：全部一樣先合併顯示，否則逐隻列 */
+      if (gains.length) {
+        const same = gains.every(g => g.gain === gains[0].gain);
+        if (same) rows.push(`<div class="br-row"><span>EXP ×${gains.length}</span><b>+${gains[0].gain}</b></div>`);
+        else gains.forEach(g => rows.push(`<div class="br-row"><span>${g.name}</span><b>+${g.gain} EXP</b></div>`));
+      }
+      if (reward.diamonds > 0) rows.push(`<div class="br-row"><span>DIAMONDS</span><b>+${reward.diamonds} 💎</b></div>`);
       reward.levelUps.forEach(lu =>
         rows.push(`<div class="br-row br-lvup"><span>${lu.name}</span><b>Lv.${lu.from} → ${lu.to}</b></div>`));
     } else {
@@ -1274,30 +1296,65 @@ const BattleUI = (() => {
     finishBattle();
   }
 
-  function applyRewards() {
+  /* 結算獎勵：贏先派 EXP；鑽石 PvP 贏 3／輸 1（投降唔入嚟），
+     AI 訓練家 = 首次擊敗一次性 10💎、重複擊敗 0💎。
+     EXP 派法（v1.15.24 起，原莊 per-enemy 制）：每擊倒一隻敵寵，凡面對過佢嘅我寵
+     均分 baseExp × 敵LV / 7，以弱勝強 ×(1+等級差/50) cap ×3 —— 輸／投降都照攞（一隻一隻計）。
+     PvP 贏額外固定 30／隻（唔按敵寵計，防互讓刷 EXP）。
+     登入時鑽石經 settle_battle RPC（server 計公式 + 記低邊個打過 + 權威 balance），
+     EXP 經 add_entry_exp RPC；RPC 失敗唔本地加（避免同雲端脫節後 pull 打回，同 quiz 一樣）。 */
+  async function applyRewards(won) {
     const st = loadState();
-    const expGain = aiTrainer ? aiTrainer.level * 12 : 30;
-    const diamonds = aiTrainer ? Math.floor(aiTrainer.level * 0.8) : 5;
+    const isPvp = mode === "pvp";
+    const loggedIn = window.SupabaseAuth && SupabaseAuth.isLoggedIn();
+    const beatenBefore = !!(aiTrainer && (st.aiTrainersBeaten || []).includes(aiTrainer.id));
+    let diamonds = isPvp ? (won ? 3 : 1)
+      : ((won && aiTrainer && !beatenBefore) ? 10 : 0);
     const levelUps = [];
-    /* EXP 落玩家出戰嘅 entries（順便記錄升級，結算畫面用） */
+    const expGains = [];   /* {name, gain} 逐隻記錄，結算畫面用 */
+    /* 引擎喺每隻敵寵 faint 嗰陣已記落 state[mySide].pendingExp；呢度一次過派。
+       贏／輸／投降都照派（EXP 係逐隻敵寵計，唔係勝利獎勵） */
+    const pending = (state && state[mySide] && state[mySide].pendingExp) || [];
+    const gainByUid = {};
+    pending.forEach(g => { gainByUid[g.uid] = (gainByUid[g.uid] || 0) + g.gain; });
     teamEntries.forEach(entry => {
       const e = st.entries.find(x => x.uid === entry.uid);
       if (!e) return;
+      let gain = gainByUid[e.uid] || 0;
+      if (isPvp && won) gain += 30;   /* PvP 贏嘅固定 30（唔按敵寵計） */
+      if (gain <= 0) return;
       const lvBefore = e.level || 1;
-      const dexBefore = entryCurrentSpecies(e)[0];
-      addEntryExp(e, expGain);
-      if (e.level > lvBefore) {
-        const p = (typeof dexOf === "function") ? dexOf(dexBefore) : null;
-        levelUps.push({ name: (p && p.name) || "Pokémon", from: lvBefore, to: e.level });
-      }
+      const dexId = entryCurrentSpecies(e)[0];
+      addEntryExp(e, gain);
+      const p = (typeof dexOf === "function") ? dexOf(dexId) : null;
+      const name = (p && p.name) || "Pokémon";
+      expGains.push({ name, gain });
+      if (e.level > lvBefore) levelUps.push({ name, from: lvBefore, to: e.level });
+      if (loggedIn) SupabaseAuth.addEntryExp(e.uid, gain);
     });
-    st.diamonds = (st.diamonds || 0) + diamonds;
-    if (aiTrainer) {
+    /* 登入 + AI 贏：即使本地記錄打過都照 call，由 server 判斷係咪首通（本地記錄可能跨機唔齊） */
+    if (loggedIn ? (diamonds > 0 || (won && aiTrainer)) : diamonds > 0) {
+      if (loggedIn) {
+        const res = await SupabaseAuth.settleBattle(isPvp ? "pvp" : "ai", won ? "win" : "lose", aiTrainer ? aiTrainer.id : null);
+        if (res && typeof res.balance === "number") {
+          diamonds = res.bonus;
+          st.diamonds = res.balance;   /* server 權威，唔係本地 += */
+          if (res.wins != null) { st.pvpWins = res.wins; st.pvpLosses = res.losses; }
+        } else {
+          diamonds = 0;
+          if (window.App && App.toast) App.toast("Cloud sync hiccup — battle diamonds not saved");
+        }
+      } else {
+        st.diamonds = (st.diamonds || 0) + diamonds;
+      }
+    }
+    if (won && aiTrainer) {
       st.aiTrainersBeaten = st.aiTrainersBeaten || [];
       if (!st.aiTrainersBeaten.includes(aiTrainer.id)) st.aiTrainersBeaten.push(aiTrainer.id);
     }
     saveState();
-    return { exp: expGain, diamonds, levelUps };
+    if (!expGains.length && diamonds === 0 && !levelUps.length) return null;
+    return { expGains, diamonds, levelUps };
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms / battleSpeed)); }

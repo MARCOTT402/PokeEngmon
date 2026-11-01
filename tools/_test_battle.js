@@ -490,5 +490,53 @@ t("同 seed：RNG 尾態一致", rngTail1 === rngTail2);
 const det3 = scriptedBattle(99999);
 t("唔同 seed：log 有分歧", JSON.stringify(det1.log) !== JSON.stringify(det3.log));
 
+/* ---------- 擊倒經驗（v1.15.24，per-enemy KO + 以弱勝強） ---------- */
+
+/* AB-EXP1：KO Rattata Lv.5（baseExp 51）→ yield = ceil(51×5/7) = 37，單參與全攞 */
+{
+  const s = BattleState.create([mk(4, 30, ["ember"])], [mk(19, 5, [])]);
+  s.p2.team[0].hp = 1;
+  BattleState.executeMove(s, "p1", 0);
+  t("KO EXP 入帳", s.p1.pendingExp.length === 1);
+  t("KO EXP = 37", s.p1.pendingExp.length > 0 && s.p1.pendingExp[0].gain === 37);
+}
+
+/* AB-EXP2：以弱勝強 —— Lv.3 打低 Lv.50 Arcanine（baseExp 194）：
+   yield = ceil(194×50/7) = 1386；mult = 1 + 47/50 = 1.94 → ceil(1386×1.94) = 2689 */
+{
+  const s = BattleState.create([mk(4, 3, ["quick-attack"])], [mk(59, 50, [])]);
+  s.p2.team[0].hp = 1;
+  BattleState.executeMove(s, "p1", 0);
+  t("以弱勝強 ×1.94 → 2689", s.p1.pendingExp.length > 0 && s.p1.pendingExp[0].gain === 2689);
+}
+
+/* AB-EXP3：Lv.1 vs Lv.99 Arcanine → mult = 1 + 98/50 = 2.96；
+   yield = ceil(194×99/7) = 2744 → ceil(2744×2.96) = 8123 */
+{
+  const s = BattleState.create([mk(4, 1, ["quick-attack"])], [mk(59, 99, [])]);
+  s.p2.team[0].hp = 1;
+  BattleState.executeMove(s, "p1", 0);
+  t("近上限加成 ×2.96 → 8123", s.p1.pendingExp.length > 0 && s.p1.pendingExp[0].gain === 8123);
+}
+
+/* AB-EXP4：兩隻面對過 → 均分（換入嘅同正選都有份）：yield 37 → 各 ceil(37/2) = 19 */
+{
+  const s = BattleState.create([mk(4, 30, ["tackle"]), mk(7, 30, ["tackle"])], [mk(19, 5, [])]);
+  s.p2.team[0].hp = 1;
+  BattleState.switchTo(s, "p1", 1);   /* Squirtle 上場面對 Rattata */
+  BattleState.executeMove(s, "p1", 0);
+  t("兩參與者 → 兩條記錄", s.p1.pendingExp.length === 2);
+  t("均分各 19", s.p1.pendingExp.length === 2 && s.p1.pendingExp.every(g => g.gain === 19));
+}
+
+/* AB-EXP5：敵方換人 → 我方參與度重設（齋坐後備唔計下一隻） */
+{
+  const s = BattleState.create([mk(4, 30, ["tackle"]), mk(7, 30, ["tackle"])], [mk(19, 5, []), mk(19, 5, [])]);
+  BattleState.switchTo(s, "p1", 1);        /* Squirtle 面對第一隻 Rattata */
+  BattleState.switchTo(s, "p2", 1);        /* 敵方換第二隻 Rattata → 我方重設 */
+  t("敵換人後正選仍計參與", s.p1.team[1].participated === true);
+  t("齋坐後備唔計", !s.p1.team[0].participated);
+}
+
 console.log(`\n${pass} PASS, ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

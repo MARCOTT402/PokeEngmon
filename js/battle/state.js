@@ -8,14 +8,44 @@ const BattleState = (() => {
   function freshSide() {
     return { spikes: 0, stealthRock: false, reflect: 0, lightScreen: 0 };
   }
+  /* ---------- 擊倒經驗（v1.15.24，原莊 per-enemy 制） ---------- */
+  /* PokéAPI base_exp 速查表：AI 梯隊用開嘅物種。冇嘅話落返 dex JSON 嘅 baseExp 欄
+     （tools/fetch_base_exp.py 抽入 data/*.json），再冇先畀 64。 */
+  const BASE_EXP = {
+    1: 64, 2: 142, 3: 236, 4: 62, 5: 142, 6: 240, 7: 63, 8: 142, 9: 239,
+    10: 39, 13: 39, 16: 50, 19: 51, 25: 112, 35: 113, 59: 194, 64: 140,
+    65: 225, 68: 227, 82: 163, 94: 225, 96: 66, 129: 40, 130: 189, 131: 187,
+    143: 189, 149: 270, 154: 236, 164: 158, 208: 179, 214: 175, 227: 163,
+    248: 270, 282: 233
+  };
+  function baseExpOf(dexId) {
+    if (BASE_EXP[dexId] != null) return BASE_EXP[dexId];
+    const p = (typeof dexOf === "function") ? dexOf(dexId) : null;
+    return (p && p.baseExp) || 64;
+  }
+  /* 擊倒一隻敵寵 → side 嗰邊派 EXP：yield = baseExp × 敵LV / 7；
+     凡係面對過呢隻敵寵嘅我寵均分（無條件進位保 1）；
+     以弱勝強加成：收 EXP 嗰隻低過敵寵 → ×(1 + 等級差/50)，cap ×3 */
+  function grantKOExp(state, side, victim) {
+    const bucket = state[side];
+    if (!bucket || !victim) return;
+    const yield_ = Math.max(1, Math.ceil((baseExpOf(victim.dexId) * victim.level) / 7));
+    const parts = bucket.team.filter(p => p.participated);
+    if (!parts.length) return;
+    parts.forEach(earner => {
+      const mult = Math.min(3, 1 + Math.max(0, victim.level - earner.level) / 50);
+      bucket.pendingExp.push({ uid: earner.uid, gain: Math.max(1, Math.ceil((yield_ / parts.length) * mult)) });
+    });
+  }
+
   function create(p1Team, p2Team, opts) {
     /* 播種：PvP 由 battles row 攞共同 seed；AI 戰由 UI 層整個隨機 seed 传入。
        冇俾就用時間做種（node 測試／獨立用嘅後備） */
     const sd = (opts && typeof opts.seed === "number") ? opts.seed : ((Date.now() ^ (Math.random() * 0xFFFFFFFF)) >>> 0);
     BattleRng.seed(sd);
-    return {
-      p1: { team: p1Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide() },
-      p2: { team: p2Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide() },
+    const st = {
+      p1: { team: p1Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide(), pendingExp: [] },
+      p2: { team: p2Team.map(Battle.makeBattlePokemon), active: 0, side: freshSide(), pendingExp: [] },
       seed: sd,
       /* 天氣：{ name: "sun"|"rain"|"sandstorm"|"hail", turns }；null = 無天氣 */
       weather: null,
@@ -24,6 +54,10 @@ const BattleState = (() => {
       finished: false,
       winner: null
     };
+    /* 正選自動計參與（面對對方正選） */
+    if (st.p1.team[0]) st.p1.team[0].participated = true;
+    if (st.p2.team[0]) st.p2.team[0].participated = true;
+    return st;
   }
 
   function active(state, side) { return state[side].team[state[side].active]; }
@@ -332,6 +366,8 @@ const BattleState = (() => {
       }
       if (target.hp <= 0) {
         log(state, `${target.name} fainted!`);
+        /* 擊倒 → 攻方邊派 EXP（面對過呢隻敵寵嘅寵均分） */
+        grantKOExp(state, side, target);
         /* Moxie：擊倒對手後攻擊 +1 */
         if (actor.ability === "moxie" && (actor.statStages.atk || 0) < 6) {
           actor.statStages.atk = (actor.statStages.atk || 0) + 1;
@@ -446,6 +482,13 @@ const BattleState = (() => {
     const p = team[idx];
     /* 換人重置 volatile，但保留 status */
     p.volatile.flinch = false;
+    /* 我新上場嗰隻計參與（面對緊對面而家嗰隻） */
+    p.participated = true;
+    /* 我換咗人 = 對面面對新一隻敵寵 → 對面全隊參與度重設，對面正選自動計 */
+    const foeTeam = state[otherSide(side)].team;
+    foeTeam.forEach(x => { x.participated = false; });
+    const foeActive = foeTeam[state[otherSide(side)].active];
+    if (foeActive) foeActive.participated = true;
     log(state, `Go! ${p.name}!`);
     return true;
   }

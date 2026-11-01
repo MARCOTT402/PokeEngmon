@@ -1,7 +1,7 @@
-# PokeEngmon 產品需求文檔（PRD）
+﻿# PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.15.0**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.15.23**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -160,6 +160,9 @@
 - **特性擴充 + 個體特性（v1.15.20）**：白名單 `IMPLEMENTED_ABILITIES` 擴到 **40 個**（新增 Solar Power（晴 SpA×1.5、回合末 -1/8）、Chlorophyll／Swift Swim／Sand Rush（對應天氣速 ×2）、Technician（威力≤60 招 ×1.5）、Adaptability（STAB 2.0）、Sniper（crit ×2.25）、Battle Armor（免 crit，RNG 照消耗保 PvP 同步）、Moxie（擊倒後攻 +1）、Regenerator（換走回 1/3 HP）、Natural Cure（換走清狀態）、Hydration（雨天回合末解狀態）、Rain Dish／Ice Body（雨／雹回 1/16）、Sand Veil／Snow Cloak（對應天氣命中 ×0.8）、Keen Eye（唔可被降命中）、Own Tempo（唔會混亂））。**特性由「物種 slot 1」改為「個體」**：捕捉時 `rollEntryAbility()` 由「官方 slot1/slot2 ∩ 白名單」池抽出（1 個候選固定、2 個按 70%／30%），池空即 null —— 保證唔會派到「有名冇效」嘅死特性；`entry.ability` 存 Supabase `user_entries`（migration `20261101b`），換機／重登會跟 cloud 返，PvP 經 `serializeEntry` 同步。圖鑑詳情只顯示白名單內嘅特性同 `abilityName()` 顯示名。
 - **場地效果系統（v1.15.18，Gen 5 規則）**：**天氣** —— Sunny Day／Rain Dance／Sandstorm／Hail／Snowscape 開 5 回合天氣（互斥、新蓋舊，同一天氣重出失敗）；晴天火招 ×1.5／水招 ×0.5，雨天反轉；沙暴回合末磨非岩／地／鋼寵 1/16 HP，雹磨非冰寵 1/16 HP；Solar Beam 雨／沙／雹下威力減半，Thunder 雨天必中，Blizzard 雹天必中，Weather Ball 跟天氣轉屬性（火／水／岩／冰）兼威力 50→100。**場地陷阱** —— Spikes 撒對面最多 3 層（換入分別扣 1/8、1/6、1/4 max HP，飛行屬性／Levitate 免疫）、Stealth Rock 按岩屬性對換入寵相性 ×1/8 max HP 扣血（4× 弱岩直接半血）；換入先食釘子、後觸發上場特性（Gen 順序），釘死直接入 faint 流程。**光牆／反射壁** —— 開喺自己嗰邊 5 回合，Reflect 物理傷半、Light Screen 特殊傷半，critical hit 無視壁。對戰畫面中上位置有場地狀態 chip 列：天氣 icon＋回合倒數、雙方各自 Reflect／Light Screen 回合數、Spikes 層數、Stealth Rock 標記，無場地效果時收埋。
 - **PvP 真聯機（v1.15.19，種子同步制）**：接駁 Supabase `battles`／`matchmaking` 表（REST polling，唔使 websocket）。配對：入池後由 uid 細嗰方開 battle row（p1）防撞單，90s 死屍池員無視、60s 配唔到退出。開局由 p1 生成 32-bit seed 寫落 row，雙方客戶端用同一 seed 各自模擬 —— 引擎全部隨機（命中、傷害 roll、crit、連擊、狀態機率、同速 tiebreak）改用 `js/battle/rng.js`（mulberry32 PRNG），保證兩邊結果逐 bit 一致（node 測試驗證同 seed 兩場：勝者／每句 log／尾血／RNG 尾態全同）。每回合只交換 action `{turn, kind, moveIdx|idx}`，舊 turn 無視。對手 faint 後由佢自己客戶端揀替補（switch 做下一 turn action）；45s 冇動作當斷線判負；投降即寫 winner 落 row 對面即知。需先跑 migration `supabase-migrate-20261101a-battles-seed.sql`（battles 加 seed 欄）。
+- **對戰獎勵上雲（v1.15.22）**：之前對戰鑽石／EXP 係純本地加法，登入用戶下次 `pull()` 被雲端冚咗等同冇獎；改為同 quiz 一樣經 RPC —— 新 `settle_battle(p_kind, p_result, p_trainer_id)`（migration `20261101c`）由 server 計鑽石公式兼回傳權威 balance：**PvP 贏 3💎／輸 1💎、投降當輸；AI 訓練家首次擊敗一次性 10💎、重複擊敗 0💎**（server 用 `user_account.ai_trainers_beaten` 陣列記錄邊個打過，10 個 trainer id 白名單校驗，防重複攞同跨機刷）。EXP 每次贏都有，經現有 `add_entry_exp` RPC 逐隻出戰 entry 上雲；登入但 RPC 失敗 → 唔本地加鑽＋toast（同 quiz v140 規矩），匿名先本地加（本地用 `st.aiTrainersBeaten` 判斷首通）。結算畫面改為按實際獎勵顯示（PvP 輸都會出 `+1 💎` 行）。
+- **對戰 EXP 改比例制（v1.15.23）**：舊制 AI 戰固定 `trainer.level×12`／PvP 30，中後期對經驗曲線（Lv.50 升一級約 7.5k）近乎冇意義；改為同 quiz 一樣按比例派 —— AI 戰每隻出戰寵各攞「佢自己升一級所需（`levelSpan`）× 訓練家等級%」（Timmy=5%、Alder=82%≈一級），任何等級都有感，後期玩家可以帶低等級寵搵高級訓練家刷 EXP；PvP 維持固定 30（唔按比例，防相熟玩家互讓速刷）。結算畫面 EXP 改逐隻顯示（全部相同先合併 `+N ×3`）。
+- **對戰 EXP 改逐敵寵制（v1.15.24，取代 v1.15.23 嘅 span% 制）**：每擊倒一隻敵寵即記一筆 EXP —— 原莊公式 `baseExp × 敵LV / 7`，凡係**面對過嗰隻敵寵**嘅我寵均分（參與＝正選自動計＋換入過，敵方換人即重設，齋坐後備冇份 —— Gen 1–5 switch-training 規則）；**以弱勝強加成**：收 EXP 嗰隻等級低過敵寵 → `×(1 + 等級差/50)`，cap ×3。**輸／投降都照攞已擊倒嘅 EXP**（一隻一隻計；鑽石先係最後結算、投降當輸）；PvP 贏維持額外固定 30／隻（唔按敵寵計，防互讓刷）。`baseExp` 資料：`tools/fetch_base_exp.py` 由 PokéAPI 抽入 5 個 dex JSON，649 隻全齊（引擎內置梯隊物種速查表做後備）。**PvP 戰績**：`user_account.pvp_wins / pvp_losses` 兩欄由 `settle_battle` RPC 累積（migration `20261101c` 已更新），對戰主選單 PvP 格顯示 `W–L`，數據留俾下一步 leaderboard / friends system 用。下一步預告：每日答題閘門（5 回合 50 題英文 → 解鎖 4 場對戰，再做 5 回合 → 再 4 場，每日上限 8 場）。
 - 無障礙：`user-scalable=no` 已移除；所有 hover 動效只用 `@media (hover:hover)` 觸發；支援 `prefers-reduced-motion`
 
 ---
