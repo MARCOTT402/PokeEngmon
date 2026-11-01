@@ -184,3 +184,26 @@ Two pitfalls from authoring the 27 custom `assets/battle/anim/*.json` (v1.15.17)
 
 - **Screenshot verification**: battle anims run at 60fps and many are ~260ms total, so browser_use screenshots almost always land between animations and report "nothing renders" for perfectly fine anims. Use the dev harness `tools/_anim_preview.html?slug=<a,b,c>&frameMs=400` (passes `frameMs` to `MoveAnim.play`, 4–6s per move) — screenshots then reliably catch every move mid-animation.
 - **Empty frame 0**: when staggering layer entrances (e.g. trick-room tiles appearing one by one), make sure at least one layer exists in frame 0 — `MoveAnim.play` calls `drawFrame(0)` immediately, and an empty first frame shows a blank beat (and trips `tools/gen_missing_anims.js` validation). Bias stagger formulas so the first element is already visible at i=0.
+
+## Rule 22 — The "fainted → skip action" guard in `runTurnResolution` must not swallow switch actions
+
+Bug (reported as "對戰用戶Pokémon戰死後不能換Pokémon上場"): `js/battle/battle.js` `runTurnResolution` guarded every queued action with `if (active(state, side).hp <= 0) continue;`. A forced post-faint switch is itself a queued `{kind:"switch"}` action resolved inside that loop, so the guard skipped it → `switchTo` never ran → the turn ended with the active still at 0 HP → the forced-switch branch re-opened `showSwitchMenu(true)` forever. Symptom: player picks a healthy Pokémon, taps SEND OUT, party screen reopens every time.
+
+Fix shape (keep this condition):
+
+```js
+if (act.action.kind === "move" && active(state, side).hp <= 0) continue;
+```
+
+Rules:
+- Only `move` actions may be skipped for a fainted side. `switch` actions MUST still execute even when the outgoing Pokémon is at 0 HP — `executeMove` already guards `actor.hp <= 0`, and `animatedSwitch` skips the recall animation when `out.hp <= 0`, so a fainted-side switch is safe.
+- Do NOT "fix" a stuck switch by moving forced switches outside the turn loop / giving them a free turn: PvP requires switch to stay a next-turn action (`prd.md` L162) because both clients replay the same seed with the same `Battle.turnOrder` (switch priority 6); changing turn semantics desyncs PvP.
+- When adding any new action kind (item, run, etc.), decide explicitly whether the fainted guard applies to it, and write it as a positive `kind ===` list rather than a blanket `continue`.
+
+## Rule 23 — A class with `display:flex` defeats the `hidden` attribute; visible-by-default lists don't need a reveal tap
+
+Incident (Battle menu): `#ai-trainer-list` was only filled when the "AI Trainers" tile was tapped, so the ladder looked empty on entry. It now renders inside `renderMenu()` and the tile just collapses/expands it.
+
+- Any repo element whose class sets `display` (e.g. `.ai-trainer-list{display:flex}`) IGNORES `el.hidden = true` (author styles beat the UA `[hidden]{display:none}` rule). Add an explicit `.<class>[hidden]{display:none}` pair in `css/style.css` before using `hidden` as a toggle.
+- Content lists that are the point of a screen MUST be rendered when the view opens (in `renderMenu()` / the view's render fn), not behind a second tap. Keep the tile as a collapse/expand affordance only.
+- Guard generated-item click handlers against missing prerequisites (e.g. no owned Pokémon) inside the handler too — once a list renders unconditionally, its click path is reachable in states the old reveal-flow never allowed.

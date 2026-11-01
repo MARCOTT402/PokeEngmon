@@ -242,6 +242,13 @@ const SupabaseAuth = {
     return this._rpc("award_round_diamonds", { score, total });
   },
 
+  /* ---------- RPC：對戰結算鑽石（server 計公式 + 權威 balance） ----------
+     kind: "ai" | "pvp"；result: "win" | "lose"；trainerId: AI 訓練家 id（pvp 唔使畀） */
+  async settleBattle(kind, result, trainerId) {
+    if (!this.currentUser()) return null;
+    return this._rpc("settle_battle", { p_kind: kind, p_result: result, p_trainer_id: trainerId || null });
+  },
+
   /* ---------- RPC：捕捉日誌（log-only） ---------- */
   async settleCapture(dexId) {
     if (!this.currentUser()) return null;

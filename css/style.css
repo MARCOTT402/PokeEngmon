@@ -2492,6 +2492,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .bmt-sub { font-size: .78rem; color: #6b7590; }
 
 .ai-trainer-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+/* flex 會蓋過 UA 嘅 [hidden]，所以收合要自己寫 */
+.ai-trainer-list[hidden] { display: none; }
 .ai-trainer-card {
   display: flex; justify-content: space-between; align-items: center;
   padding: 12px 14px; border-radius: 12px; cursor: pointer;

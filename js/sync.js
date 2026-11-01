@@ -177,6 +177,9 @@ window.Sync = (() => {
           const local = Array.isArray(st.gymBadges) ? st.gymBadges : [];
           st.gymBadges = Array.from(new Set([...local, ...acct.gym_badges.map(Number)]));
         }
+        /* PvP 戰績（settle_battle RPC 喺 server 累積；本地只讀顯示用） */
+        st.pvpWins = acct.pvp_wins ?? st.pvpWins ?? 0;
+        st.pvpLosses = acct.pvp_losses ?? st.pvpLosses ?? 0;
         if (acct.trainer_name && acct.trainer_name !== st.playerName) {
           st.playerName = acct.trainer_name;
           st.nameCustomized = true;
