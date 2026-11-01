@@ -1,3 +1,11 @@
+# [1.20.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.19.0...v1.20.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** energy points, 14-trainer ladder with 4 tiers and mastery rewards ([b9ef708](https://github.com/MARCOTT402/PokeEngmon/commit/b9ef7085f2744a9d5fc5f9c728e05b0f19dec81d))
+* **social:** friends list, realtime friend/random PvP, add-friend from leaderboard ([257f6b4](https://github.com/MARCOTT402/PokeEngmon/commit/257f6b46fa0f56dbca4aa840ace9c8cc857ed878))
+
 # [1.19.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.18.0...v1.19.0) (2026-11-01)
 
 
