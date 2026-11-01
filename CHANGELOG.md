@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.15.0...v1.16.0) (2026-11-01)
+
+
+### Features
+
+* **ability:** per-individual abilities with slot1/slot2 pool and 40 implemented effects ([36d96c0](https://github.com/MARCOTT402/PokeEngmon/commit/36d96c08a3fa3272914d07735570090d5e7e14fb))
+
 # [1.15.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.14.0...v1.15.0) (2026-11-01)
 
 
