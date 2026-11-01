@@ -1,18 +1,26 @@
 /* ============================================================
    PokeEngmon Battle - PvP 網絡層（Task 9）
-   純 fetch + REST polling（唔用 supabase-js / websocket）。
+   純 fetch + REST；等待對手改用 Supabase Realtime（WebSocket）先行，
+   輪詢只做 safety fallback（realtime.js）。
    同步策略：battles row 存共同 seed，雙方客戶端各自模擬
    （rng.js 保證一致），每回合只交換 action：
      { turn: N, kind: "move", moveIdx } | { turn: N, kind: "switch", idx }
    只接受 turn == 本地回合+1 嘅 action，舊 turn 無視 → 唔使清 action。
    配對規則：uid 細嗰個做莊起 battle row（p1），避免撞單。
+   好友局（battles.is_friend = true）唔會落入隨機配對池。
    ============================================================ */
 
 const PvpNet = (() => {
   const MATCH_TIMEOUT_MS = 60000;   /* 配對上限 60s */
   const ACTION_TIMEOUT_MS = 45000;  /* 等對手出招上限 45s */
   const STALE_MS = 90000;           /* 配對池 90s 以上當死屍，無視 */
-  const POLL_MS = 1800;
+  const FIRST_POLL_MS = 500;        /* 配對首次間隔 */
+  const MAX_POLL_MS = 1500;         /* 配對最大間隔 */
+  const FALLBACK_FIRST_MS = 1200;   /* realtime 未到 → 第一次 safety poll */
+  const FALLBACK_MAX_MS = 2200;
+
+  /* 只攞必要欄位（回傳 payload 細啲，turn 交換更快） */
+  const SELECT_BATTLE = "id,state,seed,winner,team_size,p1_uid,p2_uid,p1_action,p2_action,p1_team,p2_team,is_friend";
 
   function myUid() {
     return (window.SupabaseAuth && SupabaseAuth.currentUser && SupabaseAuth.currentUser())
@@ -40,31 +48,6 @@ const PvpNet = (() => {
     return res.json().catch(() => []);
   }
 
-  /* ---------- 通用輪詢：返 cancel fn ---------- */
-  function poll(fn, ms) {
-    let stopped = false;
-    (async function loop() {
-      while (!stopped) {
-        try { await fn(); } catch (e) { console.warn("[PvP] poll error:", e); }
-        if (stopped) break;
-        await new Promise(r => setTimeout(r, ms));
-      }
-    })();
-    return () => { stopped = true; };
-  }
-  function pollOnce(fn, ms, isDone) {
-    /* 每 ms 跑一次 fn，isDone(result) 真就 resolve(result)；返 Promise，帶 cancel */
-    let cancel;
-    const p = new Promise((resolve, reject) => {
-      cancel = poll(async () => {
-        const r = await fn();
-        if (isDone(r)) { cancel(); resolve(r); }
-      }, ms);
-    });
-    p.cancel = () => cancel && cancel();
-    return p;
-  }
-
   /* ============================================================
      配對
      ============================================================ */
@@ -73,45 +56,65 @@ const PvpNet = (() => {
     await api("DELETE", `/matchmaking?uid=eq.${uid}`, undefined, "return=minimal").catch(() => {});
   }
 
-  /* 搵未過期嘅其他玩家（最早入池嗰個） */
+  /* 搵未過期嘅其他玩家（最早入池嗰個）；好友局唔會入池 */
   async function findOpponent() {
     const uid = myUid();
     const rows = await api("GET", `/matchmaking?uid=neq.${uid}&created_at=gt.${Date.now() - STALE_MS}&order=created_at.asc&limit=1`);
     return rows[0] || null;
   }
 
-  /* 搵人哋開畀我嘅局（我係 p2） */
+  /* 搵人哋開畀我嘅隨機局（我係 p2）；is_friend=eq.false 防止劫走好友局 */
   async function findBattleForMe() {
     const uid = myUid();
-    const rows = await api("GET", `/battles?p2_uid=eq.${uid}&state=eq.active&created_at=gt.${Date.now() - STALE_MS}&order=created_at.desc&limit=1`);
+    const rows = await api("GET",
+      `/battles?p2_uid=eq.${uid}&state=eq.active&is_friend=eq.false&created_at=gt.${Date.now() - STALE_MS}&order=created_at.desc&limit=1&select=${SELECT_BATTLE}`);
     return rows[0] || null;
   }
 
-  /* 主流程：入池 → 輪詢。onMatched(battle, mySide, foeUid) 只會觸發一次 */
+  /* 主流程：入池 → 自適應輪詢。onMatched(battle, mySide, foeUid) 只會觸發一次 */
   function matchmake(teamSize, cbs) {
     const uid = myUid();
     if (!uid) { cbs.onError && cbs.onError(new Error("not logged in")); return () => {}; }
-    let done = false, cancelPoll = null, myRowId = null;
+
+    let done = false;
+    let timer = null;
+    let myRowId = null;
+    let delay = FIRST_POLL_MS;
     const startedAt = Date.now();
 
-    (async () => {
-      try {
-        await leavePool();   /* 清走自己舊 row */
-        const rows = await api("POST", "/matchmaking", { uid, team_size: teamSize });
-        myRowId = rows[0] && rows[0].id;
-      } catch (e) { cbs.onError && cbs.onError(e); done = true; return; }
+    function stop() {
+      done = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      document.removeEventListener("visibilitychange", onVisibility);
+    }
 
-      cancelPoll = poll(async () => {
-        if (done) return;
-        if (Date.now() - startedAt > MATCH_TIMEOUT_MS) {
-          done = true; cancelPoll(); await leavePool();
-          cbs.onTimeout && cbs.onTimeout();
-          return;
-        }
-        /* A. 有人開咗局畀我？（我係 p2） */
+    function schedule() {
+      if (done || document.hidden) return;
+      timer = setTimeout(tick, delay);
+      delay = Math.min(Math.round(delay * 1.4), MAX_POLL_MS);
+    }
+
+    async function enterPool() {
+      await leavePool();
+      const rows = await api("POST", "/matchmaking", { uid, team_size: teamSize });
+      myRowId = (rows[0] && rows[0].id) || null;
+    }
+
+    async function tick() {
+      timer = null;
+      if (done || document.hidden) return;
+      if (Date.now() - startedAt > MATCH_TIMEOUT_MS) {
+        stop();
+        await leavePool();
+        cbs.onTimeout && cbs.onTimeout();
+        return;
+      }
+      try {
+        /* A. 有人開咗隨機局畀我？（我係 p2） */
         const b = await findBattleForMe();
         if (b) {
-          done = true; cancelPoll(); await leavePool();
+          stop();
+          await leavePool();
           cbs.onMatched(b, "p2", b.p1_uid);
           return;
         }
@@ -122,19 +125,53 @@ const PvpNet = (() => {
           try {
             const created = await api("POST", "/battles", {
               mode: "pvp", p1_uid: uid, p2_uid: opp.uid,
-              team_size: teamSize, seed
+              team_size: teamSize, seed, is_friend: false
             });
-            done = true; cancelPoll(); await leavePool();
+            stop();
+            await leavePool();
             cbs.onMatched(created[0], "p1", opp.uid);
-          } catch (e) { cbs.onError && cbs.onError(e); done = true; cancelPoll(); }
+            return;
+          } catch (e) {
+            console.warn("[PvP] create battle failed:", e);
+          }
         }
         /* C. uid 大 → 等對方開局（下個 poll A 會接到） */
-      }, POLL_MS);
+      } catch (e) {
+        console.warn("[PvP] poll error:", e);
+      }
+      schedule();
+    }
+
+    /* 分頁隱藏：停止發 request 並離開池；返嚟再入池（避免「人唔喺度但被配對」） */
+    async function onVisibility() {
+      if (done) return;
+      if (document.hidden) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        myRowId = null;
+        await leavePool();
+        return;
+      }
+      if (!myRowId) {
+        try { await enterPool(); } catch (e) { /* 下個 tick 再試 */ }
+        delay = FIRST_POLL_MS;
+        schedule();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+
+    (async () => {
+      try {
+        await enterPool();
+      } catch (e) {
+        stop();
+        cbs.onError && cbs.onError(e);
+        return;
+      }
+      schedule();
     })();
 
-    return () => {   /* cancel */
-      done = true;
-      if (cancelPoll) cancelPoll();
+    return () => {
+      stop();
       leavePool();
     };
   }
@@ -143,7 +180,7 @@ const PvpNet = (() => {
      對戰回合交換
      ============================================================ */
   async function fetchBattle(battleId) {
-    const rows = await api("GET", `/battles?id=eq.${battleId}&limit=1`);
+    const rows = await api("GET", `/battles?id=eq.${battleId}&select=${SELECT_BATTLE}&limit=1`);
     return rows[0] || null;
   }
 
@@ -153,9 +190,59 @@ const PvpNet = (() => {
     await api("PATCH", `/battles?id=eq.${battleId}`, { [col]: team, updated_at: Date.now() }, "return=minimal");
   }
 
+  /* realtime 先行；safety 輪詢 1.2s → ×1.6 → cap 2.2s。
+     回傳 Promise<row>，帶 .cancel() */
+  function waitRow(battleId, isDone) {
+    let settled = false;
+    let unsub = null;
+    let timer = null;
+    let delay = FALLBACK_FIRST_MS;
+    let resolveFn = null;
+
+    const p = new Promise((resolve) => { resolveFn = resolve; });
+
+    function cleanup() {
+      if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
+      if (timer) { clearTimeout(timer); timer = null; }
+    }
+    function settle(row) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolveFn(row);
+    }
+    function check(row) {
+      if (!row || settled) return;
+      if (isDone(row)) settle(row);
+    }
+
+    if (window.PvpRealtime) {
+      try { unsub = PvpRealtime.subscribe(battleId, check); } catch (e) { unsub = null; }
+    }
+
+    async function pollTick() {
+      timer = null;
+      if (settled) return;
+      let row = null;
+      try { row = await fetchBattle(battleId); } catch (e) {}
+      check(row);
+      if (settled) return;
+      delay = Math.min(Math.round(delay * 1.6), FALLBACK_MAX_MS);
+      timer = setTimeout(pollTick, delay);
+    }
+    timer = setTimeout(pollTick, FALLBACK_FIRST_MS);
+
+    p.cancel = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+    };
+    return p;
+  }
+
   /* 等雙方隊伍齊（或者對手已經投降走人） */
   function waitForTeams(battleId) {
-    return pollOnce(async () => fetchBattle(battleId), POLL_MS,
+    return waitRow(battleId,
       b => b && ((b.p1_team && b.p1_team.length && b.p2_team && b.p2_team.length) || b.state === "finished"));
   }
 
@@ -168,7 +255,7 @@ const PvpNet = (() => {
 
   /* 等對手同一 turn 嘅 action；對手投降（state finished）都會即刻返 */
   function waitForOpponentAction(battleId, foeCol, turn) {
-    return pollOnce(async () => fetchBattle(battleId), POLL_MS,
+    return waitRow(battleId,
       b => b && ((b[foeCol] && b[foeCol].turn === turn) || b.state === "finished"));
   }
 
