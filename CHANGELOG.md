@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.24.0...v1.25.0) (2026-11-01)
+
+
+### Features
+
+* **quests:** add daily quest board with manual claim ([3613a8e](https://github.com/MARCOTT402/PokeEngmon/commit/3613a8e049e7e6b569541ab53a1c2e504c083fdc))
+
 # [1.24.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.23.0...v1.24.0) (2026-11-01)
 
 
