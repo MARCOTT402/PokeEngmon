@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.14.0...v1.15.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** real-time PvP with seed-synced deterministic simulation ([cb33732](https://github.com/MARCOTT402/PokeEngmon/commit/cb33732ad849b57de6bb39b9f3e6187787eb0a24))
+
 # [1.14.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.13.0...v1.14.0) (2026-10-31)
 
 
