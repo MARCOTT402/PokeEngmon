@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.20.1...v1.21.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** sync trainer mastery across devices via battle_progress RPC ([0ca25a0](https://github.com/MARCOTT402/PokeEngmon/commit/0ca25a005f1a56664a2a7df32c6cf3871025a3ea))
+
 ## [1.20.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.20.0...v1.20.1) (2026-11-01)
 
 
