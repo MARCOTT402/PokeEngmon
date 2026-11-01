@@ -126,6 +126,13 @@ function getCurveMode() {
   return (loadState().curveMode) || "standard";
 }
 
+/* 某日已答題數（records 每筆有 total；冇記錄 = 0）
+   EP／server 同步都用呢個，唔再經 BattleGate */
+function questionsToday(st, day) {
+  const list = (st && st.records && st.records[day]) || [];
+  return list.reduce((n, r) => n + (Number(r.total) || 0), 0);
+}
+
 function setCurveMode(mode) {
   const st = loadState();
   st.curveMode = mode;

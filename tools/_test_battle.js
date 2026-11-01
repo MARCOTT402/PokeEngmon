@@ -4,11 +4,11 @@ const vm = require("vm");
 const ctx = { console, Math, Date, JSON, require, window: {} };
 vm.createContext(ctx);
 /* 所有 js 喺同一個 context 跑（const 跨 script 先互通） */
-const src = ["js/gens-data.js", "js/data.js", "js/pokemon.js", "js/battle/rng.js", "js/battle/gate.js", "js/battle/engine.js", "js/battle/state.js"]
+const src = ["js/gens-data.js", "js/data.js", "js/pokemon.js", "js/battle/rng.js", "js/battle/engine.js", "js/battle/state.js"]
   .map(p => fs.readFileSync(p, "utf8")).join("\n;\n");
 vm.runInContext(src, ctx, { filename: "battle-bundle.js" });
-const { Battle, BattleState, BattleRng, BattleGate, moveInfo, entryCurrentSpecies, calcStats } =
-  vm.runInContext("({Battle, BattleState, BattleRng, BattleGate, moveInfo, entryCurrentSpecies, calcStats})", ctx);
+const { Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats } =
+  vm.runInContext("({Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats})", ctx);
 const { IMPLEMENTED_ABILITIES, abilityPool, rollEntryAbility, abilityName } =
   vm.runInContext("({IMPLEMENTED_ABILITIES, abilityPool, rollEntryAbility, abilityName})", ctx);
 
@@ -536,55 +536,6 @@ t("唔同 seed：log 有分歧", JSON.stringify(det1.log) !== JSON.stringify(det
   BattleState.switchTo(s, "p2", 1);        /* 敵方換第二隻 Rattata → 我方重設 */
   t("敵換人後正選仍計參與", s.p1.team[1].participated === true);
   t("齋坐後備唔計", !s.p1.team[0].participated);
-}
-
-/* ---------- 每日對戰配額（gate.js） ---------- */
-{
-  const day = "2026-11-01";
-  const stWith = (questions) => ({ records: { [day]: [{ total: questions }] }, battleDays: {} });
-  const g = (q, mode) => (BattleGate.capFor(q, mode));
-  t("0 題 → 上限 0", g(0, "standard") === 0);
-  t("50 題 → 上限 4", g(50, "standard") === 4);
-  t("99 題 → 仍係 4", g(99, "standard") === 4);
-  t("100 題 → 上限 8", g(100, "standard") === 8);
-  t("200 題 → 封頂 8", g(200, "standard") === 8);
-  t("junior 模式一樣受限", g(50, "junior") === 4);
-  t("teen 模式無上限", g(50, "teen") === null);
-  t("adult 模式無上限", g(50, "adult") === null);
-  t("自訂 7 題組 × 8 回合 = 56 題夠 4 場（唔靠回合數）", g(56, "standard") === 4);
-
-  const s0 = BattleGate.status(stWith(0), day, "standard");
-  t("0 題：唔可以打，差 50 題", s0.allowed === false && s0.needQuestions === 50);
-  const s49 = BattleGate.status(stWith(49), day, "standard");
-  t("49 題：差 1 題", s49.allowed === false && s49.needQuestions === 1);
-  const s50 = BattleGate.status(stWith(50), day, "standard");
-  t("50 題：解鎖 4 場", s50.allowed === true && s50.cap === 4 && s50.remaining === 4);
-
-  const used = stWith(50);
-  used.battleDays[day] = { used: 4, ai: 4 };
-  const sFull = BattleGate.status(used, day, "standard");
-  t("打完 4 場：封住唔可以再打", sFull.allowed === false && sFull.remaining === 0);
-
-  const used2 = stWith(100);
-  used2.battleDays[day] = { used: 5, pvp: 5 };
-  t("100 題打咗 5 場：仲有 3 場", BattleGate.status(used2, day, "standard").remaining === 3);
-
-  /* 跨日重設 */
-  const next = stWith(50);
-  next.battleDays["2026-11-02"] = { used: 4 };
-  t("第二日重新計", BattleGate.status(next, "2026-11-02", "standard").used === 4 &&
-    BattleGate.status(next, day, "standard").used === 0);
-
-  /* record：累加 + 分類 + 只留 7 日 */
-  const rec = { records: {}, battleDays: {} };
-  for (let i = 0; i < 9; i++) {
-    const d = "2026-10-2" + i;
-    BattleGate.record(rec, d, i % 2 ? "pvp" : "ai");
-  }
-  t("只保留最近 7 日", Object.keys(rec.battleDays).length === 7);
-  BattleGate.record(rec, day, "pvp");
-  t("同日累加 used", rec.battleDays[day].used === 1);
-  t("分類記 pvp", rec.battleDays[day].pvp === 1 && !rec.battleDays[day].ai);
 }
 
 console.log(`\n${pass} PASS, ${fail} FAIL`);

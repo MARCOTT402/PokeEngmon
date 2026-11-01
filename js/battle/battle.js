@@ -85,7 +85,7 @@ const BattleUI = (() => {
     renderMasterySummary();
     /* 登入用戶：用 server ledger 校正 EP + 精通（跨機一致、清 cache 都保得住進度） */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
-      const q = BattleGate.questionsToday(st, dateKey(Date.now()));
+      const q = questionsToday(st, dateKey(Date.now()));
       const pull = SupabaseAuth.battleProgress
         ? SupabaseAuth.battleProgress(q)
         : (SupabaseAuth.energyStatus ? SupabaseAuth.energyStatus(q) : null);
@@ -1939,7 +1939,7 @@ const BattleUI = (() => {
     /* ---- 能量點：打完先扣 1 EP（開戰唔扣，中途斷線唔會白扣）；好友局唔扣 ---- */
     const day = dateKey(Date.now());
     const kind = isPvp ? "pvp" : "ai";
-    const questionsTodayN = BattleGate.questionsToday(st, day);
+    const questionsTodayN = questionsToday(st, day);
     /* server RPC 會寫返 battleDays[day].used，所以要保證個格存在 */
     if (!st.battleDays[day]) st.battleDays[day] = { used: 0, ai: 0, pvp: 0 };
     let energySpent = false;
