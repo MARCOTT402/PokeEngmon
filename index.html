@@ -82,7 +82,7 @@
       #loading-screen.ld-out { animation-duration: .01s; }
     }
   </style>
-  <link rel="stylesheet" href="css/style.css?v=1.23.0">
+  <link rel="stylesheet" href="css/style.css?v=1.24.0">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -100,6 +100,7 @@
         <div class="topbar-name" id="topbar-name" title="Tap to change name">The PokéEngmon Trainer</div>
         <div class="topbar-res">
           <button class="chip chip-diamond chip-btn" id="btn-top-diamond">💎 <b id="topbar-diamonds">0</b></button>
+          <button class="icon-btn" id="btn-top-friends" aria-label="Friends" title="Friends">👥<span class="friends-icon-badge" id="top-friends-badge" hidden>0</span></button>
           <button class="chip chip-btn chip-badge" id="btn-top-leaderboard" aria-label="Leaderboard" title="Leaderboard">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path d="M12 1.5l2.5 3.1 3.9-.8.8 3.9 3.1 2.5-2 2.8 2 2.8-3.1 2.5-.8 3.9-3.9-.8L12 22.5l-2.5-3.1-3.9.8-.8-3.9-3.1-2.5 2-2.8-2-2.8 3.1-2.5.8-3.9 3.9.8z"
@@ -137,6 +138,7 @@
             <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
             <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
             <button id="btn-home-battle" class="pd-menu-btn">⚔ Battle</button>
+            <button id="btn-home-friends" class="pd-menu-btn">👥 Friends <span id="home-friends-badge" class="friends-count-pill" hidden>0</span></button>
             <div class="home-cal-row">
               <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
               <div id="home-streak-wrap" class="home-streak-wrap" hidden>
@@ -419,23 +421,55 @@
           <button id="friends-back" class="icon-btn" aria-label="Back">✕</button>
         </div>
       </header>
-      <div id="friends-code-card" class="friends-card">
-        <div class="friends-code">Friend code <b id="friends-code">——</b></div>
+      <!-- 1. 我的訓練家卡：partner + 名 + 好友碼 -->
+      <div id="friends-identity" class="friends-identity">
+        <div id="friends-avatar" class="friends-avatar" aria-hidden="true">T</div>
+        <div class="friends-identity-main">
+          <div class="friends-trainer-name" id="friends-trainer-name">Trainer</div>
+          <div class="friends-code">Code <b id="friends-code">——</b></div>
+        </div>
         <button id="friends-copy-code" class="friends-btn">COPY</button>
       </div>
-      <div id="friends-add-row" class="friends-add-row">
-        <input id="friends-add-input" class="friends-add-input" type="text" maxlength="24"
-               placeholder="Friend code or trainer name" autocomplete="off"
-               autocapitalize="characters" spellcheck="false">
-        <button id="friends-add-btn" class="friends-btn friends-btn-add">ADD</button>
+
+      <div id="friends-banner" class="friends-banner" hidden>
+        <span id="friends-banner-text">Could not refresh friends</span>
+        <button id="friends-banner-retry" class="friends-banner-retry">RETRY</button>
       </div>
-      <div id="friends-search-results" class="friends-search-results"></div>
-      <h3 class="friends-section-title">Friend requests</h3>
-      <div id="friends-requests" class="friends-list"><div class="friends-empty">Loading…</div></div>
-      <h3 class="friends-section-title">Friends</h3>
+
+      <!-- 2. Action Center：invites → requests → outgoing，最多先顯示 3 行 -->
+      <section id="friends-actions" class="friends-actions" hidden aria-live="polite">
+        <div class="friends-actions-head">
+          <span class="friends-actions-title">Needs your attention</span>
+          <span class="friends-count-pill" id="friends-action-count">0</span>
+        </div>
+        <div id="friends-action-list" class="friends-action-list"></div>
+      </section>
+
+      <!-- 3. 好友名單：搜尋 + 排序 -->
+      <div class="friends-roster-head">
+        <div class="friends-roster-title">
+          <h3 class="friends-section-title">Your friends <span id="friends-count" class="friends-count-pill">0</span></h3>
+        </div>
+        <div class="friends-tools">
+          <input id="friends-search" class="friends-search-input" type="search"
+                 placeholder="Search friends" autocomplete="off" spellcheck="false" aria-label="Search friends">
+          <select id="friends-sort" class="dex-sort" aria-label="Sort friends"></select>
+          <button id="friends-sort-dir" class="dex-dir" aria-label="Sort direction">↑</button>
+        </div>
+      </div>
       <div id="friends-list" class="friends-list"><div class="friends-empty">Loading…</div></div>
-      <h3 class="friends-section-title">Battle invites</h3>
-      <div id="friends-invites" class="friends-list"><div class="friends-empty">Loading…</div></div>
+
+      <!-- 4. 加好友：預設收起 -->
+      <button id="friends-add-toggle" class="friends-add-toggle" type="button">＋ Add friend</button>
+      <div id="friends-add-panel" class="friends-add-panel" hidden>
+        <div id="friends-add-row" class="friends-add-row">
+          <input id="friends-add-input" class="friends-add-input" type="text" maxlength="24"
+                 placeholder="Friend code or trainer name" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false">
+          <button id="friends-add-btn" class="friends-btn friends-btn-add">ADD</button>
+        </div>
+        <div id="friends-search-results" class="friends-search-results"></div>
+      </div>
       <div class="hub-spacer"></div>
       <div class="hub-bar">
         <button id="friends-back-bottom" class="btn-big btn-plain">‹ Home</button>
@@ -682,39 +716,39 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase/supabase-config.js?v=1.23.0"></script>
-  <script src="js/supabase-auth.js?v=1.23.0"></script>
-  <script src="js/sm2.js?v=1.23.0"></script>
-  <script src="js/sync.js?v=1.23.0"></script>
-  <script src="js/gens-data.js?v=1.23.0"></script>
-  <script src="js/data.js?v=1.23.0"></script>
-  <script src="js/qimg-db.js?v=1.23.0"></script>
-  <script src="js/pokemon.js?v=1.23.0"></script>
-  <script src="js/dex-sort.js?v=1.23.0"></script>
-  <script src="js/battle/rng.js?v=1.23.0"></script>
-  <script src="js/battle/energy.js?v=1.23.0"></script>
-  <script src="js/battle/realtime.js?v=1.23.0"></script>
-  <script src="js/battle/pvp.js?v=1.23.0"></script>
-  <script src="js/battle/engine.js?v=1.23.0"></script>
-  <script src="js/battle/state.js?v=1.23.0"></script>
-  <script src="js/battle/moveanim.js?v=1.23.0"></script>
-  <script src="js/battle/sprites.js?v=1.23.0"></script>
-  <script src="js/battle/battle.js?v=1.23.0"></script>
-  <script src="js/genpack.js?v=1.23.0"></script>
-  <script src="js/storage.js?v=1.23.0"></script>
-  <script src="js/pet.js?v=1.23.0"></script>
-  <script src="js/explain.js?v=1.23.0"></script>
-  <script src="js/quiz.js?v=1.23.0"></script>
-  <script src="js/gacha.js?v=1.23.0"></script>
-  <script src="js/pokedex.js?v=1.23.0"></script>
-  <script src="js/gym.js?v=1.23.0"></script>
-  <script src="js/leaderboard.js?v=1.23.0"></script>
-  <script src="js/friends.js?v=1.23.0"></script>
-  <script src="js/calendar.js?v=1.23.0"></script>
-  <script src="js/evolve-scene.js?v=1.23.0"></script>
-  <script src="js/app.js?v=1.23.0"></script>
-  <script src="vendor/gsap/gsap.min.js?v=1.23.0"></script>
-  <script type="module" src="js/capture.js?v=1.23.0"></script>
+  <script src="supabase/supabase-config.js?v=1.24.0"></script>
+  <script src="js/supabase-auth.js?v=1.24.0"></script>
+  <script src="js/sm2.js?v=1.24.0"></script>
+  <script src="js/sync.js?v=1.24.0"></script>
+  <script src="js/gens-data.js?v=1.24.0"></script>
+  <script src="js/data.js?v=1.24.0"></script>
+  <script src="js/qimg-db.js?v=1.24.0"></script>
+  <script src="js/pokemon.js?v=1.24.0"></script>
+  <script src="js/dex-sort.js?v=1.24.0"></script>
+  <script src="js/battle/rng.js?v=1.24.0"></script>
+  <script src="js/battle/energy.js?v=1.24.0"></script>
+  <script src="js/battle/realtime.js?v=1.24.0"></script>
+  <script src="js/battle/pvp.js?v=1.24.0"></script>
+  <script src="js/battle/engine.js?v=1.24.0"></script>
+  <script src="js/battle/state.js?v=1.24.0"></script>
+  <script src="js/battle/moveanim.js?v=1.24.0"></script>
+  <script src="js/battle/sprites.js?v=1.24.0"></script>
+  <script src="js/battle/battle.js?v=1.24.0"></script>
+  <script src="js/genpack.js?v=1.24.0"></script>
+  <script src="js/storage.js?v=1.24.0"></script>
+  <script src="js/pet.js?v=1.24.0"></script>
+  <script src="js/explain.js?v=1.24.0"></script>
+  <script src="js/quiz.js?v=1.24.0"></script>
+  <script src="js/gacha.js?v=1.24.0"></script>
+  <script src="js/pokedex.js?v=1.24.0"></script>
+  <script src="js/gym.js?v=1.24.0"></script>
+  <script src="js/leaderboard.js?v=1.24.0"></script>
+  <script src="js/friends.js?v=1.24.0"></script>
+  <script src="js/calendar.js?v=1.24.0"></script>
+  <script src="js/evolve-scene.js?v=1.24.0"></script>
+  <script src="js/app.js?v=1.24.0"></script>
+  <script src="vendor/gsap/gsap.min.js?v=1.24.0"></script>
+  <script type="module" src="js/capture.js?v=1.24.0"></script>
 </body>
 </html>
 

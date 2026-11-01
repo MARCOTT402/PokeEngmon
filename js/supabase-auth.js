@@ -338,6 +338,18 @@ const SupabaseAuth = {
     return this._rpcTable("get_friend_requests", {});
   },
 
+  /* 拎自己送出、對方未回應嘅好友請求（rows） */
+  async getOutgoingFriendRequests() {
+    if (!this.currentUser()) return null;
+    return this._rpcTable("get_outgoing_friend_requests", {});
+  },
+
+  /* 取消自己送出嘅好友請求 */
+  async cancelFriendRequest(uid) {
+    if (!this.currentUser()) return null;
+    return this._rpc("cancel_friend_request", { p_target: uid });
+  },
+
   /* 向好友送出對戰邀請（teamSize 為對方隊伍人數） */
   async sendBattleInvite(friendUid, teamSize) {
     if (!this.currentUser()) return null;

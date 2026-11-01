@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "1.23.0";
+const APP_VERSION = "1.24.0";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -20,6 +20,9 @@ const App = {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
     document.body.classList.toggle("capture-mode", id === "view-capture");
+    /* Friends dashboard 喺桌面用闊版面（≥768px 兩欄） */
+    const appEl = document.getElementById("app");
+    if (appEl) appEl.classList.toggle("app-wide", id === "view-friends");
     window.scrollTo(0, 0);
   },
 
@@ -1974,6 +1977,10 @@ const App = {
     document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
     document.getElementById("btn-home-battle").onclick = () => { if (typeof BattleUI !== "undefined") BattleUI.openMenu(); };
     document.getElementById("battle-menu-friends").onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
+    const homeFriendsBtn = document.getElementById("btn-home-friends");
+    if (homeFriendsBtn) homeFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
+    const topFriendsBtn = document.getElementById("btn-top-friends");
+    if (topFriendsBtn) topFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
     if (typeof BattleUI !== "undefined") BattleUI.bind();
     document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();

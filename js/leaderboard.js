@@ -59,6 +59,7 @@ const Leaderboard = {
           totalOwned: row.total_owned || 0,
           gymBadges: Array.isArray(row.gym_badges) ? row.gym_badges : [],
           accountUuid: row.account_uuid || null,
+          relation: row.relation || null,   /* friend / pending_out / pending_in / self / none（未登入 = null） */
           fromRpc: true
         };
       });
@@ -84,6 +85,7 @@ const Leaderboard = {
       partnerDex, partnerName, partnerLevel,
       totalOwned: (st.entries || []).length,
       gymBadges: Array.isArray(st.gymBadges) ? st.gymBadges.slice() : [],
+      relation: "self",
       isYou: true
     };
   },
@@ -100,10 +102,21 @@ const Leaderboard = {
           `<img src="${gymBadgeSpriteURL(m)}" alt="×${m}" title="Gym ×${m}" loading="lazy"
                 onerror="this.remove()">`).join("")}</span>`
       : "";
-    /* 加好友掣：只有真帳號（有 uuid）同唔係自己先顯示 */
-    const addBtn = (r.accountUuid && !r.isYou)
-      ? `<button class="lb-add" data-uid="${r.accountUuid}" data-name="${escapeHTML(r.name)}" aria-label="Add friend" title="Add friend">＋</button>`
-      : "";
+    /* 好友關係狀態：只有真帳號同唔係自己先顯示 */
+    let addBtn = "";
+    if (r.accountUuid && !r.isYou) {
+      const uid = r.accountUuid;
+      const n = escapeHTML(r.name);
+      if (r.relation === "friend") {
+        addBtn = `<span class="lb-rel lb-rel-friend" title="Already friends">FRIEND</span>`;
+      } else if (r.relation === "pending_out") {
+        addBtn = `<span class="lb-rel" title="Request pending">PENDING</span>`;
+      } else if (r.relation === "pending_in") {
+        addBtn = `<button class="lb-add lb-accept" data-uid="${uid}" data-name="${n}" data-act="accept" aria-label="Accept friend request" title="Accept friend request">✓</button>`;
+      } else {
+        addBtn = `<button class="lb-add" data-uid="${uid}" data-name="${n}" data-act="add" aria-label="Add friend" title="Add friend">＋</button>`;
+      }
+    }
     return `<div class="lb-row${r.isYou ? " lb-you" : ""}${rank <= 3 ? " lb-top" + rank : ""}">
       <div class="lb-rank">${medal}</div>
       ${img}
@@ -156,9 +169,22 @@ const Leaderboard = {
     /* 榜上＋掣：事件委派式逐粒綁，撳咗就送好友邀請 */
     const bindAddBtns = (el) => {
       el.querySelectorAll(".lb-add").forEach(btn => {
-        btn.onclick = (ev) => {
+        btn.onclick = async (ev) => {
           ev.stopPropagation();
-          if (window.Friends && Friends.addByUid) Friends.addByUid(btn.dataset.uid, btn.dataset.name);
+          btn.disabled = true;
+          if (btn.dataset.act === "accept") {
+            if (window.Friends && Friends.acceptRequest) {
+              await Friends.acceptRequest(btn.dataset.uid);
+            } else if (window.SupabaseAuth && SupabaseAuth.respondFriendRequest) {
+              await SupabaseAuth.respondFriendRequest(btn.dataset.uid, true);
+            }
+            await this.render();
+            return;
+          }
+          if (window.Friends && Friends.addByUid) {
+            await Friends.addByUid(btn.dataset.uid, btn.dataset.name);
+            await this.render();   /* 重新攞 relation → 顯示 PENDING */
+          }
         };
       });
     };
