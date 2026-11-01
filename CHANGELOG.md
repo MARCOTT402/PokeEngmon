@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.17.0...v1.18.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** add baseExp data for all 649 species (per-KO EXP rewards) ([eeb196d](https://github.com/MARCOTT402/PokeEngmon/commit/eeb196d2193149d3f7edff0b90c5c47a1296e2de))
+
 # [1.17.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.16.0...v1.17.0) (2026-11-01)
 
 
