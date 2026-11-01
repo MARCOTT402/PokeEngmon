@@ -212,24 +212,27 @@ const BattleUI = (() => {
   const TIER_META = {
     easy: { label: "Easy", short: "E", mult: 0.7, note: "Warm-up · foe levels lowered" },
     normal: { label: "Normal", short: "N", mult: 1.0, note: "Standard test" },
-    hard: { label: "Hard", short: "H", mult: 1.6, note: "Outnumbered · smarter foe" },
+    hard: { label: "Hard", short: "H", mult: 1.6, note: "Best nature · smarter foe" },
     inferno: { label: "Inferno", short: "I", mult: 2.5, note: "Level Sync · perfect foe" }
   };
   const DIFFICULTY_PRESETS = {
     easy: { ivs: "zero", evs: "none", nature: "neutral", moves: "weak2", iq: 0 },
     normal: { ivs: "random", evs: "none", nature: "random", moves: "full", iq: 1 },
-    hard: { ivs: "perfect", evs: "main", nature: "best", moves: "full", iq: 2 },
+    hard: { ivs: "random", evs: "none", nature: "best", moves: "full", iq: 2 },
     inferno: { ivs: "perfect", evs: "main", nature: "best", moves: "full", iq: 3 }
   };
 
-  /* 難度 → 敵人等級（Easy 大隊有額外 -10% 飽和補償） */
+  /* 難度 → 敵人等級（Easy 大隊有額外 -10% 飽和補償；Normal 喺 Junior 模式放寬到 0.95×） */
   function foeLevel(trainer, tier) {
     const base = trainer.baseLevel;
     if (tier === "easy") {
       const v = Math.round(base * 0.9 * (trainer.team.length >= 6 ? 0.9 : 1));
       return Math.max(1, Math.min(100, v));
     }
-    if (tier === "hard") return Math.max(1, Math.min(100, Math.round(base * 1.1)));
+    if (tier === "hard") return Math.max(1, Math.min(100, base));
+    if (tier === "normal" && typeof getCurveMode === "function" && getCurveMode() === "junior") {
+      return Math.max(1, Math.min(100, Math.round(base * 0.95)));
+    }
     return base;
   }
   function levelRangeText(trainer) {
@@ -241,10 +244,10 @@ const BattleUI = (() => {
   function infernoSyncLevel(trainer) {
     return Math.min(100, trainer.baseLevel + 2);
   }
-  /* 玩家出戰數：Easy +1、Hard/Inferno −1（最少 1） */
+  /* 玩家出戰數：Easy +1、Normal/Hard 同數、Inferno −1（最少 1） */
   function playerSlots(aiCount, tier) {
     if (tier === "easy") return Math.min(6, aiCount + 1);
-    if (tier === "hard" || tier === "inferno") return Math.max(1, aiCount - 1);
+    if (tier === "inferno") return Math.max(1, aiCount - 1);
     return aiCount;
   }
 
