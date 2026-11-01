@@ -396,9 +396,8 @@ const BattleUI = (() => {
       const unlocked = trainerUnlockedAt(st, i);
       const tp = trainerProgress(st, t.id);
       const clearedCount = TIERS.filter(x => tp[x] > 0).length;
-      const hardOpen = unlocked && tierUnlocked(st, t, "hard");
-      const infernoOpen = unlocked && tierUnlocked(st, t, "inferno");
-      const frame = infernoOpen ? "frame-rainbow" : hardOpen ? "frame-purple" : "";
+      /* 火焰邊框代表「已打贏」而唔係「已解鎖」，否則清完 Normal 就全場紫火 */
+      const frame = tp.inferno > 0 ? "frame-rainbow" : tp.hard > 0 ? "frame-purple" : "";
       const rank = String(i + 1).padStart(2, "0");
       const mastery = unlocked
         ? `${TIERS.map(x => tierChip(tp, x, tierUnlocked(st, t, x))).join("")}<span class="at-count">${clearedCount}/4</span>`
