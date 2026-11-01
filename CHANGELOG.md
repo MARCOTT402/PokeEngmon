@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.21.2...v1.22.0) (2026-11-01)
+
+
+### Features
+
+* **battle:** rebalance hard tier and soften normal for junior mode ([7617653](https://github.com/MARCOTT402/PokeEngmon/commit/76176532c8b0fe1b9c6779b9dd01c5756733575e))
+
 ## [1.21.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.21.1...v1.21.2) (2026-11-01)
 
 
