@@ -17,8 +17,10 @@ const BattleUI = (() => {
   let forfeited = false;   /* 玩家撳 RUN 投降 */
   let pendingSwitch = false;
   let battleSpeed = 1;      /* 1 = NORMAL、2 = FAST（只限 AI 對戰） */
-  let pvpMatchTimer = null;  /* PvP 配對計時（模擬用，Task 9 換真配對） */
   let pvpTeamSize = 3;       /* 抽中嘅場制 */
+  let pvpBattle = null;      /* 真 PvP：battles row（含 seed） */
+  let pvpSide = "p1";        /* 我喺 row 入面係 p1 定 p2 */
+  let pvpCancel = null;      /* 配對輪詢取消 fn */
   const toast = (m) => App.toast(m);
 
   /* ---------- 入口 ---------- */
@@ -136,53 +138,55 @@ const BattleUI = (() => {
   }
 
   function showMatchPanel() {
+    /* 未登入冇得玩 PvP（auth.uid() 係 RLS 必須） */
+    if (!(window.SupabaseAuth && SupabaseAuth.isLoggedIn())) {
+      toast("Log in first to battle other players!");
+      return;
+    }
     document.getElementById("pvp-match-panel").style.display = "flex";
     document.getElementById("pvp-matching").style.display = "flex";
     document.getElementById("pvp-matched").style.display = "none";
-    /* TODO Task 9：接 Supabase matchmaking；而家先模擬配對延遲 */
-    clearTimeout(pvpMatchTimer);
-    pvpMatchTimer = setTimeout(onMatched, 1600 + Math.random() * 1400);
-  }
-
-  function cancelMatch() {
-    clearTimeout(pvpMatchTimer);
-    document.getElementById("pvp-match-panel").style.display = "none";
-  }
-
-  function onMatched() {
-    /* 配對成功 → 抽 1v1 / 3v3 / 6v6（唔會多過玩家持有數） */
+    /* 場制隨機抽 1/3/6，唔會多過自己持有數 */
     const st = loadState();
     const ownedCount = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length).length;
     const size = Math.min([1, 3, 6][Math.floor(Math.random() * 3)], Math.max(1, ownedCount));
     pvpTeamSize = size;
-    /* fallback 對手隊伍（Task 9 換成真對手隊伍） */
-    foeTeamEntries = makeFallbackFoeTeam(size);
+    pvpCancel = PvpNet.matchmake(size, {
+      onMatched, onTimeout: onMatchTimeout, onError: onMatchError
+    });
+  }
+
+  function cancelMatch() {
+    if (pvpCancel) { pvpCancel(); pvpCancel = null; }
+    document.getElementById("pvp-match-panel").style.display = "none";
+  }
+
+  function onMatchTimeout() {
+    pvpCancel = null;
+    document.getElementById("pvp-match-panel").style.display = "none";
+    toast("No opponent found. Try again later!");
+  }
+
+  function onMatchError(e) {
+    console.warn("[PvP] match error:", e);
+    pvpCancel = null;
+    document.getElementById("pvp-match-panel").style.display = "none";
+    toast("Matchmaking failed: " + (e && e.message ? e.message.slice(0, 60) : "network error"));
+  }
+
+  function onMatched(battle, side, foeUid) {
+    pvpCancel = null;
+    pvpBattle = battle;
+    pvpSide = side;
+    pvpTeamSize = battle.team_size;
     document.getElementById("pvp-matching").style.display = "none";
     document.getElementById("pvp-matched").style.display = "flex";
-    document.getElementById("pvp-format-value").textContent = size + "v" + size;
+    document.getElementById("pvp-format-value").textContent = battle.team_size + "v" + battle.team_size;
   }
 
   function confirmFormat() {
     document.getElementById("pvp-match-panel").style.display = "none";
     openTeamSelect(() => launchBattle(), pvpTeamSize);
-  }
-
-  /* fallback 對手：隨機 pool（Task 9 前用） */
-  function makeFallbackFoeTeam(size) {
-    const pool = [
-      { dexId: 19, moves: ["tackle", "tail-whip"] },
-      { dexId: 16, moves: ["tackle", "sand-attack"] },
-      { dexId: 21, moves: ["tackle", "leer"] },
-      { dexId: 43, moves: ["absorb", "growth"] },
-      { dexId: 10, moves: ["tackle", "harden"] },
-      { dexId: 13, moves: ["tackle", "string-shot"] }
-    ];
-    const team = [];
-    for (let i = 0; i < size; i++) {
-      const p = pool[Math.floor(Math.random() * pool.length)];
-      team.push({ dexId: p.dexId, level: 8 + Math.floor(Math.random() * 6), ivs: {}, evs: {}, nature: "hardy", moves: p.moves });
-    }
-    return team;
   }
 
   function openTeamSelect(cb, fixedSize) {
@@ -253,8 +257,53 @@ const BattleUI = (() => {
   }
 
   function launchBattle() {
+    if (mode === "pvp") { launchPvpBattle(); return; }
     mySide = "p1"; foeSide = "p2";
-    state = BattleState.create(teamEntries, foeTeamEntries);
+    state = BattleState.create(teamEntries, foeTeamEntries, { seed: (Math.random() * 0xFFFFFFFF) >>> 0 });
+    afterLaunch();
+  }
+
+  /* PvP：交隊伍 → 等對手 → 用 row 嘅 seed 開戰（雙方模擬一致） */
+  async function launchPvpBattle() {
+    narrate("");
+    try {
+      await PvpNet.submitTeam(pvpBattle.id, pvpSide, teamEntries.map(serializeEntry));
+      toast("Waiting for opponent's team…");
+      const w = PvpNet.waitForTeams(pvpBattle.id);
+      const b = await raceTimeout(w, PvpNet.ACTION_TIMEOUT_MS);
+      w.cancel && w.cancel();
+      if (!b || b.state === "finished") { toast("Opponent left. Battle cancelled."); pvpBattle = null; openMenu(); return; }
+      const foeTeam = (pvpSide === "p1" ? b.p2_team : b.p1_team) || [];
+      if (!foeTeam.length) { toast("Opponent left. Battle cancelled."); pvpBattle = null; openMenu(); return; }
+      foeTeamEntries = foeTeam;
+      mySide = pvpSide; foeSide = pvpSide === "p1" ? "p2" : "p1";
+      /* 注意：state 嘅 p1/p2 要跟 row（唔係跟我邊邊），兩邊客戶端先會一致 */
+      const p1T = pvpSide === "p1" ? teamEntries : foeTeamEntries;
+      const p2T = pvpSide === "p1" ? foeTeamEntries : teamEntries;
+      state = BattleState.create(p1T, p2T, { seed: Number(b.seed) >>> 0 });
+      afterLaunch();
+    } catch (e) {
+      console.warn("[PvP] launch error:", e);
+      toast("Network error: " + (e && e.message ? e.message.slice(0, 60) : ""));
+      pvpBattle = null;
+      openMenu();
+    }
+  }
+
+  function raceTimeout(promise, ms) {
+    return Promise.race([promise, new Promise(r => setTimeout(() => r(null), ms))]);
+  }
+
+  /* 隊伍序列化：只帶開戰需要嘅欄位（入得 jsonb） */
+  function serializeEntry(e) {
+    return {
+      chainKey: e.chainKey || null, stage: e.stage || 1, branch: e.branch || 0, dexId: e.dexId,
+      level: e.level, ivs: e.ivs || {}, evs: e.evs || {},
+      nature: e.nature || "hardy", moves: (e.moves || []).filter(Boolean).slice(0, 4)
+    };
+  }
+
+  function afterLaunch() {
     acting = true;   /* intro 期間鎖住操作 */
     forfeited = false;
     /* 速度切換只限 AI 對戰；結算畫面重設 */
@@ -1004,13 +1053,57 @@ const BattleUI = (() => {
   /* ---------- 回合 resolve ---------- */
   function resolveTurn(playerAction) {
     state.turn += 1;
-    const foeAction = pickAIAction();
+    if (mode === "pvp") { resolvePvpTurn(playerAction); return; }
+    runTurnResolution(playerAction, pickAIAction());
+  }
 
+  /* PvP：交 action → 等對手同一 turn 嘅 action → 雙方各自模擬（seed 一致） */
+  async function resolvePvpTurn(playerAction) {
+    const turnNo = state.turn;
+    narrate("Waiting for opponent…");
+    try {
+      await PvpNet.submitAction(pvpBattle.id, pvpSide, turnNo, playerAction);
+      const foeCol = pvpSide === "p1" ? "p2_action" : "p1_action";
+      const w = PvpNet.waitForOpponentAction(pvpBattle.id, foeCol, turnNo);
+      const b = await raceTimeout(w, PvpNet.ACTION_TIMEOUT_MS);
+      w.cancel && w.cancel();
+      if (!b) {
+        /* 對手斷線（45s 冇郁）：判我贏並寫低結果 */
+        await PvpNet.finishBattleRow(pvpBattle.id, pvpSide);
+        state.winner = mySide; state.finished = true;
+        await say("Opponent disconnected. You win!");
+        finishBattle();
+        return;
+      }
+      if (b.state === "finished") {
+        /* 對手投降／完場：用 row 嘅 winner */
+        state.finished = true;
+        state.winner = b.winner === "p1" ? "p1" : b.winner === "p2" ? "p2" : mySide;
+        await say(state.winner === mySide ? "Opponent forfeited. You win!" : "The battle has ended.");
+        finishBattle();
+        return;
+      }
+      const raw = b[foeCol] || {};
+      const foeAction = raw.kind === "switch" ? { kind: "switch", idx: raw.idx } : { kind: "move", moveIdx: raw.moveIdx };
+      runTurnResolution(playerAction, foeAction);
+    } catch (e) {
+      console.warn("[PvP] turn error:", e);
+      toast("Network error: " + (e && e.message ? e.message.slice(0, 60) : ""));
+      acting = false;
+      showMainMenu();
+    }
+  }
+
+  function runTurnResolution(playerAction, foeAction) {
     const myMove = playerAction.kind === "move" ? moveInfo(myActive().moves[playerAction.moveIdx].slug) : null;
     const foeMove = foeAction.kind === "move" ? moveInfo(foeActive().moves[foeAction.moveIdx].slug) : null;
     const myAct = { kind: playerAction.kind, priority: myMove ? myMove.priority : 6, speed: Battle.effectiveStat(myActive(), "spe"), player: true, action: playerAction };
     const foeAct = { kind: foeAction.kind, priority: foeMove ? foeMove.priority : 6, speed: Battle.effectiveStat(foeActive(), "spe"), player: false, action: foeAction };
-    const order = Battle.turnOrder(myAct, foeAct);
+    /* PvP 同步關鍵：turnOrder 同速 tiebreak 食 RNG，
+       兩邊客戶端必須用同一次序傳參（p1 行先），否則同一個 random 會出相反結果 */
+    const firstAct = mySide === "p1" ? myAct : foeAct;
+    const secondAct = mySide === "p1" ? foeAct : myAct;
+    const order = Battle.turnOrder(firstAct, secondAct);
 
     narrate("");
     (async () => {
@@ -1088,8 +1181,10 @@ const BattleUI = (() => {
         acting = false;
         return;
       }
-      /* 對手暈咗：AI 自動換（收回 → 拋球召出） */
-      if (foeActive().hp <= 0 && BattleState.hasUsable(foe().team)) {
+      /* 對手暈咗：AI 自動換（收回 → 拋球召出）；
+         PvP 唔可以代揀 —— 對手客戶端會自己彈強制換寵，
+         佢嘅 switch 會做下一個 turn 嘅 action 傳返嚟 */
+      if (mode !== "pvp" && foeActive().hp <= 0 && BattleState.hasUsable(foe().team)) {
         const nextIdx = foe().team.findIndex(p => p.hp > 0);
         await animatedSwitch(foeSide, nextIdx);
       }
@@ -1125,6 +1220,12 @@ const BattleUI = (() => {
 
   /* ---------- 完結 ---------- */
   function finishBattle() {
+    /* PvP：兩邊客戶端都會行到呢度（seed 同步），寫 winner 落 row。
+       兩邊寫嘅值一樣，idempotent；冇 winner（斷線個案）就 skip */
+    if (mode === "pvp" && pvpBattle && state.winner) {
+      const w = state.winner;   /* state 視角 = row 視角（create 時已對齊 p1/p2） */
+      PvpNet.finishBattleRow(pvpBattle.id, w);
+    }
     const won = state.winner === mySide;
     (async () => {
       await say(forfeited ? "You gave up and ran away..." : won ? "You won the battle!" : "You lost...");
@@ -1162,6 +1263,10 @@ const BattleUI = (() => {
     acting = true;
     forfeited = true;
     state.winner = foeSide;
+    /* PvP：寫低完場等對手知道（唔使等佢嘅 action 先到） */
+    if (mode === "pvp" && pvpBattle) {
+      PvpNet.finishBattleRow(pvpBattle.id, pvpSide === "p1" ? "p2" : "p1");
+    }
     hideActionMenus();
     finishBattle();
   }

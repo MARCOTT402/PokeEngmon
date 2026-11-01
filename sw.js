@@ -43,6 +43,8 @@ const ASSETS = [
   "./js/evolve-scene.js",
   "./js/app.js",
   "./js/capture.js",
+  "./js/battle/rng.js",
+  "./js/battle/pvp.js",
   "./js/battle/engine.js",
   "./js/battle/state.js",
   "./js/battle/moveanim.js",

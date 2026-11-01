@@ -4,11 +4,11 @@ const vm = require("vm");
 const ctx = { console, Math, Date, JSON, require, window: {} };
 vm.createContext(ctx);
 /* 所有 js 喺同一個 context 跑（const 跨 script 先互通） */
-const src = ["js/gens-data.js", "js/data.js", "js/pokemon.js", "js/battle/engine.js", "js/battle/state.js"]
+const src = ["js/gens-data.js", "js/data.js", "js/pokemon.js", "js/battle/rng.js", "js/battle/engine.js", "js/battle/state.js"]
   .map(p => fs.readFileSync(p, "utf8")).join("\n;\n");
 vm.runInContext(src, ctx, { filename: "battle-bundle.js" });
-const { Battle, BattleState, moveInfo, entryCurrentSpecies, calcStats } =
-  vm.runInContext("({Battle, BattleState, moveInfo, entryCurrentSpecies, calcStats})", ctx);
+const { Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats } =
+  vm.runInContext("({Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats})", ctx);
 
 const POKEMON_DEX = JSON.parse(fs.readFileSync("data/pokemon-151.json"));
 const MOVES = JSON.parse(fs.readFileSync("data/moves.json")).moves;
@@ -281,6 +281,46 @@ while (!BattleState.checkFinished(state) && guard++ < 100) {
 }
 t("對戰有勝負", state.finished && state.winner);
 console.log("對戰結果:", state.winner, "回合:", state.turn);
+
+/* ---------- 種子同步（PvP 地基）：同 seed → 完全一致 ---------- */
+/* 用固定劇本（固定行動序）跑兩場同 seed 戰鬥，log 要逐句一樣；
+   第三場用唔同 seed，log 要有分歧（機會率極高，唔係證明，只係 sanity） */
+function scriptedBattle(seed) {
+  const mkT = (dexId, moves) => [{ dexId, level: 20, ivs: {}, evs: {}, nature: "hardy", moves }];
+  const st = BattleState.create(
+    mkT(4, ["ember", "scratch", "growl", "smokescreen"]),
+    mkT(7, ["water-gun", "tackle", "tail-whip", "bubble"]),
+    { seed }
+  );
+  let guard = 0;
+  while (!BattleState.checkFinished(st) && guard++ < 100) {
+    st.turn++;
+    /* 固定劇本：雙方輪流出第 (turn % 2) 招，等兩場食嘅 RNG call 序完全一樣 */
+    const myMove = st.turn % 2, foeMove = st.turn % 2;
+    const myAct = { kind: "move", priority: ctx.moveInfo(st.p1.team[0].moves[myMove].slug).priority, speed: Battle.effectiveStat(st.p1.team[0], "spe") };
+    const foeAct = { kind: "move", priority: ctx.moveInfo(st.p2.team[0].moves[foeMove].slug).priority, speed: Battle.effectiveStat(st.p2.team[0], "spe") };
+    Battle.turnOrder(myAct, foeAct).forEach(act => {
+      if (st.finished) return;
+      const side = act === myAct ? "p1" : "p2";
+      BattleState.executeMove(st, side, side === "p1" ? myMove : foeMove);
+      BattleState.checkFinished(st);
+    });
+    BattleState.endTurnResidual(st, "p1");
+    BattleState.endTurnResidual(st, "p2");
+    BattleState.endTurnField(st);
+  }
+  return st;
+}
+const det1 = scriptedBattle(12345);
+const rngTail1 = BattleRng.state();
+const det2 = scriptedBattle(12345);
+const rngTail2 = BattleRng.state();
+t("同 seed：勝者一致", det1.winner === det2.winner);
+t("同 seed：log 逐句一致", JSON.stringify(det1.log) === JSON.stringify(det2.log));
+t("同 seed：尾血一致", det1.p1.team[0].hp === det2.p1.team[0].hp && det1.p2.team[0].hp === det2.p2.team[0].hp);
+t("同 seed：RNG 尾態一致", rngTail1 === rngTail2);
+const det3 = scriptedBattle(99999);
+t("唔同 seed：log 有分歧", JSON.stringify(det1.log) !== JSON.stringify(det3.log));
 
 console.log(`\n${pass} PASS, ${fail} FAIL`);
 process.exit(fail ? 1 : 0);
