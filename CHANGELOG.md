@@ -1,3 +1,10 @@
+## [1.21.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.21.1...v1.21.2) (2026-11-01)
+
+
+### Bug Fixes
+
+* **battle:** announce who used a battle item before the HP recovery line ([d1b9c8e](https://github.com/MARCOTT402/PokeEngmon/commit/d1b9c8e7177fe60f8e91f8d868fc6e64fc47e10c))
+
 ## [1.21.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.21.0...v1.21.1) (2026-11-01)
 
 
