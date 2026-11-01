@@ -531,10 +531,12 @@ const BattleState = (() => {
     "full-restore": { heal: 999, cure: true, label: "Full Restore" }
   };
 
-  function useItem(state, side, itemId) {
+  function useItem(state, side, itemId, actorName) {
     const p = active(state, side);
     const it = ITEMS[itemId];
     if (!it || !p || p.hp <= 0) return false;
+    /* 先講邊個用咗咩道具，再講回復幾多 */
+    if (actorName) log(state, `${actorName} used a ${it.label}!`);
     const before = p.hp;
     p.hp = Math.min(p.maxHp, p.hp + it.heal);
     const healed = p.hp - before;

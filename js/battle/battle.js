@@ -1691,7 +1691,8 @@ const BattleUI = (() => {
           await animatedSwitch(side, act.action.idx);
         } else if (act.action.kind === "item") {
           const logStart = state.log.length;
-          BattleState.useItem(state, side, act.action.itemId);
+          const who = side === mySide ? "You" : (aiTrainer ? aiTrainer.name : "The foe");
+          BattleState.useItem(state, side, act.action.itemId, who);
           render();
           for (const l of state.log.slice(logStart)) await say(l.msg);
           await sleep(320);
