@@ -43,6 +43,7 @@ const ASSETS = [
   "./js/pokedex.js",
   "./js/leaderboard.js",
   "./js/friends.js",
+  "./js/quests.js",
   "./js/calendar.js",
   "./js/evolve-scene.js",
   "./js/app.js",

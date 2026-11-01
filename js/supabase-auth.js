@@ -270,10 +270,27 @@ const SupabaseAuth = {
     });
   },
 
-  /* ---------- RPC：能量點狀態（跨日 roll／登入 +1／答題 +1） ---------- */
+  /* ---------- RPC：能量點狀態（跨日 roll／每日任務完成次數） ---------- */
   async energyStatus(questionsToday) {
     if (!this.currentUser()) return null;
     return this._rpc("battle_energy_status", {
+      p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0))
+    });
+  },
+
+  /* ---------- RPC：每日任務板（回傳 quests / claimed / claimable / points） ---------- */
+  async battleQuestStatus(questionsToday) {
+    if (!this.currentUser()) return null;
+    return this._rpc("battle_quest_status", {
+      p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0))
+    });
+  },
+
+  /* ---------- RPC：領取每日任務獎勵（server 會 clamp 到未領數量） ---------- */
+  async claimBattleQuests(count, questionsToday) {
+    if (!this.currentUser()) return null;
+    return this._rpc("claim_battle_quests", {
+      p_count: Math.max(1, Math.floor(Number(count) || 1)),
       p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0))
     });
   },

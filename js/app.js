@@ -20,9 +20,11 @@ const App = {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
     document.body.classList.toggle("capture-mode", id === "view-capture");
-    /* Friends dashboard 喺桌面用闊版面（≥768px 兩欄） */
+    /* Friends / Daily Quests dashboard 喺桌面用闊版面（≥768px 兩欄） */
     const appEl = document.getElementById("app");
-    if (appEl) appEl.classList.toggle("app-wide", id === "view-friends");
+    if (appEl) appEl.classList.toggle("app-wide", id === "view-friends" || id === "view-quests");
+    /* 離開任務板就停倒數 timer */
+    if (id !== "view-quests" && typeof Quests !== "undefined" && Quests.stopTimer) Quests.stopTimer();
     window.scrollTo(0, 0);
   },
 
@@ -1981,6 +1983,11 @@ const App = {
     if (homeFriendsBtn) homeFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
     const topFriendsBtn = document.getElementById("btn-top-friends");
     if (topFriendsBtn) topFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
+    const homeQuestsBtn = document.getElementById("btn-home-quests");
+    if (homeQuestsBtn) homeQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+    const topQuestsBtn = document.getElementById("btn-top-quests");
+    if (topQuestsBtn) topQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+    if (typeof Quests !== "undefined" && Quests.refreshBadge) Quests.refreshBadge();
     if (typeof BattleUI !== "undefined") BattleUI.bind();
     document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
     document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
@@ -2288,3 +2295,6 @@ document.addEventListener("DOMContentLoaded", () => {
     dismissLoading();
   });
 });
+
+/* 其他模組（friends.js / quests.js）用 window.App 判斷，補返個全域引用 */
+window.App = App;

@@ -718,16 +718,15 @@ function addPracticeRecord(record) {
   /* 日曆色階：確保當日至少有一筆「有練習」標記（雲端合併用） */
   if (!st.practiceDays) st.practiceDays = {};
   st.practiceDays[key] = (st.practiceDays[key] || 0) + 1;
-  /* 答題 → 能量點：今日每滿 10 題 +1 EP（Energy 模組負責每日 3 次上限） */
+  /* 答題 → 每日任務：每滿 10 題完成 1 次（要玩家自己 CLAIM 先入帳） */
   if (typeof Energy !== "undefined") {
     const hadBank = !!(st.energy && typeof st.energy === "object");
-    const before = hadBank ? (Number(st.energy.points) || 0) : 0;
     const qToday = (st.records[key] || []).reduce((n, r) => n + (Number(r.total) || 0), 0);
-    Energy.syncQuiz(st, qToday);
-    const after = st.energy ? (Number(st.energy.points) || 0) : 0;
-    if (hadBank && after > before && typeof App !== "undefined" && App.toast) {
-      App.toast(`⚡ +${after - before} Energy (${after}/${Energy.POOL_MAX})`);
+    const fresh = Energy.syncQuiz(st, qToday);
+    if (hadBank && fresh > 0 && typeof App !== "undefined" && App.toast) {
+      App.toast(`🎯 ${fresh} quest${fresh === 1 ? "" : "s"} ready to claim`);
     }
+    if (window.Quests && Quests.refresh) Quests.refresh();
   }
   const streak = calcStreak();
   if (streak > (st.bestStreak || 0)) st.bestStreak = streak;

@@ -44,9 +44,10 @@ const BattleUI = (() => {
   }
 
   function quotaText(g) {
-    if (g.allowed) return `⚡ ${g.points}/${g.max} Energy · 1 per battle · +1 every 10 questions`;
-    if (g.noPoints) return `⚡ Out of Energy — answer 10 questions to earn 1 more`;
-    return `⚡ Daily battle limit ${g.spentToday}/${g.spendCap} reached — come back tomorrow`;
+    if (g.allowed) return `⚡ ${g.points} Energy · 1 per battle`;
+    return g.claimable > 0
+      ? `⚡ No Energy — claim ${g.claimable} daily quest${g.claimable === 1 ? "" : "s"}`
+      : "⚡ No Energy — answer 10 questions to complete a daily quest";
   }
 
   /* 入口閘門：冇 EP 就 toast 講原因，唔開戰 */
@@ -342,18 +343,25 @@ const BattleUI = (() => {
     const g = gateStatus();
     const pips = document.getElementById("energy-pips");
     if (!pips) return;
+    /* 8 格 = 今日 8 次任務：已領 = on，完成未領 = ready */
     let html = "";
-    for (let i = 0; i < g.max; i++) html += `<i class="energy-pip${i < g.points ? " on" : ""}"></i>`;
+    for (let i = 0; i < g.dailyMax; i++) {
+      const on = i < g.claimed;
+      const ready = !on && i < g.quests;
+      html += `<i class="energy-pip${on ? " on" : ""}${ready ? " ready" : ""}"></i>`;
+    }
     pips.innerHTML = html;
     const count = document.getElementById("energy-count");
-    if (count) count.textContent = `${g.points} / ${g.max}`;
+    if (count) count.textContent = `⚡ ${g.points}`;
     const note = document.getElementById("energy-note");
     if (note) {
-      note.textContent = g.allowed
-        ? `1 EP per battle · 1 EP every 10 questions · ${g.spentToday}/${g.spendCap} used today`
-        : g.noPoints
-          ? "Out of Energy — answer 10 questions to earn 1 EP"
-          : `Daily battle limit ${g.spentToday}/${g.spendCap} — resets tomorrow`;
+      if (g.claimable > 0) {
+        note.textContent = `${g.claimable} quest${g.claimable === 1 ? "" : "s"} ready — open Daily Quests to claim`;
+      } else if (g.done) {
+        note.textContent = `All 8 quests claimed today · 1 EP per battle`;
+      } else {
+        note.textContent = `Today ${g.quests}/${g.dailyMax} quests · ${g.needQuestions} more question${g.needQuestions === 1 ? "" : "s"} for the next`;
+      }
     }
     const card = document.getElementById("battle-energy");
     if (card) card.classList.toggle("energy-empty", !g.allowed);

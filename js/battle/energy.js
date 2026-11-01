@@ -1,19 +1,16 @@
 /* ============================================================
    PokeEngmon - 能量點 Energy Points (EP)
    1 EP = 1 場對戰（AI / PvP，任何難度同價）
-   獲取：每日登入 +1；每完成 10 題 +1（每日最多 3 次）
-   每日獲取上限 4、持有上限 8、每日消耗上限 4
-   新手初始 5 點（由 ensure() 首次補上）
-   純本機狀態；server 權威版本留待 settle_battle_v2 / spend_energy
+   唯一來源：每日任務「努力學習」——每 10 題 = 1 次結算，可 CLAIM 1⚡
+   每日最多完成 8 次；能量可累積、冇持有上限；冇每日消耗上限
+   （v1.25.0 起取消每日登入 +1，避免同每日任務混淆）
+   純本機狀態；登入時 server ledger 權威（battle_quest_status / claim_battle_quests）
    ============================================================ */
 
 const Energy = (() => {
-  const POOL_MAX = 8;
-  const DAILY_EARN_MAX = 4;
-  const DAILY_SPEND_MAX = 4;
   const QUEST_STEP = 10;
-  const QUEST_MAX = 3;
-  const NEW_PLAYER = 5;
+  const DAILY_QUEST_MAX = 8;
+  const OLD_NEW_PLAYER = 5;   /* 舊帳戶相容用；新帳戶由 0 開始，只靠任務賺 */
 
   function today() {
     return (typeof dateKey === "function") ? dateKey(Date.now()) : "";
@@ -21,81 +18,93 @@ const Energy = (() => {
 
   function bank(st) {
     if (!st.energy || typeof st.energy !== "object") {
-      /* 新玩家：直接派 5 點，當日登入獎勵已計（唔會即刻變 6） */
-      st.energy = { points: NEW_PLAYER, day: today(), earned: 0, spent: 0, quests: 0, login: true };
+      /* 新玩家：0 粒，必須完成每日任務先有能量 */
+      st.energy = { points: 0, day: today(), quests: 0, claimed: 0, carried: 0, spent: 0 };
+      return st.energy;
     }
     const e = st.energy;
-    if (!Number.isFinite(Number(e.points))) e.points = NEW_PLAYER;
-    e.points = Math.max(0, Math.min(POOL_MAX, Number(e.points)));
     if (e.day !== today()) {
+      /* 跨日：保留能量結餘，未領取嘅任務帶去下一日（carried） */
+      const q = Math.max(0, Number(e.quests) || 0);
+      const c = Number(e.claimed != null ? e.claimed : q) || 0;   /* 舊 ledger 冇 claimed = 已派 */
+      e.carried = Math.max(0, Number(e.carried) || 0) + Math.max(0, q - c);
       e.day = today();
-      e.earned = 0;
-      e.spent = 0;
       e.quests = 0;
-      e.login = false;
+      e.claimed = 0;
+      e.spent = 0;
     }
-    e.earned = Math.max(0, Number(e.earned) || 0);
-    e.spent = Math.max(0, Number(e.spent) || 0);
+    e.points = Math.max(0, Number(e.points) || 0);
     e.quests = Math.max(0, Number(e.quests) || 0);
+    e.claimed = Math.max(0, Math.min(e.quests, Number(e.claimed) || 0));
+    e.carried = Math.max(0, Number(e.carried) || 0);
+    e.spent = Math.max(0, Number(e.spent) || 0);
     return e;
   }
 
+  /* 不再派登入獎勵；只保證 ledger 存在 */
   function ensure(st) {
+    const had = !!(st.energy && typeof st.energy === "object");
     const e = bank(st);
-    /* 每日登入 +1（每日第一次開啟 app 時） */
-    if (!e.login) {
-      e.login = true;
-      add(e, 1);
-      if (typeof saveState === "function") saveState();
-    }
+    if (!had && typeof saveState === "function") saveState();
     return e;
   }
 
-  function add(e, n) {
-    const room = Math.max(0, DAILY_EARN_MAX - e.earned);
-    const gain = Math.min(n, room, Math.max(0, POOL_MAX - e.points));
-    e.points += gain;
-    e.earned += gain;
-    return gain;
-  }
-
-  /* 答題進度：今日每滿 10 題派 1 EP（最多 3 次／日），唔會重複派 */
+  /* 今日答題數 → 已完成任務次數；回傳今次新完成幾多個（唔會自動派獎） */
   function syncQuiz(st, questionsToday) {
     const e = bank(st);
-    const blocks = Math.min(QUEST_MAX, Math.floor((Number(questionsToday) || 0) / QUEST_STEP));
-    if (blocks > e.quests) {
-      const diff = blocks - e.quests;
-      e.quests = blocks;
-      add(e, diff);
-      if (typeof saveState === "function") saveState();
-      return true;
-    }
-    return false;
+    const q = Math.max(0, Number(questionsToday) || 0);
+    const blocks = Math.min(DAILY_QUEST_MAX, Math.floor(q / QUEST_STEP));
+    if (blocks <= e.quests) return 0;
+    const fresh = blocks - e.quests;
+    e.quests = blocks;
+    if (typeof saveState === "function") saveState();
+    return fresh;
+  }
+
+  /* 領取已完成任務；n 會被 clamp 到「未領取」數量，先領跨日帶落嚟嘅 */
+  function claim(st, n) {
+    const e = ensure(st);
+    const fromCarried = Math.max(0, e.carried);
+    const fromToday = Math.max(0, e.quests - e.claimed);
+    const count = Math.min(Math.max(0, Number(n) || 0), fromCarried + fromToday);
+    if (!count) return 0;
+    const takeCarried = Math.min(count, fromCarried);
+    e.carried -= takeCarried;
+    e.claimed += count - takeCarried;
+    e.points += count;
+    if (typeof saveState === "function") saveState();
+    return count;
   }
 
   function status(st) {
     const e = ensure(st);
-    const spendCapped = e.spent >= DAILY_SPEND_MAX;
-    const noPoints = e.points <= 0;
+    const q = (typeof questionsToday === "function")
+      ? questionsToday(st, dateKey(Date.now()))
+      : (Number(st.questionsTodayCache) || 0);
+    const claimable = Math.max(0, e.quests - e.claimed) + Math.max(0, e.carried);
+    const done = e.quests >= DAILY_QUEST_MAX;
     return {
       points: e.points,
-      max: POOL_MAX,
-      spentToday: e.spent,
-      earnedToday: e.earned,
       quests: e.quests,
-      spendCap: DAILY_SPEND_MAX,
-      allowed: !spendCapped && !noPoints,
-      noPoints,
-      spendCapped,
-      needQuestions: QUEST_STEP - ((Number(st.questionsTodayCache) || 0) % QUEST_STEP)
+      claimed: e.claimed,
+      carried: e.carried,
+      claimable,
+      dailyMax: DAILY_QUEST_MAX,
+      step: QUEST_STEP,
+      done,
+      questionsToday: q,
+      allowed: e.points >= 1,
+      noPoints: e.points < 1,
+      spentToday: e.spent,
+      needQuestions: done ? 0 : QUEST_STEP - (q % QUEST_STEP),
+      energy: e
     };
   }
 
-  /* 結算時扣 1 EP；回傳 true = 扣成功 */
+  /* 結算扣 1 EP；回傳 true = 扣成功（冇每日消耗上限） */
   function spend(st, n) {
     const e = ensure(st);
     const cost = Math.max(1, Number(n) || 1);
-    if (e.spent >= DAILY_SPEND_MAX) return false;
     if (e.points < cost) return false;
     e.points -= cost;
     e.spent += cost;
@@ -103,18 +112,26 @@ const Energy = (() => {
     return true;
   }
 
-  /* 用 server 嘅 ledger 覆寫本地（登入時 server 權威，防改 localStorage 刷場） */
+  /* 用 server ledger 覆寫本地（防改 localStorage 刷能量） */
   function adopt(st, srv) {
     if (!srv || typeof srv.points !== "number") return;
     const e = bank(st);
-    e.points = Math.max(0, Math.min(POOL_MAX, srv.points));
+    e.points = Math.max(0, Number(srv.points) || 0);
     if (typeof srv.day === "string" && srv.day) e.day = srv.day;
-    e.earned = Number(srv.earned != null ? srv.earned : srv.earned_today) || 0;
+    e.quests = Math.max(0, Number(srv.quests) || 0);
+    /* 舊 schema 冇 claimed：當舊 quests 已經派過，避免重複派 */
+    e.claimed = Number(srv.claimed != null ? srv.claimed : srv.quests) || 0;
+    e.claimed = Math.max(0, Math.min(e.quests, e.claimed));
+    e.carried = Math.max(0, Number(srv.carried) || 0);
     e.spent = Number(srv.spent != null ? srv.spent : srv.spent_today) || 0;
-    e.quests = Number(srv.quests) || 0;
-    e.login = true;
     if (typeof saveState === "function") saveState();
   }
 
-  return { POOL_MAX, DAILY_EARN_MAX, DAILY_SPEND_MAX, QUEST_STEP, QUEST_MAX, NEW_PLAYER, ensure, status, spend, syncQuiz, adopt };
+  return {
+    QUEST_STEP,
+    DAILY_QUEST_MAX,
+    QUEST_MAX: DAILY_QUEST_MAX,   /* 舊程式相容 */
+    NEW_PLAYER: OLD_NEW_PLAYER,
+    ensure, status, spend, syncQuiz, claim, adopt
+  };
 })();
