@@ -1604,7 +1604,10 @@ const BattleUI = (() => {
   function chooseItem(itemId) {
     if (acting) return;
     if (myFullRestores <= 0) return;
-    if (myActive().hp <= 0) { toast("This Pokémon can't use an item."); return; }
+    const me = myActive();
+    if (me.hp <= 0) { toast("This Pokémon can't use an item."); return; }
+    /* 滿血又冇異常狀態：唔好浪費唯一一支 */
+    if (me.hp >= me.maxHp && !me.status) { toast("It won't have any effect."); return; }
     acting = true;
     myFullRestores -= 1;
     hideActionMenus();
