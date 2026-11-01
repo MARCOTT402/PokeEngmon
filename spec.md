@@ -2,7 +2,7 @@
 
 > 版本：v1（2026-11-01）
 > 狀態：待批核（批核後照 `tasks.md` 執行）
-> 相關：`prd.md` §3.12（新增章節）、`supabase/migrations/supabase-migrate-20261101d-friends.sql`
+> 相關：`prd.md` §3.12（新增章節）、`supabase/migrations/supabase-migrate-20261101e-friends.sql`
 
 ## 1. 目標
 
@@ -23,7 +23,7 @@
 - `sw.js` 有明確 `ASSETS` 清單，新 JS 必須加入。
 - `index.html` 所有 script 帶 `?v=`，新 script 同樣。
 
-## 3. Schema（migration `supabase-migrate-20261101d-friends.sql`）
+## 3. Schema（migration `supabase-migrate-20261101e-friends.sql`）
 
 ### 3.1 `user_account`
 ```sql
@@ -92,9 +92,9 @@ alter table battles add column if not exists is_friend boolean not null default 
 | `get_battle_invites` | `()` | `table(invite_id uuid, direction text, account_uuid uuid, trainer_name text, team_size int, status text, created_at bigint, battle_id uuid)` | 最近 10 分鐘、涉及自己、status pending/accepted；`direction` ∈ `in/out` |
 | `respond_battle_invite` | `(p_invite uuid, p_accept boolean)` | `jsonb` | 只 to_uid 可回應；過期 → `expired`；decline → `declined`；accept → server roll seed、insert `battles(mode='pvp',p1=from,p2=to,is_friend=true,seed)`、invite→accepted，回 `{status:'accepted',battle_id,side:'p2',team_size,foe_uid,foe_name}` |
 | `cancel_battle_invite` | `(p_invite uuid)` | `jsonb` | 只 from_uid、只 pending → 刪 row |
-| `settle_battle` | `(p_kind text, p_result text, p_trainer_id text default null, p_battle_id uuid default null)` | `jsonb` | 新增 `pvp_friend`：贏 1💎、輸 0💎；每日最多 5 場（count finished `is_friend` battles since 今日 00:00，**排除 p_battle_id**）；`pvp_wins/losses` 照加 |
+| `settle_friend_battle` | `(p_result text)` | `jsonb` | 好友局專用（獨立 RPC，唔撞每日配額版 `settle_battle`）：贏 1💎、輸 0💎；每日最多 5 場計鑽（`friend_daily` 計數）；`pvp_wins/losses` 照加 |
 
-- 先 `drop function if exists settle_battle(text,text,text)`（舊簽名）避免 overload 混亂。
+- 好友結算**不改** `settle_battle(text,text,text,int)`（每日配額版已佔用該簽名）。
 - 所有 RPC：`revoke all ... from public, anon; grant execute ... to authenticated;`
 - 最後 `notify pgrst, 'reload schema';`
 - 先例：`get_leaderboard` 也是 `security definer` + revoke anon；好友 RPC 必須同一處理（Rule 9）。
@@ -173,7 +173,7 @@ sendFriendRequest(uid) / respondFriendRequest(requester, accept) / removeFriend(
 getMyFriends() / getFriendRequests()
 sendBattleInvite(friendUid, teamSize) / getBattleInvites()
 respondBattleInvite(inviteId, accept) / cancelBattleInvite(inviteId)
-settleBattle(kind, result, trainerId, battleId)   // 加 p_battle_id
+settleFriendBattle(result)   // 好友局專用（贏 1💎／輸 0💎）
 ```
 - 全部用現有 `_rpc` / `_rpcTable`；失敗 return `null`，由 UI toast（Rule 5：已登入唔可以靜默 fallback）。
 
@@ -181,11 +181,11 @@ settleBattle(kind, result, trainerId, battleId)   // 加 p_battle_id
 
 | 檔案 | 動作 |
 |---|---|
-| `supabase/migrations/supabase-migrate-20261101d-friends.sql` | 新增（schema + RPC） |
+| `supabase/migrations/supabase-migrate-20261101e-friends.sql` | 新增（schema + RPC） |
 | `js/battle/realtime.js` | 新增 |
 | `js/battle/pvp.js` | 改（realtime、過濾、自適應、latency、棄局） |
 | `js/friends.js` | 新增（view controller + polling + invite flow） |
-| `js/supabase-auth.js` | 改（RPC wrappers、settleBattle 加 `p_battle_id`） |
+| `js/supabase-auth.js` | 改（RPC wrappers、`settleFriendBattle`） |
 | `js/leaderboard.js` | 改（每行 `＋ Friend`） |
 | `js/battle/battle.js` | 改（`openFriendMatch`、`pvpFoeUid/Name`、results Add opponent、`foeTrainerName`、renderMenu 好友 tile） |
 | `js/app.js` | 改（friends view 入口 / back / `Friends.startPolling()`） |

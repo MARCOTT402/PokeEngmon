@@ -254,6 +254,111 @@ const SupabaseAuth = {
     });
   },
 
+  /* ---------- RPC：對戰結算 v2（EP + 訓練家 × 難度首通） ----------
+     kind: "ai" | "pvp"；result: "win" | "lose"；tier: easy/normal/hard/inferno
+     回傳 {allowed, bonus, balance, first_clear, energy, wins, losses, mastery} */
+  async settleBattleV2(kind, result, trainerId, tier, questionsToday, flawless, isFriend) {
+    if (!this.currentUser()) return null;
+    return this._rpc("settle_battle_v2", {
+      p_kind: kind,
+      p_result: result,
+      p_trainer_id: trainerId || null,
+      p_tier: tier || null,
+      p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0)),
+      p_flawless: !!flawless,
+      p_is_friend: !!isFriend
+    });
+  },
+
+  /* ---------- RPC：能量點狀態（跨日 roll／登入 +1／答題 +1） ---------- */
+  async energyStatus(questionsToday) {
+    if (!this.currentUser()) return null;
+    return this._rpc("battle_energy_status", {
+      p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0))
+    });
+  },
+
+
+  /* ---------- 好友／邀請（全部要求登入，失敗 return null） ---------- */
+
+  /* 取得（必要時生成）自己嘅 8 字好友碼 */
+  async ensureFriendCode() {
+    if (!this.currentUser()) return null;
+    return this._rpc("ensure_friend_code", {});
+  },
+
+  /* 由好友碼反查對方帳戶（回傳 trainer 資料） */
+  async resolveFriendCode(code) {
+    if (!this.currentUser()) return null;
+    return this._rpc("resolve_friend_code", { p_code: code });
+  },
+
+  /* 用關鍵字搜尋訓練家 */
+  async searchTrainers(q) {
+    if (!this.currentUser()) return null;
+    return this._rpcTable("search_trainers", { p_query: q });
+  },
+
+  /* 向指定帳戶送出好友邀請 */
+  async sendFriendRequest(uid) {
+    if (!this.currentUser()) return null;
+    return this._rpc("send_friend_request", { p_target: uid });
+  },
+
+  /* 回應好友邀請（accept 為 true 代表接受） */
+  async respondFriendRequest(requester, accept) {
+    if (!this.currentUser()) return null;
+    return this._rpc("respond_friend_request", { p_requester: requester, p_accept: !!accept });
+  },
+
+  /* 解除好友關係 */
+  async removeFriend(uid) {
+    if (!this.currentUser()) return null;
+    return this._rpc("remove_friend", { p_friend: uid });
+  },
+
+  /* 拎自己嘅好友清單（rows） */
+  async getMyFriends() {
+    if (!this.currentUser()) return null;
+    return this._rpcTable("get_my_friends", {});
+  },
+
+  /* 拎待處理嘅好友邀請（rows） */
+  async getFriendRequests() {
+    if (!this.currentUser()) return null;
+    return this._rpcTable("get_friend_requests", {});
+  },
+
+  /* 向好友送出對戰邀請（teamSize 為對方隊伍人數） */
+  async sendBattleInvite(friendUid, teamSize) {
+    if (!this.currentUser()) return null;
+    return this._rpc("send_battle_invite", { p_friend: friendUid, p_team_size: teamSize });
+  },
+
+  /* 拎待處理嘅對戰邀請（rows） */
+  async getBattleInvites() {
+    if (!this.currentUser()) return null;
+    return this._rpcTable("get_battle_invites", {});
+  },
+
+  /* 回應對戰邀請（accept 為 true 代表接受） */
+  async respondBattleInvite(inviteId, accept) {
+    if (!this.currentUser()) return null;
+    return this._rpc("respond_battle_invite", { p_invite: inviteId, p_accept: !!accept });
+  },
+
+  /* 取消自己送出嘅對戰邀請 */
+  async cancelBattleInvite(inviteId) {
+    if (!this.currentUser()) return null;
+    return this._rpc("cancel_battle_invite", { p_invite: inviteId });
+  },
+
+  /* 好友對戰結算（result: "win" | "lose"） */
+  async settleFriendBattle(result) {
+    if (!this.currentUser()) return null;
+    return this._rpc("settle_friend_battle", { p_result: result });
+  },
+
   /* ---------- RPC：捕捉日誌（log-only） ---------- */
   async settleCapture(dexId) {
     if (!this.currentUser()) return null;

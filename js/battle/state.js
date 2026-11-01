@@ -525,10 +525,28 @@ const BattleState = (() => {
     }[stat] || stat;
   }
 
+  /* ---------- 道具（Inferno AI 用 Potion ×1） ---------- */
+  const ITEMS = {
+    "potion": { heal: 20, label: "Potion" },
+    "full-restore": { heal: 999, cure: true, label: "Full Restore" }
+  };
+
+  function useItem(state, side, itemId) {
+    const p = active(state, side);
+    const it = ITEMS[itemId];
+    if (!it || !p || p.hp <= 0) return false;
+    const before = p.hp;
+    p.hp = Math.min(p.maxHp, p.hp + it.heal);
+    const healed = p.hp - before;
+    if (it.cure && p.status) p.status = null;
+    log(state, `${p.name} recovered ${healed} HP!`);
+    return true;
+  }
+
   return {
     create, active, otherSide, log,
     executeMove, endTurnResidual, endTurnField, switchTo, onSwitchIn,
-    applyEntryHazards, hasUsable, checkFinished, statusLabel
+    applyEntryHazards, hasUsable, checkFinished, statusLabel, useItem, ITEMS
   };
 })();
 

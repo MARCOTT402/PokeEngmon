@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -82,7 +82,7 @@
       #loading-screen.ld-out { animation-duration: .01s; }
     }
   </style>
-  <link rel="stylesheet" href="css/style.css?v=1.18.0">
+  <link rel="stylesheet" href="css/style.css?v=1.19.7">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -390,6 +390,37 @@
       </div>
     </section>
 
+    <!-- ============ 好友 ============ -->
+    <section id="view-friends" class="view friends-view">
+      <header class="topbar">
+        <div class="topbar-name">Friends</div>
+        <div class="topbar-res">
+          <button id="friends-back" class="icon-btn" aria-label="Back">✕</button>
+        </div>
+      </header>
+      <div id="friends-code-card" class="friends-card">
+        <div class="friends-code">Friend code <b id="friends-code">——</b></div>
+        <button id="friends-copy-code" class="friends-btn">COPY</button>
+      </div>
+      <div id="friends-add-row" class="friends-add-row">
+        <input id="friends-add-input" class="friends-add-input" type="text" maxlength="24"
+               placeholder="Friend code or trainer name" autocomplete="off"
+               autocapitalize="characters" spellcheck="false">
+        <button id="friends-add-btn" class="friends-btn friends-btn-add">ADD</button>
+      </div>
+      <div id="friends-search-results" class="friends-search-results"></div>
+      <h3 class="friends-section-title">Friend requests</h3>
+      <div id="friends-requests" class="friends-list"><div class="friends-empty">Loading…</div></div>
+      <h3 class="friends-section-title">Friends</h3>
+      <div id="friends-list" class="friends-list"><div class="friends-empty">Loading…</div></div>
+      <h3 class="friends-section-title">Battle invites</h3>
+      <div id="friends-invites" class="friends-list"><div class="friends-empty">Loading…</div></div>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="friends-back-bottom" class="btn-big btn-plain">‹ Home</button>
+      </div>
+    </section>
+
     <!-- ============ 對戰選單 ============ -->
     <section id="view-battle-menu" class="view battle-menu-view">
       <header class="topbar">
@@ -399,17 +430,50 @@
         </div>
       </header>
       <div class="battle-menu-inner">
-        <div class="battle-quota" id="battle-quota">Daily battles: loading…</div>
-        <button id="battle-menu-pvp" class="battle-menu-tile">
-          <span class="bmt-icon">🌐</span>
-          <span class="bmt-title">PvP Battle</span>
-          <span class="bmt-sub" id="battle-menu-pvp-sub">Online match · random team size</span>
-        </button>
-        <button id="battle-menu-ai" class="battle-menu-tile">
-          <span class="bmt-icon">🤖</span>
-          <span class="bmt-title">AI Trainers</span>
-          <span class="bmt-sub">Climb the trainer ladder</span>
-        </button>
+        <div class="bm-hero">
+          <div class="bm-hero-glow" aria-hidden="true"></div>
+          <div class="bm-hero-text">
+            <span class="bm-kicker">BATTLE</span>
+            <span class="bm-title">Trainer Ladder</span>
+            <span class="bm-sub">14 challengers · 4 tiers each · ⚡1 per battle</span>
+          </div>
+        </div>
+
+        <div class="energy-card" id="battle-energy">
+          <div class="energy-head">
+            <span class="energy-label">⚡ Energy</span>
+            <span class="energy-count" id="energy-count">0 / 8</span>
+          </div>
+          <div class="energy-pips" id="energy-pips"></div>
+          <div class="energy-note" id="energy-note"></div>
+        </div>
+
+        <div class="mastery-card">
+          <div class="mastery-head">
+            <span class="mastery-label">Mastery</span>
+            <span class="mastery-count" id="mastery-count">0 / 56</span>
+          </div>
+          <div class="mastery-track"><i class="mastery-bar" id="mastery-bar"></i></div>
+        </div>
+
+        <div class="battle-mode-grid">
+          <button id="battle-menu-pvp" class="battle-mode-card mode-pvp">
+            <span class="bmc-icon">🌐</span>
+            <span class="bmc-title">PvP Battle</span>
+            <span class="bmc-sub" id="battle-menu-pvp-sub">Online match · random team size</span>
+            <span class="fire-band" aria-hidden="true"><i></i><i></i><b></b></span>
+          </button>
+          <button id="battle-menu-friends" class="battle-mode-card mode-friends">
+            <span class="bmc-icon">👥</span>
+            <span class="bmc-title">Friends <span id="battle-menu-friends-badge" class="bmt-badge" hidden>0</span></span>
+            <span class="bmc-sub" id="battle-menu-friends-sub">Log in to add friends</span>
+          </button>
+        </div>
+
+        <div class="ladder-head">
+          <span>Trainer Ladder</span>
+          <small>Tap a trainer, then pick a tier</small>
+        </div>
         <div id="ai-trainer-list" class="ai-trainer-list"></div>
         <div class="hub-bar">
           <button id="battle-menu-back" class="btn-big btn-plain">‹ Home</button>
@@ -482,6 +546,16 @@
             <div class="bmp-info-body" id="bmp-info"></div>
           </div>
         </div>
+        <!-- BAG：Inferno 限定，玩家有 1 支 Full Restore -->
+        <div id="battle-bag-menu" class="battle-move-panel" style="display:none">
+          <div class="bmp-moves">
+            <div class="bmp-move-grid" id="bbp-list"></div>
+            <button class="bmp-back" id="bbp-back">◀ BACK</button>
+          </div>
+          <div class="bmp-info">
+            <div class="bmp-info-body" id="bbp-info"></div>
+          </div>
+        </div>
       </div>
 
       <!-- PokeRogue 換精靈頁（party select，320×240 design 等比縮放） -->
@@ -509,6 +583,7 @@
           <div id="br-title" class="br-title br-win">WIN</div>
           <div id="br-sub" class="br-sub"></div>
           <div id="br-rows" class="br-rows"></div>
+          <button id="br-add-foe" class="br-add-foe" style="display:none">＋ Add opponent</button>
           <button id="br-continue" class="br-continue">CONTINUE</button>
         </div>
       </div>
@@ -518,6 +593,7 @@
     <div id="team-select-modal" class="team-select-modal" style="display:none">
       <div class="team-select-card">
         <div class="ts-title">Choose your team · <span id="team-size-label">3</span> Pokémon</div>
+        <div id="ts-battle-info" class="ts-battle-info" hidden></div>
         <div id="team-select-grid" class="team-select-grid"></div>
         <div class="ts-lineup-label">Battle order <span>(first Pokémon goes out first)</span></div>
         <div id="team-lineup" class="ts-lineup" hidden></div>
@@ -525,6 +601,27 @@
           <button id="team-select-cancel" class="btn-big btn-plain">Cancel</button>
           <button id="team-select-confirm" class="btn-big btn-primary">Confirm</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 難度選擇彈窗（Trainer → Easy/Normal/Hard/Inferno） -->
+    <div id="tier-select-modal" class="tier-select-modal" style="display:none">
+      <div class="tier-select-card">
+        <div class="tier-select-head">
+          <div class="tier-select-title" id="tier-select-title">Trainer</div>
+          <button id="tier-select-close" class="tier-select-close" aria-label="Close">✕</button>
+        </div>
+        <div id="tier-select-body" class="tier-select-body"></div>
+      </div>
+    </div>
+
+    <!-- Inferno 解鎖演出（一次性彩虹火） -->
+    <div id="inferno-unlock" class="inferno-unlock" aria-hidden="true">
+      <div class="iu-flames" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="iu-text">
+        <span class="iu-kicker">INFERNO UNLOCKED</span>
+        <span class="iu-name"></span>
+        <span class="iu-sub">Clear the challenge to master this trainer</span>
       </div>
     </div>
 
@@ -560,36 +657,39 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase/supabase-config.js?v=1.18.0"></script>
-  <script src="js/supabase-auth.js?v=1.18.0"></script>
-  <script src="js/sm2.js?v=1.18.0"></script>
-  <script src="js/sync.js?v=1.18.0"></script>
-  <script src="js/gens-data.js?v=1.18.0"></script>
-  <script src="js/data.js?v=1.18.0"></script>
-  <script src="js/qimg-db.js?v=1.18.0"></script>
-  <script src="js/pokemon.js?v=1.18.0"></script>
-  <script src="js/battle/rng.js?v=1.18.0"></script>
-  <script src="js/battle/gate.js?v=1.18.0"></script>
-  <script src="js/battle/pvp.js?v=1.18.0"></script>
-  <script src="js/battle/engine.js?v=1.18.0"></script>
-  <script src="js/battle/state.js?v=1.18.0"></script>
-  <script src="js/battle/moveanim.js?v=1.18.0"></script>
-  <script src="js/battle/sprites.js?v=1.18.0"></script>
-  <script src="js/battle/battle.js?v=1.18.0"></script>
-  <script src="js/genpack.js?v=1.18.0"></script>
-  <script src="js/storage.js?v=1.18.0"></script>
-  <script src="js/pet.js?v=1.18.0"></script>
-  <script src="js/explain.js?v=1.18.0"></script>
-  <script src="js/quiz.js?v=1.18.0"></script>
-  <script src="js/gacha.js?v=1.18.0"></script>
-  <script src="js/pokedex.js?v=1.18.0"></script>
-  <script src="js/gym.js?v=1.18.0"></script>
-  <script src="js/leaderboard.js?v=1.18.0"></script>
-  <script src="js/calendar.js?v=1.18.0"></script>
-  <script src="js/evolve-scene.js?v=1.18.0"></script>
-  <script src="js/app.js?v=1.18.0"></script>
-  <script src="vendor/gsap/gsap.min.js?v=1.18.0"></script>
-  <script type="module" src="js/capture.js?v=1.18.0"></script>
+  <script src="supabase/supabase-config.js?v=1.19.7"></script>
+  <script src="js/supabase-auth.js?v=1.19.7"></script>
+  <script src="js/sm2.js?v=1.19.7"></script>
+  <script src="js/sync.js?v=1.19.7"></script>
+  <script src="js/gens-data.js?v=1.19.7"></script>
+  <script src="js/data.js?v=1.19.7"></script>
+  <script src="js/qimg-db.js?v=1.19.7"></script>
+  <script src="js/pokemon.js?v=1.19.7"></script>
+  <script src="js/battle/rng.js?v=1.19.7"></script>
+  <script src="js/battle/gate.js?v=1.19.7"></script>
+  <script src="js/battle/energy.js?v=1.19.7"></script>
+  <script src="js/battle/realtime.js?v=1.19.7"></script>
+  <script src="js/battle/pvp.js?v=1.19.7"></script>
+  <script src="js/battle/engine.js?v=1.19.7"></script>
+  <script src="js/battle/state.js?v=1.19.7"></script>
+  <script src="js/battle/moveanim.js?v=1.19.7"></script>
+  <script src="js/battle/sprites.js?v=1.19.7"></script>
+  <script src="js/battle/battle.js?v=1.19.7"></script>
+  <script src="js/genpack.js?v=1.19.7"></script>
+  <script src="js/storage.js?v=1.19.7"></script>
+  <script src="js/pet.js?v=1.19.7"></script>
+  <script src="js/explain.js?v=1.19.7"></script>
+  <script src="js/quiz.js?v=1.19.7"></script>
+  <script src="js/gacha.js?v=1.19.7"></script>
+  <script src="js/pokedex.js?v=1.19.7"></script>
+  <script src="js/gym.js?v=1.19.7"></script>
+  <script src="js/leaderboard.js?v=1.19.7"></script>
+  <script src="js/friends.js?v=1.19.7"></script>
+  <script src="js/calendar.js?v=1.19.7"></script>
+  <script src="js/evolve-scene.js?v=1.19.7"></script>
+  <script src="js/app.js?v=1.19.7"></script>
+  <script src="vendor/gsap/gsap.min.js?v=1.19.7"></script>
+  <script type="module" src="js/capture.js?v=1.19.7"></script>
 </body>
 </html>
 
