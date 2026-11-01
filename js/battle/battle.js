@@ -686,27 +686,38 @@ const BattleUI = (() => {
       </div>`;
   }
 
+  /* 揀隊排序：同圖鑑共用 DEXSORT 定義（預設 No.） */
+  const TEAM_SORT_KEY = "pokeengmon_team_sort_v1";
+  let teamSortBound = false;
+  let teamPickerRebuild = null;
+
   function openTeamSelect(cb, fixedSize) {
     const st = loadState();
-    const owned = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length);
+    const pool = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length);
     /* PvP 用抽中嘅場制；AI 依難度決定出戰數（Easy +1、Normal 同數、Hard/Inferno −1） */
     const want = (mode === "ai" && aiTrainer && !fixedSize)
       ? playerSlots(foeTeamEntries.length, aiTier)
       : fixedSize;
-    const teamSize = Math.min(want || 1, owned.length);
+    const teamSize = Math.min(want || 1, pool.length);
     renderBattleInfo();
     document.getElementById("team-size-label").textContent = teamSize;
     const lvSync = levelSyncLevel;
     const grid = document.getElementById("team-select-grid");
-    grid.innerHTML = owned.map((e, i) => {
-      const cur = entryCurrentSpecies(e);
-      return `<div class="team-slot" data-idx="${i}">
-        <span class="ts-order" hidden></span>
-        <img src="${spriteURL(cur[0])}" alt="${cur[1]}">
-        <span>${cur[1]}</span>
-        <span class="ts-lv">Lv.${lvSync || e.level}${lvSync ? " ↑" : ""}</span>
-      </div>`;
-    }).join("");
+    const selSort = document.getElementById("team-sort");
+    const dirSort = document.getElementById("team-sort-dir");
+
+    const prefs = DEXSORT.load(TEAM_SORT_KEY);
+    let owned = [];
+    function applySort() {
+      owned = pool.slice();
+      DEXSORT.sortList(owned, prefs.sort, prefs.dir, e => {
+        const c = entryCurrentSpecies(e);
+        return { dexId: c[0], level: e.level || 1 };
+      });
+    }
+    applySort();
+    DEXSORT.syncControls(selSort, dirSort, prefs);
+
     /* order = 出戰次序（第 0 隻 = 首位出場）；撳邊隻先，邊隻就排先 */
     const order = [];
     const lineup = document.getElementById("team-lineup");
@@ -737,19 +748,64 @@ const BattleUI = (() => {
         };
       });
     }
-    /* 如果一定要全選（持有數 = 隊伍大小），預設全選（次序 = 持有次序），照樣可以調位 */
+    function renderGrid() {
+      grid.innerHTML = owned.map((e, i) => {
+        const cur = entryCurrentSpecies(e);
+        const lv = lvSync || e.level || 1;
+        const metric = DEXSORT.metric(prefs.sort, cur[0], lv);
+        return `<div class="team-slot" data-idx="${i}">
+          <span class="ts-order" hidden></span>
+          <img src="${spriteURL(cur[0])}" alt="${cur[1]}">
+          <span class="ts-name">${cur[1]}</span>
+          <span class="ts-meta">${metric}${lvSync ? " ↑" : ""}</span>
+        </div>`;
+      }).join("");
+      grid.querySelectorAll(".team-slot").forEach(el => {
+        el.onclick = () => {
+          const idx = +el.dataset.idx;
+          const pos = order.indexOf(idx);
+          if (pos >= 0) order.splice(pos, 1);
+          else if (order.length < teamSize) order.push(idx);
+          else return;   /* 已滿：要先取消一隻 */
+          renderOrder();
+        };
+      });
+      renderOrder();
+    }
+
+    /* 換排序：保留已揀選嘅精靈（用 uid 追） */
+    teamPickerRebuild = (p) => {
+      if (p) { prefs.sort = p.sort; prefs.dir = p.dir; }
+      const keep = order.map(i => owned[i].uid);
+      applySort();
+      order.length = 0;
+      keep.forEach(uid => {
+        const idx = owned.findIndex(e => e.uid === uid);
+        if (idx >= 0) order.push(idx);
+      });
+      DEXSORT.syncControls(selSort, dirSort, prefs);
+      renderGrid();
+    };
+    if (!teamSortBound) {
+      teamSortBound = true;
+      if (selSort) selSort.addEventListener("change", () => {
+        const p = DEXSORT.load(TEAM_SORT_KEY);
+        p.sort = selSort.value;
+        p.dir = DEXSORT.defaultDir(p.sort);
+        DEXSORT.save(TEAM_SORT_KEY, p);
+        if (teamPickerRebuild) teamPickerRebuild(p);
+      });
+      if (dirSort) dirSort.addEventListener("click", () => {
+        const p = DEXSORT.load(TEAM_SORT_KEY);
+        p.dir = p.dir === "desc" ? "asc" : "desc";
+        DEXSORT.save(TEAM_SORT_KEY, p);
+        if (teamPickerRebuild) teamPickerRebuild(p);
+      });
+    }
+
+    /* 如果一定要全選（持有數 = 隊伍大小），預設全選（次序 = 排序後次序），照樣可以調位 */
     if (teamSize >= owned.length) owned.forEach((_, i) => order.push(i));
-    grid.querySelectorAll(".team-slot").forEach(el => {
-      el.onclick = () => {
-        const idx = +el.dataset.idx;
-        const pos = order.indexOf(idx);
-        if (pos >= 0) order.splice(pos, 1);
-        else if (order.length < teamSize) order.push(idx);
-        else return;   /* 已滿：要先取消一隻 */
-        renderOrder();
-      };
-    });
-    renderOrder();
+    renderGrid();
     document.getElementById("team-select-confirm").onclick = () => {
       if (order.length !== teamSize) { toast(`Pick exactly ${teamSize} Pokémon`); return; }
       teamEntries = order.map(i => owned[i]);

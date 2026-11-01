@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "1.22.1";
+const APP_VERSION = "1.24.0";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -259,11 +259,23 @@ const App = {
         <div class="pc-tip">Drag an item onto your partner — or tap an item, then tap the stage.</div>
 
         <div class="pc-rosterhead"><span>Your Pokémon</span><span>Tap to bring it to the stage</span></div>
+        <div class="pc-sortbar">
+          <select id="pc-sort" class="dex-sort" aria-label="Sort your Pokémon"></select>
+          <button id="pc-sort-dir" class="dex-dir" type="button" aria-label="Toggle sort direction">↑</button>
+        </div>
         <div class="partner-list" id="pc-roster"></div>
       </div>`);
 
     const modal = document.getElementById("modal-root");
     modal.querySelector(".pc-close").onclick = () => this.closeModal();
+
+    /* 精靈列表排序（同圖鑑共用 DEXSORT 定義） */
+    DEXSORT.bindControls(
+      modal.querySelector("#pc-sort"),
+      modal.querySelector("#pc-sort-dir"),
+      "pokeengmon_care_sort_v1",
+      () => this._syncPetCare()
+    );
 
     /* 道具：點擊選取（手機）＋ 桌面拖放 */
     modal.querySelectorAll(".pc-item").forEach(tile => {
@@ -473,18 +485,30 @@ const App = {
     /* 全部寶可夢：沿用原本 Switch Partner 的 dex-cell 外觀 */
     const roster = document.getElementById("pc-roster");
     if (roster) {
-      roster.innerHTML = st.entries.map(e => {
+      const prefs = DEXSORT.load("pokeengmon_care_sort_v1");
+      DEXSORT.syncControls(
+        document.getElementById("pc-sort"),
+        document.getElementById("pc-sort-dir"),
+        prefs
+      );
+      const list = st.entries.slice();
+      DEXSORT.sortList(list, prefs.sort, prefs.dir, e => {
+        const c = entryCurrentSpecies(e);
+        return { dexId: c[0], level: e.level || 1 };
+      });
+      roster.innerHTML = list.map(e => {
         ensureEntryPokemonData(e);
         const chain = EVOLUTION_CHAINS.find(c => c.key === e.chainKey);
         const c = entryCurrentSpecies(e);
         const rz = RARITY[chain?.baseRarity] || RARITY.normal;
         const faint = Pet.isFaint(e);
         const active = e.uid === st.activeUid;
+        const metric = DEXSORT.metric(prefs.sort, c[0], e.level || 1);
         return `<button class="dex-cell owned ${active ? "current" : ""} ${faint ? "pc-faint" : ""}" data-uid="${e.uid}">
           <img src="${spriteURL(c[0])}" alt="${c[1]}">
           <span class="dex-name">${c[1]}</span>
           <span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>
-          <span class="p-stage">Lv.${e.level || 1} ・ ${"★".repeat(e.stars || 1)}${active ? " ・ Active" : ""}</span>
+          <span class="p-stage">${metric} ・ ${"★".repeat(e.stars || 1)}${active ? " ・ Active" : ""}</span>
         </button>`;
       }).join("");
       roster.querySelectorAll(".dex-cell").forEach(cell => {

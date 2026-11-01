@@ -82,7 +82,7 @@
       #loading-screen.ld-out { animation-duration: .01s; }
     }
   </style>
-  <link rel="stylesheet" href="css/style.css?v=1.22.1">
+  <link rel="stylesheet" href="css/style.css?v=1.24.0">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -304,6 +304,27 @@
         <div class="glb-icon">🔒</div>
         <h3 id="gen-lock-title">Locked</h3>
         <p id="gen-lock-desc"></p>
+      </div>
+      <div class="dex-tools" id="dex-tools">
+        <div class="dex-search-row">
+          <input id="dex-search" class="dex-search" type="search" placeholder="Search name or No." autocomplete="off" aria-label="Search Pokémon">
+          <select id="dex-sort" class="dex-sort" aria-label="Sort Pokémon"></select>
+          <button id="dex-sort-dir" class="dex-dir" type="button" aria-label="Toggle sort direction">↑</button>
+        </div>
+        <button id="dex-filter-toggle" class="dex-filter-toggle" type="button" aria-expanded="false">
+          <span>⚙ Filters</span>
+          <b id="dex-filter-count" hidden>0</b>
+          <span class="dft-arrow">▾</span>
+        </button>
+        <div class="dex-filter-body" id="dex-filter-body" hidden>
+          <div class="dex-chip-row" id="dex-own-chips">
+            <button class="dex-chip active" data-own="all" type="button">All</button>
+            <button class="dex-chip" data-own="owned" type="button">Owned</button>
+            <button class="dex-chip" data-own="unowned" type="button">Missing</button>
+          </div>
+          <div class="dex-chip-row dex-type-row" id="dex-type-chips"></div>
+        </div>
+        <div class="dex-result" id="dex-result"></div>
       </div>
       <div id="pokedex-grid" class="pokedex-grid"></div>
       <div class="hub-spacer"></div>
@@ -594,6 +615,10 @@
       <div class="team-select-card">
         <div class="ts-title">Choose your team · <span id="team-size-label">3</span> Pokémon</div>
         <div id="ts-battle-info" class="ts-battle-info" hidden></div>
+        <div class="ts-sortbar">
+          <select id="team-sort" class="dex-sort" aria-label="Sort Pokémon in team picker"></select>
+          <button id="team-sort-dir" class="dex-dir" type="button" aria-label="Toggle sort direction">↑</button>
+        </div>
         <div id="team-select-grid" class="team-select-grid"></div>
         <div class="ts-lineup-label">Battle order <span>(first Pokémon goes out first)</span></div>
         <div id="team-lineup" class="ts-lineup" hidden></div>
@@ -657,38 +682,39 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase/supabase-config.js?v=1.22.1"></script>
-  <script src="js/supabase-auth.js?v=1.22.1"></script>
-  <script src="js/sm2.js?v=1.22.1"></script>
-  <script src="js/sync.js?v=1.22.1"></script>
-  <script src="js/gens-data.js?v=1.22.1"></script>
-  <script src="js/data.js?v=1.22.1"></script>
-  <script src="js/qimg-db.js?v=1.22.1"></script>
-  <script src="js/pokemon.js?v=1.22.1"></script>
-  <script src="js/battle/rng.js?v=1.22.1"></script>
-  <script src="js/battle/energy.js?v=1.22.1"></script>
-  <script src="js/battle/realtime.js?v=1.22.1"></script>
-  <script src="js/battle/pvp.js?v=1.22.1"></script>
-  <script src="js/battle/engine.js?v=1.22.1"></script>
-  <script src="js/battle/state.js?v=1.22.1"></script>
-  <script src="js/battle/moveanim.js?v=1.22.1"></script>
-  <script src="js/battle/sprites.js?v=1.22.1"></script>
-  <script src="js/battle/battle.js?v=1.22.1"></script>
-  <script src="js/genpack.js?v=1.22.1"></script>
-  <script src="js/storage.js?v=1.22.1"></script>
-  <script src="js/pet.js?v=1.22.1"></script>
-  <script src="js/explain.js?v=1.22.1"></script>
-  <script src="js/quiz.js?v=1.22.1"></script>
-  <script src="js/gacha.js?v=1.22.1"></script>
-  <script src="js/pokedex.js?v=1.22.1"></script>
-  <script src="js/gym.js?v=1.22.1"></script>
-  <script src="js/leaderboard.js?v=1.22.1"></script>
-  <script src="js/friends.js?v=1.22.1"></script>
-  <script src="js/calendar.js?v=1.22.1"></script>
-  <script src="js/evolve-scene.js?v=1.22.1"></script>
-  <script src="js/app.js?v=1.22.1"></script>
-  <script src="vendor/gsap/gsap.min.js?v=1.22.1"></script>
-  <script type="module" src="js/capture.js?v=1.22.1"></script>
+  <script src="supabase/supabase-config.js?v=1.24.0"></script>
+  <script src="js/supabase-auth.js?v=1.24.0"></script>
+  <script src="js/sm2.js?v=1.24.0"></script>
+  <script src="js/sync.js?v=1.24.0"></script>
+  <script src="js/gens-data.js?v=1.24.0"></script>
+  <script src="js/data.js?v=1.24.0"></script>
+  <script src="js/qimg-db.js?v=1.24.0"></script>
+  <script src="js/pokemon.js?v=1.24.0"></script>
+  <script src="js/dex-sort.js?v=1.24.0"></script>
+  <script src="js/battle/rng.js?v=1.24.0"></script>
+  <script src="js/battle/energy.js?v=1.24.0"></script>
+  <script src="js/battle/realtime.js?v=1.24.0"></script>
+  <script src="js/battle/pvp.js?v=1.24.0"></script>
+  <script src="js/battle/engine.js?v=1.24.0"></script>
+  <script src="js/battle/state.js?v=1.24.0"></script>
+  <script src="js/battle/moveanim.js?v=1.24.0"></script>
+  <script src="js/battle/sprites.js?v=1.24.0"></script>
+  <script src="js/battle/battle.js?v=1.24.0"></script>
+  <script src="js/genpack.js?v=1.24.0"></script>
+  <script src="js/storage.js?v=1.24.0"></script>
+  <script src="js/pet.js?v=1.24.0"></script>
+  <script src="js/explain.js?v=1.24.0"></script>
+  <script src="js/quiz.js?v=1.24.0"></script>
+  <script src="js/gacha.js?v=1.24.0"></script>
+  <script src="js/pokedex.js?v=1.24.0"></script>
+  <script src="js/gym.js?v=1.24.0"></script>
+  <script src="js/leaderboard.js?v=1.24.0"></script>
+  <script src="js/friends.js?v=1.24.0"></script>
+  <script src="js/calendar.js?v=1.24.0"></script>
+  <script src="js/evolve-scene.js?v=1.24.0"></script>
+  <script src="js/app.js?v=1.24.0"></script>
+  <script src="vendor/gsap/gsap.min.js?v=1.24.0"></script>
+  <script type="module" src="js/capture.js?v=1.24.0"></script>
 </body>
 </html>
 

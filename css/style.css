@@ -1431,8 +1431,39 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-progress b { color: var(--blue); font-size: 1.3rem; }
 
 .pokedex-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 10px; flex: 1; align-content: start;
+  display: grid; gap: 7px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 1; align-content: start;
+}
+@media (min-width: 420px) { .pokedex-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 500px) { .pokedex-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+/* 密排版卡片：細圖 + 名字 + 排序數值／屬性 badge */
+.pokedex-grid .dex-cell { padding: 5px 2px 4px; gap: 1px; border-radius: 12px; min-width: 0; }
+.pokedex-grid .dex-thumb {
+  position: relative; width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pokedex-grid .dex-thumb > img { width: 46px; height: 46px; }
+.pokedex-grid .dex-types { display: flex; gap: 3px; }
+.pokedex-grid .dex-types .type-icon {
+  width: 20px; height: 20px; border-radius: 5px;
+  object-fit: cover; object-position: left center;   /* 蓋過 .dex-cell img 嘅 contain（否則會變成扁條） */
+}
+.pokedex-grid .dex-name {
+  font-size: .66rem; line-height: 1.15; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pokedex-grid .dex-meta { gap: 3px; margin-top: 0; }
+.pokedex-grid .dex-metric { font-size: .58rem; }
+.pokedex-grid .dex-lv { font-size: .56rem; padding: 0 5px; }
+.pokedex-grid .dex-cell-locked .dex-qmark { width: 46px; height: 46px; font-size: 1.4rem; }
+/* 電腦／平板：同樣欄數下放大少少，睇落唔會太細 */
+@media (min-width: 500px) {
+  .pokedex-grid .dex-thumb, .pokedex-grid .dex-thumb > img { width: 52px; height: 52px; }
+  .pokedex-grid .dex-name { font-size: .7rem; }
+  .pokedex-grid .dex-metric { font-size: .62rem; }
+  .pokedex-grid .dex-types .type-icon { width: 22px; height: 22px; }
 }
 .dex-cell {
   background: var(--card); border: 2px solid #e2e7ef; border-radius: 14px;
@@ -1449,6 +1480,86 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .dex-name { font-size: .78rem; font-weight: 800; color: #4a5468; }
 .dex-cell:not(.owned) .dex-name { color: #c3c9d6; }
 .dex-rarity { font-size: .68rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+
+/* ---------- 圖鑑工具列（搜尋／排序／篩選） ---------- */
+.dex-tools { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 10px; }
+.dex-tools[hidden] { display: none; }
+.dex-search-row { display: flex; gap: 8px; align-items: center; }
+.dex-search {
+  flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px;
+  border: 2px solid #e2e7ef; background: var(--card);
+  font-family: inherit; font-size: .92rem; font-weight: 700; color: #37415a;
+  -webkit-appearance: none; appearance: none;
+}
+.dex-search::placeholder { color: #a8b1c4; font-weight: 700; }
+.dex-search:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59, 92, 168, .14); }
+.dex-sort {
+  flex: 0 0 auto; max-width: 42%; padding: 9px 10px; border-radius: 12px;
+  border: 2px solid #e2e7ef; background: var(--card);
+  font-family: inherit; font-size: .86rem; font-weight: 800; color: #37415a;
+}
+.dex-sort:focus { outline: none; border-color: var(--blue); }
+.dex-dir {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px;
+  border: 2px solid #e2e7ef; background: var(--card); cursor: pointer;
+  font-size: 1rem; font-weight: 900; color: var(--blue); font-family: inherit;
+}
+.dex-dir:active { transform: scale(.94); }
+
+/* 篩選收起／展開 */
+.dex-filter-toggle {
+  display: flex; align-items: center; gap: 6px; align-self: flex-start;
+  padding: 6px 12px; border-radius: 12px; border: 2px solid #e2e7ef; background: var(--card);
+  font-family: inherit; font-size: .82rem; font-weight: 800; color: #5b6478; cursor: pointer;
+}
+.dex-filter-toggle b {
+  min-width: 18px; padding: 0 4px; border-radius: 999px; background: var(--blue); color: #fff;
+  font-size: .7rem; line-height: 18px; text-align: center;
+}
+.dex-filter-toggle b[hidden] { display: none; }
+.dex-filter-toggle .dft-arrow { transition: transform .18s ease; }
+.dex-filter-toggle.open { border-color: var(--blue); color: var(--blue); }
+.dex-filter-toggle.open .dft-arrow { transform: rotate(180deg); }
+.dex-filter-body { display: flex; flex-direction: column; gap: 8px; }
+.dex-filter-body[hidden] { display: none; }
+
+.dex-chip-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.dex-chip-row::-webkit-scrollbar { display: none; }
+.dex-chip-row[hidden] { display: none; }
+/* 屬性 chips 多（17 個）：換行全部顯示，唔用橫向滾動（免被切一半睇唔到） */
+.dex-type-row { flex-wrap: wrap; overflow-x: visible; }
+.dex-chip, .dex-type-chip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 999px; border: 2px solid #e2e7ef; background: var(--card);
+  font-family: inherit; font-size: .8rem; font-weight: 800; color: #5b6478; cursor: pointer;
+  white-space: nowrap;
+}
+.dex-chip.active, .dex-type-chip.active { border-color: var(--blue); background: #eef3ff; color: var(--blue); }
+/* 官方屬性徽章原圖係 200×44（圖示＋英文名）：裁左邊方形圖示位做細 icon */
+.type-icon, .dex-type, .dex-type-chip img {
+  width: 17px; height: 17px; object-fit: cover; object-position: left center;
+  border-radius: 5px; image-rendering: -webkit-optimize-contrast; flex: 0 0 auto;
+}
+.dex-result { font-size: .78rem; font-weight: 800; color: #8792a8; }
+.dex-result b { color: var(--blue); }
+
+/* 卡上「當前排序數值」+ 屬性 icon */
+.dex-meta {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 3px; margin-top: 1px; max-width: 100%;
+}
+.dex-metric { font-size: .64rem; font-weight: 900; color: #6b7a99; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dex-lv { font-size: .66rem; font-weight: 900; color: #7b6531; background: #fff4cf; border-radius: 999px; padding: 1px 6px; }
+.dex-empty-state {
+  grid-column: 1 / -1; text-align: center; padding: 28px 12px;
+  color: #8792a8; font-size: .9rem; font-weight: 700; line-height: 1.6;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dex-cell:hover { transform: translateY(-2px); border-color: #c9d4ea; }
+  .dex-chip:hover, .dex-type-chip:hover { border-color: #c9d4ea; }
+  .dex-dir:hover { border-color: #c9d4ea; }
+}
 
 /* ---------- 浮動世代 hub（貼頂；捲落收、捲上放） ---------- */
 .gen-hub {
@@ -2463,6 +2574,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 .pc-tip{font-size:11px;color:#7a8299;text-align:center;margin-top:6px;line-height:1.4}
 .pc-rosterhead{display:flex;justify-content:space-between;gap:8px;margin:12px 0 6px;font-size:11px;color:#7a8299}
+.pc-sortbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.pc-sortbar .dex-sort{flex:1;max-width:none}
 
 /* Faint 拍檔：沿用 dex-cell 外觀，只做灰白 */
 .partner-list .dex-cell.pc-faint{opacity:.55}
@@ -3266,6 +3379,10 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .ts-title { font-size: 1.05rem; font-weight: 800; text-align: center; color: #1a2a44; }
 
+/* 揀隊排序列（同圖鑑一致嘅排序定義） */
+.ts-sortbar { display: flex; gap: 8px; align-items: center; }
+.ts-sortbar .dex-sort { flex: 1; max-width: none; }
+
 /* 揀隊頂部：對手預覽卡 */
 .ts-battle-info { display: block; }
 .ts-battle-info[hidden] { display: none; }
@@ -3306,7 +3423,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .tsb-sync { margin-top: 8px; font-size: .66rem; font-weight: 800; color: #7dd3fc; }
 
 .team-select-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px;
 }
 .team-slot {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -3352,9 +3469,10 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .tl-mv:disabled { opacity: .35; cursor: default; }
 .ts-actions { display: flex; gap: 10px; margin-top: 4px; }
 
-/* 選寵卡：名 + 等級 */
-.ts-lv { font-size: .62rem; font-weight: 700; color: #6b7590; }
-.team-slot.picked .ts-lv { color: #2e8b57; }
+/* 選寵卡：名 + 當前排序數值（HP／Lv.／No. …） */
+.ts-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-meta { font-size: .62rem; font-weight: 800; color: #6b7590; white-space: nowrap; }
+.team-slot.picked .ts-meta { color: #2e8b57; }
 
 /* ----- 選單互動（只喺有滑鼠嘅裝置先加 hover） ----- */
 @media (hover: hover) and (pointer: fine) {

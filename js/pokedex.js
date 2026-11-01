@@ -60,7 +60,13 @@ const Pokedex = {
              onerror="this.onerror=null;this.src='${artworkURL(g.iconDex)}'">
         <span class="gc-gen">GEN ${this._genRoman(g.gen)}</span>
         <span class="gc-name">${g.name}</span>`;
-      btn.onclick = () => { this.curGen = g.gen; this.render(); };
+      btn.onclick = () => {
+        this.curGen = g.gen;
+        /* 換世代就清屬性篩選（新世代未必有嗰個屬性） */
+        const f = this._prefs();
+        if (f.types.length) { f.types = []; this._savePrefs(); }
+        this.render();
+      };
       hub.appendChild(btn);
     });
     /* 撳完自動捲去 active chip（手機橫向列表） */
@@ -85,6 +91,159 @@ const Pokedex = {
     }, { passive: true });
   },
 
+  /* ---------- 排序／篩選 ---------- */
+  _prefsKey: "pokeengmon_dex_prefs_v1",
+
+  _prefs() {
+    if (this._prefsCache) return this._prefsCache;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(this._prefsKey) || "{}") || {}; } catch (e) { saved = {}; }
+    const sort = DEXSORT.isValidSort(saved.sort) ? saved.sort : "no";
+    this._prefsCache = {
+      q: typeof saved.q === "string" ? saved.q : "",
+      owned: (saved.owned === "owned" || saved.owned === "unowned") ? saved.owned : "all",
+      types: Array.isArray(saved.types) ? saved.types.filter(t => typeof t === "string") : [],
+      sort: sort,
+      dir: (saved.dir === "asc" || saved.dir === "desc") ? saved.dir : DEXSORT.defaultDir(sort),
+      filtersOpen: saved.filtersOpen === true
+    };
+    return this._prefsCache;
+  },
+
+  _savePrefs() {
+    try { localStorage.setItem(this._prefsKey, JSON.stringify(this._prefsCache)); } catch (e) { /* ignore */ }
+  },
+
+  /* 擁有集合 + 每個物種最高等級（排序用） */
+  _ownedInfo(st) {
+    const owned = new Set();
+    const levels = new Map();
+    st.entries.forEach(e => {
+      if (!Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);
+      (e.ownedSpecies || []).forEach(id => owned.add(id));
+      const cur = entryCurrentSpecies(e);
+      const id = cur ? cur[0] : null;
+      if (id == null) return;
+      const lv = e.level || 1;
+      if (!levels.has(id) || lv > levels.get(id)) levels.set(id, lv);
+    });
+    return { owned, levels };
+  },
+
+  _matches(sp, isOwned, f) {
+    if (f.owned === "owned" && !isOwned) return false;
+    if (f.owned === "unowned" && isOwned) return false;
+    if (f.types.length) {
+      /* SPECIES（js/data.js）冇屬性；屬性／能力值喺 POKEMON_DEX（data/pokemon-*.json） */
+      const ts = DEXSORT.typesOf(sp.dexId);
+      if (!f.types.some(t => ts.indexOf(t) >= 0)) return false;
+    }
+    const q = (f.q || "").trim().toLowerCase();
+    if (!q) return true;
+    const num = q.replace(/^#/, "");
+    if (num && /^\d+$/.test(num) && String(sp.dexId).indexOf(num) === 0) return true;
+    return String(sp.name || "").toLowerCase().indexOf(q) >= 0;
+  },
+
+  _activeFilterCount(f) {
+    return (f.owned === "all" ? 0 : 1) + f.types.length;
+  },
+
+  /* 工具列（搜尋／排序／篩選）；只喺未鎖世代先出 */
+  _renderTools(gen, lo, hi, f) {
+    DEXSORT.syncControls(
+      document.getElementById("dex-sort"),
+      document.getElementById("dex-sort-dir"),
+      f
+    );
+
+    const search = document.getElementById("dex-search");
+    if (search && search.value !== f.q) search.value = f.q;
+
+    /* 篩選預設收起（省位），撳「Filters」先展開 */
+    const body = document.getElementById("dex-filter-body");
+    const toggle = document.getElementById("dex-filter-toggle");
+    if (body) body.hidden = !f.filtersOpen;
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", f.filtersOpen ? "true" : "false");
+      toggle.classList.toggle("open", f.filtersOpen);
+    }
+    const count = document.getElementById("dex-filter-count");
+    if (count) {
+      const n = this._activeFilterCount(f);
+      count.hidden = n === 0;
+      count.textContent = String(n);
+    }
+
+    document.querySelectorAll("#dex-own-chips .dex-chip").forEach(b => {
+      b.classList.toggle("active", b.getAttribute("data-own") === f.owned);
+    });
+
+    /* 屬性 chips：只列本世代出現過嘅屬性 */
+    const typeRow = document.getElementById("dex-type-chips");
+    if (typeRow && typeRow.dataset.gen !== String(gen)) {
+      const seen = [];
+      for (let id = lo; id <= hi; id++) {
+        DEXSORT.typesOf(id).forEach(t => { if (seen.indexOf(t) < 0) seen.push(t); });
+      }
+      typeRow.innerHTML = seen.map(t =>
+        `<button class="dex-type-chip" type="button" data-type="${t}">
+           <img src="${typeIconURL(t)}" alt="${typeLabel(t)}">${typeLabel(t)}</button>`).join("");
+      typeRow.dataset.gen = String(gen);
+    }
+    if (typeRow) {
+      typeRow.querySelectorAll(".dex-type-chip").forEach(b => {
+        b.classList.toggle("active", f.types.indexOf(b.getAttribute("data-type")) >= 0);
+      });
+    }
+  },
+
+  _bindTools() {
+    if (this._toolsBound) return;
+    this._toolsBound = true;
+    const search = document.getElementById("dex-search");
+    if (search) {
+      let timer = null;
+      search.addEventListener("input", () => {
+        this._prefs().q = search.value;
+        clearTimeout(timer);
+        timer = setTimeout(() => { this._savePrefs(); this.render(); }, 140);
+      });
+    }
+    DEXSORT.bindControls(
+      document.getElementById("dex-sort"),
+      document.getElementById("dex-sort-dir"),
+      this._prefsKey,
+      () => { this._prefsCache = null; this.render(); }
+    );
+    const toggle = document.getElementById("dex-filter-toggle");
+    if (toggle) toggle.addEventListener("click", () => {
+      const f = this._prefs();
+      f.filtersOpen = !f.filtersOpen;
+      this._savePrefs();
+      this.render();
+    });
+    const ownRow = document.getElementById("dex-own-chips");
+    if (ownRow) ownRow.addEventListener("click", (e) => {
+      const b = e.target.closest(".dex-chip");
+      if (!b) return;
+      this._prefs().owned = b.getAttribute("data-own");
+      this._savePrefs();
+      this.render();
+    });
+    const typeRow = document.getElementById("dex-type-chips");
+    if (typeRow) typeRow.addEventListener("click", (e) => {
+      const b = e.target.closest(".dex-type-chip");
+      if (!b) return;
+      const f = this._prefs();
+      const t = b.getAttribute("data-type");
+      const i = f.types.indexOf(t);
+      if (i >= 0) f.types.splice(i, 1); else f.types.push(t);
+      this._savePrefs();
+      this.render();
+    });
+  },
+
   render() {
     const st = loadState();
     const unlocked = st.unlockedGen || 1;
@@ -92,11 +251,7 @@ const Pokedex = {
     const locked = gen > unlocked;
     const [lo, hi] = genRange(gen);
 
-    const owned = new Set();
-    st.entries.forEach(e => {
-      if (!Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);
-      (e.ownedSpecies || []).forEach(id => owned.add(id));
-    });
+    const { owned, levels } = this._ownedInfo(st);
 
     /* 標題列：Gen II · Johto · 45/100 owned */
     let ownedInGen = 0;
@@ -126,32 +281,72 @@ const Pokedex = {
       }
     }
 
+    const tools = document.getElementById("dex-tools");
+    if (tools) tools.hidden = locked;
+    this._bindTools();
+
     const grid = document.getElementById("pokedex-grid");
     grid.innerHTML = "";
 
-    for (let id = lo; id <= hi; id++) {
-      const sp = SPECIES[id];
-      const cell = document.createElement("button");
-
-      if (locked) {
-        /* 未解鎖世代：純「?」placeholder cell，零圖片請求 */
+    if (locked) {
+      /* 未解鎖世代：純「?」placeholder cell，零圖片請求 */
+      for (let id = lo; id <= hi; id++) {
+        const cell = document.createElement("button");
         cell.className = "dex-cell dex-cell-locked";
         cell.innerHTML = `
           <span class="dex-qmark">?</span>
           <span class="dex-name">#${String(id).padStart(3, "0")}</span>`;
         cell.disabled = true;
         grid.appendChild(cell);
-        continue;
       }
+      this.renderHub();
+      return;
+    }
 
+    const f = this._prefs();
+    this._renderTools(gen, lo, hi, f);
+
+    /* 篩選 + 排序 */
+    const items = [];
+    for (let id = lo; id <= hi; id++) {
+      const sp = SPECIES[id];
       if (!sp) continue;   // 理論上唔會（腳本已保證全覆蓋）
       const isOwned = owned.has(id);
+      if (!this._matches(sp, isOwned, f)) continue;
+      items.push({ sp: sp, isOwned: isOwned, level: levels.get(id) || 0 });
+    }
+    DEXSORT.sortList(items, f.sort, f.dir, it => ({ dexId: it.sp.dexId, level: it.level }));
+
+    const res = document.getElementById("dex-result");
+    if (res) {
+      const surface = (f.owned === "owned") ? " owned" : "";
+      res.innerHTML = `Showing <b>${items.length}</b> / ${total}${surface}` +
+        (f.types.length ? ` · ${f.types.map(t => typeLabel(t)).join(" + ")}` : "");
+    }
+
+    if (!items.length) {
+      grid.innerHTML = `<div class="dex-empty-state">No Pokémon match these filters.<br>Try clearing the search or type filters.</div>`;
+    }
+
+    items.forEach(it => {
+      const sp = it.sp;
+      const isOwned = it.isOwned;
+      const cell = document.createElement("button");
       cell.className = "dex-cell" + (isOwned ? " owned" : "");
-      const rz = RARITY[sp.rarity] || RARITY.normal;
+      /* 名字下面顯示「而家用緊邊個排序」嘅數值：No. / Lv. / Sp. Atk 24 … */
+      const metric = DEXSORT.metric(f.sort, sp.dexId, it.level);
+      const icons = DEXSORT.typeIcons(DEXSORT.typesOf(sp.dexId), "type-icon");
       cell.innerHTML = `
-        <img src="${spriteURL(sp.dexId)}" alt="${isOwned ? sp.name : "??"}" loading="lazy">
+        <span class="dex-thumb">
+          <img src="${spriteURL(sp.dexId)}" alt="${isOwned ? sp.name : "??"}" loading="lazy">
+        </span>
         <span class="dex-name">${isOwned ? sp.name : "???"}</span>
-        ${isOwned ? `<span class="dex-rarity" style="background:${rz.bg};color:${rz.color}">${rz.label}</span>` : ""}
+        ${isOwned
+          ? `<span class="dex-meta">
+               <span class="dex-metric${f.sort === "level" && it.level ? " dex-lv" : ""}">${metric}</span>
+               <span class="dex-types">${icons}</span>
+             </span>`
+          : ""}
       `;
       if (isOwned) {
         cell.onclick = () => this.showDetail(sp.dexId);
@@ -161,7 +356,7 @@ const Pokedex = {
         img.onclick = (e) => { e.stopPropagation(); this.playCry(sp.dexId); };
       }
       grid.appendChild(cell);
-    }
+    });
 
     this.renderHub();
   },
