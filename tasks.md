@@ -1,56 +1,66 @@
-# Tasks — 五種進化石 + 精靈進化場景
+# Tasks — Friends MVP + PvP Realtime
 
-> 對應 [spec.md](file:///c:/Users/user/Documents/trae_projects/PokeEngmon/spec.md)
-> 介面文字：全英文
+> 對應 `spec.md` v1。每完成一項即 `TodoWrite` 標記完成。
 
-## 執行順序（每項完成後自檢）
+## T1. Migration SQL（不動前端）
+- [ ] 新檔 `supabase/migrations/supabase-migrate-20261101d-friends.sql`
+- [ ] `user_account.friend_code` + unique partial index
+- [ ] `friendships`（pair unique、no-self、RLS、revoke）
+- [ ] `battle_invites`（status、battle_id、indexes、RLS、revoke）
+- [ ] `battles.is_friend boolean`
+- [ ] RPC：`ensure_friend_code`、`resolve_friend_code`、`search_trainers`
+- [ ] RPC：`send_friend_request`、`respond_friend_request`、`remove_friend`、`get_my_friends`、`get_friend_requests`
+- [ ] RPC：`send_battle_invite`、`get_battle_invites`、`respond_battle_invite`、`cancel_battle_invite`
+- [ ] `settle_battle(text,text,text,uuid)`：`pvp_friend` 1/0💎、每日 5 場 cap、`p_battle_id` 排除
+- [ ] 全部 `v_`/`p_`、欄位 alias、revoke/grant、`notify pgrst`
 
-- [x] **T1. 進化條件核心（`js/storage.js`）**
-  - 新增 `STONE_KINDS`、`STONE_LABELS`、`STONE_ITEM_MAP`、`TRADE_LIKES_REQUIRED`、`entryNextEvolution()`、`canEvolveNow()`、`canStoneEvolve()`。
-  - `defaultState()` 加 5 個石 key 及 `trainerLikes: 0`。
-  - 條件跟官方：`level-up` 用 `evo.minLevel`（null 才 fallback 30）；`use-item` + 5 石 → 只要有石即可（無等級）；`trade` → likes ≥ 20。
-  - `addEntryExp()`：改用 helper；伊貝石分支；回傳 `evolvedFrom`。
-  - `useEntryCandy()`：帶出 `evolvedFrom`。
-  - `deriveEntryFields()`：同一 helper replay，登出再登入不退化。
-  - 驗證：`node --check js/storage.js`；console 跑 spec §4.2。
+## T2. Realtime 模組 + PvP 提速
+- [ ] `js/battle/realtime.js`（原生 WS、join/heartbeat/reconnect/degraded、每 battle 一 channel、subscriber 共用）
+- [ ] `pvp.js`：`SELECT_BATTLE` 精簡欄位
+- [ ] `pvp.js`：`is_friend=eq.false`（findOpponent / findBattleForMe）
+- [ ] `pvp.js`：`waitRow()`（realtime 先行 + 1.2s→×1.6→cap 2.2s safety poll）
+- [ ] `pvp.js`：`waitForTeams` / `waitForOpponentAction` 改用 `waitRow`
+- [ ] `pvp.js`：配對自適應 500→×1.4→cap 1500；`document.hidden` 暫停／visible 重入池
+- [ ] `pvp.js`：`launchPvpBattle` 各棄局分支寫 `finishBattleRow`
+- [ ] `pvp.js`：`[PvP] turn latency` + `window.__pvpLatency`（最後 20 個）
+- [ ] `sw.js` / `index.html` 加 `js/battle/realtime.js`（先於 pvp.js）
 
-- [x] **T2. 道具層（`js/pet.js`）**
-  - `ITEM_KINDS` 加 5 石。
-  - `rollDrops()` 加 10% 石掉落、5 種各 20%。
-  - `canUse()` / `useItem()` 石分支（消耗、`entry.stone`、觸發進化、回傳 `evolvedFrom/evolvedTo/branch/stone`）。
-  - 驗證：`node --check js/pet.js`；掉落 chip 文案。
+## T3. Auth wrappers
+- [ ] `supabase-auth.js` 新增 11 個好友／邀請 RPC wrapper
+- [ ] `settleBattle(kind, result, trainerId, battleId)` 傳 `p_battle_id`
 
-- [x] **T3. 進化場景（新檔 `js/evolve-scene.js` + `js/capture.js`）**
-  - `CaptureAudio.playMusicOnce(url, volume, maxSeconds)` → bgmBus、可停、timeout 自動停。
-  - `EvolveScene.open/close`：GIF、叫聲、8 秒交替、5 秒 fanfare、完結後 backdrop 關閉、BGM 恢復。
-  - 驗證：`node --check`；瀏覽器完整流程。
+## T4. Friends view / UI
+- [ ] `index.html` `view-friends`（code 卡、add、requests、friends、invites、back）
+- [ ] `index.html` battle menu `#battle-menu-friends` tile + badge
+- [ ] `css/style.css` `.friends-*` + `[hidden]` 對 flex 類；tile badge
+- [ ] `js/friends.js`：open/render/load、copy code、add by code、add by name/uid、requests accept/decline、remove、invite modal（1v1/3v3/6v6）、invite accept/decline/cancel、waiting poll、badge/notification poll
+- [ ] `js/app.js`：`Friends.open()` 入口、`#friends-back`、登入後 `Friends.startPolling()`
+- [ ] `sw.js` ASSETS 加 `js/friends.js`；`index.html` script 加載
 
-- [x] **T4. App / Pokedex 接線（`js/app.js`、`js/pokedex.js`）**
-  - Partner Care 石 tile（`.pc-items.stones`）＋ 點擊／拖放。
-  - `_pcUse` 石成功 → patchEntry（branch / stone_used）→ 開場景 → onDone 重開 Partner Care。
-  - `onSetComplete`：場景完結後才 queueMoveLearn / gen unlock。
-  - `_renderSettlement`：有進化時不重開城鎮 BGM。
-  - `showEvolveModal(species, onDone)` 改接 `EvolveScene`。
-  - `Pokedex.feedCandy` 用 `res.evolvedFrom` 開場景。
-  - `renderHome()` 加 `_checkPendingEvolutions()`（防重入、逐隻播場景，供未來 likes）。
-  - 驗證：`node --check`；手動四條觸發路徑。
+## T5. 4 路加好友 + 對戰入口
+- [ ] `leaderboard.js` 每行 `＋` → `Friends.addByUid`
+- [ ] `battle.js`：保存 `pvpFoeUid` / `pvpFoeName`
+- [ ] `battle.js`：`openFriendMatch(battle, foeName)` → `onMatched` → `confirmFormat`
+- [ ] `battle.js`：`foeTrainerName()` PvP 顯示對手名
+- [ ] `battle.js`：結果卡 `#br-add-foe`（PvP + foeUid）
+- [ ] `battle.js`：`renderMenu()` 更新 friends tile sub/badge
+- [ ] `index.html` 結果卡加 `#br-add-foe` 按鈕（預設 hidden）
 
-- [x] **T5. 雲端（`js/sync.js` + migration）**
-  - `localEntryFromServer` 讀 `stone_used`。
-  - `patchEntry` 支援 `stone_used`。
-  - `pushItems` 加 `items_stones`，schema 錯誤 retry 舊 payload。
-  - `pull` 讀 `items_stones` 及 `trainer_likes`（null 保留本機）。
-  - 新增 `supabase/migrations/supabase-migrate-20261031-stone-evolution.sql`（`stone_used`、`items_stones`、`trainer_likes` + grants）。
-  - 驗證：`node --check js/sync.js`；未跑 migration 時 retry 成功。
+## T6. 文件
+- [ ] `prd.md` §3.12 好友系統 + 好友邀請 PvP（流程、上限、獎勵）
+- [ ] `prd.md` PvP 章節補 realtime 同步方式
+- [ ] （有需要）免責聲明無新資產 → 唔改
 
-- [x] **T6. 資產與文件（`index.html`、`sw.js`、`css/style.css`、`prd.md`、disclaimer）**
-  - 複製 2 首 mp3 到 `assets/bgm/`。
-  - `index.html` 加 script；`sw.js` ASSETS 加 3 個檔案。
-  - 加石 tile / 進化場景 CSS。
-  - disclaimer credits + prd.md §3.11。
-  - 驗證：檔案存在、路徑正確、`?v=` 一致（本地預覽需跑 sync-version）。
+## T7. 驗證（見 spec §9）
+- [ ] SQL 全段 Run 成功
+- [ ] 每個新 RPC 真登入 200 smoke
+- [ ] Realtime WS join + latency p50/p95
+- [ ] 斷 WS fallback 完成回合
+- [ ] 好友 4 路 + remove
+- [ ] 好友對戰 invite→開局→結算（第 6 場 0 鑽）
+- [ ] 隨機 PvP 唔劫好友局
+- [ ] `view-friends` 瀏覽器實測（無 console error）
+- [ ] 版本檔未手動改（CI 負責）
 
-- [x] **T7. 端到端驗證**
-  - spec §4 全部項目；瀏覽器實測；回報結果。
-
-> 注意：T5 migration 需要用戶在 Supabase SQL Editor 執行；未執行時功能仍可本機運作。
+## T8.（需用戶明確指示先做）
+- [ ] git commit / push（Conventional Commits）

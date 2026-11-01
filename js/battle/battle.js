@@ -29,6 +29,32 @@ const BattleUI = (() => {
     renderMenu();
   }
 
+  /* ---------- 每日對戰配額（結算先扣，開戰唔扣） ---------- */
+  function gateStatus() {
+    const st = loadState();
+    const day = dateKey(Date.now());
+    const curve = (typeof getCurveMode === "function") ? getCurveMode() : (st.curveMode || "standard");
+    return BattleGate.status(st, day, curve);
+  }
+
+  function quotaText(g) {
+    if (g.unlimited) return "Daily battles: unlimited";
+    if (!g.allowed) {
+      if (g.capped) return `Daily battles ${g.used}/${g.cap} · Daily limit reached — come back tomorrow`;
+      return `Daily battles ${g.used}/${g.cap} · Answer ${g.needQuestions} more questions to unlock ${BattleGate.BATTLES_PER_BATCH} more`;
+    }
+    const tail = g.capped ? "" : ` · ${g.needQuestions} questions for +${BattleGate.BATTLES_PER_BATCH} more`;
+    return `Daily battles ${g.used}/${g.cap}${tail}`;
+  }
+
+  /* 入口閘門：冇配額就 toast 講原因，唔開戰 */
+  function blockedByQuota() {
+    const g = gateStatus();
+    if (g.allowed) return false;
+    toast(quotaText(g));
+    return true;
+  }
+
   function renderMenu() {
     const st = loadState();
     /* PvP 戰績（server 記錄，pull / settle_battle 回應入咗本地 state） */
@@ -36,6 +62,14 @@ const BattleUI = (() => {
     if (pvpSub && window.SupabaseAuth && SupabaseAuth.isLoggedIn() && st.pvpWins != null) {
       pvpSub.textContent = `Online · ${st.pvpWins || 0}W – ${st.pvpLosses || 0}L`;
     }
+    /* 每日配額行 */
+    const quotaEl = document.getElementById("battle-quota");
+    if (quotaEl) {
+      const g = gateStatus();
+      quotaEl.textContent = quotaText(g);
+      quotaEl.classList.toggle("quota-blocked", !g.allowed);
+    }
+
     const havePokemon = st.entries.some(e => e.ownedSpecies && e.ownedSpecies.length);
     document.getElementById("battle-menu-pvp").onclick = () => {
       if (!havePokemon) { toast("You need Pokémon first! Pull or capture one."); return; }
@@ -134,6 +168,7 @@ const BattleUI = (() => {
 
   /* ---------- 開始對戰 ---------- */
   function startAI(trainer) {
+    if (blockedByQuota()) return;
     mode = "ai";
     aiTrainer = trainer;
     foeTeamEntries = trainer.team.map(m => ({ dexId: m.dexId, level: m.level, ivs: {}, evs: {}, nature: "hardy", moves: m.moves }));
@@ -147,6 +182,7 @@ const BattleUI = (() => {
 
   /* ---------- PvP 流程：配對 → 抽場制 → confirm → 揀隊 → 開戰 ---------- */
   function startPvP() {
+    if (blockedByQuota()) return;
     mode = "pvp";
     aiTrainer = null;
     showMatchPanel();
@@ -1250,7 +1286,8 @@ const BattleUI = (() => {
       await say(forfeited ? "You gave up and ran away..." : won ? "You won the battle!" : "You lost...");
       /* 對戰完：淡出 battle BGM，恢復全域 town BGM */
       try { if (window.CaptureScene) { CaptureScene.audio.stopBGM(400); CaptureScene.audio.startTownBGM(); } } catch (e) {}
-      const reward = forfeited ? null : await applyRewards(won);
+      /* 投降都行結算（當輸；配額都照扣 —— 係打完先扣，唔係開戰扣） */
+      const reward = await applyRewards(won && !forfeited);
       showResult(won && !forfeited, forfeited, reward);
     })();
   }
@@ -1264,18 +1301,20 @@ const BattleUI = (() => {
       : win ? `${foeTrainerName()} was defeated!` : "You lost the battle...";
     const rows = [];
     const gains = (reward && reward.expGains) || [];
-    if (reward && (gains.length || reward.diamonds > 0)) {
+    if (gains.length) {
       /* EXP 逐隻唔同（按等級比例派）：全部一樣先合併顯示，否則逐隻列 */
-      if (gains.length) {
-        const same = gains.every(g => g.gain === gains[0].gain);
-        if (same) rows.push(`<div class="br-row"><span>EXP ×${gains.length}</span><b>+${gains[0].gain}</b></div>`);
-        else gains.forEach(g => rows.push(`<div class="br-row"><span>${g.name}</span><b>+${g.gain} EXP</b></div>`));
-      }
-      if (reward.diamonds > 0) rows.push(`<div class="br-row"><span>DIAMONDS</span><b>+${reward.diamonds} 💎</b></div>`);
-      reward.levelUps.forEach(lu =>
-        rows.push(`<div class="br-row br-lvup"><span>${lu.name}</span><b>Lv.${lu.from} → ${lu.to}</b></div>`));
-    } else {
-      rows.push(`<div class="br-row"><span>REWARD</span><b>None</b></div>`);
+      const same = gains.every(g => g.gain === gains[0].gain);
+      if (same) rows.push(`<div class="br-row"><span>EXP ×${gains.length}</span><b>+${gains[0].gain}</b></div>`);
+      else gains.forEach(g => rows.push(`<div class="br-row"><span>${g.name}</span><b>+${g.gain} EXP</b></div>`));
+    }
+    if (reward && reward.diamonds > 0) rows.push(`<div class="br-row"><span>DIAMONDS</span><b>+${reward.diamonds} 💎</b></div>`);
+    if (reward) reward.levelUps.forEach(lu =>
+      rows.push(`<div class="br-row br-lvup"><span>${lu.name}</span><b>Lv.${lu.from} → ${lu.to}</b></div>`));
+    if (!rows.length) rows.push(`<div class="br-row"><span>REWARD</span><b>None</b></div>`);
+    /* 每日對戰配額（打完先扣，顯示返剩幾多） */
+    if (reward && reward.quota) {
+      const q = reward.quota;
+      rows.push(`<div class="br-row"><span>DAILY BATTLES</span><b>${q.unlimited ? "Unlimited" : q.remaining + " left"}</b></div>`);
     }
     document.getElementById("br-rows").innerHTML = rows.join("");
     document.getElementById("battle-result").style.display = "flex";
@@ -1332,29 +1371,37 @@ const BattleUI = (() => {
       if (e.level > lvBefore) levelUps.push({ name, from: lvBefore, to: e.level });
       if (loggedIn) SupabaseAuth.addEntryExp(e.uid, gain);
     });
-    /* 登入 + AI 贏：即使本地記錄打過都照 call，由 server 判斷係咪首通（本地記錄可能跨機唔齊） */
-    if (loggedIn ? (diamonds > 0 || (won && aiTrainer)) : diamonds > 0) {
-      if (loggedIn) {
-        const res = await SupabaseAuth.settleBattle(isPvp ? "pvp" : "ai", won ? "win" : "lose", aiTrainer ? aiTrainer.id : null);
-        if (res && typeof res.balance === "number") {
-          diamonds = res.bonus;
-          st.diamonds = res.balance;   /* server 權威，唔係本地 += */
-          if (res.wins != null) { st.pvpWins = res.wins; st.pvpLosses = res.losses; }
-        } else {
-          diamonds = 0;
-          if (window.App && App.toast) App.toast("Cloud sync hiccup — battle diamonds not saved");
-        }
+    /* ---- 每日配額：打完先扣（開戰唔扣，中途斷線唔會白扣） ---- */
+    const day = dateKey(Date.now());
+    const kind = isPvp ? "pvp" : "ai";
+    const questionsTodayN = BattleGate.questionsToday(st, day);
+    BattleGate.record(st, day, kind);
+
+    /* 登入：一律 call settle_battle（server 計鑽石 + 記配額 + 記累積場數）；
+       匿名：本地加鑽石。AI 首通由 server 判斷（本地記錄可能跨機唔齊） */
+    if (loggedIn) {
+      const res = await SupabaseAuth.settleBattle(kind, won ? "win" : "lose", aiTrainer ? aiTrainer.id : null, questionsTodayN);
+      if (res && typeof res.balance === "number") {
+        diamonds = res.bonus;
+        st.diamonds = res.balance;   /* server 權威，唔係本地 += */
+        if (res.wins != null) { st.pvpWins = res.wins; st.pvpLosses = res.losses; }
+        if (typeof res.used === "number") st.battleDays[day].used = res.used;
+        if (typeof res.ai_total === "number") st.battleAiTotal = res.ai_total;
+        if (typeof res.pvp_total === "number") st.battlePvpTotal = res.pvp_total;
       } else {
-        st.diamonds = (st.diamonds || 0) + diamonds;
+        diamonds = 0;
+        if (window.App && App.toast) App.toast("Cloud sync hiccup — battle rewards not saved");
       }
+    } else {
+      st.diamonds = (st.diamonds || 0) + diamonds;
     }
     if (won && aiTrainer) {
       st.aiTrainersBeaten = st.aiTrainersBeaten || [];
       if (!st.aiTrainersBeaten.includes(aiTrainer.id)) st.aiTrainersBeaten.push(aiTrainer.id);
     }
     saveState();
-    if (!expGains.length && diamonds === 0 && !levelUps.length) return null;
-    return { expGains, diamonds, levelUps };
+    const curve = (typeof getCurveMode === "function") ? getCurveMode() : (st.curveMode || "standard");
+    return { expGains, diamonds, levelUps, quota: BattleGate.status(st, day, curve) };
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms / battleSpeed)); }

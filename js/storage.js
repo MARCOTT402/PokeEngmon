@@ -52,6 +52,9 @@ function defaultState() {
     entries: [],             // 擁有嘅 Pokemon { uid, chainKey, stage, exp, branch?, ownedSpecies:[dexId], obtainedAt }
     activeUid: null,         // 目前拍檔（練經驗目標）
     records: {},             // "YYYY-MM-DD" -> [ {ts, duration, score, total, results:[{qid, chosen, correct}]} ]
+    battleDays: {},          // "YYYY-MM-DD" -> { used, ai, pvp }：每日對戰配額（結算先扣）
+    battleAiTotal: 0,        // 累積 AI 對戰場數（server 權威，pull 覆寫）
+    battlePvpTotal: 0,       // 累積 PvP 對戰場數（server 權威，pull 覆寫）
     customQuestions: [],     // 家長用 CSV 匯入嘅自訂題目
     unlockedGen: 1,          // 世代解鎖進度：1-5；擁有該代全部鏈（連傳說）自動開下一代
     gymBadges: [],           // 已領取 Gym milestone（10,20,30…）；上雲 user_account.gym_badges

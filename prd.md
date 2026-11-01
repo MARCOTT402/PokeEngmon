@@ -1,7 +1,7 @@
 ﻿# PokeEngmon 產品需求文檔（PRD）
 
 > 寶可夢主題嘅英文學習遊戲。用答題換鑽石、抽卡、捕捉同進化寶可夢嘅動機，驅動持續練習英文。
-> 目前版本：**1.17.1**（2026-10 · SemVer；發佈由 semantic-release 自動）
+> 目前版本：**1.17.2**（2026-10 · SemVer；發佈由 semantic-release 自動）
 
 ---
 
@@ -163,7 +163,8 @@
 - **對戰獎勵上雲（v1.15.22）**：之前對戰鑽石／EXP 係純本地加法，登入用戶下次 `pull()` 被雲端冚咗等同冇獎；改為同 quiz 一樣經 RPC —— 新 `settle_battle(p_kind, p_result, p_trainer_id)`（migration `20261101c`）由 server 計鑽石公式兼回傳權威 balance：**PvP 贏 3💎／輸 1💎、投降當輸；AI 訓練家首次擊敗一次性 10💎、重複擊敗 0💎**（server 用 `user_account.ai_trainers_beaten` 陣列記錄邊個打過，10 個 trainer id 白名單校驗，防重複攞同跨機刷）。EXP 每次贏都有，經現有 `add_entry_exp` RPC 逐隻出戰 entry 上雲；登入但 RPC 失敗 → 唔本地加鑽＋toast（同 quiz v140 規矩），匿名先本地加（本地用 `st.aiTrainersBeaten` 判斷首通）。結算畫面改為按實際獎勵顯示（PvP 輸都會出 `+1 💎` 行）。
 - **對戰 EXP 改比例制（v1.15.23）**：舊制 AI 戰固定 `trainer.level×12`／PvP 30，中後期對經驗曲線（Lv.50 升一級約 7.5k）近乎冇意義；改為同 quiz 一樣按比例派 —— AI 戰每隻出戰寵各攞「佢自己升一級所需（`levelSpan`）× 訓練家等級%」（Timmy=5%、Alder=82%≈一級），任何等級都有感，後期玩家可以帶低等級寵搵高級訓練家刷 EXP；PvP 維持固定 30（唔按比例，防相熟玩家互讓速刷）。結算畫面 EXP 改逐隻顯示（全部相同先合併 `+N ×3`）。
 - **對戰 EXP 改逐敵寵制（v1.15.24，取代 v1.15.23 嘅 span% 制）**：每擊倒一隻敵寵即記一筆 EXP —— 原莊公式 `baseExp × 敵LV / 7`，凡係**面對過嗰隻敵寵**嘅我寵均分（參與＝正選自動計＋換入過，敵方換人即重設，齋坐後備冇份 —— Gen 1–5 switch-training 規則）；**以弱勝強加成**：收 EXP 嗰隻等級低過敵寵 → `×(1 + 等級差/50)`，cap ×3。**輸／投降都照攞已擊倒嘅 EXP**（一隻一隻計；鑽石先係最後結算、投降當輸）；PvP 贏維持額外固定 30／隻（唔按敵寵計，防互讓刷）。`baseExp` 資料：`tools/fetch_base_exp.py` 由 PokéAPI 抽入 5 個 dex JSON，649 隻全齊（引擎內置梯隊物種速查表做後備）。**PvP 戰績**：`user_account.pvp_wins / pvp_losses` 兩欄由 `settle_battle` RPC 累積（migration `20261101c` 已更新），對戰主選單 PvP 格顯示 `W–L`，數據留俾下一步 leaderboard / friends system 用。下一步預告：每日答題閘門（5 回合 50 題英文 → 解鎖 4 場對戰，再做 5 回合 → 再 4 場，每日上限 8 場）。
-- 無障礙：`user-scalable=no` 已移除；所有 hover 動效只用 `@media (hover:hover)` 觸發；支援 `prefers-reduced-motion`
+- **每日對戰配額（v1.17.2）**：junior / standard 模式下，**今日答題數每滿 50 題解鎖 4 場對戰，每日上限 8 場**（teen / adult 無上限）。用**題數**唔用回合數 —— 自訂組題可能不足 10 題，所以 50 題先係準則。配額以**完成結算先扣**（`applyRewards`），開戰唔扣，中途斷線／中途走佬唔會白扣；投降當輸但照扣。純函數 `js/battle/gate.js`（`BattleGate`）計配額，對戰主選單頂部顯示 `Daily battles 3 / 8` 同「仲差幾多題解鎖 +4」，冇配額撳入口即 toast 原因。每日場數記 `st.battleDays["YYYY-MM-DD"] = {used, ai, pvp}`（本機 mirror）＋server `user_account.battle_days` jsonb（跨機一致）；另加 `battle_ai_total / battle_pvp_total` 累積場數，留俾 leaderboard / friends system 用。`settle_battle` RPC 加 `p_questions_today` 參數、server 夾死上限（最多 8），cap 未夠時回傳 `allowed=false` 唔派鑽。migration `supabase-migrate-20261101d-battle-daily-quota.sql`。
+
 
 ---
 

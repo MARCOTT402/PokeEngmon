@@ -1,179 +1,229 @@
-# Spec — 五種進化石 + 精靈進化場景
+# Spec — Friends System MVP + PvP Realtime 提速
 
-> 狀態：待用戶批准（Spec Mode）
-> 介面文字：全英文；對話與文件：繁體中文（香港用語）
-
----
+> 版本：v1（2026-11-01）
+> 狀態：待批核（批核後照 `tasks.md` 執行）
+> 相關：`prd.md` §3.12（新增章節）、`supabase/migrations/supabase-migrate-20261101d-friends.sql`
 
 ## 1. 目標
 
-1. 在 Partner Care 的道具區新增 5 種進化石：Thunder / Moon / Fire / Leaf / Water Stone。
-2. 每完成一個答題回合有 10% 機會掉落 1 粒石；掉落時 5 種石各佔 20%。
-3. 進化條件跟官方：
-   - 等級進化用 `evolvesTo.minLevel`（例如 Charmander 16、Charmeleon 36、Caterpie 7）。
-   - 用石進化只要有對應石即可，**不設等級門檻**；伊貝分支由石決定，不再隨機。
-   - Trade 進化（Kadabra／Machoke／Graveler／Haunter）改為「收集 20 likes」；likes 功能尚未實作，暫時停喺第二階，並預留主頁觸發。
-4. 新增進化場景（hub 彈窗），依序播放：
-   - 顯示進化前 GIF + 播一次進化前叫聲
-   - 播 `1-41. Evolution.mp3` 同時交替閃動前／後 GIF 約 8 秒
-   - 只顯示進化後 GIF + 播一次進化後叫聲
-   - 播 `3-31. Fanfare Evolution.mp3` 5 秒後完結
-   - 完結後等用戶點擊 hub 以外地方返回
+1. **好友系統 MVP**：好友清單、請求、刪除；4 種加好友入口；好友邀請制 PvP。
+2. **PvP 反應提速**：Supabase Realtime（原生 WebSocket，零依賴）取代主要輪詢；輪詢降為 safety fallback。
+3. **好友 PvP 獎勵**：server 權威結算，每日最多 5 場計鑽。
 
----
+非目標：禮物、觀戰、好友排行、即時聊天、線上狀態（online presence）。
 
-## 2. 已鎖定規格
+## 2. 現況（已確認）
 
-### 2.1 道具與掉落
+- `battles` 已在 `supabase_realtime` publication；RLS：只有參與者（`p1_uid`/`p2_uid`）可 SELECT/UPDATE。
+- `pvp.js` 現時每 1800ms 全量 `GET /battles`；`waitForTeams` / `waitForOpponentAction` 只靠輪詢；配對只靠 `matchmaking` 表。
+- `battle.js`：`onMatched(battle, side, foeUid)` 已存在但 `foeUid` 冇保存；結果畫面只有 CONTINUE；`settle_battle(text,text,text)` 已支援 `ai|pvp`。
+- `leaderboard.js` 每行已有 `accountUuid`。
+- `supabase-auth.js` 有 `_rpc()`（單行/物件）與 `_rpcTable()`（setof rows）可重用。
+- 版本號由 CI 同步（`tools/sync_app_version.py`），本地唔手動 bump `APP_VERSION`。
+- `sw.js` 有明確 `ASSETS` 清單，新 JS 必須加入。
+- `index.html` 所有 script 帶 `?v=`，新 script 同樣。
 
-- 新道具 key（`st.items` 扁平欄位）：`thunder`、`moon`、`fire`、`leaf`、`water`。
-- `Pet.ITEM_KINDS` 擴展為 `["food","premium","revive","thunder","moon","fire","leaf","water"]`。
-- `defaultState().items` 補齊 5 個石 key = 0；`Pet.items()` 自動補 0。
-- 掉落（`Pet.rollDrops()`，完美與非完美回合都適用）：
-  - 先照現有食物／復活藥規則
-  - 再獨立擲 `Math.random() < 0.10` → 有石掉落
-  - 掉落時 5 種石均等（各 20%），`addItem(stone, 1)`，結算 chip 顯示例如 `🪨 Thunder Stone +1`
-- Partner Care 道具區分兩行：原本 3 個食物／復活藥 tile；下面新增 `.pc-items.stones` 5 個石 tile。
-  - 石 tile 用 emoji 圖示（⚡ 🌙 🔥 🍃 💧）＋名稱＋數量，不加新圖片 asset。
-  - 可點擊／拖放，行為同現有道具；不可用時 disabled。
+## 3. Schema（migration `supabase-migrate-20261101d-friends.sql`）
 
-### 2.2 進化條件（單一真相來源）
-
-在 `js/storage.js` 新增 helper，`addEntryExp()` 與 `deriveEntryFields()` 共用：
-
-```js
-const STONE_KINDS = ["thunder","moon","fire","leaf","water"];
-const STONE_LABELS = { thunder:"Thunder Stone", moon:"Moon Stone", fire:"Fire Stone", leaf:"Leaf Stone", water:"Water Stone" };
-const STONE_ITEM_MAP = { "thunder-stone":"thunder", "moon-stone":"moon", "fire-stone":"fire", "leaf-stone":"leaf", "water-stone":"water" };
-const TRADE_LIKES_REQUIRED = 20;
-
-entryNextEvolution(entry) -> {
-  fromDex, target|null, needLevel, stone|null, trade:false, branchIndex|null,
-  options: [{ target, needLevel, stone, trade, branchIndex }]   // 伊貝未選分支時
-}
-canEvolveNow(entry, info) -> boolean        // 等級／石／likes 條件全部達成？
-canStoneEvolve(entry, kind) -> { ok, msg, target?, branchIndex? }
-```
-
-規則（依 `data/pokemon-151.json` 官方資料）：
-- 線性階段：目標 = `chain.stages[entry.stage]`；`evo = dexOf(fromDex).evolvesTo.find(id)`。
-- `trigger:"level-up"`：`needLevel = evo.minLevel`；若官方資料 minLevel 為 null（Gen2+ 特殊進化），沿用 30 作近似。
-- `trigger:"use-item"` + 5 種石：`stone = STONE_ITEM_MAP[evo.item]`，**不設等級門檻**；有石就用得。
-- `trigger:"trade"`：`trade = true`，條件 = `(st.trainerLikes || 0) >= 20`；likes 未實作時 `trainerLikes` 預設 0 → 不會進化。
-- 其他道具／特殊進化（Gen2+ 非這 5 種石）：維持舊行為（視作無石、30 級自動進化）。
-- 伊貝分支：`entry.branch` 已存在 → 用該分支；未存在時由 `entry.stone` 對應（water→Vaporeon、thunder→Jolteon、fire→Flareon），並寫入 `entry.branch`。無石 → 停在伊貝。
-- `addEntryExp()` 回傳新增 `evolvedFrom`（進化前 dexId），供場景使用。
-- `useEntryCandy()` 回傳新增 `evolvedFrom`。
-- `deriveEntryFields()` replay 必須用同一套 helper；`out.branch` 未定時可由 `out.stone` 推出，確保登出再登入不會退化。
-
-Trade 進化（本作 chain 內）：`abra 64→65`、`machop 67→68`、`geodude 75→76`、`gastly 93→94`；現階段停喺第二階，等 likes 功能。
-
-### 2.3 使用石（Partner Care）
-
-- `Pet.canUse(kind, entry)`：石種類 → 只要 `countOf > 0 && canStoneEvolve(entry, kind).ok` 就可用（不受餵食時段／血量影響）。
-- `Pet.useItem(kind, entry)` 石種類流程：
-  1. 檢查數量與 `canStoneEvolve`
-  2. `addItem(kind, -1)`、`entry.stone = kind`、`saveState()`
-  3. `addEntryExp(entry, 0)` 觸發進化
-  4. 回傳 `{ ok:true, msg, evolvedFrom, evolvedTo, branch, stone }`
-- 失敗訊息（英文）：
-  - 未到官方等級：`Charmeleon needs Lv.36 to evolve`
-  - 石不適用：`That stone has no effect on Pikachu`
-  - 需要其他石：`Pikachu needs a Thunder Stone`
-  - 已完全進化：`Already fully evolved`
-  - Trade 未達 likes：`Kadabra needs 20 likes to evolve`
-- 使用成功後：`Sync.patchEntry(uid, { branch })`（如有）＋ `Sync.patchEntry(uid, { stone_used: kind })`，再開進化場景；場景完結後重新打開 Partner Care。
-
-### 2.3b Trade 進化與主頁觸發（為 likes 功能預留）
-
-- `defaultState()` 加 `trainerLikes: 0`（likes 功能之後寫入）。
-- `App.renderHome()` 尾段呼叫 `App._checkPendingEvolutions()`：
-  - 掃描所有 entries，凡 `entryNextEvolution(entry)` 現時條件已達成（例如 likes 由登入／同步變成 ≥20）→ `addEntryExp(entry, 0)` 完成進化，收集 `{fromDex, toDex, entry}`。
-  - 逐隻以 `EvolveScene` 順序播放，全部完成後 `renderHome()` 一次。
-  - 加 `_evoChecking` 防重入；冇進化就靜靜返回。
-- 現階段 likes 恆為 0，所以唔會觸發；likes 功能上線後只需更新 `st.trainerLikes`，主頁／登入即會自動播進化。
-
-### 2.4 進化場景（新檔 `js/evolve-scene.js`）
-
-公開 API：`EvolveScene.open({ fromDex, toDex, onDone })`。
-
-流程（時間由 `open()` 起計）：
-1. `App.showModal(html, true)`（暫時停用背景點擊關閉）
-2. 停止城鎮 BGM；顯示進化前 GIF（`animatedURL(fromDex)`）；`Pokedex.playCry(fromDex)`
-3. +900ms：`CaptureScene.audio.playMusicOnce("assets/bgm/evolution.mp3", 0.7, 8000)`；每 400ms 交替顯示前／後 GIF，維持 8 秒
-4. 8 秒後：只顯示後 GIF；`Pokedex.playCry(toDex)`
-5. +1200ms：`playMusicOnce("assets/bgm/evolution-fanfare.mp3", 0.8, 5000)`；顯示 `Tap outside to continue`
-6. 5 秒後完結：掛上 backdrop click → `close()`
-7. `close()`：清 timers、停所有場景音效、重開城鎮 BGM、`onDone && onDone()`
-
-- `playMusicOnce(url, volume, maxSeconds)` 加在 `CaptureAudio`：經 `bgmBus`、回傳 `{ stop }`、到時自動停；沿用 `_oneShotBufs` 快取。
-- 叫聲沿用 `Pokedex.playCry`（sfxBus 音量設定）。
-- GIF 用兩張疊圖 + opacity 切換，避免 src 重載。
-- 觸發點：
-  - 回合結算升級進化（`App.onSetComplete`）：場景完結後才 `queueMoveLearn` / `maybeShowGenUnlock`。
-  - 餵糖果進化（`Pokedex.feedCandy`）。
-  - 使用石進化（`App._pcUse`）。
-  - 主頁外部條件進化（`App.renderHome` → `_checkPendingEvolutions`，供未來 likes）。
-- 保留 `App.showEvolveModal(species, onDone)` 作為入口，內部改為 `EvolveScene.open`。
-
-### 2.5 雲端持久化
-
-新增 migration `supabase/migrations/supabase-migrate-20261031-stone-evolution.sql`：
+### 3.1 `user_account`
 ```sql
-alter table public.user_entries add column if not exists stone_used text;
-alter table public.user_account add column if not exists items_stones jsonb;
-alter table public.user_account add column if not exists trainer_likes integer;
-grant select, update (stone_used) on public.user_entries to authenticated;
-grant select, update (items_stones, trainer_likes) on public.user_account to authenticated;
-notify pgrst, 'reload schema';
+alter table user_account add column if not exists friend_code text;
+create unique index if not exists user_account_friend_code_uniq
+  on user_account (friend_code) where friend_code is not null;
 ```
-- `localEntryFromServer()` 讀 `stone_used` → `entry.stone`。
-- `Sync.patchEntry()` 支援 `stone_used`。
-- `Sync.pushItems()` 加 `items_stones`；若後端回 schema/column 錯誤，自動 retry 舊 3 欄（避免未跑 migration 時連食物都同步唔到）。
-- `Sync.pull()` 若 `acct.items_stones` 存在才覆蓋本機石數量（null = 保留本機）；若 `acct.trainer_likes` 存在 → `st.trainerLikes`。
-- migration 未跑時：本機石與進化照常運作，只係未上雲；log warning，不阻塞。
-- `trainer_likes` 只作未來 likes 功能寫入；本 spec 只讀不寫。
+- 8 字元；字母表 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`（剔除 O/0/I/1）。
+- Lazy 生成：`ensure_friend_code()`（security definer）檢查自己個 code，冇就 loop 生成 + 檢查全表唯一，最多 50 次。
 
-### 2.6 資產
+### 3.2 `friendships`
+```sql
+create table if not exists friendships (
+  id uuid primary key default gen_random_uuid(),
+  requester uuid not null references user_account(id) on delete cascade,
+  addressee uuid not null references user_account(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted')),
+  created_at bigint not null default (extract(epoch from now())*1000)::bigint,
+  responded_at bigint,
+  constraint friendships_no_self check (requester <> addressee)
+);
+create unique index friendships_pair_uniq on friendships
+  (least(requester, addressee), greatest(requester, addressee));
+alter table friendships enable row level security;
+revoke all on friendships from anon, authenticated;   -- 只准經 RPC
+```
 
-- 複製：
-  - `C:\Users\user\Desktop\1-41. Evolution.mp3` → `assets/bgm/evolution.mp3`
-  - `C:\Users\user\Desktop\3-31. Fanfare Evolution.mp3` → `assets/bgm/evolution-fanfare.mp3`
-- `sw.js` ASSETS 加上述 2 個 mp3 及 `./js/evolve-scene.js`。
-- `index.html` 在 `js/pokedex.js` 之後、`js/app.js` 之前加 `<script src="js/evolve-scene.js?v=...">`。
-- `App.openDisclaimer()` Music & Sound Credits 加進化曲與 fanfare（Pokémon RGBY 原聲，© Nintendo / Creatures Inc. / GAME FREAK inc.）。
-- `prd.md` §3.11 補進化場景音效與 5 種石。
-- `css/style.css` 加 `.pc-items.stones`、`.pc-item.stone`、`.evolve-scene`、`.evo-stage`、`.evo-gif` 樣式。
+### 3.3 `battle_invites`
+```sql
+create table if not exists battle_invites (
+  id uuid primary key default gen_random_uuid(),
+  from_uid uuid not null references user_account(id) on delete cascade,
+  to_uid uuid not null references user_account(id) on delete cascade,
+  team_size int not null check (team_size in (1,3,6)),
+  status text not null default 'pending'
+    check (status in ('pending','accepted','declined','expired')),
+  battle_id uuid references battles(id) on delete set null,
+  created_at bigint not null default (...),
+  responded_at bigint,
+  constraint battle_invites_no_self check (from_uid <> to_uid)
+);
+create index battle_invites_to on battle_invites (to_uid, status);
+create index battle_invites_from on battle_invites (from_uid, status);
+alter table battle_invites enable row level security;
+revoke all on battle_invites from anon, authenticated;
+```
 
----
+### 3.4 `battles`
+```sql
+alter table battles add column if not exists is_friend boolean not null default false;
+```
 
-## 3. 明確不改
+## 4. RPC（全部 `security definer` + `set search_path = public`，變數 `v_`、參數 `p_`、欄位帶 alias）
 
-- 不改現有食物／復活藥掉落率與效果。
-- Trade 進化改為 20 likes 條件（本 spec 實作條件判定，likes 功能本身不在本 spec）。
-- 不改 Gen2–5 非這 5 種石的道具進化行為（維持近似 30 級）。
-- 不改 APP_VERSION（由 semantic-release 管）；本地預覽用 `python tools/sync_app_version.py`。
-- 不新增石頭 PNG asset。
+| RPC | 簽名 | 回傳 | 規則 |
+|---|---|---|---|
+| `ensure_friend_code` | `()` | `text` | 冇 code 就生成；重入安全 |
+| `resolve_friend_code` | `(p_code text)` | `jsonb` | `{account_uuid,trainer_name}`；搵唔到回 `null`；自己回 `{self:true}` |
+| `search_trainers` | `(p_query text)` | `table(account_uuid uuid, trainer_name text, relation text)` | 名字 ILIKE；≥2 字；排除自己；limit 20；`relation` ∈ `friend/pending_out/pending_in/none` |
+| `send_friend_request` | `(p_target uuid)` | `jsonb` | 已好友 → `already_friends`；已 outgoing pending → `pending`；對方已向我請求 → 自動 `accepted`；上限：好友 50、outgoing pending 20；否則 insert → `sent` |
+| `respond_friend_request` | `(p_requester uuid, p_accept boolean)` | `jsonb` | accept → status accepted；decline → 刪 row（可再請求）；唔存在 → `not_found` |
+| `remove_friend` | `(p_friend uuid)` | `jsonb` | 刪 pair → `{removed:true/false}` |
+| `get_my_friends` | `()` | `table(account_uuid uuid, trainer_name text, pvp_wins int, pvp_losses int, since bigint)` | 只 accepted |
+| `get_friend_requests` | `()` | `table(account_uuid uuid, trainer_name text, created_at bigint)` | 只 incoming pending |
+| `send_battle_invite` | `(p_friend uuid, p_team_size int)` | `jsonb` | 必須好友；team_size ∈ 1/3/6；同 pair 10 分鐘內已有 pending（任一方向）→ `pending_exists`；否則 insert → `{status:'sent',invite_id,to_uid}` |
+| `get_battle_invites` | `()` | `table(invite_id uuid, direction text, account_uuid uuid, trainer_name text, team_size int, status text, created_at bigint, battle_id uuid)` | 最近 10 分鐘、涉及自己、status pending/accepted；`direction` ∈ `in/out` |
+| `respond_battle_invite` | `(p_invite uuid, p_accept boolean)` | `jsonb` | 只 to_uid 可回應；過期 → `expired`；decline → `declined`；accept → server roll seed、insert `battles(mode='pvp',p1=from,p2=to,is_friend=true,seed)`、invite→accepted，回 `{status:'accepted',battle_id,side:'p2',team_size,foe_uid,foe_name}` |
+| `cancel_battle_invite` | `(p_invite uuid)` | `jsonb` | 只 from_uid、只 pending → 刪 row |
+| `settle_battle` | `(p_kind text, p_result text, p_trainer_id text default null, p_battle_id uuid default null)` | `jsonb` | 新增 `pvp_friend`：贏 1💎、輸 0💎；每日最多 5 場（count finished `is_friend` battles since 今日 00:00，**排除 p_battle_id**）；`pvp_wins/losses` 照加 |
 
----
+- 先 `drop function if exists settle_battle(text,text,text)`（舊簽名）避免 overload 混亂。
+- 所有 RPC：`revoke all ... from public, anon; grant execute ... to authenticated;`
+- 最後 `notify pgrst, 'reload schema';`
+- 先例：`get_leaderboard` 也是 `security definer` + revoke anon；好友 RPC 必須同一處理（Rule 9）。
 
-## 4. 驗證
+## 5. Realtime（`js/battle/realtime.js`）
 
-1. `node --check js/storage.js js/pet.js js/app.js js/pokedex.js js/sync.js js/evolve-scene.js`
-2. 單元式 console 驗證：
-   - Pikachu Lv.5 用 Thunder Stone → 直接進化 Raichu（無等級門檻）
-   - Eevee Lv.5 用 Water/Thunder/Fire Stone → 對應 Vaporeon/Jolteon/Flareon，branch 正確；無石停在伊貝
-   - Charmander Lv.16 進化 Charmeleon；Charmeleon Lv.35 冇 Fire Stone → 不進化；Lv.36 自動進化 Charizard
-   - Kadabra Lv.99、trainerLikes 0 → 不進化；設 `st.trainerLikes = 20` 後 `renderHome()` → 自動進化 Alakazam 並播場景
-   - `deriveEntryFields` 對以上 entry 重推 stage 一致（模擬 pull）
-3. Partner Care：石 tile 數量、disabled 狀態、點擊／拖放、成功後場景、關閉後回到 Partner Care。
-4. 回合結算 10% 掉落（可用 console 改 seed 手動多跑）；掉落 chip 顯示正確。
-5. 進化場景：計時順序、GIF 交替、叫聲、兩首音樂、完結後點外面關閉、BGM 恢復。
-6. 未跑 migration 時：`pushItems` 仍成功同步食物（retry 路徑）；console 只有 warning。
-7. 瀏覽器實測（`python -m http.server` 或現有預覽方式）。
+原生 WebSocket，唔引入 supabase-js：
 
----
+- URL：`wss://<project-ref>.supabase.co/realtime/v1/websocket?apikey=<anon>&vsn=1.0.0`
+  - ref 由 `SUPABASE_CONFIG.url` 抽 host 第一段；anon key 由 `SUPABASE_CONFIG.anonKey`。
+- `PvpRealtime.subscribe(battleId, cb)` → 回傳 `unsubscribe`：
+  - 每個 battleId 一條 channel（subscriber 共用），`phx_join` payload：
+    ```js
+    { config: { postgres_changes: [{ event: "UPDATE", schema: "public", table: "battles", filter: "id=eq."+battleId }] }, access_token: SupabaseAuth.currentToken() }
+    ```
+  - topic `realtime:pvp:<battleId>`。
+  - 收到 `postgres_changes` → 取 `payload.record` / `payload.data.record` → 同步給所有 subscriber；保留 `lastRecord` 俾新 subscriber 即時收到。
+  - 心跳：每 25s `{topic:"phoenix",event:"heartbeat",payload:{},ref}`；`document.hidden` 時降低心跳（或照常，成本低）。
+  - 斷線：指數退避重連（1s→2s→4s→8s→cap 10s）；`join` 失敗 / 連 3 次失敗 → 標記 `degraded=true`（照樣俾 pvp.js 輪詢 fallback）。
+  - 最後一個 subscriber 取消 → 60s 後無新 subscriber 才關 WS（避免回合之間反覆握手）。
+  - 絕不 throw：所有錯誤只 `console.warn("[Realtime] ...")`。
+- 安全：只訂閱自己參與嘅 battle（RLS 會擋；若 join 被拒，直接 fallback）。
 
-## 5. 待批准後執行
+## 6. `js/battle/pvp.js` 改動
+
+1. **唔再用 1800ms 全量 GET**
+   - 新增 `SELECT_BATTLE = "id,state,seed,winner,team_size,p1_uid,p2_uid,p1_action,p2_action,p1_team,p2_team,is_friend"`，所有 `fetchBattle` 只攞需要欄位。
+2. **配對過濾好友局**：`findOpponent()`、`findBattleForMe()` 加 `is_friend=eq.false`（防隨機配對劫走好友局）。
+3. **等待用 realtime 先行**：新增 `waitRow(battleId, isDone)`：
+   - 先 `PvpRealtime.subscribe`；
+   - safety 輪詢：首次 1200ms，之後 `×1.6`（cap 2200ms）；
+   - `isDone` 成立即 cleanup（unsubscribe + clearTimeout）並 resolve。
+   - `waitForOpponentAction` / `waitForTeams` 改用 `waitRow`。
+4. **自適應配對輪詢**：`matchmake` 由固定 1800ms 改 `delay = 500 → ×1.4 → cap 1500ms`；`document.hidden` 暫停（唔發請求），visible 時重新入池（DELETE+POST，只限未 matched）。
+5. **棄局補寫**：`launchPvpBattle` 任何「對手走／冇隊伍」分支都要 `finishBattleRow(battleId, foeSide)`（現時只 toast + openMenu，row 會殘留 active）。
+6. **延遲量測**：`resolvePvpTurn` 由 submit 到收到對手 action 計 `console.debug("[PvP] turn latency", ms+"ms")`；`window.__pvpLatency` 陣列（最後 20 個）方便驗證 p50/p95。
+7. **好友局**：`matchmake` 不受影響；好友局由 `battle.js` 直接開。
+
+## 7. UI / 功能
+
+### 7.1 新 view：`index.html` `<section id="view-friends" class="view friends-view">`
+- Header：`Friends` + 關閉／返回。
+- 自己 Friend Code 卡：`#friends-code` + `#friends-copy-code`（`navigator.clipboard`，失敗 fallback `App.toast`）。
+- 加好友：`#friends-add-input`（friend code 或名）+ `#friends-add-btn`；結果列表 `#friends-search-results`（每行 `ADD` / 狀態）。
+  - 輸入 8 字元字母表格式 → 先 `resolve_friend_code` → 再 `send_friend_request`。
+  - 否則 → `search_trainers`（≥2 字）列出 `＋` 按鈕。
+- 好友請求：`#friends-requests`（ACCEPT / DECLINE）。
+- 好友清單：`#friends-list`（名、W–L、`⚔ Invite`、`Remove`）。
+- 邀請：`#friends-invites`（incoming ACCEPT/DECLINE；outgoing pending「Waiting… / Cancel」）。
+- Loading / empty / error 狀態都要有文字，唔可以空白。
+- 未登入：toast + 打開 Login Hub，唔顯示 view。
+
+### 7.2 入口
+- `view-battle-menu` 加 tile：`👥 Friends`（`#battle-menu-friends`，sub 顯示 `N friends · M requests`），`BattleUI.renderMenu()` 更新。
+- `app.js`：`Friends.open()` 綁定；`#friends-back` → home。
+- 首頁 Battle tile 唔改。
+
+### 7.3 4 路加好友
+1. **Friend Code**（friends view）。
+2. **排行榜一鍵加**：`leaderboard.js` 每行（非自己、有 `accountUuid`）加 `＋` 按鈕 → `Friends.addByUid(uuid, name)` → toast。
+3. **訓練員名搜尋**（friends view）。
+4. **PvP 完場 Add opponent**：`battle.js` 配對時保存 `pvpFoeUid` / `pvpFoeName`；結果卡加 `#br-add-foe` 按鈕（只 PvP + 有 foeUid 時顯示）→ `Friends.addByUid`。
+
+### 7.4 好友邀請 PvP
+- Invite：friends list `⚔` → modal 揀 1v1 / 3v3 / 6v6 → `send_battle_invite` → 顯示 waiting（3s poll `get_battle_invites`，accepted 即 `fetchBattle` → `BattleUI.openFriendMatch`；cancel → `cancel_battle_invite`）。
+- Accept（invitee）：`respond_battle_invite(...,true)` → `PvpNet.fetchBattle(battle_id)` → `BattleUI.openFriendMatch`。
+- `BattleUI.openFriendMatch(battle, foeName)`：`mode="pvp"`、`pvpBattle=battle`、`pvpSide = (p1_uid===me?'p1':'p2')`、`pvpTeamSize=battle.team_size`、`pvpFoeUid`、`pvpFoeName`；顯示 `#pvp-match-panel` + `#pvp-matched`（格式 = team_size），之後照 `confirmFormat` → 揀隊 → `launchPvpBattle`。
+- `foeTrainerName()` PvP 時回 `pvpFoeName || "RIVAL"`。
+- 通知：登入後 `Friends.startPolling()`，每 20s `get_battle_invites`；只在 `view-home` / `view-battle-menu` / `view-friends` 且非對戰中，遇到新 pending 就 toast + tile badge；好友 view 開住時 8s 一次。
+- 已接受但未開局嘅 invite 唔好自動搶走：`PvpNet.findBattleForMe` 已過濾 `is_friend=false`，所以隨機配對唔會接到好友局；好友局必須經 invite 流程開。
+
+### 7.5 `supabase-auth.js` wrappers
+```js
+ensureFriendCode() / resolveFriendCode(code) / searchTrainers(q)
+sendFriendRequest(uid) / respondFriendRequest(requester, accept) / removeFriend(uid)
+getMyFriends() / getFriendRequests()
+sendBattleInvite(friendUid, teamSize) / getBattleInvites()
+respondBattleInvite(inviteId, accept) / cancelBattleInvite(inviteId)
+settleBattle(kind, result, trainerId, battleId)   // 加 p_battle_id
+```
+- 全部用現有 `_rpc` / `_rpcTable`；失敗 return `null`，由 UI toast（Rule 5：已登入唔可以靜默 fallback）。
+
+## 8. 檔案清單
+
+| 檔案 | 動作 |
+|---|---|
+| `supabase/migrations/supabase-migrate-20261101d-friends.sql` | 新增（schema + RPC） |
+| `js/battle/realtime.js` | 新增 |
+| `js/battle/pvp.js` | 改（realtime、過濾、自適應、latency、棄局） |
+| `js/friends.js` | 新增（view controller + polling + invite flow） |
+| `js/supabase-auth.js` | 改（RPC wrappers、settleBattle 加 `p_battle_id`） |
+| `js/leaderboard.js` | 改（每行 `＋ Friend`） |
+| `js/battle/battle.js` | 改（`openFriendMatch`、`pvpFoeUid/Name`、results Add opponent、`foeTrainerName`、renderMenu 好友 tile） |
+| `js/app.js` | 改（friends view 入口 / back / `Friends.startPolling()`） |
+| `index.html` | 改（`view-friends`、Friends tile、結算 Add opponent、新 script） |
+| `css/style.css` | 改（`.friends-*`、badge；`[hidden]{display:none}` 對 flex 類） |
+| `sw.js` | 改（ASSETS 加 `js/friends.js`、`js/battle/realtime.js`） |
+| `prd.md` | 改（§3.12 好友系統 + PvP 邀請；資產/功能描述同步） |
+
+## 9. 驗證（必須做）
+
+1. **SQL**：Supabase SQL Editor 全段 Run 無錯；`pg_proc` 見到新函數。
+2. **RPC smoke（Rule 9）**：真登入帳戶（瀏覽器 DevTools Network）逐個 call：
+   - `ensure_friend_code` → 200 + 8 字 code
+   - `send_friend_request` / `get_friend_requests` / `respond_friend_request` / `get_my_friends` → 200，DB 有 row
+   - `send_battle_invite` / `get_battle_invites` / `respond_battle_invite` → 200，`battles` 多一行 `is_friend=true` + seed
+   - `settle_battle` `pvp_friend` → 200，`{bonus:1|0,balance,...,wins,losses}`
+3. **Realtime**：
+   - 兩個瀏覽器（或一真一假 session）入同一 battle；DevTools WS 見 join ok。
+   - 對手寫 action 後，另一端 `[PvP] turn latency` p50 < 700ms、p95 < 1500ms（20 回合樣本）。
+   - 人為斷 WS（DevTools offline / 關 WS）→ 仍然靠 fallback 完成回合，唔卡死。
+4. **好友流程**：A/B 兩個 Google 帳戶（或 A + B 測試資料）：
+   - code add → request → accept → 出現在雙方清單
+   - leaderboard `＋` / 名搜尋 / PvP 完場 Add opponent 三路都成功
+   - remove → 雙方清單消失
+5. **好友對戰**：invite → 對方接受 → 兩邊揀隊 → 開局 seed 相同（HP/回合一致）；完場鑽石：贏 +1、輸 +0，第 6 場 0 鑽；`pvp_wins/losses` 增加。
+6. **隨機 PvP**：好友局唔會被隨機配對劫走（`is_friend=false` filter）。
+7. **版本**：唔手動改 `APP_VERSION` / `CACHE_NAME` / `?v=`（CI 負責）；本地預覽如需，用 `npm run sync-version`（Rule 1）。
+8. **瀏覽器實測**（Rule 20）：preview 視窗非 0×0；`view-friends` 可開、可關、可返回；no console error。
+
+## 10. 風險 / 決策
+
+- **每日 5 場好友鑽**：靠 `p_battle_id` 排除當前場；若前端冇傳 battle id（舊 client）就 fallback 計全部 → 可能少派，唔會多派。可接受。
+- **Realtime join 失敗**：純 fallback 輪詢，遊戲照玩；`degraded` 只記錄 console。
+- **好友 invite 過期**：10 分鐘；`get_battle_invites` 只回 10 分鐘內，舊 row 由 server 標 `expired`（`respond` 時檢查 created_at）。
+- **邀請 spam**：同 pair 10 分鐘只 1 個 pending；好友上限 50；outgoing pending 20。
+- **安全**：`friendships` / `battle_invites` 前端零直接讀寫；所有 mutation 經 RPC；`ensure_friend_code` 只改自己 row。
+- **唔改**：`Sync.pushState` 唔加好友資料（唔係敏感數值，亦冇必要上雲）；鑽石仍只經 `settle_battle`。
+
+## 11. 批核後執行順序
 
 見 `tasks.md`。

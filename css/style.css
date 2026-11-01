@@ -2479,6 +2479,12 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   display: flex; flex-direction: column; gap: 12px;
   padding: 14px; max-width: 520px; margin: 0 auto; width: 100%;
 }
+.battle-quota {
+  padding: 10px 14px; border-radius: 12px;
+  background: #eef3fb; border: 2px solid #cdd8eb;
+  font-size: .82rem; font-weight: 700; color: #3b4a63; text-align: center;
+}
+.battle-quota.quota-blocked { background: #fdecec; border-color: #f2bcbc; color: #a33; }
 .battle-menu-tile {
   display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
   padding: 16px 18px; border-radius: 14px; cursor: pointer;

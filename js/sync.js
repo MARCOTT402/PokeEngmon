@@ -180,6 +180,10 @@ window.Sync = (() => {
         /* PvP 戰績（settle_battle RPC 喺 server 累積；本地只讀顯示用） */
         st.pvpWins = acct.pvp_wins ?? st.pvpWins ?? 0;
         st.pvpLosses = acct.pvp_losses ?? st.pvpLosses ?? 0;
+        /* 每日對戰配額（server 記，跨機一致）＋累積場數（leaderboard / friends 用） */
+        if (acct.battle_days && typeof acct.battle_days === "object") st.battleDays = acct.battle_days;
+        if (acct.battle_ai_total != null) st.battleAiTotal = acct.battle_ai_total | 0;
+        if (acct.battle_pvp_total != null) st.battlePvpTotal = acct.battle_pvp_total | 0;
         if (acct.trainer_name && acct.trainer_name !== st.playerName) {
           st.playerName = acct.trainer_name;
           st.nameCustomized = true;
