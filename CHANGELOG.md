@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.26.0...v1.27.0) (2026-11-02)
+
+
+### Features
+
+* **quests:** animate and chime when claiming board quests ([a6a9986](https://github.com/MARCOTT402/PokeEngmon/commit/a6a99861ab1f7ba301af17a3fdf1f047ebd6827e))
+
 # [1.26.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.25.0...v1.26.0) (2026-11-02)
 
 
