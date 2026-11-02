@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.25.0...v1.26.0) (2026-11-02)
+
+
+### Features
+
+* **quests:** add configurable weekly, event and achievement quests ([78312e3](https://github.com/MARCOTT402/PokeEngmon/commit/78312e3acc00dbbdf9897413b6da802d5eb4ca43))
+
 # [1.25.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.24.0...v1.25.0) (2026-11-01)
 
 
