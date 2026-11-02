@@ -207,3 +207,22 @@ Incident (Battle menu): `#ai-trainer-list` was only filled when the "AI Trainers
 - Any repo element whose class sets `display` (e.g. `.ai-trainer-list{display:flex}`) IGNORES `el.hidden = true` (author styles beat the UA `[hidden]{display:none}` rule). Add an explicit `.<class>[hidden]{display:none}` pair in `css/style.css` before using `hidden` as a toggle.
 - Content lists that are the point of a screen MUST be rendered when the view opens (in `renderMenu()` / the view's render fn), not behind a second tap. Keep the tile as a collapse/expand affordance only.
 - Guard generated-item click handlers against missing prerequisites (e.g. no owned Pokémon) inside the handler too — once a list renders unconditionally, its click path is reachable in states the old reveal-flow never allowed.
+
+## Rule 24 — plpgsql block terminators: `IF` ends with `end if;`, only the function body ends with `end;`
+
+A migration is applied as one pasted script in the Supabase SQL Editor, so one syntax slip aborts EVERYTHING after it. Sections already executed stay applied — the file is left half-applied (tables/policies exist, RPCs don't).
+
+- Before running a new migration, count `IF ... THEN` / `ELSIF` chains against `end if;`. Loops close with `end loop;`; only the outermost `begin ... end;` uses a bare `end;`.
+- Failure mode: `42601 syntax error at or near ";"` points at the stray `end;` line, NOT at the `IF` that opened the chain — so do not reread the flagged line, count terminators instead.
+- Re-running is only safe when the file is written idempotently (`create table if not exists`, `drop policy if exists` + `create policy`, `create or replace`, seed `on conflict do nothing`); keep new migrations in that shape so a failed paste can simply be re-run.
+
+Incident (20261102c quest-config): two if-chains ended with `end;` → whole migration rejected at line 150 after tables/policies had already applied. Restructuring a `CASE`-with-correlated-subquery into plain `if / else` also removed the ambiguity that made the slip easy to miss.
+
+## Rule 25 — 撞板／被修正之後，同一輪就要寫入 skill（唔准等用戶開口）
+
+Trigger: 用戶纠正你、同一類錯誤第二次出現、或者你第一次嘗試失敗要改做法。呢個係最強信號。
+
+- Before you report "done", append a rule to this file (or the matching project skill). The message must end with `Skill: Rule N added` or `Skill: already covered by Rule N`.
+- Record the **workflow** lesson, not just the code detail. If the real failure was "I ran it without checking", "I only capture when asked", "I tested the happy path only", that is the rule.
+- Do not narrow it to one symptom (e.g. only `end if;`). State the invariant that prevents the whole class of mistake.
+- If the user says "that's not the lesson" — the rule was too narrow; widen it in the same turn.
