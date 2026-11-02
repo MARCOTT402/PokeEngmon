@@ -139,7 +139,7 @@
             <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
             <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
             <button id="btn-home-battle" class="pd-menu-btn">⚔ Battle</button>
-            <button id="btn-home-quests" class="pd-menu-btn">🎯 Daily Quests <span id="home-quests-badge" class="friends-count-pill" hidden>0</span></button>
+            <button id="btn-home-quests" class="pd-menu-btn">🎯 Quests <span id="home-quests-badge" class="friends-count-pill" hidden>0</span></button>
             <button id="btn-home-friends" class="pd-menu-btn">👥 Friends <span id="home-friends-badge" class="friends-count-pill" hidden>0</span></button>
             <div class="home-cal-row">
               <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
@@ -482,7 +482,7 @@
     <section id="view-quests" class="view quests-view">
       <header class="topbar">
         <button class="icon-btn" id="quests-back" aria-label="Back home">‹</button>
-        <div class="topbar-name">Daily Quests</div>
+        <div class="topbar-name">Quests</div>
         <span class="chip quests-reset-chip" id="quests-reset">resets 0:00:00</span>
       </header>
 
@@ -502,6 +502,14 @@
         <div class="quests-track" id="quests-track" role="list"></div>
         <button class="quests-claim-all" id="quests-claim-all" type="button" hidden>CLAIM 1⚡</button>
         <div class="quests-note">ⓘ 10 questions = 1⚡ · max 8 per day · unclaimed rewards roll over</div>
+      </section>
+
+      <section class="quests-panel quests-defs-panel">
+        <div class="quests-head">
+          <h3 class="quests-title">Quest board</h3>
+          <span class="friends-count-pill" id="quests-defs-count" hidden>0</span>
+        </div>
+        <div id="quests-defs" class="quests-defs"></div>
       </section>
 
       <div class="hub-spacer"></div>

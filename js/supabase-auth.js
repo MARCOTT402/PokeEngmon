@@ -296,6 +296,20 @@ const SupabaseAuth = {
   },
 
 
+  /* ---------- RPC：任務板 Phase 2（每日／每週／活動／成就 + 鑽石餘額） ---------- */
+  async questBoard(questionsToday) {
+    if (!this.currentUser()) return null;
+    return this._rpc("quest_board", {
+      p_questions_today: Math.max(0, Math.floor(Number(questionsToday) || 0))
+    });
+  },
+
+  /* ---------- RPC：逐個任務領取（server 驗進度，重複呼叫回 already） ---------- */
+  async questClaim(questId) {
+    if (!this.currentUser()) return null;
+    return this._rpc("quest_claim", { p_quest_id: String(questId || "") });
+  },
+
   /* ---------- RPC：EP + 訓練家精通一齊拎（換機／清 cache 都保得住進度） ---------- */
   async battleProgress(questionsToday) {
     if (!this.currentUser()) return null;

@@ -9,12 +9,54 @@ const Quests = (() => {
   const STEP = 10;
   const DAILY_MAX = 8;
 
+  const KIND_ORDER = ["daily", "weekly", "event", "achievement"];
+  const KIND_LABELS = {
+    daily: "Daily",
+    weekly: "Weekly",
+    event: "Event",
+    achievement: "Achievements"
+  };
+
   let bound = false;
   let timer = null;
   let claiming = false;
+  let claimingDef = null;
+
+  /* Phase 2：server 配置任務（每日／每週／活動／成就） */
+  let defQuests = [];
+  let defState = "idle";   /* idle | ok | offline | unsupported */
 
   function el(id) { return document.getElementById(id); }
   function toast(msg) { if (window.App && App.toast) App.toast(msg); }
+
+  function esc(s) {
+    const v = String(s == null ? "" : s);
+    if (typeof escapeHTML === "function") return escapeHTML(v);
+    return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function defClaimable() {
+    return defQuests.filter(q => q.claimable).length;
+  }
+
+  function rewardLabel(q) {
+    return q.reward_type === "diamonds"
+      ? `+${q.reward_amount}💎`
+      : `+${q.reward_amount}⚡`;
+  }
+
+  /* 鑽石係 server 權威：直接覆寫本地再同步三個顯示位 */
+  function adoptDiamonds(balance) {
+    if (typeof balance !== "number") return;
+    const st = loadState();
+    st.diamonds = Math.max(0, balance);
+    if (typeof saveState === "function") saveState();
+    ["topbar-diamonds", "gacha-diamonds", "topbar-diamonds-bm"].forEach(id => {
+      const node = el(id);
+      if (node) node.textContent = String(st.diamonds);
+    });
+  }
   function loggedIn() {
     return !!(window.SupabaseAuth && SupabaseAuth.isEnabled && SupabaseAuth.isEnabled()
       && SupabaseAuth.isLoggedIn && SupabaseAuth.isLoggedIn());
@@ -65,7 +107,7 @@ const Quests = (() => {
     if (!boardOpen()) { stopTimer(); return; }
     const chip = el("quests-reset");
     if (chip) chip.textContent = "resets " + fmtReset(msToReset());
-    if (msToReset() <= 0) render();   /* 啱啱跨日 */
+    if (msToReset() <= 0) { render(); syncFromServer(); }   /* 啱啱跨日：每日任務／每週任務一齊刷新 */
   }
 
   function startTimer() {
@@ -143,7 +185,7 @@ const Quests = (() => {
   function refreshBadge() {
     let g;
     try { g = status(); } catch (e) { return; }
-    const claimable = g.claimable || 0;
+    const claimable = (g.claimable || 0) + defClaimable();
     const top = el("top-quests-badge");
     if (top) {
       top.textContent = String(claimable);
@@ -157,16 +199,135 @@ const Quests = (() => {
     }
   }
 
-  /* ---------- 載入 server 狀態 ---------- */
+  /* ---------- 載入 server 狀態（Phase 2：quest_board 一次過） ---------- */
   async function syncFromServer() {
-    if (!loggedIn()) return;
-    const res = await call("battleQuestStatus", questions());
-    if (!res) return;
+    if (!loggedIn()) {
+      defState = "offline";
+      defQuests = [];
+      renderDefs();
+      refreshBadge();
+      return;
+    }
+    const res = await call("questBoard", questions());
+    if (res && res.energy && typeof res.energy.points === "number") {
+      const st = loadState();
+      Energy.adopt(st, res.energy);
+      adoptDiamonds(res.diamonds);
+      defQuests = Array.isArray(res.quests) ? res.quests : [];
+      defState = "ok";
+      renderDefs();
+      if (boardOpen()) render();
+      refreshBadge();
+      return;
+    }
+    /* migration 20261102c 未跑／暫時失敗：退回舊 RPC，config 任務區顯示提示 */
+    defState = "unsupported";
+    defQuests = [];
+    renderDefs();
+    const legacy = await call("battleQuestStatus", questions());
+    if (!legacy) { refreshBadge(); return; }
     const st = loadState();
-    const e = res.energy || res;
+    const e = legacy.energy || legacy;
     if (e && typeof e.points === "number" && Energy.adopt) Energy.adopt(st, e);
     if (boardOpen()) render();
     refreshBadge();
+  }
+
+  /* ---------- Phase 2：配置任務列表 ---------- */
+  function renderDefs() {
+    const box = el("quests-defs");
+    const countEl = el("quests-defs-count");
+    if (!box) return;
+
+    if (countEl) {
+      const n = defClaimable();
+      countEl.textContent = String(n);
+      countEl.hidden = n <= 0;
+    }
+
+    if (!loggedIn()) {
+      box.innerHTML = '<div class="quests-defs-empty">Log in to unlock weekly, event and achievement quests.</div>';
+      return;
+    }
+    if (defState === "idle") {
+      box.innerHTML = '<div class="quests-defs-empty">Loading quests…</div>';
+      return;
+    }
+    if (defState === "unsupported") {
+      box.innerHTML = '<div class="quests-defs-empty">Quest board is unavailable right now — try again later.</div>';
+      return;
+    }
+    if (!defQuests.length) {
+      box.innerHTML = '<div class="quests-defs-empty">No quests available — check back soon.</div>';
+      return;
+    }
+
+    let html = "";
+    KIND_ORDER.forEach(kind => {
+      const rows = defQuests.filter(q => q.kind === kind);
+      if (!rows.length) return;
+      html += '<div class="qd-group"><div class="qd-group-head">' + KIND_LABELS[kind] + "</div>"
+        + rows.map(questDefRow).join("")
+        + "</div>";
+    });
+    box.innerHTML = html;
+  }
+
+  function questDefRow(q) {
+    const target = Math.max(1, Number(q.target) || 1);
+    const progress = Math.min(target, Math.max(0, Number(q.progress) || 0));
+    const pct = Math.round((progress / target) * 100);
+    const done = !!q.claimed;
+    const ready = !done && !!q.claimable;
+    let btn;
+    if (done) {
+      btn = '<button class="qd-claim qd-claim-done" type="button" disabled>✓</button>';
+    } else if (ready) {
+      btn = '<button class="qd-claim qd-claim-ready" type="button" data-quest="'
+        + esc(q.id) + '">CLAIM</button>';
+    } else {
+      btn = '<button class="qd-claim" type="button" disabled>' + progress + "/" + target + "</button>";
+    }
+    const cls = "quest-def" + (done ? " qd-done" : ready ? " qd-ready" : "");
+    return '<div class="' + cls + '">'
+      + '<div class="qd-main">'
+      + '<div class="qd-title">' + esc(q.title) + "</div>"
+      + (q.subtitle ? '<div class="qd-sub">' + esc(q.subtitle) + "</div>" : "")
+      + '<div class="qd-bar"><span style="width:' + pct + '%"></span></div>'
+      + "</div>"
+      + '<div class="qd-side">'
+      + '<div class="qd-reward">' + rewardLabel(q) + "</div>"
+      + btn
+      + "</div></div>";
+  }
+
+  async function claimDef(id) {
+    if (claimingDef) return;
+    const q = defQuests.find(x => x.id === id);
+    if (!q || !q.claimable) return;
+    if (!loggedIn()) { toast("Log in to claim"); return; }
+
+    claimingDef = id;
+    renderDefs();
+    const res = await call("questClaim", id);
+    claimingDef = null;
+
+    const status = res && res.status;
+    if (status === "claimed") {
+      if (res.energy && typeof res.energy.points === "number") Energy.adopt(loadState(), res.energy);
+      adoptDiamonds(res.diamonds);
+      const gain = res.reward_type === "diamonds"
+        ? `💎 +${res.reward_amount}`
+        : `⚡ +${res.reward_amount}`;
+      toast(`${gain} · ${q.title}`);
+      await syncFromServer();
+      return;
+    }
+
+    renderDefs();
+    if (status === "already") toast("Already claimed");
+    else if (status === "not_ready") toast("Not finished yet");
+    else toast("Could not claim — try again");
   }
 
   /* ---------- CLAIM ---------- */
@@ -226,12 +387,21 @@ const Quests = (() => {
         claim(1);
       };
     }
+    const defs = el("quests-defs");
+    if (defs) {
+      defs.onclick = (ev) => {
+        const btn = ev.target.closest(".qd-claim[data-quest]");
+        if (!btn) return;
+        claimDef(btn.dataset.quest);
+      };
+    }
     bound = true;
   }
 
   function open() {
     bind();
     render();
+    renderDefs();
     if (window.App && App.showView) App.showView("view-quests");
     startTimer();
     syncFromServer();
