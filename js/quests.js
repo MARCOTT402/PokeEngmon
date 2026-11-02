@@ -301,7 +301,7 @@ const Quests = (() => {
       + "</div></div>";
   }
 
-  async function claimDef(id) {
+  async function claimDef(id, anchor) {
     if (claimingDef) return;
     const q = defQuests.find(x => x.id === id);
     if (!q || !q.claimable) return;
@@ -319,6 +319,8 @@ const Quests = (() => {
       const gain = res.reward_type === "diamonds"
         ? `💎 +${res.reward_amount}`
         : `⚡ +${res.reward_amount}`;
+      flyReward(anchor, gain, res.reward_type === "diamonds");
+      playClaimSfx();
       toast(`${gain} · ${q.title}`);
       await syncFromServer();
       return;
@@ -328,6 +330,31 @@ const Quests = (() => {
     if (status === "already") toast("Already claimed");
     else if (status === "not_ready") toast("Not finished yet");
     else toast("Could not claim — try again");
+  }
+
+  /* 領取時由個掣位置飄出獎勵字 */
+  function flyReward(anchor, text, diamond) {
+    if (!anchor) return;
+    try {
+      const r = anchor.getBoundingClientRect();
+      const node = document.createElement("span");
+      node.className = "qd-fly" + (diamond ? " qd-fly-diamond" : "");
+      node.textContent = text;
+      node.style.left = (r.left + r.width / 2) + "px";
+      node.style.top = (r.top + r.height / 2) + "px";
+      document.body.appendChild(node);
+      setTimeout(() => node.remove(), 1000);
+    } catch (e) { /* 動畫失敗唔影響領取 */ }
+  }
+
+  /* 沿用 CaptureAudio 嘅 one-shot，會自動跟用戶 SFX 音量設定 */
+  function playClaimSfx() {
+    try {
+      const audio = window.CaptureScene && CaptureScene.audio;
+      if (audio && audio.previewSfx) {
+        audio.previewSfx("assets/bgm/obtained-pokemon.mp3", 0.35);
+      }
+    } catch (e) { /* 冇音效都可以照領 */ }
   }
 
   /* ---------- CLAIM ---------- */
@@ -392,7 +419,7 @@ const Quests = (() => {
       defs.onclick = (ev) => {
         const btn = ev.target.closest(".qd-claim[data-quest]");
         if (!btn) return;
-        claimDef(btn.dataset.quest);
+        claimDef(btn.dataset.quest, btn);
       };
     }
     bound = true;

@@ -4034,6 +4034,21 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .qd-claim.qd-claim-ready:active { transform: translateY(1px); box-shadow: 0 1px 0 #c47c00; }
 .qd-claim.qd-claim-done { border-color: #4caf50; background: #eaf7ec; color: #2f7d3a; font-size: .9rem; }
 
+/* 領取獎勵：由個掣位飄出 +N 字 */
+.qd-fly {
+  position: fixed; z-index: 9999; pointer-events: none;
+  font-family: inherit; font-size: .95rem; font-weight: 900;
+  color: #b26a00; text-shadow: 0 1px 0 #fff, 0 0 8px rgba(255, 214, 102, .8);
+  transform: translate(-50%, -50%);
+  animation: qdFly .95s ease-out forwards;
+}
+.qd-fly.qd-fly-diamond { color: #1f7ae0; text-shadow: 0 1px 0 #fff, 0 0 8px rgba(120, 190, 255, .85); }
+@keyframes qdFly {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.8); }
+  18%  { opacity: 1; transform: translate(-50%, -75%) scale(1.18); }
+  100% { opacity: 0; transform: translate(-50%, -170%) scale(1); }
+}
+
 #btn-top-quests { position: relative; }
 #home-quests-badge { margin-left: auto; }
 #home-quests-badge.is-claimable { background: #e53935; color: #fff; }
