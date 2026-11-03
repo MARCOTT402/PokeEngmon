@@ -9,21 +9,44 @@ const Calendar = {
 
   open() {
     App.showView("view-calendar");
-    this.render();
+    this.render("view-calendar");
   },
 
-  render() {
+  /* render 到指定 container（預設 view-calendar；Streak sheet 傳 "#sheet-calendar-content"） */
+  render(containerId) {
+    const root = containerId ? document.querySelector(containerId) : document.getElementById("view-calendar");
+    if (!root) return;
+
     const MONTHS = ["January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"];
-    document.getElementById("cal-month-label").textContent =
+
+    /* 如果 root 內冇 cal-grid 等元素 → 先注入結構（Streak sheet 用） */
+    if (!root.querySelector(".cal-month-label")) {
+      root.innerHTML = `
+        <div style="padding:10px 4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <button class="cal-nav" type="button" aria-label="Previous month">‹</button>
+            <span class="cal-month-label" style="font-size:14px; font-weight:900;"></span>
+            <button class="cal-nav" type="button" aria-label="Next month">›</button>
+          </div>
+          <div class="cal-weekdays"></div>
+          <div class="cal-grid"></div>
+          <div class="cal-legend"></div>
+        </div>`;
+      /* 綁 nav */
+      root.querySelector(".cal-nav:first-child").onclick = () => { this.month--; if (this.month<0){this.month=11;this.year--;} this.render(containerId); };
+      root.querySelector(".cal-nav:last-child").onclick = () => { this.month++; if (this.month>11){this.month=0;this.year++;} this.render(containerId); };
+    }
+
+    root.querySelector(".cal-month-label").textContent =
       `${MONTHS[this.month]} ${this.year}`;
 
     /* Weekday header */
-    document.getElementById("cal-weekdays").innerHTML =
+    root.querySelector(".cal-weekdays").innerHTML =
       ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => `<span>${d}</span>`).join("");
 
     /* 日期格 */
-    const grid = document.getElementById("cal-grid");
+    const grid = root.querySelector(".cal-grid");
     grid.innerHTML = "";
     const firstDay = new Date(this.year, this.month, 1).getDay();
     const daysInMonth = new Date(this.year, this.month + 1, 0).getDate();
@@ -36,18 +59,17 @@ const Calendar = {
       const level = dayLevel(key);
       const cell = document.createElement("button");
       cell.className = `cal-cell lv${level}` + (key === todayKey ? " today" : "");
-      /* 組數：本地明細同雲端「每日組數」取大者；records 可能未有該 key，唔可以直讀 .length */
       const st = loadState();
       const recs = (st.records && st.records[key]) || [];
       const setsN = Math.max(recs.length, (st.practiceDays && st.practiceDays[key]) || 0);
       cell.innerHTML = `<span class="cal-day">${d}</span>` +
-        (level > 0 ? `<span class="cal-count">${setsN} sets</span>` : "");
+        (level > 0 ? `<span class="cal-count">${setsN}</span>` : "");
       if (level > 0) cell.onclick = () => this.showDay(key);
       grid.appendChild(cell);
     }
 
     /* 圖例 */
-    document.getElementById("cal-legend").innerHTML = `
+    root.querySelector(".cal-legend").innerHTML = `
       <span><i class="lv-dot lv0"></i>No practice</span>
       <span><i class="lv-dot lv1"></i>1–2 sets</span>
       <span><i class="lv-dot lv2"></i>3–4 sets</span>

@@ -2284,19 +2284,64 @@ const App = {
       }
     });
 
-    /* 底部展開箭咀：子按鈕，唔經 binder（唔要 debounce + toggle）
-     * 直接 close compact → wait 動畫 → open full page */
-    const expandArrow = (id, closeSheetId, openFn) => {
+    /* 底部展開箭咀：模式切換（compact → full calendar 再返 compact）
+     * 唔跳 view，唔 close sheet，直接喺同一 sheet 內切換內容 */
+    const expandArrow = (id, sheetId, renderCompact, renderFull) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
-        this._closeSheet(closeSheetId);
-        setTimeout(() => openFn(), 430); /* 等捲回動畫 */
+        const sheet = document.getElementById(sheetId);
+        const isFull = sheet && sheet.classList.contains("ph-sheet-full");
+        if (isFull) {
+          /* 返 compact */
+          sheet.classList.remove("ph-sheet-full");
+          sheet.style.maxHeight = "";
+          renderCompact();
+          el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        } else {
+          /* 展開 full */
+          sheet.classList.add("ph-sheet-full");
+          renderFull();
+          el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 13.5L10 7.5L16 13.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        }
       };
     };
-    expandArrow("btn-calendar-expand", "sheet-calendar", () => { if (typeof Calendar !== "undefined") Calendar.open(); });
-    expandArrow("btn-pokedex-full",   "sheet-pokedex",   () => { if (typeof Pokedex !== "undefined") Pokedex.open(); });
-    expandArrow("btn-quests-full",    "sheet-quests",    () => { if (typeof Quests !== "undefined") Quests.open(); });
+
+    /* Streak sheet：compact = 大 streak 數字；full = Calendar.render */
+    expandArrow("btn-calendar-expand", "sheet-calendar",
+      /* renderCompact — 重新顯示 streak 大數字 */
+      () => {
+        const container = document.getElementById("sheet-calendar-content");
+        if (!container) return;
+        const st = loadState();
+        const streak = calcStreak();
+        container.innerHTML = `
+          <div style="padding:12px; text-align:center;">
+            <div style="font-size:36px; font-weight:900; color:#ee1515;">🔥 ${streak}</div>
+            <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
+          </div>`;
+      },
+      /* renderFull — Calendar 內容直接入 sheet */
+      () => {
+        if (typeof Calendar !== "undefined") Calendar.render("#sheet-calendar-content");
+      }
+    );
+
+    /* Pokédex + Quests 箭咀（同上模式，但 full 暫時唔用 view-pokedex，留位） */
+    const expandArrowPokedex = document.getElementById("btn-pokedex-full");
+    if (expandArrowPokedex) {
+      expandArrowPokedex.onclick = () => {
+        this._closeSheet("sheet-pokedex");
+        if (typeof Pokedex !== "undefined") Pokedex.open();
+      };
+    }
+    const expandArrowQuests = document.getElementById("btn-quests-full");
+    if (expandArrowQuests) {
+      expandArrowQuests.onclick = () => {
+        this._closeSheet("sheet-quests");
+        if (typeof Quests !== "undefined") Quests.open();
+      };
+    }
 
     /* 舊 energy sheet 按鈕（保留但唔綁定） */
     /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」+ toggle */

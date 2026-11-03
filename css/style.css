@@ -4171,7 +4171,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .ph-sheet-body.compact { padding: 10px 14px; }
 
-/* 底部展開箭咀（Streak / Pokédex / Quests sheet 用） */
+.ph-sheet-down.ph-sheet-full {
+  max-height: none; height: 100%;
+}
 .ph-sheet-expand {
   flex: none;
   height: 48px; min-height: 44px;
