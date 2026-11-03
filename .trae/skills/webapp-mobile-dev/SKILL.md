@@ -319,6 +319,33 @@ binder("btn-bd-battle",    "sheet-battle", () => { App._openSheet("sheet-battle"
 binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); });
 ```
 
+### 6.4.1 子按鈕唔好用 binder！用 expandArrow()
+
+**錯誤做法：** 把 sheet 內嘅展開箭咀 / 子按鈕綁入 `binder()` 而唔傳 `sheetId`。結果 binder 見到 `curSheet` 存在 → `isToggle = curSheet.id === undefined → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + debounce flag 鎖死。子按鈕點擊後功能冇執行！
+
+**正確做法：** 新增 `expandArrow()` pattern — 直接 call `_closeSheet` → wait 430ms → openFn：
+
+```js
+const expandArrow = (id, closeSheetId, openFn) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.onclick = () => {
+    App._closeSheet(closeSheetId);
+    setTimeout(() => openFn(), 430); /* 等捲回動畫 */
+  };
+};
+expandArrow("btn-calendar-expand", "sheet-calendar", () => Calendar.open());
+```
+
+**Pattern 使用場景：**
+
+| Pattern | 使用者 | Debounce `_sheetSwitching` | Toggle | Cross-button close→open |
+|---|---|---|---|---|
+| `binder()` | **Bezel stat buttons + Dockbar buttons** | ✅ | ✅ | ✅ |
+| `expandArrow()` | **Sheet 內子按鈕**（箭咀、Open Full、Settings sub-entry） | ❌ | ❌ | ❌（直接 close → wait → open） |
+
+**鐵律：** 永遠唔好把「子按鈕」綁入 binder。binder 係頂層導航按鈕專用（有 debounce + toggle + cross-button 邏輯），子按鈕需要「點咗即刻執行，唔好 debounce」。
+
 ### 6.6 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
 
 **錯誤做法 A：** remove class 同時設 hidden → 跳過 transform，「閃一下就冇咗」。
@@ -357,20 +384,7 @@ _closeAllSheets() {
 - 一律有 **stillOpen guard**（隱藏前檢查有冇新 `ph-open`）
 - 移除 `_checkCloseAllSheets`（舊時 closeSheet 完再 call closeAllSheets → 雙 timer race）
 
-### 6.7 Sheet 入面嘅子按鈕要關自己
-
-sheet 入面嘅「Open Full Page」按鈕（例如 `btn-calendar-full`），行為必須係：**先 close 當前 sheet → 等動畫跑完 → 再開 target 頁面**。
-
-```js
-document.getElementById("btn-calendar-full").onclick = () => {
-  App._closeSheet("sheet-calendar");
-  setTimeout(() => { Calendar.open(); }, 410);  // 等捲回完
-};
-```
-
-或者如果 target 頁面本身唔需要「捲回完再顯示」，可以直接 `Calendar.open()`（佢會自行捲動 view），但 sheet 關閉動畫仍然要跑。
-
-### 6.8 切換 View 時自動捲回
+### 6.7 切換 View 時自動捲回
 
 `showView(id)` 最頂部必須 call `_closeAllSheets()`：
 
@@ -384,7 +398,7 @@ showView(id) {
 }
 ```
 
-### 6.9 四種關閉路徑（全部一致）
+### 6.8 四種關閉路徑（全部一致）
 
 | 路徑 | Trigger | Handler |
 |---|---|---|
@@ -412,7 +426,7 @@ document.addEventListener("click", (e) => {
 
 **鐵律：** 所有路徑必須走 `_closeSheet` / `_closeAllSheets`（有 stillOpen guard + 430ms timer），唔好直接 `classList.remove + hidden=true`。
 
-### 6.10 Bezel stat button icon 定位技巧
+### 6.9 Bezel stat button icon 定位技巧
 
 Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如果要把 pill 貼住某個 icon 嘅右上角（例如鑽石 icon）：
 
@@ -429,7 +443,7 @@ Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如�
 
 **鐵律：** 唔好用 `right: -8px` 相對於 44px button（飛去 button 最右邊），要用 `left: calc(50% + 2px)` 精確貼 icon 嘅 right edge。button 必須先設 `position: relative`。
 
-### 6.11 實戰經驗（Incident Log）
+### 6.10 實戰經驗（Incident Log）
 
 | # | 問題 | 根因 | 解法 | Lesson 邊關 |
 |---|---|---|---|---|
@@ -440,7 +454,8 @@ Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如�
 | 5 | Dockbar 切換 view 無先關 sheet | dockbar handler 冇 close 邏輯 | 同 `dockBinder` pattern，加 curSheet 檢查 | 6.4 |
 | 6 | Gacha 關閉後鑽石冇 update | `_closeSheet(gacha)` 冇 sync UI | wrapper `closeGachaSheet()` 入面 call renderHome | 6.4 |
 | 7 | 點閃電 → 點電池，新 sheet 直接彈出冇動畫 | **Timer race**：`_closeAllSheets` 410ms + binder 410ms 同時 race，JS event loop ordering 唔 guarentee → 新 sheet 可能被舊 timer 設 hidden | close timer 改 **430ms**（遲 binder 20ms）+ 加 **stillOpen guard**（timer 跑時檢查有冇新 ph-open）→ 兩條 close 路徑統一 | 6.2 / 6.5 |
-| 8 | 逐個 toggle close 後再 closeAllSheets | `_checkCloseAllSheets` 令單獨 close 完再 call closeAllSheets → **雙 timer race** | 移除 `_checkCloseAllSheets()`；每條 close 路徑有自己嘅 guard timer 就夠 | 6.5 |
+| 8 | 逐個 toggle close 後再 closeAllSheets | `_checkCloseAllSheets` 令單獨 close 完再 call closeAllSheets → **雙 timer race** | 移除 `_checkCloseAllSheets()`；每條 close 路徑有自己嘅 guard timer 就夠 | 6.6 |
+| 9 | Sheet 內展開箭咀點擊後冇執行功能 | 把子按鈕綁入 `binder()` 但唔傳 `sheetId` → binder 見到 `curSheet` 存在 → `isToggle = undefined === curSheet.id → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + `_sheetSwitching` debounce 鎖死 | 新增 `expandArrow()` pattern（6.4.1）— 直接 `_closeSheet` → wait 430ms → openFn，唔經 binder | 6.4.1 |
 
 ---
 
