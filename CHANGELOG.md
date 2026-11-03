@@ -1,3 +1,37 @@
+# [1.31.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.30.0...v1.31.0) (2026-11-03)
+
+
+### Bug Fixes
+
+* **home:** _closeAllSheets now animates close before hiding (consistent with _closeSheet) ([ea6f7f4](https://github.com/MARCOTT402/PokeEngmon/commit/ea6f7f4908134e0fd3deb5ddbed9921965c0ed7e))
+* **home:** 4 bug fixes for Streak sheet arrow expand system. 1) _openSheet now ALWAYS resets .ph-sheet-full class + arrow direction + content to compact (fixes 'reopen retains full state'). 2) expandArrow adds e.stopPropagation() + preventDefault (fixes 'arrow click triggers document click→closeAllSheets'). 3) Calendar.render container injection still works. 4) .ph-sheet-full CSS preserved ([1806b44](https://github.com/MARCOTT402/PokeEngmon/commit/1806b4428c7793fe616ab16f04f2b73f06a59245))
+* **home:** Calendar visible — JS inline height control. expandArrow sets sheet.style.height=100%+maxHeight=none on expand, reset to empty on collapse. _openSheet also resets height style. CSS: transition height .4s (smooth expand/collapse animation), overflow:hidden (keep for transforms). Remove broken fit-content/max-height percentage hacks ([43f8013](https://github.com/MARCOTT402/PokeEngmon/commit/43f80133d8d158484886a1257a511292030f3385))
+* **home:** Calendar visible in Streak accordion — 1) .ph-sheet-full adds overflow:visible + body overflow-y:auto (was overflow:hidden hiding calendar). 2) expandArrow now accordion: keeps 🔥 streak on top + appends calendar below (was mode-switch replacing streak). 3) .cal-wrap CSS + tighter weekday/grid sizing for sheet context ([551d898](https://github.com/MARCOTT402/PokeEngmon/commit/551d898c129eecb477b4f8bbbadc0ad90b425146))
+* **home:** Calendar visible via max-height transition — 1) removed overflow:visible hack (Chrome transforms auto-forces overflow hidden). 2) compact max-height:58%, full max-height:100% with .4s transition = smooth scroll-open/close style consistent with sheet transform. 3) .ph-sheet-full .ph-sheet-body overflow-y:auto + flex:1 min-height:0 for scrollable calendar. 4) restored missing .ph-sheet-up definition ([188569e](https://github.com/MARCOTT402/PokeEngmon/commit/188569e2204515812c339bd08f25e486393ef089))
+* **home:** cross-button sheet transition smooth — _closeAllSheets timer 430ms + stillOpen guard prevents race with binder 410ms open ([36c1448](https://github.com/MARCOTT402/PokeEngmon/commit/36c1448628ef2eecdaebce6600c14676be0c25fb))
+* **home:** diamond icon = round blue gem sphere with radial gradient + highlight ([ff75a76](https://github.com/MARCOTT402/PokeEngmon/commit/ff75a76dbbbdf81d652f691ef22e80801cfc7e2a))
+* **home:** diamond pill position — use left: calc(50%+2px) to pin to gem's right edge instead of button right edge ([a9755fe](https://github.com/MARCOTT402/PokeEngmon/commit/a9755fe0671492ca86ea63aed4e59471516f590a))
+* **home:** handle energy as object in renderHome and sheet-quests preview ([e1b6b47](https://github.com/MARCOTT402/PokeEngmon/commit/e1b6b47d71ab2f56974dd5a3fe30233206e15d30))
+* **home:** masterball icon + energy.ensure normalize + confirm diamond/bolt format ([1da03e1](https://github.com/MARCOTT402/PokeEngmon/commit/1da03e1d07875f045ec80c4297e8bf4772da9d6c))
+* **home:** move diamond count pill onto diamond icon top-right corner ([b2ce5ef](https://github.com/MARCOTT402/PokeEngmon/commit/b2ce5efb86e6993c50a747818eb72066d907655a))
+* **home:** remove retry+force-close loop — setting→diamond cross-button stable. Retry was closing legitimate open sheets after 3×200ms ([9de8fc7](https://github.com/MARCOTT402/PokeEngmon/commit/9de8fc7f90780e8acdc7dc23966930f2eb1502a9))
+* **home:** sheet close-system hardening — double-rAF for openSheet race, bdOpen check in cleanup, retry 3×200ms + force close, removed _checkCloseAllSheets ([f4992d2](https://github.com/MARCOTT402/PokeEngmon/commit/f4992d2f19c4a2efb1a9953231d35e6090b30a43))
+* **home:** sub-sheet expand arrows use expandArrow() not binder — binder has debounce+toggle which breaks sub-buttons. expandArrow = close compact → wait 430ms → open full page ([98f4a08](https://github.com/MARCOTT402/PokeEngmon/commit/98f4a082bf82c1b5b76814e60e6f482b9f390d15))
+* **home:** swap bolt+gem positions + replace canvas bolt with golden lightning SVG ([db248e5](https://github.com/MARCOTT402/PokeEngmon/commit/db248e52eab704be0e8cb80ce6dca8ea111db5c8))
+* **home:** unified close-system — both _closeSheet and _closeAllSheets share 430ms + stillOpen guard; removed _checkCloseAllSheets double-timer race ([e85a19b](https://github.com/MARCOTT402/PokeEngmon/commit/e85a19b4efcf9fbfa1d0422204b918f1aa15a126))
+* **home:** upgrade diamond cut SVG + Ultra Ball (purple top + A mark) per user reference ([808df17](https://github.com/MARCOTT402/PokeEngmon/commit/808df17a01cc30e845c9ad364722c690de6189c4))
+
+
+### Features
+
+* **home:** auto-close sheet when clicking elsewhere or another feature button ([8bebb15](https://github.com/MARCOTT402/PokeEngmon/commit/8bebb155e844a1d659170ad9af3777f77625d952))
+* **home:** Calendar in-sheet expand — Streak sheet arrow toggles compact↔full calendar without view jump. Calendar.render() now accepts containerId param, injects nav+grid structure when missing ([c03c45f](https://github.com/MARCOTT402/PokeEngmon/commit/c03c45fdb862e0a59f6a70ef3e7e6b5e2da8a326))
+* **home:** move the four stats into the bezel and free up the screen ([e03c601](https://github.com/MARCOTT402/PokeEngmon/commit/e03c6013311be33722d5a40eaf5fe647aecf46b7))
+* **home:** rebuild the partner card to the reference vertical layout ([6e84f58](https://github.com/MARCOTT402/PokeEngmon/commit/6e84f581cf90965e9538b1a1bb576778e6039dbf))
+* **home:** redesign bezel icons + top-down sheets + canvas bolt animation ([20b9559](https://github.com/MARCOTT402/PokeEngmon/commit/20b95596a4437a241af7966f530c32a8e452f26e))
+* **home:** Streak sheet redesign — title 'Streak' (not 'Practice Calendar'), bottom expand-arrow instead of 'Open Full Calendar' button, arrow→close compact→open full Calendar ([aad028a](https://github.com/MARCOTT402/PokeEngmon/commit/aad028a4a0e3a94bf13c73228f3207b0e525eec0))
+* **home:** toggle same-button-to-close + 0.4s sheet transition ([3ee24d8](https://github.com/MARCOTT402/PokeEngmon/commit/3ee24d83665396ae72a1f37feb878fceaee1b103))
+
 # [1.30.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.29.1...v1.30.0) (2026-11-03)
 
 
