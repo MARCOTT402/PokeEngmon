@@ -3896,17 +3896,21 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   gap: 8px; padding: 0 8px;
 }
 
-/* 右上角鑽石數字 pill */
+/* 鑽石按鈕：數值貼 icon 右上角 */
+.pd-stat-diamond { position: relative; }
+
+/* 鑽石數值 pill（貼 icon 右上角） */
 .pd-topdiamond {
-  position: absolute; top: 4px; right: 6px;
-  font-size: 12px; font-weight: 900; line-height: 1;
+  position: absolute; top: -4px; right: -8px;
+  font-size: 10px; font-weight: 900; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
   color: #fff8e1;
-  padding: 3px 9px; border-radius: 999px;
-  background: rgba(60, 8, 5, .55);
-  border: 1px solid rgba(255, 255, 255, .28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
-  white-space: nowrap; z-index: 2;
+  padding: 2px 6px; border-radius: 999px;
+  background: rgba(60, 8, 5, .75);
+  border: 1px solid rgba(255, 255, 255, .35);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3), inset 0 1px 0 rgba(255, 255, 255, .25);
+  white-space: nowrap; z-index: 3;
+  pointer-events: none; /* 唔擋 click */
 }
 
 /* 統一 icon 尺寸（所有 stat icon 用同一套） */
