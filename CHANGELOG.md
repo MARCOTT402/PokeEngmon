@@ -1,3 +1,14 @@
+# [1.30.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.29.1...v1.30.0) (2026-11-03)
+
+
+### Features
+
+* **dev:** add a phone-model selector to the simulator HUD ([5efbd34](https://github.com/MARCOTT402/PokeEngmon/commit/5efbd34e7908d2c4aa058def5f3102e1e669b1b3))
+* **dev:** add iPhone 17 Pro Max preview harness and widen the shell ([b8225dc](https://github.com/MARCOTT402/PokeEngmon/commit/b8225dc3f5fc49902abfe3125618a240bb7e733d))
+* **dev:** replace CDP viewport with an interactive phone frame preview ([44b27a6](https://github.com/MARCOTT402/PokeEngmon/commit/44b27a6e47db7230c11c8ee05451ae2b92b8562d))
+* **home:** rework docks, settings sheet and top-dock entries ([108fae8](https://github.com/MARCOTT402/PokeEngmon/commit/108fae8c5a9437035c7280445582429bbf6beede))
+* **home:** turn the bezel lens into a diamond entry with an in-frame gacha sheet ([6d22c56](https://github.com/MARCOTT402/PokeEngmon/commit/6d22c567cc028b12f7ac3cf9742ed64415831f81))
+
 ## [1.29.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.29.0...v1.29.1) (2026-11-03)
 
 
