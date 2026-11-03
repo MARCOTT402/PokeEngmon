@@ -1,3 +1,10 @@
+## [1.32.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.32.0...v1.32.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **home:** drag the sheet handle in the panel's anchor direction ([fec8e3c](https://github.com/MARCOTT402/PokeEngmon/commit/fec8e3ca947043a76a4f02fe78915bb5da7e8b88))
+
 # [1.32.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.31.2...v1.32.0) (2026-11-03)
 
 
