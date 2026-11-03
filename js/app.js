@@ -133,9 +133,13 @@ const App = {
       dexProgEl.textContent = collected + "/" + denominator;
     }
 
-    /* Energy：單一數值（戰鬥可用能量） */
+    /* Energy：單一數值（戰鬥可用能量）— st.energy 係 object { points, ... } */
     const energyEl = document.getElementById("td-energy-val");
-    if (energyEl) energyEl.textContent = st.energy ?? 0;
+    if (energyEl) {
+      const e = st.energy;
+      const points = (e && typeof e === "object") ? (e.points ?? 0) : (typeof e === "number" ? e : 0);
+      energyEl.textContent = points;
+    }
 
     /* 登入 chip 狀態：任何情況下都同步返真實登入狀態（包括 localStorage restore） */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) this._markLoggedIn();
@@ -2209,7 +2213,8 @@ const App = {
       if (container) {
         const st = loadState();
         const quests = (typeof Quests !== "undefined" && Quests.getTodayCount) ? Quests.getTodayCount() : null;
-        const energy = st.energy ?? 0;
+        const e = st.energy;
+        const energy = (e && typeof e === "object") ? (e.points ?? 0) : (typeof e === "number" ? e : 0);
         container.innerHTML = `
           <div style="padding:12px; text-align:center;">
             <div style="font-size:32px; font-weight:900; color:#16a34a;">⚡ ${energy}</div>
