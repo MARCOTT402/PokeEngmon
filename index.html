@@ -98,13 +98,16 @@
     <section id="view-home" class="view ph-shell-parent">
       <!-- Pokedex shell（safe-area 五列 Grid） -->
       <div class="pd-shell" id="pd-shell">
-        <!-- 上框 48px：鏡頭 + seam + 精靈球 -->
-        <div class="pd-bezel" aria-hidden="true">
-          <span class="pd-lens"></span>
+        <!-- 上框 48px：鑽石入口 + seam + 精靈球 -->
+        <div class="pd-bezel">
+          <button class="pd-diamond-entry" id="btn-bezel-diamond" type="button" aria-label="Open Dragonite Draw">
+            <span class="pd-lens" aria-hidden="true"></span>
+            <span class="pd-diamond-count" id="bezel-diamond-count">0</span>
+          </button>
           <svg class="pd-seam" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 48 H115 C145 48 150 26 185 26 H400" fill="none" stroke="#8a1712" stroke-width="2.5"/>
           </svg>
-          <span class="pd-ball"></span>
+          <span class="pd-ball" aria-hidden="true"></span>
         </div>
 
         <!-- 屏幕列 -->
@@ -286,24 +289,50 @@
           </div>
         </div>
 
-        <!-- Diamond sheet：top-down -->
-        <div class="ph-sheet ph-sheet-down" id="sheet-diamond" hidden aria-hidden="true" aria-label="Diamonds">
+        <!-- Gacha sheet：top-down，由白色螢幕內上邊向下捲出 -->
+        <div class="ph-sheet ph-sheet-down" id="sheet-gacha" hidden aria-hidden="true" aria-label="Dragonite Draw">
           <div class="ph-sheet-head">
-            <span class="ph-sheet-t">Diamonds</span>
+            <span class="ph-sheet-t" id="gacha-title">Rare Pull</span>
             <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
           </div>
-          <div class="ph-sheet-body">
-            <div class="ph-gacha-card">
-              <div class="ph-gacha-h">Rare Pull</div>
-              <div class="ph-gacha-m">Spend 100 💎 to pull a Pokémon</div>
-              <div class="ph-gacha-row">
-                <button class="ph-gacha-cell" id="btn-gacha-home" type="button">
-                  <div class="ph-g-cell-t">Pull</div>
-                  <div class="ph-g-cell-v">100 💎</div>
-                </button>
-              </div>
+          <section id="view-gacha" class="gacha-view">
+            <div class="gacha-topbar">
+              <span class="chip chip-diamond">💎 <b id="gacha-diamonds">0</b></span>
+              <span class="chip gacha-cost">Cost: 💎3</span>
             </div>
-          </div>
+            <div class="gacha-info">
+              <div class="gacha-odds-row">
+                <span class="rarity-chip" style="background:#e3f2fd;color:#42a5f5">Rare 80%</span>
+                <span class="rarity-chip" style="background:#fff8e1;color:#b8860b">Epic 15%</span>
+                <span class="rarity-chip" style="background:#f3e5f5;color:#ab47bc">Legend 5%</span>
+              </div>
+              <p class="gacha-info-note">Duplicate pull → 🍬 Candy +1 ・ ⚡ EV point +1</p>
+            </div>
+            <div class="gacha-stage" id="gacha-stage">
+              <div class="gacha-prompt" id="gacha-prompt"></div>
+              <div class="gacha-machine dragonite-art" id="gacha-machine">
+                <img class="dm-art" src="assets/gacha/dragonite.png" alt="Dragonite" draggable="false">
+                <div class="dm-belly" id="dm-belly">
+                  <span class="dm-cavity"></span>
+                  <span class="dm-door left"></span>
+                  <span class="dm-door right"></span>
+                </div>
+                <div class="dm-arm" id="dm-arm" role="slider" tabindex="0"
+                     aria-label="Pull Dragonite's hand" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span class="dm-bracket"></span>
+                  <span class="dm-arm-upper"></span>
+                  <span class="dm-hand"><i></i><i></i><i></i></span>
+                </div>
+              </div>
+              <div class="gacha-dropzone" id="gacha-dropzone"></div>
+            </div>
+            <div class="gacha-controls">
+              <button id="btn-do-pull" class="btn-big btn-primary">💎 ×3 TO GO!</button>
+            </div>
+            <div class="gacha-sheet-bar">
+              <button id="btn-gacha-home" class="btn-big btn-secondary">‹ Back to Home</button>
+            </div>
+          </section>
         </div>
           </div>
         </div>
@@ -408,48 +437,6 @@
       <div class="hub-spacer"></div>
       <div class="hub-bar">
         <button id="btn-review-back" class="btn-big btn-secondary">‹ Back</button>
-      </div>
-    </section>
-
-    <!-- ============ 抽獎 ============ -->
-    <section id="view-gacha" class="view">
-      <h2 class="gacha-title" id="gacha-title">🎯 Gacha Machine</h2>
-      <div class="gacha-topbar">
-        <span class="chip chip-diamond">💎 <b id="gacha-diamonds">0</b></span>
-        <span class="chip gacha-cost">Cost: 💎3</span>
-      </div>
-      <div class="gacha-info">
-        <div class="gacha-odds-row">
-          <span class="rarity-chip" style="background:#e3f2fd;color:#42a5f5">Rare 80%</span>
-          <span class="rarity-chip" style="background:#fff8e1;color:#b8860b">Epic 15%</span>
-          <span class="rarity-chip" style="background:#f3e5f5;color:#ab47bc">Legend 5%</span>
-        </div>
-        <p class="gacha-info-note">Duplicate pull → 🍬 Candy +1 ・ ⚡ EV point +1</p>
-      </div>
-      <div class="gacha-stage" id="gacha-stage">
-        <div class="gacha-prompt" id="gacha-prompt"></div>
-        <div class="gacha-machine dragonite-art" id="gacha-machine">
-          <img class="dm-art" src="assets/gacha/dragonite.png" alt="Dragonite" draggable="false">
-          <div class="dm-belly" id="dm-belly">
-            <span class="dm-cavity"></span>
-            <span class="dm-door left"></span>
-            <span class="dm-door right"></span>
-          </div>
-          <div class="dm-arm" id="dm-arm" role="slider" tabindex="0"
-               aria-label="Pull Dragonite's hand" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <span class="dm-bracket"></span>
-            <span class="dm-arm-upper"></span>
-            <span class="dm-hand"><i></i><i></i><i></i></span>
-          </div>
-        </div>
-        <div class="gacha-dropzone" id="gacha-dropzone"></div>
-      </div>
-      <div class="gacha-controls">
-        <button id="btn-do-pull" class="btn-big btn-primary">💎 ×3 TO GO!</button>
-      </div>
-      <div class="hub-spacer"></div>
-      <div class="hub-bar">
-        <button id="btn-gacha-home" class="btn-big btn-secondary">‹ Back to Home</button>
       </div>
     </section>
 

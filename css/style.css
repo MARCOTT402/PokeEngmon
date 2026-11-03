@@ -3906,6 +3906,27 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pd-bezel .pd-seam { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .pd-bezel .pd-ball { margin-left: auto; width: 24px; height: 24px; }
 
+/* 上框鑽石入口：藍寶石 icon（沿用鏡頭圖案）+ 右邊數量 */
+.pd-diamond-entry {
+  position: relative; z-index: 3;
+  display: flex; align-items: center; gap: 7px;
+  min-width: 44px; min-height: 44px;
+  padding: 0 4px 0 0; margin-left: -4px;
+  background: none; border: 0; border-radius: 12px;
+  font-family: inherit; cursor: pointer;
+  transition: transform .12s cubic-bezier(.25, 1, .5, 1);
+}
+.pd-diamond-entry:active { transform: scale(.96); }
+.pd-diamond-count {
+  font-size: 13px; font-weight: 900; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+  color: #fff8e1;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(60, 8, 5, .42);
+  border: 1px solid rgba(255, 255, 255, .22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+
 /* ---- 3. 屏幕列 ---- */
 .pd-screen2 {
   position: relative; min-height: 0;
@@ -4075,6 +4096,29 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sheet-down { top: 0; border-top: 0; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; transform: translateY(-100%); z-index: 2; }
 .ph-sheet-down.ph-open { transform: translateY(0); }
 .ph-sheet-sm { max-height: 260px; }
+
+/* ---- Gacha sheet：佔滿白色螢幕，內容自己滾動 ---- */
+#sheet-gacha { top: 0; bottom: 0; max-height: none; border-radius: 0; border-left: 0; border-right: 0; }
+#sheet-gacha .gacha-view {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 6px 14px 14px;
+}
+#sheet-gacha .gacha-sheet-bar {
+  position: sticky; bottom: 0; margin-top: auto;
+  background: #fffdf7; padding-top: 6px;
+}
+
+/* 抽獎 overlay 只覆蓋白色螢幕區，唔蓋住紅色機身 */
+:root {
+  --frame-screen-top: calc(48px + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px)));
+  --frame-screen-bottom: calc(34px + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
+}
+#gacha-scene-b, #gacha-inspect {
+  top: var(--frame-screen-top);
+  bottom: var(--frame-screen-bottom);
+  height: auto;
+}
 .ph-sheet-head {
   flex: none;
   display: flex; align-items: center; gap: 8px;

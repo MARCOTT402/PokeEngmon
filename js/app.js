@@ -34,6 +34,8 @@ const App = {
     /* 頂 dock 4 格更新 */
     document.getElementById("topbar-name").textContent = st.playerName;
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
+    const bezelDiamonds = document.getElementById("bezel-diamond-count");
+    if (bezelDiamonds) bezelDiamonds.textContent = st.diamonds;
     const streakEl = document.getElementById("home-streak-label");
     if (streakEl) streakEl.textContent = "x" + calcStreak();
     const dexProgEl = document.getElementById("home-dex-progress");
@@ -1942,6 +1944,8 @@ const App = {
   _closeSheet(id) {
     const sheet = document.getElementById(id);
     if (!sheet) return;
+    /* 關抽獎 sheet = 中斷流程（abort 會照樣結算，唔會食鑽唔派寵） */
+    if (id === "sheet-gacha" && typeof Gacha !== "undefined") Gacha.abort();
     sheet.classList.remove("ph-open");
     setTimeout(() => { sheet.hidden = true; this._checkCloseAllSheets(); }, 280);
   },
@@ -1958,6 +1962,15 @@ const App = {
   _bindSheetBtn(btnId, sheetId) {
     const btn = document.getElementById(btnId);
     if (btn) btn.onclick = () => { /* 子 onclick 會覆寫，但保留 default handler 如果子冇覆蓋 */ };
+  },
+  /* Gacha：由白色螢幕內上邊向下捲出 */
+  openGachaSheet() {
+    if (!document.getElementById("view-home").classList.contains("active")) this.showView("view-home");
+    this._openSheet("sheet-gacha");
+  },
+  closeGachaSheet() {
+    this._closeSheet("sheet-gacha");
+    this.renderHome();
   },
   /* Setting sheet 內嘅音量滑桿（同舊 openSettings 同一套 prefs） */
   _syncAudioSliders() {
@@ -2051,7 +2064,10 @@ const App = {
     document.getElementById("td-streak").onclick = () => {
       if (typeof Calendar !== "undefined") Calendar.open();
     };
-    document.getElementById("td-diamond").onclick = () => this._openSheet("sheet-diamond");
+    document.getElementById("td-diamond").onclick = () => Gacha.open("rare");
+    /* 上框鑽石入口（藍寶石 icon + 數量）→ 同一抽獎 sheet */
+    const bezelDiamondBtn = document.getElementById("btn-bezel-diamond");
+    if (bezelDiamondBtn) bezelDiamondBtn.onclick = () => Gacha.open("rare");
     document.getElementById("td-energy").onclick = () => {
       const st = loadState(); const e = st.energy ?? 3;
       const fill = document.getElementById("energy-fill");
@@ -2139,7 +2155,7 @@ const App = {
     };
     document.getElementById("btn-do-pull").onclick = () => Gacha.pull();
     /* 先切 view（會中斷抽獎流程並結算），再 render 主頁，避免顯示舊鑽石/舊拍檔 */
-    document.getElementById("btn-gacha-home").onclick = () => { this.showView("view-home"); this.renderHome(); };
+    document.getElementById("btn-gacha-home").onclick = () => Gacha._goHome();
     if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
     else {
       document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };

@@ -33,7 +33,7 @@ const Gacha = {
   open(mode) {
     this.mode = mode;
     this.abort();      // 清走上次殘留；未結算就補結算，唔會「食咗鑽但冇派寵」
-    App.showView("view-gacha");
+    App.openGachaSheet();
     document.getElementById("gacha-title").textContent = "💎 Rare Pull";
     this._bindArm();
     this._resetStage();
@@ -812,7 +812,7 @@ const Gacha = {
     this._cleanupScene();
     const evo = this._pendingEvolve;
     this._pendingEvolve = null;
-    App.showView("view-home");
+    App.closeGachaSheet();
     if (evo) App.showEvolveModal(evo);
     App.maybeShowGenUnlock();
   },
