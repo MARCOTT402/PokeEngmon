@@ -3899,9 +3899,12 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* 鑽石按鈕：數值貼 icon 右上角 */
 .pd-stat-diamond { position: relative; }
 
-/* 鑽石數值 pill（貼 icon 右上角） */
+/* 鑽石數值 pill（貼 gem 嘅 top-right corner）
+ * button 44px 寬，gem 22px 佔左半 → gem right 喺 50% 位置 */
 .pd-topdiamond {
-  position: absolute; top: -4px; right: -8px;
+  position: absolute;
+  left: calc(50% + 2px);  /* 貼 gem 右邊 */
+  top: -8px;              /* 向上偏貼 gem 頂部 */
   font-size: 10px; font-weight: 900; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
   color: #fff8e1;
