@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.29.0...v1.29.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **home:** correct Pokedex shell grid rows and restore dock icons ([aee2fc6](https://github.com/MARCOTT402/PokeEngmon/commit/aee2fc684089d54d8769afa8949f96ed7d0807f1))
+
 # [1.29.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.28.0...v1.29.0) (2026-11-03)
 
 
