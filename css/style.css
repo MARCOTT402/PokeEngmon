@@ -4199,6 +4199,15 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sheet-expand:active { background: #f3efe2; }
 .ph-sheet-expand svg { display: block; }
 
+/* full 模式：將舊 view 頁面內容搬入 sheet body 顯示 */
+.ph-sheet.view-mode .ph-sheet-body > :not(.sheet-view-host) { display: none; }
+.sheet-view-host { display: flex; flex-direction: column; gap: 14px; }
+.sheet-view-host--quests { gap: 12px; }
+.sheet-view-host > .topbar,
+.sheet-view-host > .dex-title,
+.sheet-view-host > .hub-spacer,
+.sheet-view-host > .hub-bar { display: none; }
+
 .ph-ssec { margin-top: 8px; }
 .ph-ssec:first-child { margin-top: 2px; }
 .ph-ssec-t {

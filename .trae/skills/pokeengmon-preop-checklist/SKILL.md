@@ -334,3 +334,20 @@ Incident (2026-11-03 Calendar): 加左右掃轉月 + 拖曳箭咀展合 sheet，
 - **拖曳方向要跟 panel 嘅 anchor**：`.ph-sheet-down` 係 `top: 0`、由頂部向下展開，所以 **向下拖 = 展開、向上拖 = 收起**（height 增加時 handle 會向下行）。照抄「向上展開」會同手指方向相反 — 2026-11-03 實際做錯過一次要改返。Bottom-anchored sheet 才係向上拖展開。
 - Headless 驗證手勢要用 CDP `Input.dispatchTouchEvent`；用 JS 合成 `PointerEvent` 會令 `setPointerCapture` 拋 `NotFoundError`，驗唔到真實行為。
 
+## Rule 35 — sheet 內 click handler 即時 re-render 會令 document click 誤關 sheet
+
+Incident (2026-11-03 Pokédex compact preview): 喺 sheet 入面嘅 chip／按鈕 handler 直接 `container.innerHTML = ...` 重繪，`event.target` 會變成 detached node；跟住 document 嘅 bubble click handler 做 `e.target.closest("#view-home .ph-sheet")` 會攞到 null，誤判「點咗 sheet 外面」而 `_closeAllSheets()`。症狀係撳 chip 之後內容有更新，但 sheet 已經靜靜雞關咗，之後再撳箭咀就會出現 full class 但冇內容嘅怪狀態。
+
+- 任何 sheet 內 handler 會**同步** re-render（尤其清空 container）都要 `ev.stopPropagation()`。
+- 或者延後 re-render（`setTimeout 0` / `requestAnimationFrame`），等 click 冒泡完先換 DOM。
+- 測試唔好只驗內容有冇更新，要同時驗返 sheet 仍然 `ph-open`。
+
+## Rule 36 — sheet compact → full 要共用同一個頂部 unit，唔好各整一份
+
+Incident (2026-11-03 Pokédex): 初版用自製 compact preview markup，full 再搬成個 view 入去；兩個 gen hub 係唔同 DOM，展開時頂部會 re-render／跳位，睇落似 overlap。用戶要求「上部份係同一個 unit，下部份由上部份展開出去」。
+
+- 做法：mount 時只搬「頂部 unit」element（例如 `#gen-hub`、`#dex-progress`）入 sheet host 並 render 一次；**展開時**才把其餘 childNodes append 落去；**收起時**把其餘 nodes 搬返 view，頂部 element 完全唔動 → 同一個 unit、位置不變。
+- `_unmountSheetView` 要用 `prepend`（收起狀態下 lower 內容已搬返 view，頂部 unit 要放返最前），否則次序會變。
+- `expandArrow` 支援 opts `onDragStart` / `onDragEnd`：拖曳期間先放出 lower content（避免拉出空白），未夠力就收起返。
+- `renderHub()` 嘅 `scrollIntoView` 喺 sheet mount 時要 skip（flag），否則一開 sheet 就橫向捲走第一格；mount 完再 `scrollLeft = 0`。
+

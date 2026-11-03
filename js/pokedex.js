@@ -26,6 +26,22 @@ const Pokedex = {
     this._setDexBackMode("grid");
   },
 
+  /* 由 home sheet 展開時用：唔跳 view，只 render 已經搬入 sheet 嘅 DOM */
+  mount(resetGen) {
+    const st = loadState();
+    const unlocked = st.unlockedGen || 1;
+    /* 每次開 sheet 預設顯示最高已解鎖世代；展開／收起之間就保留用戶揀咗嘅世代 */
+    if (resetGen || !this.curGen || this.curGen > unlocked) {
+      this.curGen = Math.min(unlocked, MAX_GEN);
+    }
+    this._bindHubScroll();
+    this._skipHubScroll = true; /* sheet 開啟時由第一格開始顯示，唔好自動捲去 active */
+    this.render();
+    this._skipHubScroll = false;
+    const hub = document.getElementById("gen-hub");
+    if (hub) hub.scrollLeft = 0;
+  },
+
   /* detail：底欄「Back to Pokédex」關 modal；grid：返主頁 */
   _setDexBackMode(mode) {
     const btn = document.getElementById("btn-dex-back");
@@ -71,7 +87,7 @@ const Pokedex = {
     });
     /* 撳完自動捲去 active chip（手機橫向列表） */
     const active = hub.querySelector(".gen-chip.active");
-    if (active && active.scrollIntoView) {
+    if (!this._skipHubScroll && active && active.scrollIntoView) {
       active.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     }
   },

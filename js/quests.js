@@ -434,5 +434,14 @@ const Quests = (() => {
     syncFromServer();
   }
 
-  return { open, refresh, refreshBadge, claim, claimAll, render, stopTimer };
+  /* 由 home sheet 展開時用：唔跳 view，只 render 已經搬入 sheet 嘅 DOM */
+  function mount() {
+    bind();
+    render();
+    renderDefs();
+    startTimer();
+    syncFromServer();
+  }
+
+  return { open, mount, refresh, refreshBadge, claim, claimAll, render, stopTimer };
 })();

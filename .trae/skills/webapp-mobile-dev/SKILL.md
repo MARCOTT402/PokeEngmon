@@ -572,7 +572,16 @@ Pattern（本專案參考實作：`js/app.js` 的 `expandArrow()`）：
 8. 拖曳超過 4px 就設 `suppressClick`，並喺 350ms 後清；否則放手時嗰個 click 會再 toggle 一次。
 9. 收起／展開後記得換箭咀方向 icon（compact 向下、full 向上），同埋開 sheet 時重置 height / transition / icon。
 
-### 7.3 驗收清單（每次加呢類手勢都要跑）
+### 7.4 舊 view 搬入 full sheet（本專案 pattern）
+
+當某個 sheet 嘅「Open full …」要改成同 Streak 一樣嘅箭咀展開時，唔需要重寫舊頁面：
+
+1. 把舊 view 嘅 `childNodes` **暫時搬入** sheet body 內嘅 `.sheet-view-host`（用 `Array.from` snapshot，唔好直接 spread live `childNodes`），所有 ID 唔變，`render()` 照用。
+2. CSS：`view-mode` 隱藏 sheet body 內嘅 compact 內容；host 內嘅 `.topbar`、`.hub-bar`、`.hub-spacer`、`.dex-title` 都要隱藏（`.hub-bar` 係 `position: fixed`，唔隱藏會浮喺畫面底部）。
+3. **收起／關閉時一定要搬返原位**：`_unmountSheetView()` 把 host 內 nodes `append` 返原本嘅 view。所有 close 路徑（X、backdrop、切換 sheet）同 `_openSheet` 開頭都要叫，否則下次開 sheet 會殘留上次 full 狀態，或者舊全頁入口（`Pokedex.open()` / `Quests.open()`）會見到空 view。
+4. 搬入後只 call view 嘅 render 方法（本專案：`Pokedex.mount()` / `Quests.mount()`），**唔好** call `open()`（`open()` 會 `App.showView()` 跳走個畫面）。
+
+### 7.5 驗收清單（每次加呢類手勢都要跑）
 
 - 橫掃過門檻 → 轉頁；細掃 → 磁吸回彈、頁碼不變。
 - 垂直手勢仍然可以捲動頁面（唔會被手勢搶走）。

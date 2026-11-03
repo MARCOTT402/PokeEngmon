@@ -2038,6 +2038,7 @@ const App = {
     const sheet = document.getElementById(id);
     if (!sheet) return;
     if (id === "sheet-setting") this._syncAudioSliders();
+    this._unmountSheetView(sheet); /* 上次 full 模式搬咗舊 view 入嚟 → 搬返原位 */
     /* 永遠重置 full 模式 + height style + arrow 方向（確保每次開都由 compact 開始） */
     sheet.classList.remove("ph-sheet-full");
     sheet.style.height = "";
@@ -2097,7 +2098,10 @@ const App = {
         const bd = document.querySelector("#view-home .ph-backdrop");
         if (bd) bd.hidden = true;
         document.querySelectorAll("#view-home .ph-sheet").forEach(s => {
-          if (!s.classList.contains("ph-open")) s.hidden = true;
+          if (!s.classList.contains("ph-open")) {
+            s.hidden = true;
+            this._unmountSheetView(s);
+          }
         });
       }));
     }, 430);
@@ -2111,10 +2115,68 @@ const App = {
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
         if (stillOpen) return; /* binder 410ms 後開咗新 sheet → skip */
-        sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
+        sheets.forEach(s => {
+          if (!s.classList.contains("ph-open")) {
+            s.hidden = true;
+            this._unmountSheetView(s);
+          }
+        });
         if (bd) bd.hidden = true;
       }));
     }, 430);
+  },
+  /* full sheet 模式：暫時將舊 view 頁面嘅 DOM 搬入 sheet body，關閉／收起時搬返原位。
+     topIds：呢啲 element 由 compact 到 full 都留在 sheet 頂部（同一個 unit），其餘內容展開時才加入 */
+  _mountSheetView(sheetId, viewId, renderFn, variant, topIds) {
+    const sheet = document.getElementById(sheetId);
+    const view = document.getElementById(viewId);
+    if (!sheet || !view) return;
+    const body = sheet.querySelector(".ph-sheet-body");
+    if (!body) return;
+    let host = sheet.querySelector(".sheet-view-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.className = "sheet-view-host" + (variant ? " sheet-view-host--" + variant : "");
+      host.dataset.view = viewId;
+      host._topIds = topIds || [];
+      body.appendChild(host);
+      const tops = host._topIds.length
+        ? Array.from(view.children).filter(n => host._topIds.includes(n.id))
+        : Array.from(view.childNodes);
+      host.append(...tops);
+    }
+    sheet.classList.add("view-mode");
+    if (typeof renderFn === "function") renderFn();
+  },
+  /* 展開：把其餘內容搬到頂部 unit 之下 */
+  _expandSheetView(sheet) {
+    if (!sheet) return;
+    const host = sheet.querySelector(".sheet-view-host");
+    if (!host) return;
+    const view = document.getElementById(host.dataset.view);
+    if (view) host.append(...Array.from(view.childNodes));
+  },
+  /* 收起：只保留頂部 unit，其餘內容搬返（隱藏嘅）view，避免 compact 狀態可以捲到下面 */
+  _collapseSheetView(sheet) {
+    if (!sheet) return;
+    const host = sheet.querySelector(".sheet-view-host");
+    if (!host) return;
+    const view = document.getElementById(host.dataset.view);
+    const tops = host._topIds || [];
+    if (!view) return;
+    Array.from(host.childNodes).forEach(n => {
+      if (!(n.nodeType === 1 && tops.includes(n.id))) view.appendChild(n);
+    });
+  },
+  _unmountSheetView(sheet) {
+    if (!sheet) return;
+    sheet.classList.remove("view-mode");
+    const host = sheet.querySelector(".sheet-view-host");
+    if (!host) return;
+    const view = document.getElementById(host.dataset.view);
+    /* prepend：收起狀態下 lower 內容仍然喺 view，頂部 unit 要放返最前 */
+    if (view) view.prepend(...Array.from(host.childNodes));
+    host.remove();
   },
   /* 移除：舊時逐個 close 完再 closeAll → 會雙 timer race。
    * 所有 close 路徑（_closeSheet / _closeAllSheets）都有自己嘅 stillOpen guard timer */
@@ -2248,6 +2310,22 @@ const App = {
       };
     };
 
+    /* Quests sheet：compact 預覽內容 */
+    const renderQuestsCompact = () => {
+      const container = document.getElementById("sheet-quests-content");
+      if (!container) return;
+      const st = loadState();
+      let energy = 0;
+      if (typeof Energy !== "undefined" && Energy.ensure) {
+        energy = Number(Energy.ensure(st)?.points) || 0;
+      }
+      container.innerHTML = `
+        <div style="padding:12px; text-align:center;">
+          <div style="font-size:32px; font-weight:900; color:#16a34a;">⚡ ${energy}</div>
+          <div style="font-size:12px; color:#7d786c; margin-top:4px;">Battle energy available</div>
+        </div>`;
+    };
+
     binder("btn-bezel-diamond", "sheet-gacha", () => {
       if (!document.getElementById("view-home").classList.contains("active")) this.showView("view-home");
       this._openSheet("sheet-gacha");
@@ -2268,44 +2346,19 @@ const App = {
     });
     binder("btn-bezel-dex", "sheet-pokedex", () => {
       this._openSheet("sheet-pokedex");
-      const container = document.getElementById("sheet-pokedex-content");
-      if (container) {
-        const st = loadState();
-        const collected = (st.entries || []).length;
-        const denominator = App._unlockedGenTotal(st.unlockedGen || 1);
-        const pct = denominator > 0 ? Math.round(collected / denominator * 100) : 0;
-        container.innerHTML = `
-          <div style="padding:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:13px; font-weight:900;">Progress</span>
-              <span style="font-size:13px; font-weight:900; color:#1b1b22;">${collected}/${denominator} (${pct}%)</span>
-            </div>
-            <div style="height:10px; border-radius:999px; background:#e7e4da; overflow:hidden;">
-              <i style="display:block; height:100%; width:${pct}%; background:linear-gradient(180deg,#4ade80,#16a34a); transition:width .6s;"></i>
-            </div>
-          </div>`;
-      }
+      /* 頂部 gen hub + 進度由 compact 到 full 都係同一個 unit，下面內容展開時才加入 */
+      App._mountSheetView("sheet-pokedex", "view-pokedex", () => {
+        if (typeof Pokedex !== "undefined" && Pokedex.mount) Pokedex.mount(true);
+      }, null, ["gen-hub", "dex-progress"]);
     });
     binder("btn-bezel-energy", "sheet-quests", () => {
       this._openSheet("sheet-quests");
-      const container = document.getElementById("sheet-quests-content");
-      if (container) {
-        const st = loadState();
-        let energy = 0;
-        if (typeof Energy !== "undefined" && Energy.ensure) {
-          energy = Number(Energy.ensure(st)?.points) || 0;
-        }
-        container.innerHTML = `
-          <div style="padding:12px; text-align:center;">
-            <div style="font-size:32px; font-weight:900; color:#16a34a;">⚡ ${energy}</div>
-            <div style="font-size:12px; color:#7d786c; margin-top:4px;">Battle energy available</div>
-          </div>`;
-      }
+      renderQuestsCompact();
     });
 
     /* 底部展開箭咀：tap 切換 compact / full；亦可上下拖曳 sheet 展開／收起
      * 唔跳 view，唔 close sheet，直接喺同一 sheet 內切換內容 */
-    const expandArrow = (id, sheetId, renderCompact, renderFull) => {
+    const expandArrow = (id, sheetId, renderCompact, renderFull, opts = {}) => {
       const el = document.getElementById(id);
       const sheet = document.getElementById(sheetId);
       if (!el || !sheet) return;
@@ -2403,9 +2456,13 @@ const App = {
       el.addEventListener("pointermove", (e) => {
         if (!drag || e.pointerId !== drag.id) return;
         const dy = e.clientY - drag.startY; /* 向下為正：sheet 由頂部向下展開，handle 跟手指拉落 */
-        if (!drag.moved && Math.abs(dy) < 4) return;
-        drag.moved = true;
-        suppressClick = true;
+        if (!drag.moved) {
+          if (Math.abs(dy) < 4) return;
+          drag.moved = true;
+          suppressClick = true;
+          /* compact 拖落時即時放出展開內容，避免拉出一片空白 */
+          if (!drag.full && opts.onDragStart) opts.onDragStart();
+        }
         const minH = drag.full ? 90 : drag.startH;
         const h = Math.max(minH, Math.min(drag.startH + dy, drag.maxH));
         sheet.style.height = h + "px";
@@ -2429,6 +2486,7 @@ const App = {
         if (d.full) {
           settleHeight(d.maxH, () => { sheet.style.height = "100%"; });
         } else {
+          if (opts.onDragEnd) opts.onDragEnd(); /* 收起返下面內容 */
           settleHeight(d.startH, () => {
             sheet.style.height = "";
             sheet.style.maxHeight = "";
@@ -2467,21 +2525,27 @@ const App = {
       }
     );
 
-    /* Pokédex + Quests 箭咀（同上模式，但 full 暫時唔用 view-pokedex，留位） */
-    const expandArrowPokedex = document.getElementById("btn-pokedex-full");
-    if (expandArrowPokedex) {
-      expandArrowPokedex.onclick = () => {
-        this._closeSheet("sheet-pokedex");
-        if (typeof Pokedex !== "undefined") Pokedex.open();
-      };
-    }
-    const expandArrowQuests = document.getElementById("btn-quests-full");
-    if (expandArrowQuests) {
-      expandArrowQuests.onclick = () => {
-        this._closeSheet("sheet-quests");
-        if (typeof Quests !== "undefined") Quests.open();
-      };
-    }
+    /* Pokédex / Quests：同 Streak 一樣用底部箭咀展開，full 模式把舊 view 內容搬入 sheet */
+    expandArrow("btn-pokedex-expand", "sheet-pokedex",
+      () => App._collapseSheetView(document.getElementById("sheet-pokedex")),
+      () => App._expandSheetView(document.getElementById("sheet-pokedex")),
+      {
+        /* 拖曳展開時即刻放出下面內容，唔會拉出一片空白 */
+        onDragStart: () => App._expandSheetView(document.getElementById("sheet-pokedex")),
+        onDragEnd: () => App._collapseSheetView(document.getElementById("sheet-pokedex"))
+      }
+    );
+    expandArrow("btn-quests-expand", "sheet-quests",
+      () => {
+        App._unmountSheetView(document.getElementById("sheet-quests"));
+        renderQuestsCompact();
+      },
+      () => {
+        App._mountSheetView("sheet-quests", "view-quests", () => {
+          if (typeof Quests !== "undefined" && Quests.mount) Quests.mount();
+        }, "quests");
+      }
+    );
 
     /* 舊 energy sheet 按鈕（保留但唔綁定） */
     /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」+ toggle */
