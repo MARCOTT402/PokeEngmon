@@ -2060,15 +2060,23 @@ const App = {
     setTimeout(() => { sheet.hidden = true; this._checkCloseAllSheets(); }, 410);
   },
   _closeAllSheets() {
+    /* 只 remove class → transition 自然播放（0.4s）
+     * 唔自己設 hidden=true：交俾 caller（binder 等 410ms 後 call _openSheet），
+     * 或者 caller 唔 call 新 _openSheet（Esc / backdrop），留喺 transform:translateY(-100%) 狀態就夠
+     * pointer-events 由 .ph-sheets overflow:hidden + ph-open class 控制 */
     const sheets = document.querySelectorAll("#view-home .ph-sheet");
-    sheets.forEach(s => { s.classList.remove("ph-open"); });
-    const backdrop = document.querySelector("#view-home .ph-backdrop");
-    if (backdrop) { backdrop.classList.remove("ph-open"); }
-    /* 等動畫完（400ms）再真隱藏 */
+    sheets.forEach(s => s.classList.remove("ph-open"));
+    const bd = document.querySelector("#view-home .ph-backdrop");
+    if (bd) bd.classList.remove("ph-open");
+    /* 單獨 close 完後（無 caller 開新），410ms 後真隱藏清理 DOM */
     setTimeout(() => {
-      sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
-      if (backdrop && !backdrop.classList.contains("ph-open")) backdrop.hidden = true;
-    }, 410);
+      const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+      if (!stillOpen) {
+        const all = document.querySelectorAll("#view-home .ph-sheet");
+        all.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
+        if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+      }
+    }, 430); /* 比 transition + binder 嘅 410 再長 20ms，確保唔會喺 binder open 之前隱藏 */
   },
   _checkCloseAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet:not([hidden])");
