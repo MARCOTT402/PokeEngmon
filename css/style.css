@@ -4228,8 +4228,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   --frame-inset-top: 0px;
   /* 機頂裝飾列高度：螢幕列自動讓出呢段空間 */
   --frame-deco-h: 44px;
-  --frame-screen-top: calc(var(--frame-inset-top) + var(--frame-deco-h) + 48px + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px));
-  --frame-screen-bottom: calc(46px + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
+  /* 白螢幕區 .pd-screen2 有 margin:6px，overlay 要貼實白區就要計埋 */
+  --frame-screen-top: calc(var(--frame-inset-top) + var(--frame-deco-h) + 48px + 6px + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px));
+  --frame-screen-bottom: calc(46px + 6px + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
 }
 #gacha-scene-b, #gacha-inspect {
   top: var(--frame-screen-top);

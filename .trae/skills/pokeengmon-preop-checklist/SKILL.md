@@ -405,3 +405,9 @@ Incident (2026-11-04)：選題頁 `#topic-list` 設咗 `flex:1; overflow-y:auto`
 - 任何 `flex column + overflow-y:auto` 嘅滾動清單，子項必須 `flex: none`（或 `flex-shrink: 0`），否則 overflow 形同虛設。
 - 驗證方法：check `scrollHeight > clientHeight` 先算真滾動；單睇 CSS 有 `overflow-y: auto` 唔代表滾到。
 
+## Rule 43 — display-window overlay 定位要對齊 .pd-screen2（計埋佢嘅 margin:6px）
+
+Incident (2026-11-04)：Leaderboard／Battle Menu／Friends overlay 上下各凸出 6px（頂蓋住 status bar、底蓋住下巴紅邊）。原因：`--frame-screen-top/bottom` 算式冇計 `.pd-screen2` 嘅 `margin: 6px`。修：兩個算式各加 6px。
+
+- 改紅框結構（deco／status bar／chin／pd-screen2 margin）時，必須同步更新 `--frame-screen-top` / `--frame-screen-bottom`，並用 `getBoundingClientRect` 對比 `.pd-screen2` 同 overlay 四邊（差值要係 0）。
+
