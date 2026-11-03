@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.37.0...v1.38.0) (2026-11-03)
+
+
+### Features
+
+* **ui:** floating Start hub, battle menu cleanup, gacha close fixes ([28635d9](https://github.com/MARCOTT402/PokeEngmon/commit/28635d9cd34a08bcef6a81ebfc4307222b2a2fe7))
+
 # [1.37.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.36.0...v1.37.0) (2026-11-03)
 
 
