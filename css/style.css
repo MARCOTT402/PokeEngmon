@@ -3895,20 +3895,32 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 0 8px;
 }
-.pd-lens {
-  position: relative;
-  left: auto; top: auto;
-  width: 28px; height: 28px; border-radius: 50%; flex: none;
-  background: radial-gradient(circle at 35% 32%, #bfe9ff 0 18%, #4aa3df 19% 46%, #1c5d8f 47% 68%, #0d2f4a 69% 100%);
-  border: 2.5px solid #111;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.2), inset -3px -3px 6px rgba(0,0,0,.3);
-  z-index: 0;
+
+/* 右上角鑽石數字 pill */
+.pd-topdiamond {
+  position: absolute; top: 4px; right: 6px;
+  font-size: 12px; font-weight: 900; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+  color: #fff8e1;
+  padding: 3px 9px; border-radius: 999px;
+  background: rgba(60, 8, 5, .55);
+  border: 1px solid rgba(255, 255, 255, .28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+  white-space: nowrap; z-index: 2;
 }
+
+/* 統一 icon 尺寸（所有 stat icon 用同一套） */
+.pd-icon {
+  width: 22px; height: 22px; flex: none; display: block;
+  filter: drop-shadow(0 1px 1px rgba(60, 8, 5, .45));
+}
+/* canvas 閃電 */
+.pd-bolt { image-rendering: pixelated; }
 
 /* 上框數據列：左 2（鑽石 / 天數）· 右 2（圖鑑 / 能量） */
 .pd-stats { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .pd-stat {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 6px;
   min-width: 44px; min-height: 44px;
   padding: 0; margin: 0;
   background: none; border: 0; border-radius: 12px;
@@ -3916,7 +3928,6 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: transform .12s cubic-bezier(.25, 1, .5, 1);
 }
 .pd-stat:active { transform: scale(.94); }
-.pd-stat svg { width: 20px; height: 20px; flex: none; display: block; filter: drop-shadow(0 1px 1px rgba(60, 8, 5, .45)); }
 .pd-num {
   font-size: 13px; font-weight: 900; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
@@ -3927,6 +3938,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
   white-space: nowrap;
 }
+/* 連續天數 x1 格式 */
+.pd-num-x { min-width: 22px; text-align: center; }
 
 /* ---- 3. 屏幕列 ---- */
 .pd-screen2 {
@@ -4075,11 +4088,14 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-badge[hidden] { display: none !important; }
 
 /* ---- 11. Sheet（定位喺白色螢幕區內，由框內邊捲出捲入） ---- */
+/* sheet bottom 必須喺 dockbar 頂部之上，dockbar 由 flex 自動高度決定 */
 .ph-sheets {
   position: absolute; inset: 0; z-index: 40;
   pointer-events: none;
   overflow: hidden;
   border-radius: 16px;
+  /* bottomdock 高度大約 52px（min-height 44 + padding 8）+ gap 8 = 60px 預留 */
+  bottom: calc(56px + 8px);
 }
 .ph-sheet, .ph-backdrop { pointer-events: auto; }
 .ph-sheet[hidden], .ph-backdrop[hidden] { display: none !important; }

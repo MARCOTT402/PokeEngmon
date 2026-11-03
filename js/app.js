@@ -12,6 +12,10 @@ const App = {
 
   /* ---------- 路由 ---------- */
   showView(id) {
+    /* 切頁前關閉所有 home sheets */
+    if (document.getElementById("view-home").classList.contains("active")) {
+      this._closeAllSheets();
+    }
     /* 離開抽獎頁：中斷流程（已結算嘅獎勵唔會漏，只係跳過動畫） */
     const cur = document.querySelector(".view.active");
     if (cur && cur.id === "view-gacha" && id !== "view-gacha" && typeof Gacha !== "undefined") {
@@ -28,16 +32,111 @@ const App = {
     window.scrollTo(0, 0);
   },
 
+  /* 計算累加到 unlockedGen 嘅物種總數（Gen1=151, Gen1+2=251 …） */
+  _unlockedGenTotal(gen) {
+    if (typeof GENS === "undefined") return 151;
+    let total = 0;
+    for (let i = 0; i < gen && i < GENS.length; i++) {
+      const range = GENS[i].range;
+      total += range[1] - range[0] + 1;
+    }
+    return total || 151;
+  },
+
+  /* Canvas 閃電動畫（22×22 px pixel art，閃爍效果） */
+  _initBoltCanvas() {
+    const canvas = document.getElementById("pd-bolt-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    /* Pixel art 閃電（5 段 path，22×22） */
+    const boltPaths = [
+      /* base frame — 主閃電 */
+      [[14,2, 8,11,12,11,7,20]],
+      /* frame 2 — 加支線 */
+      [[14,2, 8,11,12,11,7,20], [10,7, 14,9]],
+      /* frame 3 — 加另一條支線 */
+      [[14,2, 8,11,12,11,7,20], [10,7, 14,9], [9,14, 6,16]],
+      /* frame 4 — 減返支線 */
+      [[14,2, 8,11,12,11,7,20]],
+    ];
+
+    let frameIdx = 0;
+    let tick = 0;
+    const FLASH_INTERVAL = 6; /* 每 N tick 換一幀 */
+
+    const draw = () => {
+      ctx.clearRect(0, 0, 22, 22);
+
+      const paths = boltPaths[frameIdx % boltPaths.length];
+      paths.forEach(pts => {
+        /* 主體（亮黃） */
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(pts[0], pts[1]);
+        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i+1]);
+        ctx.stroke();
+
+        /* 高光（白邊） */
+        ctx.strokeStyle = "#fff8dc";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(pts[0], pts[1]);
+        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i+1]);
+        ctx.stroke();
+      });
+
+      tick++;
+      if (tick >= FLASH_INTERVAL) { tick = 0; frameIdx++; }
+    };
+
+    /* 開始動畫 */
+    this._boltRaf = requestAnimationFrame(function loop() {
+      draw();
+      App._boltRaf = requestAnimationFrame(loop);
+    });
+
+    /* 清理（頁面隱藏時） */
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && this._boltRaf) {
+        cancelAnimationFrame(this._boltRaf);
+        this._boltRaf = null;
+      } else if (!this._boltRaf) {
+        this._boltRaf = requestAnimationFrame(function loop() {
+          draw();
+          App._boltRaf = requestAnimationFrame(loop);
+        });
+      }
+    });
+  },
+
   /* ---------- 主畫面 ---------- */
   renderHome() {
     const st = loadState();
-    /* 頂 dock 4 格更新 */
-    document.getElementById("topbar-name").textContent = st.playerName;
-    document.getElementById("topbar-diamonds").textContent = st.diamonds;
+    /* 右上角鑽石數字 pill */
+    const topDiamonds = document.getElementById("topbar-diamonds");
+    if (topDiamonds) topDiamonds.textContent = st.diamonds;
+
+    /* 連續天數 x1 格式 */
     const streakEl = document.getElementById("home-streak-label");
     if (streakEl) streakEl.textContent = "x" + calcStreak();
+
+    /* Pokédex：分子 = 已收集 entry 數；分母 = 累加到 unlockedGen 嘅物種總數 */
     const dexProgEl = document.getElementById("home-dex-progress");
-    if (dexProgEl) dexProgEl.textContent = (st.entries || []).length + "/" + TOTAL_SPECIES;
+    if (dexProgEl) {
+      const collected = (st.entries || []).length;
+      const denominator = App._unlockedGenTotal(st.unlockedGen || 1);
+      dexProgEl.textContent = collected + "/" + denominator;
+    }
+
+    /* Energy：單一數值（戰鬥可用能量） */
+    const energyEl = document.getElementById("td-energy-val");
+    if (energyEl) energyEl.textContent = st.energy ?? 0;
+
     /* 登入 chip 狀態：任何情況下都同步返真實登入狀態（包括 localStorage restore） */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) this._markLoggedIn();
 
@@ -2057,20 +2156,75 @@ const App = {
     /* 按鈕（Home P1 dock + sheet 系統） */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
 
-    /* 上框數據列 4 格（左：鑽石 / 天數；右：圖鑑 / 能量） */
+    /* 上框 4 格：全部捲入 top-down sheets（捲到 dockbar 高度，唔 overlap） */
     const binder = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-    binder("btn-bezel-diamond", () => Gacha.open("rare"));
-    binder("btn-bezel-streak", () => { if (typeof Calendar !== "undefined") Calendar.open(); });
-    binder("btn-bezel-dex", () => { if (typeof Pokedex !== "undefined") Pokedex.open(); });
+    binder("btn-bezel-diamond", () => {
+      if (!document.getElementById("view-home").classList.contains("active")) this.showView("view-home");
+      this._openSheet("sheet-gacha");
+      /* 同步 gacha 鑽石顯示 */
+      if (typeof Gacha !== "undefined") {
+        Gacha.open("rare");
+      }
+    });
+    binder("btn-bezel-streak", () => {
+      this._openSheet("sheet-calendar");
+      /* 預覽：只顯示連續天數 + 最近 7 日練習記錄 */
+      const container = document.getElementById("sheet-calendar-content");
+      if (container) {
+        const st = loadState();
+        const streak = calcStreak();
+        container.innerHTML = `
+          <div style="padding:12px; text-align:center;">
+            <div style="font-size:36px; font-weight:900; color:#ee1515;">🔥 ${streak}</div>
+            <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
+            <div style="font-size:11px; color:#b0a99a; margin-top:10px;">Tap below to open full calendar</div>
+          </div>`;
+      }
+    });
+    binder("btn-bezel-dex", () => {
+      this._openSheet("sheet-pokedex");
+      /* 預覽：進度 + 最近收集 */
+      const container = document.getElementById("sheet-pokedex-content");
+      if (container) {
+        const st = loadState();
+        const collected = (st.entries || []).length;
+        const denominator = App._unlockedGenTotal(st.unlockedGen || 1);
+        const pct = denominator > 0 ? Math.round(collected / denominator * 100) : 0;
+        container.innerHTML = `
+          <div style="padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:13px; font-weight:900;">Progress</span>
+              <span style="font-size:13px; font-weight:900; color:#1b1b22;">${collected}/${denominator} (${pct}%)</span>
+            </div>
+            <div style="height:10px; border-radius:999px; background:#e7e4da; overflow:hidden;">
+              <i style="display:block; height:100%; width:${pct}%; background:linear-gradient(180deg,#4ade80,#16a34a); transition:width .6s;"></i>
+            </div>
+          </div>`;
+      }
+    });
     binder("btn-bezel-energy", () => {
-      const st = loadState(); const e = st.energy ?? 3;
-      const fill = document.getElementById("energy-fill");
-      const text = document.getElementById("energy-text");
-      if (fill) fill.style.width = (e/5*100) + "%";
-      if (text) text.textContent = e + " / 5";
-      this._openSheet("sheet-energy");
+      this._openSheet("sheet-quests");
+      /* 預覽：今日任務數 */
+      const container = document.getElementById("sheet-quests-content");
+      if (container) {
+        const st = loadState();
+        const quests = (typeof Quests !== "undefined" && Quests.getTodayCount) ? Quests.getTodayCount() : null;
+        const energy = st.energy ?? 0;
+        container.innerHTML = `
+          <div style="padding:12px; text-align:center;">
+            <div style="font-size:32px; font-weight:900; color:#16a34a;">⚡ ${energy}</div>
+            <div style="font-size:12px; color:#7d786c; margin-top:4px;">Battle energy available</div>
+            ${quests ? `<div style="font-size:11px; color:#b0a99a; margin-top:10px;">${quests.done}/${quests.total} quests today</div>` : ""}
+          </div>`;
+      }
     });
 
+    /* 新增 sheet 內的 "Open Full" 按鈕 */
+    binder("btn-calendar-full", () => { this._closeSheet("sheet-calendar"); if (typeof Calendar !== "undefined") Calendar.open(); });
+    binder("btn-pokedex-full", () => { this._closeSheet("sheet-pokedex"); if (typeof Pokedex !== "undefined") Pokedex.open(); });
+    binder("btn-quests-full", () => { this._closeSheet("sheet-quests"); if (typeof Quests !== "undefined") Quests.open(); });
+
+    /* 舊 energy sheet 按鈕（保留但唔綁定） */
     /* 底部 dock 4 格：答題 / Quests / Battle / Setting */
     document.getElementById("btn-bd-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-bd-quests").onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
@@ -2102,6 +2256,9 @@ const App = {
     /* Quest badge 更新 */
     if (typeof Quests !== "undefined" && Quests.refreshBadge) Quests.refreshBadge();
     if (typeof BattleUI !== "undefined") BattleUI.bind();
+
+    /* 上框連續天數 canvas 閃電動畫 */
+    this._initBoltCanvas();
 
     /* Gym challenge（保留 id 俾 Gym.refreshHomeUI 寫內容） */
     const gymBtn = document.getElementById("btn-gym-challenge");
