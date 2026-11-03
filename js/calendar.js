@@ -112,6 +112,9 @@ const Calendar = {
       grid.appendChild(cell);
     }
 
+    /* 左右掃切換月份（帶磁吸回彈） */
+    this._bindSwipe(grid, containerId);
+
     /* 圖例 */
     root.querySelector(".cal-legend").innerHTML = `
       <span><i class="lv-dot lv0"></i>No practice</span>
@@ -130,6 +133,115 @@ const Calendar = {
     this.month++;
     if (this.month > 11) { this.month = 0; this.year++; }
     this.render();
+  },
+
+  /* 左右掃轉月份：跟手指拖動，放手後磁吸到上一／下一月或回彈原位 */
+  _bindSwipe(grid, containerId) {
+    if (grid._swipeAC) grid._swipeAC.abort();
+    const ac = new AbortController();
+    grid._swipeAC = ac;
+
+    const rootOf = () => (containerId ? document.querySelector(containerId) : document.getElementById("view-calendar"));
+    const width = () => Math.max(grid.getBoundingClientRect().width, 1);
+
+    let activeId = null, startX = 0, startY = 0, dx = 0;
+    let locked = false, horizontal = false;
+    let lastX = 0, lastT = 0, velocity = 0;
+    let suppressClick = !!grid._swipeSuppress; /* 跨 re-render 保留，避免掃完誤觸日期 */
+
+    const snapBack = () => {
+      grid.style.transition = "transform .34s cubic-bezier(.22,1,.36,1)";
+      grid.style.transform = "translateX(0)";
+    };
+
+    const changeMonth = (delta) => {
+      const W = width();
+      grid.style.transition = "transform .2s cubic-bezier(.4,0,1,1)";
+      grid.style.transform = `translateX(${delta > 0 ? -W : W}px)`;
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        grid.removeEventListener("transitionend", finish);
+        this.month += delta;
+        if (this.month < 0) { this.month = 11; this.year--; }
+        if (this.month > 11) { this.month = 0; this.year++; }
+        this.render(containerId);
+        const nextGrid = rootOf()?.querySelector(".cal-grid");
+        if (!nextGrid) return;
+        /* 新月份由反方向滑入，形成磁吸接合 */
+        nextGrid.style.transition = "none";
+        nextGrid.style.transform = `translateX(${delta > 0 ? W : -W}px)`;
+        void nextGrid.offsetWidth;
+        requestAnimationFrame(() => {
+          nextGrid.style.transition = "transform .34s cubic-bezier(.22,1,.36,1)";
+          nextGrid.style.transform = "translateX(0)";
+        });
+      };
+      grid.addEventListener("transitionend", finish);
+      setTimeout(finish, 260);
+    };
+
+    grid.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      activeId = e.pointerId;
+      startX = lastX = e.clientX;
+      startY = e.clientY;
+      dx = 0;
+      locked = false;
+      horizontal = false;
+      velocity = 0;
+      lastT = performance.now();
+      grid.style.transition = "none";
+    }, { signal: ac.signal });
+
+    grid.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== activeId) return;
+      const mx = e.clientX - startX;
+      const my = e.clientY - startY;
+      if (!locked) {
+        if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+        locked = true;
+        horizontal = Math.abs(mx) > Math.abs(my);
+        if (!horizontal) { activeId = null; return; } /* 垂直手勢交返俾 sheet 捲動 */
+        grid.setPointerCapture(e.pointerId);
+      }
+      const now = performance.now();
+      if (now > lastT) velocity = (e.clientX - lastX) / (now - lastT);
+      lastX = e.clientX;
+      lastT = now;
+      dx = mx;
+      grid.style.transform = `translateX(${dx}px)`;
+      if (e.cancelable) e.preventDefault();
+    }, { signal: ac.signal, passive: false });
+
+    const end = (e) => {
+      if (e.pointerId !== activeId) return;
+      activeId = null;
+      const wasDrag = locked && horizontal && Math.abs(dx) > 10;
+      if (!wasDrag) { grid.style.transition = ""; grid.style.transform = ""; return; }
+
+      suppressClick = true;
+      grid._swipeSuppress = true;
+      setTimeout(() => { suppressClick = false; grid._swipeSuppress = false; }, 350);
+
+      const W = width();
+      const threshold = Math.min(W * 0.18, 56);
+      const flung = Math.abs(velocity) > 0.45 && Math.abs(dx) > 20 && velocity * dx > 0;
+      if (Math.abs(dx) > threshold || flung) changeMonth(dx < 0 ? 1 : -1);
+      else snapBack();
+    };
+    grid.addEventListener("pointerup", end, { signal: ac.signal });
+    grid.addEventListener("pointercancel", end, { signal: ac.signal });
+
+    /* 掃完唔好誤觸日期格 */
+    grid.addEventListener("click", (e) => {
+      if (!suppressClick) return;
+      suppressClick = false;
+      grid._swipeSuppress = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }, { signal: ac.signal, capture: true });
   },
 
   /* 當日詳細記錄 HTML：各組成績 + 錯題位置；冇紀錄回傳 "" */

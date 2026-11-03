@@ -322,3 +322,14 @@ Incident (2026-11-03 Calendar): 用戶報「點擊日曆日期會彈資訊」，
 - 用戶「要內容但唔要 popup」時，正解通常係**原位置 inline / accordion 展開**（同一容器、可再點收起、切換日期會換內容），而唔係刪掉功能或保留 modal。
 - 修完要重現用戶原話嘅場景驗收（例如「點有紀錄嘅日期 → 應該喺日曆下方見到 Set 詳情，且冇 modal」），而唔止驗自己假設嘅方向。
 
+## Rule 34 — 手勢（swipe / drag）實作要點
+
+Incident (2026-11-03 Calendar): 加左右掃轉月 + 拖曳箭咀展合 sheet，容易踩以下幾點。
+
+- 用 pointer events（`pointerdown/move/up/cancel`）+ 每次 render 用 `AbortController` 重綁，避免舊 handler 疊加。
+- CSS `touch-action`：可捲動區域用 `pan-y`（保留垂直捲動、自己處理橫掃）；純拖曳 handle 用 `none`。
+- 一定要做 **axis lock**（例如 6px 後判斷橫向定縱向）：縱向就即刻放手指手，交返俾 sheet 捲動，否則會搶走 scroll。
+- 掃完要 suppress click，而且 flag 要**跨 re-render 保存**（掛喺 DOM element 上，例如 `grid._swipeSuppress`）；因為轉月後 `render()` 會重建 listener，local flag 會失效，synthetic click 就會誤觸日期格。
+- height 由 auto ↔ 100% 係唔可以 transition 嘅：先量目標高度 → 設返起點 px → 下一 frame animate 去目標 px → 完成後才改回 `auto` / `100%`，否則會直接跳。
+- Headless 驗證手勢要用 CDP `Input.dispatchTouchEvent`；用 JS 合成 `PointerEvent` 會令 `setPointerCapture` 拋 `NotFoundError`，驗唔到真實行為。
+

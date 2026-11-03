@@ -2042,6 +2042,8 @@ const App = {
     sheet.classList.remove("ph-sheet-full");
     sheet.style.height = "";
     sheet.style.maxHeight = "";
+    sheet.style.transition = "";
+    sheet._settleSeq = (sheet._settleSeq || 0) + 1; /* 取消未完成嘅高度磁吸動畫 */
     const arrow = sheet.querySelector(".ph-sheet-expand");
     if (arrow) arrow.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     /* 如果係 Streak sheet，重置 content 為 compact（只顯示 streak） */
@@ -2301,33 +2303,140 @@ const App = {
       }
     });
 
-    /* 底部展開箭咀：模式切換（compact → full calendar 再返 compact）
+    /* 底部展開箭咀：tap 切換 compact / full；亦可上下拖曳 sheet 展開／收起
      * 唔跳 view，唔 close sheet，直接喺同一 sheet 內切換內容 */
     const expandArrow = (id, sheetId, renderCompact, renderFull) => {
       const el = document.getElementById(id);
-      if (!el) return;
+      const sheet = document.getElementById(sheetId);
+      if (!el || !sheet) return;
+
+      const ICON_DOWN = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      const ICON_UP = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 13.5L10 7.5L16 13.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      const isFull = () => sheet.classList.contains("ph-sheet-full");
+      const setIcon = (full) => { el.innerHTML = full ? ICON_UP : ICON_DOWN; };
+
+      /* 磁吸：height 動畫到目標後再做最後清理（token 防止上一個動畫嘅 timer 補刀） */
+      const settleHeight = (targetH, done) => {
+        const my = (sheet._settleSeq = (sheet._settleSeq || 0) + 1);
+        sheet.style.transition = "height .34s cubic-bezier(.22,1,.36,1)";
+        sheet.style.height = targetH + "px";
+        sheet.style.maxHeight = "none";
+        let finished = false;
+        let timer = null;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          sheet.removeEventListener("transitionend", onEnd);
+          clearTimeout(timer);
+          if (my !== sheet._settleSeq) return;
+          sheet.style.transition = "";
+          if (done) done();
+        };
+        const onEnd = (ev) => { if (ev.target === sheet && ev.propertyName === "height") finish(); };
+        sheet.addEventListener("transitionend", onEnd);
+        timer = setTimeout(finish, 420);
+      };
+
+      const expand = () => {
+        const fromH = sheet.getBoundingClientRect().height;
+        renderFull();
+        sheet.classList.add("ph-sheet-full");
+        sheet.style.transition = "none";
+        sheet.style.height = "100%";
+        sheet.style.maxHeight = "none";
+        const targetH = sheet.getBoundingClientRect().height;
+        sheet.style.height = fromH + "px";
+        void sheet.offsetHeight;
+        settleHeight(targetH, () => { sheet.style.height = "100%"; });
+        setIcon(true);
+      };
+
+      const collapse = () => {
+        const fromH = sheet.getBoundingClientRect().height;
+        renderCompact();
+        sheet.classList.remove("ph-sheet-full");
+        sheet.style.transition = "none";
+        sheet.style.height = "auto";
+        sheet.style.maxHeight = "";
+        const targetH = sheet.getBoundingClientRect().height;
+        sheet.style.height = fromH + "px";
+        void sheet.offsetHeight;
+        settleHeight(targetH, () => {
+          sheet.style.height = "";
+          sheet.style.maxHeight = "";
+        });
+        setIcon(false);
+      };
+
+      const toggle = () => { if (isFull()) collapse(); else expand(); };
+
+      /* tap 切換（拖曳後 suppress，避免誤觸） */
+      let suppressClick = false;
       el.onclick = (e) => {
         e.stopPropagation(); /* 防止 bubble 到 document click handler 觸發 _closeAllSheets */
         e.preventDefault();
-        const sheet = document.getElementById(sheetId);
-        if (!sheet) return;
-        const isFull = sheet.classList.contains("ph-sheet-full");
-        if (isFull) {
-          /* 收起 compact：移除 full class + 設 height auto（讓內容自動撐開）*/
-          sheet.classList.remove("ph-sheet-full");
-          sheet.style.height = "";  /* 回復 auto */
-          sheet.style.maxHeight = "";
-          renderCompact();
-          el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        if (suppressClick) { suppressClick = false; return; }
+        toggle();
+      };
+
+      /* 上下拖曳箭咀：向上展開、向下收起，放手磁吸到最近狀態 */
+      let drag = null;
+      if (el._dragAC) el._dragAC.abort();
+      const ac = new AbortController();
+      el._dragAC = ac;
+
+      el.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        drag = {
+          id: e.pointerId,
+          startY: e.clientY,
+          startH: sheet.getBoundingClientRect().height,
+          full: isFull(),
+          maxH: sheet.parentElement ? sheet.parentElement.clientHeight : sheet.getBoundingClientRect().height,
+          moved: false
+        };
+        sheet.style.transition = "none";
+        sheet._settleSeq = (sheet._settleSeq || 0) + 1; /* 取消未完成嘅磁吸動畫 */
+        try { el.setPointerCapture(e.pointerId); } catch {}
+      }, { signal: ac.signal });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
+        const dy = drag.startY - e.clientY; /* 向上為正 */
+        if (!drag.moved && Math.abs(dy) < 4) return;
+        drag.moved = true;
+        suppressClick = true;
+        const minH = drag.full ? 90 : drag.startH;
+        const h = Math.max(minH, Math.min(drag.startH + dy, drag.maxH));
+        sheet.style.height = h + "px";
+        sheet.style.maxHeight = "none";
+        if (e.cancelable) e.preventDefault();
+      }, { signal: ac.signal, passive: false });
+
+      const endDrag = (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
+        const d = drag;
+        drag = null;
+        if (!d.moved) { sheet.style.transition = ""; return; }
+        setTimeout(() => { suppressClick = false; }, 350);
+
+        const dy = d.startY - e.clientY;
+        const threshold = Math.max(52, d.maxH * 0.14);
+        if (!d.full && dy > threshold) { expand(); return; }
+        if (d.full && -dy > threshold) { collapse(); return; }
+
+        /* 未夠力 → 磁吸返原本狀態 */
+        if (d.full) {
+          settleHeight(d.maxH, () => { sheet.style.height = "100%"; });
         } else {
-          /* 展開 full：先 renderFull 讓 calendar DOM 存在，再加 full class + height 100% */
-          renderFull();
-          sheet.classList.add("ph-sheet-full");
-          sheet.style.height = "100%";
-          sheet.style.maxHeight = "none";
-          el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 13.5L10 7.5L16 13.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+          settleHeight(d.startH, () => {
+            sheet.style.height = "";
+            sheet.style.maxHeight = "";
+          });
         }
       };
+      el.addEventListener("pointerup", endDrag, { signal: ac.signal });
+      el.addEventListener("pointercancel", endDrag, { signal: ac.signal });
     };
 
     /* Streak sheet：accordion expand — 保留 streak 頂部 + 展開 calendar 下面 */

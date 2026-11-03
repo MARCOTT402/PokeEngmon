@@ -1743,7 +1743,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .cal-header h2 { font-size: 1.25rem; }
 .cal-wrap { padding: 8px 2px 0; }
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 800; color: #7a8299; font-size: 11px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; touch-action: pan-y; will-change: transform; }
 .cal-cell {
   aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background: #eef0f5;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -4192,7 +4192,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   display: flex; align-items: center; justify-content: center;
   border: none; border-top: 2px solid #e7e4da;
   background: #fffdf7; color: #7d786c;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   transition: background .15s;
 }
 .ph-sheet-expand:active { background: #f3efe2; }
