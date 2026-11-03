@@ -2051,37 +2051,43 @@ const App = {
     sheet.hidden = false;
     requestAnimationFrame(() => { sheet.classList.add("ph-open"); });
   },
+  /* ====== Sheet 系統 ======
+   * 所有 close 路徑共享同一規則：
+   *   1. 只 remove ph-open class（transition 0.4s 自然播放）
+   *   2. setTimeout 430ms（比 transition + binder open 嘅 410ms 遲 20ms）
+   *   3. timer 執行時先檢查有冇新 ph-open（stillOpen guard）→ 有就 skip hidden
+   *   4. 絕對唔好 remove class 同時設 hidden（跳過 transform 動畫）
+   */
   _closeSheet(id) {
     const sheet = document.getElementById(id);
     if (!sheet) return;
-    /* 關抽獎 sheet = 中斷流程（abort 會照樣結算，唔會食鑽唔派寵） */
     if (id === "sheet-gacha" && typeof Gacha !== "undefined") Gacha.abort();
     sheet.classList.remove("ph-open");
-    setTimeout(() => { sheet.hidden = true; this._checkCloseAllSheets(); }, 410);
+    setTimeout(() => {
+      /* stillOpen guard：如果有其他 sheet 被打開（binder 410ms 後開），skip hidden */
+      const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+      if (stillOpen) return;
+      sheet.hidden = true;
+      /* backdrop 都跟住 close 晒 */
+      const bd = document.querySelector("#view-home .ph-backdrop");
+      if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+    }, 430);
   },
   _closeAllSheets() {
-    /* 只 remove class → transition 自然播放（0.4s）
-     * 唔自己設 hidden=true：交俾 caller（binder 等 410ms 後 call _openSheet），
-     * 或者 caller 唔 call 新 _openSheet（Esc / backdrop），留喺 transform:translateY(-100%) 狀態就夠
-     * pointer-events 由 .ph-sheets overflow:hidden + ph-open class 控制 */
     const sheets = document.querySelectorAll("#view-home .ph-sheet");
     sheets.forEach(s => s.classList.remove("ph-open"));
     const bd = document.querySelector("#view-home .ph-backdrop");
     if (bd) bd.classList.remove("ph-open");
-    /* 單獨 close 完後（無 caller 開新），410ms 後真隱藏清理 DOM */
     setTimeout(() => {
       const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
-      if (!stillOpen) {
-        const all = document.querySelectorAll("#view-home .ph-sheet");
-        all.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
-        if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
-      }
-    }, 430); /* 比 transition + binder 嘅 410 再長 20ms，確保唔會喺 binder open 之前隱藏 */
+      if (stillOpen) return; /* binder 已經開咗新 sheet → skip hidden */
+      sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
+      if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+    }, 430);
   },
-  _checkCloseAllSheets() {
-    const sheets = document.querySelectorAll("#view-home .ph-sheet:not([hidden])");
-    if (sheets.length === 0) this._closeAllSheets();
-  },
+  /* 移除：舊時逐個 close 完再 closeAll → 會雙 timer race。
+   * 所有 close 路徑（_closeSheet / _closeAllSheets）都有自己嘅 stillOpen guard timer */
+  _checkCloseAllSheets() {},
   _bindSheetBtn(btnId, sheetId) {
     const btn = document.getElementById(btnId);
     if (btn) btn.onclick = () => { /* 子 onclick 會覆寫，但保留 default handler 如果子冇覆蓋 */ };
