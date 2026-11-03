@@ -2284,10 +2284,19 @@ const App = {
       }
     });
 
-    /* 底部展開箭咀：關閉 compact sheet → 再向下捲入完整頁面 */
-    binder("btn-calendar-expand", () => { this._closeSheet("sheet-calendar"); if (typeof Calendar !== "undefined") Calendar.open(); });
-    binder("btn-pokedex-full", () => { this._closeSheet("sheet-pokedex"); if (typeof Pokedex !== "undefined") Pokedex.open(); });
-    binder("btn-quests-full", () => { this._closeSheet("sheet-quests"); if (typeof Quests !== "undefined") Quests.open(); });
+    /* 底部展開箭咀：子按鈕，唔經 binder（唔要 debounce + toggle）
+     * 直接 close compact → wait 動畫 → open full page */
+    const expandArrow = (id, closeSheetId, openFn) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.onclick = () => {
+        this._closeSheet(closeSheetId);
+        setTimeout(() => openFn(), 430); /* 等捲回動畫 */
+      };
+    };
+    expandArrow("btn-calendar-expand", "sheet-calendar", () => { if (typeof Calendar !== "undefined") Calendar.open(); });
+    expandArrow("btn-pokedex-full",   "sheet-pokedex",   () => { if (typeof Pokedex !== "undefined") Pokedex.open(); });
+    expandArrow("btn-quests-full",    "sheet-quests",    () => { if (typeof Quests !== "undefined") Quests.open(); });
 
     /* 舊 energy sheet 按鈕（保留但唔綁定） */
     /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」+ toggle */
