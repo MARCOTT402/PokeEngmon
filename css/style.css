@@ -3878,7 +3878,11 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   max-width: 430px; margin: 0 auto;
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
   display: grid;
-  grid-template-rows: env(safe-area-inset-top,0px) 48px 1fr 34px env(safe-area-inset-bottom,0px);
+  grid-template-rows: 48px 1fr 34px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+  grid-auto-rows: 0;
   z-index: 10;
   border-left: 0; border-right: 0;
 }
@@ -3998,7 +4002,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* ---- 9. CTA ---- */
 .ph-cta {
   flex: none;
-  width: 100%; height: 54px;
+  width: 100%; height: 60px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 12px;
   background: linear-gradient(180deg, #ffe259, #ffd93b);
@@ -4173,7 +4177,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   .ph-sign-sprite { width: 80px; height: 80px; }
   .ph-sign-name { font-size: 15px; }
   .ph-td { padding: 4px; font-size: 11px; }
-  .ph-cta { height: 50px; font-size: 14px; }
+  .ph-cta { height: 56px; font-size: 14px; }
 }
 
 /* ---- 18. Reduced motion ---- */

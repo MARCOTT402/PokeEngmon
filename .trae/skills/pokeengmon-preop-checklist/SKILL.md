@@ -233,3 +233,21 @@ Incident (P1 home 原型驗收, 2026-11-03): `--headless=new --window-size=375,6
 
 - 正解：Node ≥22 內建 WebSocket，零依賴講 CDP —— `--remote-debugging-port` 起 Chrome，`Emulation.setDeviceMetricsOverride {width:375,height:667,deviceScaleFactor:2,mobile:true}` 先係真 375×667。現成腳本：`prototype/home-p1/capture.mjs`（兼可用 `Input.dispatchTouchEvent` 做合成下拉/誤觸測試）。
 - 同場兩個版面教訓：(1) 彈出式元素（offline banner）會改變固定高度預算，用 CSS 變數 `--fixed` 補償而唔係寫死；(2) sticky CTA 要設 `z-index` 高過卡內 badge，否則滾動時 badge 會透出 CTA 邊緣。
+
+## Rule 27 — Grid 列數必須等於實際子元素數；`env(safe-area-*)` 用 `padding` 吸收，不要當成 grid row
+
+Incident (v1.28 Home 上線後真機全紅, 2026-11-03): `.pd-shell` 寫了 `grid-template-rows: env(safe-area-inset-top) 48px 1fr 34px env(safe-area-inset-bottom)` 五列，但當時 shell 內只有 2 個 grid item（bezel、screen2），`.pd-chin` 還在 shell 外面。結果 bezel 落入第 1 列（safe-top=0 → 0px 高、內容溢出）、screen2 被壓進第 2 列（48px）、其餘 1fr/34px/safe-bottom 全部空成紅色背景 —— 版面「整個屏幕都是紅殼、內容只剩頂部一條白帶」。
+
+- `grid-template-rows` 的數量是「軌道」數量，**不會自動對應子元素**。加/刪子元素時必須同步改列定義，否則子元素被塞進錯的軌道。
+- Safe area 用 `padding-top/bottom: env(safe-area-inset-*)` + `box-sizing: border-box` 吸收（外殼高度仍 `100dvh`），Grid 只留固定內容列（`48px 1fr 34px`）。把 safe-area 寫成 row 的話，桌面/瀏覽器（inset=0）會多出兩條 0px 軌道，令所有子元素位移一列。
+- 裝飾性子元素（下巴/底部裝飾）如果想參與 grid 佈局，就要放進 grid 容器內；放外面就永遠不是 grid item。
+- 驗證方法（唔可以只靠肉眼睇截圖）：CDP 讀 `getBoundingClientRect()` 每個 grid item 的高度 + `scrollHeight - clientHeight`。本次正確值（375×667）：shell 667 / bezel 48 / screen2 575 / chin 34 / overflow 0。
+
+## Rule 28 — 手寫 SVG 圖示一定要帶 `fill` 或 `stroke`，否則變黑塊或完全隱形
+
+Incident (同上，同一輪): 由原型搬去正式碼時，部分 `<svg>` 漏了 `fill`/`stroke` 屬性。`<rect>`/`<circle>` 默認 fill 黑色 → Pokedex 與 Quest 圖示變成實心黑塊；純線段 `<path>`（交叉劍）默認 fill 但無面積 → 完全睇唔到，底部 dock 明明 5 格只見到 4 格。
+
+- 線稿圖示統一寫齊：`fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`。
+- 實心圖示必須明寫 `fill`（例如火焰 `fill="#ff7a00"`），並補 `stroke` 描邊以配合手繪風。
+- 同一組（頂 dock / 底 dock）圖示用同一 stroke-width 與 viewBox 尺寸，否則視覺重量不一致。
+- 驗收：截圖後逐格數目對數（5 格要見到 5 個圖示），唔係只看「有冇紅屏」。
