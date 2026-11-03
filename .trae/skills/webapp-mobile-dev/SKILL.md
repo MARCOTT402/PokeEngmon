@@ -355,11 +355,12 @@ expandArrow("btn-calendar-expand", "sheet-calendar",
 
 **配套 CSS（必須！）：**
 ```css
-.ph-sheet { max-height: 100%; overflow: hidden; }  /* 預設鎖高度 */
-.ph-sheet-down.ph-sheet-full { max-height: none; height: 100%; overflow: visible; }  /* 展開解鎖！*/
-.ph-sheet-down.ph-sheet-full .ph-sheet-body { overflow-y: auto; }  /* body 自己滾動 */
+.ph-sheet { max-height: 100%; overflow: hidden; transition: transform .4s, max-height .4s; }
+.ph-sheet-down:not(.ph-sheet-full) { max-height: 58%; }  /* compact 高度 */
+.ph-sheet-down.ph-sheet-full { max-height: 100%; }        /* full 高度（max-height transition = 捲動畫！）*/
+.ph-sheet-down.ph-sheet-full .ph-sheet-body { overflow-y: auto; flex: 1; min-height: 0; }
 ```
-**關鍵：** `.ph-sheet-full` 必須設 `overflow: visible`（或者至少唔係 hidden），否則 append 嘅內容會被裁切！之前只設 `max-height: none` 但冇改 overflow → calendar render 咗但被 `overflow: hidden` 隱藏！
+**鐵律 6（關鍵！）：唔好用 `overflow: visible` 嚟解決內容裁切！** 有 `transform` 嘅元素上，Chrome 會自動把 `overflow: visible` 強制變 `overflow: hidden`（瀏覽器規格）！.ph-sheet-down 有 `transform: translateY()` → overflow:visible 永遠唔生效 → simulator 睇唔到 calendar（但 web browser DevTools 可能顯示正常，因為冇 transform context）。正確做法：**用 max-height transition 做捲動畫 + body overflow-y:auto**。
 
 **Pattern 使用場景：**
 
@@ -485,6 +486,7 @@ Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如�
 | 7 | 點閃電 → 點電池，新 sheet 直接彈出冇動畫 | **Timer race**：`_closeAllSheets` 410ms + binder 410ms 同時 race，JS event loop ordering 唔 guarentee → 新 sheet 可能被舊 timer 設 hidden | close timer 改 **430ms**（遲 binder 20ms）+ 加 **stillOpen guard**（timer 跑時檢查有冇新 ph-open）→ 兩條 close 路徑統一 | 6.2 / 6.5 |
 | 8 | 逐個 toggle close 後再 closeAllSheets | `_checkCloseAllSheets` 令單獨 close 完再 call closeAllSheets → **雙 timer race** | 移除 `_checkCloseAllSheets()`；每條 close 路徑有自己嘅 guard timer 就夠 | 6.6 |
 | 9 | Sheet 內展開箭咀點擊後冇執行功能 | 把子按鈕綁入 `binder()` 但唔傳 `sheetId` → binder 見到 `curSheet` 存在 → `isToggle = undefined === curSheet.id → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + `_sheetSwitching` debounce 鎖死 | 新增 `expandArrow()` pattern（6.4.1）— 直接 `_closeSheet` → wait 430ms → openFn，唔經 binder | 6.4.1 |
+| 10 | Calendar 展開後 simulator 睇唔到 | `.ph-sheet-full` 加 `overflow: visible` 但 Chrome 對有 `transform` 嘅元素**自動把 overflow:visible 變 hidden**（瀏覽器規格）！`.ph-sheet-down` 有 `transform: translateY()` → overflow:visible 永遠唔生效 | 用 **max-height transition** 做捲動畫（compact 58% / full 100%）+ body overflow-y:auto。唔好改 overflow！ | 6.4.1 |
 
 ---
 
