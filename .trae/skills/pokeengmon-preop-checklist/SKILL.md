@@ -275,3 +275,13 @@ Phase 1 以手機為先，版面基準就用最大嘅 iPhone：
 - 本地預覽：`npm run preview:iphone` 開 `tools/device-preview.html`（iPhone 外框 + Dynamic Island + Home indicator，可操作）。外框頁按窗口大小整體縮放，並經 `--sim-safe-top/bottom` 注入安全區；`.pd-shell` 用 `max(env(...), var(--sim-*))` 所以真機仍然用 env()。截圖：`--headless --click "#btn-entry-yes" --shot out.png`。
 - 桌面 Chrome DevTools 嘅 iPhone 預設**唔會**注入 `env(safe-area-inset-*)`（iframe 內更加一定係 0），所以唔好靠 DevTools 對安全區。
 - `.pd-ball` 基類係 `position:absolute; right:18px; top:10px`。任何新容器（下巴、卡角、裝飾）要用佢，必須畀容器 `position:relative` 並重置 `top/right:auto`，否則粒球會飛去 `.pd-shell` 嘅 padding 區（實測飛到 y=10，即狀態欄位置）。
+
+## Rule 31 — `_closeAllSheets()` 唔好立即設 `hidden=true`，要等 transform 動畫跑完
+
+Incident (Home sheet auto-close, v1.30 迭代, 2026-11-03): 第一次寫 `_closeAllSheets()` 時直接 `s.hidden = true`，結果所有 sheet 關閉時「閃一下就冇咗」—— transform `translateY(-100%)` 動畫被 `hidden` 立即中斷。
+
+- 正確做法：`_closeAllSheets()` 只 remove `ph-open` class（動畫自然播），`setTimeout(410ms)` 後先真設 `hidden = true`（transition 係 0.4s，留 10ms buffer）。
+- `_closeSheet(id)` 已經係咁做；`_closeAllSheets()` 必須跟同樣 pattern，確保兩條 close 路徑視覺一致。
+- Binder pattern：`binder(btnId, sheetId, openFn)` 必須實現 3 種狀態（§6.3），加 `_sheetSwitching` debounce flag 防快速連點。
+- 切換 view 時 `showView()` 最頂部 call `_closeAllSheets()`，但 **唔等動畫**（動畫同 view 切換平行跑）。
+- 完整規格見 `.trae/skills/webapp-mobile-dev/SKILL.md` Rule 6。
