@@ -94,82 +94,260 @@
 
   <div id="app">
 
-    <!-- ============ 主畫面 ============ -->
-    <section id="view-home" class="view">
-      <header class="topbar">
-        <div class="topbar-name" id="topbar-name" title="Tap to change name">The PokéEngmon Trainer</div>
-        <div class="topbar-res">
-          <button class="chip chip-diamond chip-btn" id="btn-top-diamond">💎 <b id="topbar-diamonds">0</b></button>
-          <button class="icon-btn" id="btn-top-quests" aria-label="Daily quests" title="Daily quests">🎯<span class="friends-icon-badge" id="top-quests-badge" hidden>0</span></button>
-          <button class="icon-btn" id="btn-top-friends" aria-label="Friends" title="Friends">👥<span class="friends-icon-badge" id="top-friends-badge" hidden>0</span></button>
-          <button class="chip chip-btn chip-badge" id="btn-top-leaderboard" aria-label="Leaderboard" title="Leaderboard">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M12 1.5l2.5 3.1 3.9-.8.8 3.9 3.1 2.5-2 2.8 2 2.8-3.1 2.5-.8 3.9-3.9-.8L12 22.5l-2.5-3.1-3.9.8-.8-3.9-3.1-2.5 2-2.8-2-2.8 3.1-2.5.8-3.9 3.9.8z"
-                fill="#f5b301" stroke="#8a6d00" stroke-width="1" stroke-linejoin="round"/>
-              <circle cx="12" cy="12" r="4.2" fill="#2a75bb" stroke="#fff" stroke-width="1.4"/>
-            </svg>
-          </button>
-          <button class="icon-btn" id="btn-login" aria-label="Account" title="Account">🔐</button>
-          <button class="icon-btn" id="btn-settings" aria-label="Settings" title="Settings">⚙️</button>
-        </div>
-      </header>
-
-      <div class="pokedex-device">
-        <div class="pd-top" aria-hidden="true">
-          <svg class="pd-seam" viewBox="0 0 400 60" preserveAspectRatio="none">
+    <!-- ============ 主畫面（P1 Pokedex Shell） ============ -->
+    <section id="view-home" class="view ph-shell-parent">
+      <!-- Pokedex shell（safe-area 五列 Grid） -->
+      <div class="pd-shell" id="pd-shell">
+        <!-- 上框 48px：鏡頭 + seam + 精靈球 -->
+        <div class="pd-bezel" aria-hidden="true">
+          <span class="pd-lens"></span>
+          <svg class="pd-seam" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 48 H115 C145 48 150 26 185 26 H400" fill="none" stroke="#8a1712" stroke-width="2.5"/>
           </svg>
-          <span class="pd-lens"></span>
           <span class="pd-ball"></span>
         </div>
 
-        <div class="pd-screen">
-          <div class="pd-hero">
-            <div class="hero-label" id="hero-label">My Partner</div>
-            <img id="hero-sprite" class="hero-sprite" alt="My Pokémon">
-            <div class="hero-name" id="hero-name">No Pokémon yet</div>
-            <div class="hero-stage" id="hero-stage"></div>
-            <div class="hero-petbar"><i id="hero-hpbar"></i></div>
-            <div class="hero-pet-note" id="hero-pet-note"></div>
-            <div class="expbar"><i id="hero-expbar"></i></div>
-            <div class="hero-exp-text" id="hero-exp-text">Answer questions → pull a Pokémon!</div>
-          </div>
+        <!-- 屏幕列 -->
+        <div class="pd-screen2">
+          <!-- 頂 dock 4 格 -->
+          <nav class="ph-topdock" aria-label="Top dock">
+            <button class="ph-td" data-dock="dex" type="button" id="td-dex">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="12" cy="8" r="1.7"/><path d="M8.3 13h7.4M8.3 16.2h5"/></svg>
+              <span id="home-dex-progress" class="ph-tdv">0/151</span>
+            </button>
+            <button class="ph-td" data-dock="streak" type="button" id="td-streak">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M13 2 4 14h6l-2 8 9-12h-6l2-8Z" fill="currentColor" stroke="currentColor" stroke-width="1"/></svg>
+              <span id="home-streak-label" class="ph-tdv">x0</span>
+            </button>
+            <button class="ph-td" data-dock="diamond" type="button" id="td-diamond">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3.5 9 8 4.5h8L20.5 9 12 19.5Z" fill="#57c7ff" stroke="#1b1b22" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.5 9h17M8 4.5 12 9l4-4.5M12 19.5 9.2 9M12 19.5 14.8 9" fill="none" stroke="#1b1b22" stroke-width="1.3"/></svg>
+              <span id="topbar-diamonds" class="ph-tdv">0</span>
+            </button>
+            <button class="ph-td" data-dock="energy" type="button" id="td-energy">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M13 2 4 14h6l-2 8 9-12h-6l2-8Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              <span id="td-energy-val" class="ph-tdv">3/5</span>
+            </button>
+          </nav>
 
-          <nav class="pd-menu">
-            <button id="btn-start-quiz" class="pd-menu-btn pd-menu-start">▶ Start Quiz <span>(10 questions)</span></button>
-            <button id="btn-home-pokedex" class="pd-menu-btn">📕 Pokédex <span id="home-dex-progress" class="nav-badge"></span></button>
-            <button id="btn-home-battle" class="pd-menu-btn">⚔ Battle</button>
-            <button id="btn-home-quests" class="pd-menu-btn">🎯 Quests <span id="home-quests-badge" class="friends-count-pill" hidden>0</span></button>
-            <button id="btn-home-friends" class="pd-menu-btn">👥 Friends <span id="home-friends-badge" class="friends-count-pill" hidden>0</span></button>
-            <div class="home-cal-row">
-              <button id="btn-home-calendar" class="pd-menu-btn">📅 Practice Calendar</button>
-              <div id="home-streak-wrap" class="home-streak-wrap" hidden>
-                <canvas id="home-streak-bolt" class="home-streak-bolt" width="28" height="36" aria-hidden="true"></canvas>
-                <span id="home-streak-label" class="home-streak-label">x0 days</span>
+          <!-- Signature 卡 -->
+          <div class="ph-sign card ph-anim-partner">
+            <img id="hero-sprite" class="ph-sign-sprite" alt="My Pokémon">
+            <div class="ph-sign-main">
+              <div class="ph-sign-row1">
+                <span class="ph-sign-name" id="hero-name">No Pokémon yet</span>
+                <span class="ph-sign-rarity" id="hero-rarity">—</span>
+                <span class="ph-sign-lv" id="hero-lv">Lv 1</span>
+              </div>
+              <div class="ph-sign-row2">
+                <span id="hero-pet-note">Health 0/100</span>
+              </div>
+              <div class="ph-sign-exp">
+                <span class="ph-sign-explabel" id="hero-exp-text">Answer → pull Pokémon</span>
+                <div class="ph-sign-expbar"><i id="hero-expbar"></i></div>
               </div>
             </div>
-            <div id="home-gym-badges" class="home-gym-badges" hidden></div>
-            <button id="btn-gym-challenge" class="pd-menu-btn pd-menu-gym" type="button" hidden>⚔ GYM CHALLENGE</button>
+            <div class="ph-sign-hpbar" aria-hidden="true"><i id="hero-hpbar"></i></div>
+          </div>
+
+          <!-- TodayStrip 44 -->
+          <div class="ph-today" id="ph-today" hidden>
+            <span class="ph-today-t" id="ph-today-streak">🔥 12 day streak</span>
+            <span class="ph-today-sep">·</span>
+            <button class="ph-today-btn" id="btn-home-quests" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4"/></svg>
+              <span id="ph-today-quests">3/5 quests</span>
+            </button>
+          </div>
+
+          <!-- 彈性空白（大機多出空間） -->
+          <div class="ph-spacer" aria-hidden="true"></div>
+
+          <!-- CTA 60 sticky -->
+          <button id="btn-start-quiz" class="ph-cta" type="button">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5 17.5 12 8 18.5Z" fill="#fff"/></svg>
+            START QUIZ <span>(10 questions)</span>
+          </button>
+
+          <!-- 底部 dock 5 格 -->
+          <nav class="ph-bottomdock" aria-label="Bottom dock">
+            <button class="ph-bd" data-bd="dashboard" type="button" id="btn-bd-dashboard" aria-label="Dashboard">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="quiz" type="button" id="btn-bd-quiz" aria-label="Quiz">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 18v-3M9.5 15a2.5 2.5 0 1 0 4.5-1.5c-1.3-.8-2-.9-2-2s.7-1.2 1.5-1.2a2 2 0 0 1 3.5 1.5M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="quests" type="button" id="btn-bd-quests" aria-label="Quests">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4"/></svg>
+              <span class="ph-badge" id="home-quests-badge" hidden>0</span>
+            </button>
+            <button class="ph-bd" data-bd="battle" type="button" id="btn-bd-battle" aria-label="Battle">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="gacha" type="button" id="btn-bd-gacha" aria-label="Gacha">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="5.5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18.5" cy="12" r="2"/></svg>
+            </button>
           </nav>
         </div>
+      </div>
 
-        <div class="pd-bottom" aria-hidden="true">
-          <div class="pd-greenbar"></div>
-          <div class="pd-controls">
-            <span class="pd-dpad"><i></i></span>
-            <span class="pd-screen-btn"></span>
-            <span class="pd-rounds"><i class="pd-round-red"></i><i class="pd-round-green"></i></span>
+      <!-- 下巴 34px 精靈球（裝飾） -->
+      <div class="pd-chin" aria-hidden="true"><span class="pd-ball pd-ball-sm"></span></div>
+
+      <!-- Sheet 容器（setting / battle） -->
+      <div class="ph-sheets">
+        <!-- Setting sheet：bottom-up -->
+        <div class="ph-backdrop" hidden aria-hidden="true"></div>
+        <div class="ph-sheet ph-sheet-up" id="sheet-setting" hidden aria-hidden="true" aria-label="Settings">
+          <div class="ph-sheet-head">
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+            <span class="ph-sheet-t">Settings</span>
+            <span class="ph-sheet-grip"></span>
+          </div>
+          <div class="ph-sheet-body">
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Trainer</div>
+              <button class="ph-sitem" id="btn-name-edit" type="button">
+                <span class="ph-sitem-t">Name</span>
+                <span class="ph-sitem-v" id="topbar-name">—</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-login" type="button">
+                <span class="ph-sitem-t">Account</span>
+                <span class="ph-sitem-v" id="login-state">Sign in</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Game</div>
+              <button class="ph-sitem" id="btn-dex-enter" type="button">
+                <span class="ph-sitem-t">Pokédex</span>
+                <span class="ph-sitem-v" id="home-dex-progress2">—</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-home-calendar" type="button">
+                <span class="ph-sitem-t">Practice Calendar</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-top-leaderboard" type="button">
+                <span class="ph-sitem-t">Leaderboard</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-home-friends" type="button">
+                <span class="ph-sitem-t">Friends</span>
+                <span class="ph-sitem-v" id="home-friends-badge2">—</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Help</div>
+              <button class="ph-sitem" id="btn-disclaimer" type="button">
+                <span class="ph-sitem-t">Copyright &amp; Disclaimer</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <div class="ph-sitem-sites">
+                <p>Unofficial fan-made educational site.</p>
+                <p>Pokémon © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
+                <p class="ph-site-ver" id="app-version">v0.0.0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Battle sheet：bottom-up -->
+        <div class="ph-sheet ph-sheet-up" id="sheet-battle" hidden aria-hidden="true" aria-label="Battle hub">
+          <div class="ph-sheet-head">
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+            <span class="ph-sheet-t">Battle</span>
+            <span class="ph-sheet-grip"></span>
+          </div>
+          <div class="ph-sheet-body">
+            <button class="ph-sitem" id="btn-home-battle" type="button">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5"/></svg>
+              <span class="ph-sitem-t">Battle Menu</span>
+              <span class="ph-s-arrow">›</span>
+            </button>
+            <button class="ph-sitem" id="btn-leaderboard-sheet" type="button">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 1.5l2.5 3.1 3.9-.8.8 3.9 3.1 2.5-2 2.8 2 2.8-3.1 2.5-.8 3.9-3.9-.8L12 22.5l-2.5-3.1-3.9.8-.8-3.9-3.1-2.5 2-2.8-2-2.8 3.1-2.5.8-3.9 3.9.8z" fill="#f5b301" stroke="#8a6d00" stroke-width="1" stroke-linejoin="round"/><circle cx="12" cy="12" r="4.2" fill="#2a75bb" stroke="#fff" stroke-width="1.4"/></svg>
+              <span class="ph-sitem-t">Leaderboard</span>
+              <span class="ph-s-arrow">›</span>
+            </button>
+            <button class="ph-sitem" id="btn-friends-sheet" type="button">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="9" cy="8.5" r="3"/><circle cx="16.8" cy="9.5" r="2.5"/><path d="M3.8 19.5c0-3.2 2.3-5.2 5.2-5.2s5.2 2 5.2 5.2M15.4 14.6c2.4.3 4.3 2.1 4.3 4.9"/></svg>
+              <span class="ph-sitem-t">Friends</span>
+              <span class="ph-s-arrow">›</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dex sheet：top-down -->
+        <div class="ph-sheet ph-sheet-down ph-sheet-sm" id="sheet-dex" hidden aria-hidden="true" aria-label="Pokédex">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Pokédex <span id="home-dex-progress3">—</span></span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body compact" id="dex-mini-wrap">
+            <!-- JS 填充 -->
+          </div>
+        </div>
+
+        <!-- Energy sheet：top-down -->
+        <div class="ph-sheet ph-sheet-down ph-sheet-sm" id="sheet-energy" hidden aria-hidden="true" aria-label="Energy">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Energy</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body compact">
+            <div class="ph-energy-row">
+              <div class="ph-energy-bar"><i id="energy-fill"></i></div>
+              <span class="ph-energy-n" id="energy-text">3 / 5</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Streak sheet：top-down -->
+        <div class="ph-sheet ph-sheet-down ph-sheet-sm" id="sheet-streak" hidden aria-hidden="true" aria-label="Streak">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Day Streak</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body compact">
+            <div class="ph-streak-month" id="streak-cal">—</div>
+          </div>
+        </div>
+
+        <!-- Diamond sheet：top-down -->
+        <div class="ph-sheet ph-sheet-down" id="sheet-diamond" hidden aria-hidden="true" aria-label="Diamonds">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Diamonds</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body">
+            <div class="ph-gacha-card">
+              <div class="ph-gacha-h">Rare Pull</div>
+              <div class="ph-gacha-m">Spend 100 💎 to pull a Pokémon</div>
+              <div class="ph-gacha-row">
+                <button class="ph-gacha-cell" id="btn-gacha-home" type="button">
+                  <div class="ph-g-cell-t">Pull</div>
+                  <div class="ph-g-cell-v">100 💎</div>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <footer class="home-stats" id="home-stats"></footer>
-
-      <footer class="site-footer">
-        <button id="btn-disclaimer" class="footer-link">Copyright &amp; Disclaimer</button>
-        <p class="footer-note">Unofficial fan-made educational site. Pokémon © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
-        <p class="footer-version" id="app-version">v77</p>
-      </footer>
+      <!-- Gym challenge 佔位（保留 id，renderHome 會寫內容） -->
+      <div id="home-gym-wrap" hidden></div>
+      <div id="home-streak-wrap" class="ph-hidden-inline" hidden>
+        <canvas id="home-streak-bolt" width="22" height="28" aria-hidden="true"></canvas>
+      </div>
+      <div id="home-gym-badges" hidden></div>
+      <button id="btn-gym-challenge" type="button" hidden></button>
+      <button id="btn-home-pokedex" type="button" hidden></button>
+      <button id="btn-home-battle" type="button" hidden></button>
+      <button id="btn-home-quests-old" type="button" hidden></button>
+      <button id="btn-home-friends-old" type="button" hidden></button>
+      <button id="btn-home-calendar-old" type="button" hidden></button>
     </section>
 
     <!-- ============ 題型選擇（做題前） ============ -->

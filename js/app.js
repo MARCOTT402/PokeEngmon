@@ -31,35 +31,38 @@ const App = {
   /* ---------- 主畫面 ---------- */
   renderHome() {
     const st = loadState();
-    document.getElementById("topbar-name").innerHTML = `${escapeHTML(st.playerName)} <span class="name-edit">✎</span>`;
+    /* 頂 dock 4 格更新 */
+    document.getElementById("topbar-name").textContent = st.playerName;
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
-    /* btn-top-pull (normal pulls) hidden since v48 — skip binding */
-
+    document.getElementById("td-streak").textContent = "x" + calcStreak();
     /* 登入 chip 狀態：任何情況下都同步返真實登入狀態（包括 localStorage restore） */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) this._markLoggedIn();
 
-    /* 拍檔卡 */
+    /* 拍檔卡（Signature） */
     const entry = getActiveEntry();
     const sprite = document.getElementById("hero-sprite");
-    const labelEl = document.getElementById("hero-label");
     const nameEl = document.getElementById("hero-name");
-    const stageEl = document.getElementById("hero-stage");
+    const rarityEl = document.getElementById("hero-rarity");
+    const lvEl = document.getElementById("hero-lv");
     const bar = document.getElementById("hero-expbar");
     const expText = document.getElementById("hero-exp-text");
 
+    /* Hero HP/EXP bar 位置已遷到 Signature 卡；舊 label/stage 元素由新 ID 取代 */
     if (entry) {
       ensureEntryPokemonData(entry);
       const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
       const cur = entryCurrentSpecies(entry);
       const rz = RARITY[chain?.baseRarity] || RARITY.normal; /* v141：冇 "common" key，舊 fallback 會 undefined → rz.bg throw */
       const level = entry.level || 1;
-      const stars = "★".repeat(entry.stars || 1);
       /* Animated pixel GIF from local assets; falls back to the static sprite */
       sprite.onerror = () => { sprite.onerror = null; sprite.src = spriteURL(cur[0]); };
       sprite.src = animatedURL(cur[0]);
       sprite.style.visibility = "visible";
       nameEl.textContent = cur[1];
-      stageEl.innerHTML = `<span class="rarity-chip" style="background:${rz.bg};color:${rz.color}">${rz.label}</span> Lv.${level} <span class="hero-stars">${stars}</span>`;
+      rarityEl.textContent = rz.label;
+      rarityEl.style.background = rz.bg;
+      rarityEl.style.color = rz.color;
+      lvEl.textContent = "Lv " + level;
 
       /* 電子寵物狀態：只跟當前拍檔，其他寶可夢唔受影響 */
       const petSt = window.Pet ? Pet.status(entry) : null;
@@ -90,19 +93,21 @@ const App = {
       }
       if (level >= MAX_LEVEL) {
         bar.style.width = "100%";
-        expText.textContent = `Lv.MAX ・ Fully evolved 🎉`;
+        expText.textContent = `Fully evolved 🎉`;
       } else {
         const base = expAtLevel(cur[0], level);
         const span = levelSpan(cur[0], level);
         const into = Math.max(0, entry.exp - base);
         bar.style.width = Math.min(100, (into / span) * 100) + "%";
-        expText.textContent = `Lv. ${level} ・ EXP ${into} / ${span} to next Lv.`;
+        expText.textContent = `EXP ${into} / ${span} to next Lv.`;
       }
     } else {
       sprite.style.visibility = "hidden";
       sprite.classList.remove("fainted");
       nameEl.textContent = "No Pokémon yet";
-      stageEl.textContent = "";
+      rarityEl.textContent = "—";
+      rarityEl.style.background = ""; rarityEl.style.color = "";
+      lvEl.textContent = "Lv 1";
       bar.style.width = "0%";
       expText.textContent = "Answer questions → pull a Pokémon!";
       /* 冇拍檔時清空健康條 */
@@ -117,15 +122,9 @@ const App = {
 
     /* 點拍檔 → Partner Care（育成 / 餵食 / 換拍檔都可以喺彈窗做） */
     sprite.classList.toggle("clickable", !!entry);
-    labelEl.textContent = entry ? "My Partner (tap to care)" : "My Partner";
     sprite.onclick = () => { if (entry) this.openPartnerPicker(); };
 
-    /* Stats */
-    const acc = st.totalQuestions > 0 ? Math.round((st.totalCorrect / st.totalQuestions) * 100) : 0;
-    document.getElementById("home-stats").innerHTML = `
-      <span>Sets done <b>${st.totalSets}</b></span>
-      <span>Accuracy <b>${acc}%</b></span>
-      <span>Day streak <b>${calcStreak()}</b></span>`;
+    /* 版本號移入 setting sheet */
     const verEl = document.getElementById("app-version");
     if (verEl) verEl.textContent = APP_VERSION;
     if (typeof Gym !== "undefined" && Gym.refreshHomeUI) Gym.refreshHomeUI();
@@ -1919,6 +1918,64 @@ const App = {
     document.getElementById("btn-disclaimer-close").onclick = () => this.closeModal();
   },
 
+  /* ---------- Home P1 sheet system ---------- */
+  _openSheet(id) {
+    const sheet = document.getElementById(id);
+    if (!sheet) return;
+    const parent = document.querySelector("#view-home .ph-sheets");
+    const backdrop = parent ? parent.querySelector(".ph-backdrop") : null;
+    /* 先開 backdrop（如果未開） */
+    if (backdrop && backdrop.hidden) {
+      backdrop.hidden = false;
+      requestAnimationFrame(() => { backdrop.classList.add("ph-open"); });
+    } else if (backdrop) {
+      backdrop.classList.add("ph-open");
+    }
+    /* 開 sheet */
+    sheet.hidden = false;
+    requestAnimationFrame(() => { sheet.classList.add("ph-open"); });
+  },
+  _closeSheet(id) {
+    const sheet = document.getElementById(id);
+    if (!sheet) return;
+    sheet.classList.remove("ph-open");
+    setTimeout(() => { sheet.hidden = true; this._checkCloseAllSheets(); }, 280);
+  },
+  _closeAllSheets() {
+    const sheets = document.querySelectorAll("#view-home .ph-sheet");
+    sheets.forEach(s => { s.classList.remove("ph-open"); s.hidden = true; });
+    const backdrop = document.querySelector("#view-home .ph-backdrop");
+    if (backdrop) { backdrop.classList.remove("ph-open"); backdrop.hidden = true; }
+  },
+  _checkCloseAllSheets() {
+    const sheets = document.querySelectorAll("#view-home .ph-sheet:not([hidden])");
+    if (sheets.length === 0) this._closeAllSheets();
+  },
+  _bindSheetBtn(btnId, sheetId) {
+    const btn = document.getElementById(btnId);
+    if (btn) btn.onclick = () => { /* 子 onclick 會覆寫，但保留 default handler 如果子冇覆蓋 */ };
+  },
+  _openStreakSheet() {
+    const cal = document.getElementById("streak-cal");
+    if (cal) {
+      const today = new Date();
+      const y = today.getFullYear(), m = today.getMonth();
+      const first = new Date(y, m, 1);
+      const days = new Date(y, m + 1, 0).getDate();
+      const hits = (window.Pet && Pet.streakDays) ? Pet.streakDays() : [];
+      let html = "";
+      for (let i = 0; i < first.getDay(); i++) html += `<div></div>`;
+      for (let d = 1; d <= days; d++) {
+        const hit = hits.includes(d);
+        const isToday = d === today.getDate();
+        const cls = hit ? "streak-hit" : (isToday ? "today" : "");
+        html += `<div class="${cls}">${d}</div>`;
+      }
+      cal.innerHTML = html;
+    }
+    this._openSheet("sheet-streak");
+  },
+
   /* ---------- Modal / Toast ---------- */
   showModal(html, noClose) {
     const root = document.getElementById("modal-root");
@@ -1974,29 +2031,90 @@ const App = {
         .catch(() => {});
     }
 
-    /* 按鈕 */
+    /* 按鈕（Home P1 dock + sheet 系統） */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
-    document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
-    document.getElementById("btn-home-battle").onclick = () => { if (typeof BattleUI !== "undefined") BattleUI.openMenu(); };
-    document.getElementById("battle-menu-friends").onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
-    const homeFriendsBtn = document.getElementById("btn-home-friends");
-    if (homeFriendsBtn) homeFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
-    const topFriendsBtn = document.getElementById("btn-top-friends");
-    if (topFriendsBtn) topFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
-    const homeQuestsBtn = document.getElementById("btn-home-quests");
-    if (homeQuestsBtn) homeQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
-    const topQuestsBtn = document.getElementById("btn-top-quests");
-    if (topQuestsBtn) topQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+
+    /* 頂 dock 4 格 → top-down sheets */
+    this._bindSheetBtn("td-dex", "sheet-dex");
+    document.getElementById("td-dex").onclick = () => {
+      if (typeof Pokedex !== "undefined" && Pokedex.ensureMiniDexGrid) {
+        Pokedex.ensureMiniDexGrid("dex-mini-wrap", 12);
+        const st = loadState(); const got = (st.entries||[]).length;
+        const total = POKEMON_DEX.length;
+        document.getElementById("home-dex-progress").textContent = got + "/" + total;
+        document.getElementById("home-dex-progress2").textContent = got + "/" + total;
+        document.getElementById("home-dex-progress3").textContent = got + "/" + total;
+      }
+      this._openSheet("sheet-dex");
+    };
+    this._bindSheetBtn("td-streak", "sheet-streak");
+    document.getElementById("td-streak").onclick = () => this._openStreakSheet();
+    this._bindSheetBtn("td-diamond", "sheet-diamond");
+    document.getElementById("td-diamond").onclick = () => this._openSheet("sheet-diamond");
+    this._bindSheetBtn("td-energy", "sheet-energy");
+    document.getElementById("td-energy").onclick = () => {
+      const st = loadState(); const e = st.energy ?? 3;
+      document.getElementById("energy-fill").style.width = (e/5*100) + "%";
+      document.getElementById("energy-text").textContent = e + " / 5";
+      this._openSheet("sheet-energy");
+    };
+
+    /* 底部 dock 5 格 */
+    document.getElementById("btn-bd-dashboard").onclick = () => this._openSheet("sheet-setting");
+    document.getElementById("btn-bd-quiz").onclick = () => this.openSetup();
+    document.getElementById("btn-bd-quests").onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+    document.getElementById("btn-bd-battle").onclick = () => this._openSheet("sheet-battle");
+    document.getElementById("btn-bd-gacha").onclick = () => this._openSheet("sheet-diamond");
+
+    /* Battle sheet 內容按鈕 */
+    document.getElementById("btn-home-battle").onclick = () => {
+      this._closeSheet("sheet-battle");
+      if (typeof BattleUI !== "undefined") BattleUI.openMenu();
+    };
+    document.getElementById("btn-leaderboard-sheet").onclick = () => { this._closeSheet("sheet-battle"); Leaderboard.open(); };
+    document.getElementById("btn-friends-sheet").onclick = () => {
+      this._closeSheet("sheet-battle");
+      if (typeof Friends !== "undefined") Friends.open();
+    };
+
+    /* Setting sheet 內容按鈕 */
+    document.getElementById("btn-name-edit").onclick = () => { this._closeSheet("sheet-setting"); this.openRename(); };
+    document.getElementById("btn-login").onclick = () => { this._closeSheet("sheet-setting"); this.openLoginHub(); };
+    document.getElementById("btn-dex-enter").onclick = () => {
+      this._closeSheet("sheet-setting");
+      if (typeof Pokedex !== "undefined") Pokedex.open();
+    };
+    document.getElementById("btn-home-calendar").onclick = () => { this._closeSheet("sheet-setting"); Calendar.open(); };
+    document.getElementById("btn-top-leaderboard").onclick = () => { this._closeSheet("sheet-setting"); Leaderboard.open(); };
+    document.getElementById("btn-home-friends").onclick = () => {
+      this._closeSheet("sheet-setting");
+      if (typeof Friends !== "undefined") Friends.open();
+    };
+    document.getElementById("btn-disclaimer").onclick = () => { this._closeSheet("sheet-setting"); this.openDisclaimer(); };
+
+    /* TodayStrip 按鈕 */
+    document.getElementById("btn-home-quests").onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+
+    /* Quest badge 更新 */
     if (typeof Quests !== "undefined" && Quests.refreshBadge) Quests.refreshBadge();
     if (typeof BattleUI !== "undefined") BattleUI.bind();
-    document.getElementById("btn-top-leaderboard").onclick = () => Leaderboard.open();
-    document.getElementById("btn-home-calendar").onclick = () => Calendar.open();
+
+    /* Gym challenge（保留 id 俾 Gym.refreshHomeUI 寫內容） */
     const gymBtn = document.getElementById("btn-gym-challenge");
     if (gymBtn) gymBtn.onclick = () => { if (typeof Gym !== "undefined") Gym.startChallenge(); };
-    document.getElementById("btn-disclaimer").onclick = () => this.openDisclaimer();
-    document.getElementById("topbar-name").onclick = () => this.openRename();
-    document.getElementById("btn-settings").onclick = () => this.openSettings();
-    document.getElementById("btn-login").onclick = () => this.openLoginHub();
+
+    /* 舊 topbar 按鈕（已隱藏，但保留綁定防 null） */
+    const topFriendsBtn = document.getElementById("btn-top-friends");
+    if (topFriendsBtn) topFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
+    const topQuestsBtn = document.getElementById("btn-top-quests");
+    if (topQuestsBtn) topQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+    document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
+    const topDiamondBtn = document.getElementById("btn-top-diamond");
+    if (topDiamondBtn) topDiamondBtn.onclick = () => Gacha.open("rare");
+    const settingsBtn = document.getElementById("btn-settings");
+    if (settingsBtn) settingsBtn.onclick = () => this.openSettings();
+    const battleMenuFriends = document.getElementById("battle-menu-friends");
+    if (battleMenuFriends) battleMenuFriends.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
 
     /* OAuth redirect 返嚟時 SupabaseAuth.init() 已經 parse hash → save session。
        呢度只同步更新登入 UI；雲端合併（migrate / import / pull / overwrite 確認窗）
@@ -2010,8 +2128,6 @@ const App = {
       this.toast("❌ Google sign-in failed: " + window.__oauthError);
       window.__oauthError = null;
     }
-    /* 主頁鑽石 chip → 稀有抽頁面（永遠開放，pull 按鈕自己會 disabled） */
-    document.getElementById("btn-top-diamond").onclick = () => Gacha.open("rare");
     /* btn-top-pull hidden since v48 — skip binding */
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();
@@ -2095,6 +2211,13 @@ const App = {
     /* Esc：答題頁開設定；設定彈窗開住時 Esc = Keep going */
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      /* Home P1 sheet 優先：任何 ph-sheet 開住 → 先關 */
+      const openSheets = document.querySelectorAll("#view-home .ph-sheet.ph-open");
+      if (openSheets.length) {
+        e.preventDefault();
+        App._closeAllSheets();
+        return;
+      }
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
       if (document.getElementById("report-box")) return;
@@ -2105,6 +2228,17 @@ const App = {
       } else if (!document.getElementById("quiz-settings-quit")) {
         e.preventDefault();
         Quiz.openSettings();
+      }
+    });
+
+    /* Home P1 sheet：backdrop 點擊關閉 + X 按鈕關閉 */
+    document.addEventListener("click", (e) => {
+      const bd = e.target.closest("#view-home .ph-backdrop");
+      if (bd) { App._closeAllSheets(); return; }
+      const xBtn = e.target.closest("#view-home .ph-sheet-x");
+      if (xBtn) {
+        const sheet = xBtn.closest(".ph-sheet");
+        if (sheet) App._closeSheet(sheet.id);
       }
     });
 

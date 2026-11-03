@@ -3851,6 +3851,337 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;
   background: #f8fbff; border: 2px solid #e2e7ef; border-radius: 12px; padding: 8px 10px;
 }
+
+/* ================================================================
+   PokeEngmon Home P1 — Pokedex shell + Console+ IA
+   移植自 prototype/home-p1.html；唔碰正式碼邏輯只換 Home 版面
+   ================================================================ */
+
+/* ---- 1. Shell：safe-area 五列 Grid ---- */
+.ph-shell-parent {
+  position: fixed; inset: 0;
+  height: 100dvh;
+  max-width: 430px; margin: 0 auto;
+  padding: 0;
+}
+.ph-shell-parent #app { padding: 0; }
+.ph-shell-parent .site-footer { display: none; }
+.ph-shell-parent .topbar { display: none; }
+.ph-shell-parent .home-stats { display: none; }
+.ph-shell-parent .home-cal-row { display: none; }
+.ph-shell-parent .pd-menu { display: none; }
+.ph-shell-parent .pd-hero { display: none; }
+
+.pd-shell {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  height: 100dvh;
+  max-width: 430px; margin: 0 auto;
+  background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
+  display: grid;
+  grid-template-rows: env(safe-area-inset-top,0px) 48px 1fr 34px env(safe-area-inset-bottom,0px);
+  z-index: 10;
+  border-left: 0; border-right: 0;
+}
+
+/* ---- 2. 上框 48px ---- */
+.pd-bezel {
+  position: relative; background: linear-gradient(180deg, #f0524a 0%, #e03a32 60%, #d42f28 100%);
+  border-bottom: 2.5px solid #8a1712;
+  display: flex; align-items: center;
+  padding: 0 16px;
+}
+.pd-lens {
+  position: relative;
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 35% 32%, #bfe9ff 0 18%, #4aa3df 19% 46%, #1c5d8f 47% 68%, #0d2f4a 69% 100%);
+  border: 2.5px solid #111;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.2), inset -3px -3px 6px rgba(0,0,0,.3);
+  z-index: 2;
+}
+.pd-bezel .pd-seam { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pd-bezel .pd-ball { margin-left: auto; width: 24px; height: 24px; }
+
+/* ---- 3. 屏幕列 ---- */
+.pd-screen2 {
+  position: relative; flex: 1 1 auto; min-height: 0;
+  background: #fffdf7;
+  border-left: 6px solid #e03a32; border-right: 6px solid #e03a32;
+  border: 3px solid #111;
+  border-radius: 16px;
+  margin: 6px;
+  padding: 10px 10px 0;
+  display: flex; flex-direction: column; gap: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 2px #dfe4ee;
+}
+
+/* ---- 4. 下巴 34px ---- */
+.pd-chin {
+  background: linear-gradient(180deg, #d42f28, #b5231d);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.pd-ball.pd-ball-sm { width: 20px; height: 20px; opacity: .9; }
+
+/* ---- 5. 頂 dock ---- */
+.ph-topdock {
+  flex: none; min-height: 44px;
+  display: flex; align-items: stretch; gap: 4px;
+  padding: 0;
+}
+.ph-td {
+  flex: 1; min-width: 0; min-height: 44px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 6px 6px; border-radius: 10px;
+  background: #f3efe2; border: 2px solid #111;
+  font-family: inherit; font-size: 12px; font-weight: 900;
+  color: #1b1b22; text-align: center; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 3px 0 #c9c3b3;
+  transition: transform .12s cubic-bezier(.25,1,.5,1), box-shadow .12s cubic-bezier(.25,1,.5,1);
+}
+.ph-td:active { transform: translateY(2px); box-shadow: 0 1px 0 #c9c3b3; }
+.ph-tdv { white-space: nowrap; }
+
+/* ---- 6. Signature 卡 ---- */
+.ph-sign {
+  flex: none;
+  display: flex; gap: 12px; padding: 10px 12px; align-items: center;
+  background: #fff; border: 2.5px solid #1b1b22; border-radius: 14px;
+  box-shadow: 0 3px 0 #1b1b22;
+  position: relative;
+}
+.ph-sign-sprite {
+  width: 96px; height: 96px; flex: none; object-fit: contain; image-rendering: pixelated;
+  border-radius: 50%; border: 2.5px solid #1b1b22; background: #f5f2e8;
+}
+.ph-sign-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ph-sign-row1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ph-sign-name { font-size: 17px; font-weight: 900; }
+.ph-sign-rarity {
+  background: #fffbe7; border: 2px solid #1b1b22; border-radius: 8px;
+  padding: 0 7px; font-size: 11px; font-weight: 900; line-height: 1.6;
+}
+.ph-sign-lv { font-size: 12px; font-weight: 900; color: #3b5ca8; }
+.ph-sign-row2 { font-size: 11px; font-weight: 700; color: #6b675d; line-height: 1.3; }
+.ph-sign-exp { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.ph-sign-explabel { font-size: 11px; font-weight: 800; color: #6b675d; }
+.ph-sign-expbar { height: 4px; border-radius: 2px; background: #d8d2c4; overflow: hidden; }
+.ph-sign-expbar > i { display: block; height: 100%; background: #2f9e44; width: 0; transition: width .6s ease; }
+.ph-sign-hpbar { position: absolute; left: 12px; right: 12px; bottom: 6px; height: 4px; background: #d8d2c4; border-radius: 2px; overflow: hidden; }
+.ph-sign-hpbar > i { display: block; height: 100%; background: #2f9e44; width: 100%; transition: width .3s ease; }
+.ph-sign-hpbar.mid > i { background: #f5a524; }
+.ph-sign-hpbar.low > i { background: #e5383b; }
+
+/* ---- 7. TodayStrip ---- */
+.ph-today {
+  flex: none; height: 40px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 10px; border-radius: 10px;
+  background: #fff; border: 2px solid #1b1b22;
+  font-size: 12px; font-weight: 900;
+  color: #1b1b22; box-shadow: 0 2px 0 #1b1b22;
+  font-variant-numeric: tabular-nums;
+}
+.ph-today[hidden] { display: none !important; }
+.ph-today-sep { color: #b0a99a; }
+.ph-today-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 8px; border-radius: 8px;
+  background: transparent; border: 0; font: inherit; font-weight: 800; color: #1b1b22;
+  cursor: pointer;
+}
+
+/* ---- 8. 彈性空白 ---- */
+.ph-spacer { flex: 1 1 auto; min-height: 4px; }
+
+/* ---- 9. CTA ---- */
+.ph-cta {
+  flex: none;
+  width: 100%; height: 54px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffe259, #ffd93b);
+  border: 2.5px solid #c8a000;
+  color: #1b1b22; font-family: inherit;
+  font-size: 15px; font-weight: 900;
+  box-shadow: 0 3px 0 #a07800;
+  cursor: pointer;
+  transition: transform .12s cubic-bezier(.25,1,.5,1), box-shadow .12s cubic-bezier(.25,1,.5,1);
+}
+.ph-cta span { font-size: 12px; font-weight: 700; opacity: .75; }
+.ph-cta:active { transform: translateY(2px); box-shadow: 0 1px 0 #a07800; }
+
+/* ---- 10. 底部 dock ---- */
+.ph-bottomdock {
+  flex: none;
+  display: flex; align-items: stretch; gap: 3px;
+  padding: 4px;
+  background: #fff; border: 2.5px solid #1b1b22; border-radius: 12px;
+  box-shadow: 0 3px 0 #1b1b22;
+  position: sticky; bottom: 0; z-index: 3;
+}
+.ph-bd {
+  flex: 1; min-height: 44px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; border: 0; background: transparent;
+  cursor: pointer;
+  transition: background-color .12s cubic-bezier(.25,1,.5,1), transform .12s cubic-bezier(.25,1,.5,1);
+}
+.ph-bd:active { background: #ffe9e7; transform: translateY(1px); }
+.ph-bd.active { background: #ffe9e7; }
+.ph-badge {
+  position: absolute; top: 2px; right: 4px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px;
+  background: #e5383b; color: #fff;
+  font-size: 10px; font-weight: 900; line-height: 1.6;
+  display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.ph-badge[hidden] { display: none !important; }
+
+/* ---- 11. Sheet ---- */
+.ph-sheets {
+  position: fixed; inset: 0; z-index: 50;
+  pointer-events: none;
+}
+.ph-sheet, .ph-backdrop { pointer-events: auto; }
+.ph-sheet[hidden], .ph-backdrop[hidden] { display: none !important; }
+
+.ph-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 55;
+}
+.ph-sheet {
+  position: fixed; left: 0; right: 0;
+  max-width: 430px; margin: 0 auto;
+  background: #fff; border: 2.5px solid #1b1b22;
+  max-height: 80dvh; overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: transform .28s cubic-bezier(.25,1,.5,1);
+}
+.ph-sheet-up { bottom: 0; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom: 0; transform: translateY(100%); z-index: 60; }
+.ph-sheet-up.ph-open { transform: translateY(0); }
+.ph-sheet-down { top: 0; border-top: 0; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; transform: translateY(-100%); z-index: 60; }
+.ph-sheet-down.ph-open { transform: translateY(0); }
+.ph-sheet-sm { max-height: 260px; }
+.ph-sheet-head {
+  flex: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px 6px;
+  border-bottom: 2px solid #1b1b22;
+  background: #fffbe7;
+}
+.ph-sheet-t { font-size: 16px; font-weight: 900; flex: 1; }
+.ph-sheet-down .ph-sheet-head { justify-content: space-between; }
+.ph-sheet-x {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 2px solid #1b1b22; background: #f3efe2;
+  font-size: 18px; font-weight: 900; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.ph-sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: #d2cdc0; flex: none; margin-right: auto; }
+.ph-sheet-down .ph-sheet-grip { display: none; }
+.ph-sheet-body {
+  flex: 1; overflow-y: auto; overscroll-behavior: contain;
+  padding: 10px 14px 18px;
+}
+.ph-sheet-body.compact { padding: 10px 14px; }
+
+.ph-ssec { margin-top: 8px; }
+.ph-ssec:first-child { margin-top: 2px; }
+.ph-ssec-t {
+  font-size: 11px; font-weight: 900; color: #6b675d;
+  text-transform: uppercase; letter-spacing: 1.2px;
+  padding: 8px 4px 4px;
+}
+.ph-sitem {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 12px; border-radius: 10px;
+  border: 2px solid transparent; background: transparent;
+  font-family: inherit; font-size: 14px; font-weight: 800; color: #1b1b22;
+  cursor: pointer; text-align: left;
+  transition: background-color .12s cubic-bezier(.25,1,.5,1);
+}
+.ph-sitem + .ph-sitem { margin-top: 2px; }
+.ph-sitem:active { background: #ffe9e7; }
+.ph-sitem-t { flex: 1; }
+.ph-sitem-v { font-size: 12px; color: #6b675d; font-weight: 700; }
+.ph-s-arrow { color: #6b675d; font-size: 16px; font-weight: 700; }
+.ph-sitem-sites {
+  padding: 10px 12px; border-radius: 10px;
+  background: #f3efe2;
+  font-size: 11px; font-weight: 700; color: #6b675d;
+  line-height: 1.4;
+}
+.ph-sitem-sites p { margin: 2px 0; }
+.ph-site-ver { margin-top: 4px !important; font-size: 12px !important; color: #3b5ca8 !important; font-weight: 900 !important; }
+
+/* ---- 12. Energy bar (mini) ---- */
+.ph-energy-row { display: flex; flex-direction: column; gap: 6px; }
+.ph-energy-bar { width: 100%; height: 14px; border-radius: 7px; background: #d8d2c4; overflow: hidden; border: 2px solid #1b1b22; }
+.ph-energy-bar > i { display: block; height: 100%; background: #f5a524; width: 0; transition: width .3s ease; }
+.ph-energy-n { text-align: center; font-size: 12px; font-weight: 900; color: #1b1b22; }
+
+/* ---- 13. Streak mini-calendar ---- */
+.ph-streak-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: 11px; text-align: center; margin-top: 4px; }
+.ph-streak-month > div { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 8px; border: 1.5px solid #e8e3d6; }
+.ph-streak-month > div:first-child { color: #6b675d; border: 0; }
+.ph-streak-month > div:nth-child(7n+1) { color: #6b675d; border: 0; }
+.ph-streak-month .streak-hit { background: #fff1ee; border-color: #e03a32; color: #e03a32; font-weight: 900; }
+.ph-streak-month .today { background: #fffbe7; border-color: #c8a000; color: #a07800; font-weight: 900; }
+
+/* ---- 14. Dex mini grid ---- */
+.ph-dex-mini { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
+.ph-dex-mini > div { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid #d8d2c4; background: #fff; }
+.ph-dex-mini > div.got { background: #e03a32; border-color: #1b1b22; }
+.ph-dex-fact { font-size: 11px; font-weight: 800; color: #6b675d; margin-top: 6px; text-align: center; }
+
+/* ---- 15. Gacha card ---- */
+.ph-gacha-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; border: 2.5px solid #1b1b22; border-radius: 14px;
+  background: linear-gradient(135deg, #fffbe7, #ffe9c7); margin-top: 6px;
+}
+.ph-gacha-h { font-size: 16px; font-weight: 900; text-align: center; }
+.ph-gacha-m { font-size: 12px; font-weight: 800; color: #6b675d; text-align: center; }
+.ph-gacha-row { display: flex; gap: 8px; margin-top: 4px; }
+.ph-gacha-cell {
+  flex: 1; padding: 10px; border: 2px solid #1b1b22; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: #fff; cursor: pointer; font-family: inherit;
+}
+.ph-g-cell-t { font-size: 10px; font-weight: 700; color: #6b675d; text-transform: uppercase; letter-spacing: .8px; }
+.ph-g-cell-v { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* ---- 16. Misc ---- */
+.ph-hidden-inline { display: none !important; }
+.ph-anim-partner .ph-sign-sprite.clickable { cursor: pointer; }
+.ph-anim-partner .ph-sign-sprite.clickable:active { transform: scale(1.12) rotate(-4deg); transition: transform .2s cubic-bezier(.25,1,.5,1); }
+.ph-anim-partner .ph-sign-sprite.fainted { filter: grayscale(.9) brightness(.6); }
+
+/* ---- 17. Mobile adjustments（≤380px）---- */
+@media (max-width: 380px) {
+  .pd-bezel { padding: 0 12px; }
+  .pd-lens { width: 26px; height: 26px; }
+  .pd-bezel .pd-ball { width: 20px; height: 20px; }
+  .pd-screen2 { padding: 8px 8px 0; margin: 5px; }
+  .ph-sign-sprite { width: 80px; height: 80px; }
+  .ph-sign-name { font-size: 15px; }
+  .ph-td { padding: 4px; font-size: 11px; }
+  .ph-cta { height: 50px; font-size: 14px; }
+}
+
+/* ---- 18. Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .ph-td, .ph-bd, .ph-sheet, .ph-cta, .ph-sign-expbar > i, .ph-energy-bar > i, .ph-sign-sprite.clickable:active {
+    transition: none !important;
+  }
+}
 .fa-invite { background: #fffbe8; border-color: #ffe08a; }
 .fa-request { background: #f2fbf4; border-color: #bfe6c8; }
 .fa-out, .fa-waiting { background: #fffdf3; border-color: #ffe7a3; }
