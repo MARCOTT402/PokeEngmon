@@ -34,10 +34,19 @@ const Calendar = {
           <div class="cal-grid"></div>
           <div class="cal-legend"></div>
         </div>`;
-      /* 綁 nav */
-      root.querySelector(".cal-nav:first-child").onclick = () => { this.month--; if (this.month<0){this.month=11;this.year--;} this.render(containerId); };
-      root.querySelector(".cal-nav:last-child").onclick = () => { this.month++; if (this.month>11){this.month=0;this.year++;} this.render(containerId); };
     }
+
+    /* 綁 nav：每次 render 都重綁並帶回同一個 options。
+       否則 Streak sheet 內切換月份時會用預設 options 重新 render，
+       disableClick 失效 → 點日期又彈 showDay modal。 */
+    const stepMonth = (delta) => {
+      this.month += delta;
+      if (this.month < 0) { this.month = 11; this.year--; }
+      if (this.month > 11) { this.month = 0; this.year++; }
+      this.render(containerId, options);
+    };
+    root.querySelector(".cal-nav:first-child").onclick = () => stepMonth(-1);
+    root.querySelector(".cal-nav:last-child").onclick = () => stepMonth(1);
 
     root.querySelector(".cal-month-label").textContent =
       `${MONTHS[this.month]} ${this.year}`;

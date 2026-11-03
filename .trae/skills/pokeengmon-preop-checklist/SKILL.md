@@ -304,3 +304,12 @@ Incident 4 (setting→diamond cross-button, v1.30): 點 setting → 點寶石，
 **仍然未解決：** 快速 cross-button（間隔 < 410ms）時，後續 click 會被 `_sheetSwitching` flag skip。如果要完全解決，需要用 **last-click-wins 模式**（新 click 會 cancel 舊 timer）而唔係 debounce skip。
 
 完整規格見 `.trae/skills/webapp-mobile-dev/SKILL.md` Rule 6。
+
+## Rule 32 — Render 函數新增選項後，要審查所有「內部再 render」入口
+
+Incident (2026-11-03 Streak sheet 日曆): `Calendar.render()` 加了 `options.disableClick`，但月切換 nav 的 handler 寫成 `this.render(containerId)`（冇帶 options）。結果 sheet 內日曆一按 ‹/› 就回復預設（可點擊），再點日期又彈 `showDay` modal —— 同一個 bug 第二次出現。
+
+- 為 render/virtual-render 加任何 option 時，逐一列出所有會再次呼叫它嘅入口：內部 nav/pagination、sync pull 後 refresh、resize、動畫結束後 re-render。每個入口都必須傳回同一份 options（或把 options 存在 root 上）。
+- 事件 handler 唔好在首次注入時 bind 一次就算；每次 render 都重綁，令 closure 永遠帶住最新 options。
+- 驗收方法：用 headless 打開該情境，檢查受影響 cell/按鈕 `el.onclick` 是否為 null（唯讀情境應全為 0），並實際 click 一次確認冇 modal。
+
