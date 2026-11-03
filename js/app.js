@@ -2271,9 +2271,6 @@ const App = {
     if (typeof Quests !== "undefined" && Quests.refreshBadge) Quests.refreshBadge();
     if (typeof BattleUI !== "undefined") BattleUI.bind();
 
-    /* 上框連續天數 canvas 閃電動畫 */
-    this._initBoltCanvas();
-
     /* Gym challenge（保留 id 俾 Gym.refreshHomeUI 寫內容） */
     const gymBtn = document.getElementById("btn-gym-challenge");
     if (gymBtn) gymBtn.onclick = () => { if (typeof Gym !== "undefined") Gym.startChallenge(); };

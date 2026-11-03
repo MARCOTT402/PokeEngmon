@@ -101,7 +101,33 @@
         <!-- 上框 48px：4 個數據入口（左：鑽石 / 連續天數；右：圖鑑 / 能量） -->
         <div class="pd-bezel">
           <div class="pd-stats pd-stats-l">
-            <!-- 鑽石（圓形藍色寶石 + 數值貼右上角） -->
+            <!-- 連續天數（金色金屬閃電 icon）— 位置對調去左一 -->
+            <button class="pd-stat" id="btn-bezel-streak" type="button" aria-label="Practice calendar">
+              <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <linearGradient id="bolt-gold" x1="30%" y1="0%" x2="70%" y2="100%">
+                    <stop offset="0%" stop-color="#fff9c4"/>
+                    <stop offset="30%" stop-color="#ffd54f"/>
+                    <stop offset="60%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#b45309"/>
+                  </linearGradient>
+                  <linearGradient id="bolt-outline" x1="50%" y1="0%" x2="50%" y2="100%">
+                    <stop offset="0%" stop-color="#1a0f00"/>
+                    <stop offset="100%" stop-color="#3d1f00"/>
+                  </linearGradient>
+                </defs>
+                <!-- 閃電主體（填充） -->
+                <path d="M13 2 L7.5 11.5 L11 12 L8 22 L16.5 10.5 L12 10.8 L14.5 2 Z"
+                      fill="url(#bolt-gold)" stroke="url(#bolt-outline)" stroke-width="1.4" stroke-linejoin="round"/>
+                <!-- 高光（左上側） -->
+                <path d="M13 2 L7.5 11.5 L11 12 L9 18 L15 9.5 L12 10.8 L14.5 2 Z"
+                      fill="#fff8d0" opacity="0.5"/>
+                <!-- 尖端亮光 -->
+                <circle cx="14.5" cy="2.2" r="1" fill="#ffffff" opacity="0.8"/>
+              </svg>
+              <span class="pd-num pd-num-x" id="home-streak-label">x0</span>
+            </button>
+            <!-- 鑽石（圓形藍色寶石 + 數值貼右上角）— 位置對調去左二 -->
             <button class="pd-stat pd-stat-diamond" id="btn-bezel-diamond" type="button" aria-label="Open Dragonite Draw">
               <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <defs>
@@ -123,13 +149,8 @@
                 <!-- 底部陰影 -->
                 <ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/>
               </svg>
-              <!-- 鑽石數值貼 icon 右上角 -->
+              <!-- 鑽石數值貼 gem 嘅 top-right corner -->
               <span class="pd-topdiamond" id="topbar-diamonds">0</span>
-            </button>
-            <!-- 連續天數（canvas 閃電動畫） -->
-            <button class="pd-stat" id="btn-bezel-streak" type="button" aria-label="Practice calendar">
-              <canvas class="pd-icon pd-bolt" id="pd-bolt-canvas" width="22" height="22" aria-hidden="true"></canvas>
-              <span class="pd-num pd-num-x" id="home-streak-label">x0</span>
             </button>
           </div>
           <div class="pd-stats pd-stats-r">
