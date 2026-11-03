@@ -375,3 +375,33 @@ Incident (2026-11-04 Lucky Draw 驗證): `preview-iphone.mjs --js` 喺外框頁�
 - 一定要 eval：用 `w.eval('...')`，eval 字串入面只用單引號；外層 PowerShell 用雙引號，唔好再嵌雙引號。
 - 模擬拖拽：`new w.PointerEvent('pointerdown', {clientY, pointerId:1, bubbles:true})` dispatch 落 `#dm-arm`，再 `pointermove` 加 clientY 偏移（≥108px 即過 72% 閾值），可無頭行完整個抽獎流程。
 
+## Rule 39 — display-window overlay 四個角都要圓角（唔好只修被投訴嗰個角）
+
+Incident (2026-11-04)：quiz 選題／結算、Leaderboard、Battle Menu、Friends 收成 display-window overlay 後，用戶投訴「下面起角穿出來」。第一次只加 `border-radius: 0 0 14px 14px`（底部），下一輪用戶再投訴**頂部**一樣起角——白螢幕區（`.ph-sheets`）本身四個角都係 16px 圓角，任何一個直角都會穿。
+
+- 新 display-window overlay（position: fixed、對齊 `--frame-screen-top/bottom`、max-width 428px）**一出場就要** `border-radius: 14px`（全四角），唔好等被投訴邊個角先修邊個。
+- 規則：投訴「起角／穿出」時，檢查**全部四個角**，唔好只修用戶指住嗰個。
+- 同時檢查同類 overlay 是否共用同一 selector（`#view-quiz-setup, #view-settlement, #view-leaderboard, #view-friends, #view-battle-menu, #gacha-scene-b, #gacha-inspect`），改一個就要改晒。
+
+## Rule 40 — body 級 overlay 要豁免「點外面關 sheet」全域 handler
+
+Incident (2026-11-04)：gacha 結算卡撳「×3 TO GO!」會跳返主頁而唔係再抽。原因：`#gacha-inspect` / `#gacha-scene-b` 係 `document.body.appendChild` 掛嘅 fixed overlay，**唔喺** `#view-home .ph-sheet` DOM 入面；app.js 嘅全域 document click handler 見「click 唔喺 sheet 內」就 `_closeAllSheets()`，於是 TO GO 嘅 click 順手將 gacha sheet 關埋。
+
+- 任何掛喺 body、但邏輯上屬於某個 sheet 流程嘅 overlay，都要喺 `e.__peHit` capture 階段加 hit-test（見 `gachaOverlay`），並喺 bubble handler 豁免。
+- 日後新增 body 級 overlay（唔喺 sheet DOM 內），即刻問：「佢嘅 click 會唔會誤觸 _closeAllSheets？」
+
+## Rule 41 — 關 sheet 有兩條路徑：改一條就要同步另一條
+
+Incident (2026-11-04)：gacha 結算卡撳下巴 Home 掣「冇反應」——其實 Home 掣有行到 `_closeAllSheets()`，但佢只係逐個 sheet `remove("ph-open")`，**冇**好似 `_closeSheet()` 咁呼叫 `Gacha.abort()`，於是 body 級嘅 `#gacha-inspect` 結算卡冇收到、繼續蓋住成個畫面，用戶以為掣壞咗。
+
+- `_closeSheet()`（逐個關）有 sheet-specific hooks（gacha → `Gacha.abort()`）；`_closeAllSheets()`（全部關，例如下巴 Home、戰敗跳走）必須做同樣嘅 hook，依家已加 `if sheet-gacha is open → Gacha.abort()`。
+- 日後任何「關閉時要做清理」嘅 sheet（stop BGM、收 overlay、補結算），hook 要同時存在兩個函數；更好係 `_closeAllSheets` 內部逐個 call `_closeSheet`。
+- body 級 overlay 嘅清理永遠要靠 abort/close hook，唔好假設 sheet 關咗佢就會自己消失。
+
+## Rule 42 — flex column 容器做滾動區：子項要 flex: none，否則被壓扁
+
+Incident (2026-11-04)：選題頁 `#topic-list` 設咗 `flex:1; overflow-y:auto` 但清單全部縮到 ~20px 一條、唔滾動。原因：flex column 容器嘅子項預設 `flex-shrink:1`，空間唔夠時瀏覽器寧願壓扁子項都唔溢出。修：`#topic-list > * { flex: none; }`。
+
+- 任何 `flex column + overflow-y:auto` 嘅滾動清單，子項必須 `flex: none`（或 `flex-shrink: 0`），否則 overflow 形同虛設。
+- 驗證方法：check `scrollHeight > clientHeight` 先算真滾動；單睇 CSS 有 `overflow-y: auto` 唔代表滾到。
+

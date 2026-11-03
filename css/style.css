@@ -368,6 +368,8 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   cursor: pointer; font-family: inherit; transition: transform .12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .topic-list { display: flex; flex-direction: column; gap: 10px; }
+/* flex column 入面啲卡預設 flex-shrink:1 會被壓扁；要保持原高、溢出變滾動 */
+.topic-list > * { flex: none; }
 .topic-chip {
   display: flex; justify-content: space-between; align-items: center;
   background: #fff; border: 3px solid #dbe2ee; border-radius: 14px;
@@ -2225,24 +2227,30 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   padding: 12px 12px 10px;
   background: #fffdf7;
   box-sizing: border-box;
-  /* 貼合白螢幕區 16px 圓角，底部唔好起角穿出去 */
-  border-radius: 0 0 14px 14px;
+  /* 貼合白螢幕區 16px 圓角，四角都唔好起角穿出去 */
+  border-radius: 14px;
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 120;
 }
-/* 選題頁：Start 釘死喺 display window 底（精靈球 Home 鍵上方），內容區自己滾動 */
+/* 選題頁：Start 浮起喺 display window 底（精靈球 Home 鍵上方），清單用盡全高自己滾動 */
 #view-quiz-setup.active { overflow: hidden; }
 #view-quiz-setup .topic-list {
   flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding-bottom: 84px; /* 讓位俾浮起嘅 Start hub */
 }
 #view-quiz-setup .hub-spacer { display: none; }
+/* 題數提示要避開浮起嘅 Start hub */
+#view-quiz-setup .custom-q-count { margin-bottom: 76px; }
 #view-quiz-setup.active .hub-bar {
-  position: static; left: auto; transform: none;
-  flex: none;
-  width: 100%; max-width: none;
-  background: transparent; border-top: 0; box-shadow: none; backdrop-filter: none;
-  padding: 8px 0 2px;
+  position: absolute; left: 12px; right: 12px; bottom: 10px;
+  width: auto; max-width: none; transform: none;
+  z-index: 10;
+  background: rgba(10, 12, 22, 0.92);
+  backdrop-filter: blur(10px);
+  border-top: 0; border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 8px 10px;
 }
 
 /* ============ Reset progress (danger) ============ */
@@ -4229,7 +4237,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   left: 50%; right: auto; transform: translateX(-50%);
   width: 100%; max-width: 428px; /* 同其他 display-window overlay 一致：殼 440 - 2×6px */
   height: auto;
-  border-radius: 0 0 14px 14px; /* 貼合白螢幕區底部圓角 */
+  border-radius: 14px; /* 貼合白螢幕區圓角 */
 }
 .ph-sheet-head {
   flex: none;

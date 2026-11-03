@@ -2121,6 +2121,8 @@ const App = {
   },
   _closeAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet");
+    /* 同 _closeSheet 一致：gacha sheet 關閉前要 abort（收埋結算卡／場景 overlay、恢復 BGM） */
+    if (typeof Gacha !== "undefined" && document.getElementById("sheet-gacha")?.classList.contains("ph-open")) Gacha.abort();
     sheets.forEach(s => s.classList.remove("ph-open"));
     const bd = document.querySelector("#view-home .ph-backdrop");
     if (bd) bd.classList.remove("ph-open");
@@ -2772,7 +2774,9 @@ const App = {
       e.__peHit = {
         backdrop: !!(t && t.closest && t.closest("#view-home .ph-backdrop")),
         sheet: (t && t.closest && t.closest("#view-home .ph-sheet")) || null,
-        closeBtn: !!(t && t.closest && t.closest("#view-home .ph-sheet-x"))
+        closeBtn: !!(t && t.closest && t.closest("#view-home .ph-sheet-x")),
+        /* gacha 抽獎動畫／結算卡掛喺 body（唔喺 sheet 入面），當佢哋係 gacha sheet 嘅延伸 */
+        gachaOverlay: !!(t && t.closest && t.closest("#gacha-scene-b, #gacha-inspect"))
       };
     }, true);
 
@@ -2791,6 +2795,9 @@ const App = {
 
       /* 點擊咗 sheet 內嘅 element → 唔處理（由各 handler 自行關閉） */
       if (hit.sheet) return;
+
+      /* 點擊咗 gacha overlay（抽獎動畫／結算卡）→ 當係 gacha sheet 內，唔好關 */
+      if (hit.gachaOverlay && anyOpen.id === "sheet-gacha") return;
 
       /* 點擊咗任何其他地方 → 關閉 sheet，再讓原 click 冒泡執行 */
       App._closeAllSheets();

@@ -82,8 +82,6 @@ const BattleUI = (() => {
         fb.hidden = true;
       }
     }
-    renderEnergy();
-    renderMasterySummary();
     /* 登入用戶：用 server ledger 校正 EP + 精通（跨機一致、清 cache 都保得住進度） */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
       const q = questionsToday(st, dateKey(Date.now()));
@@ -96,8 +94,6 @@ const BattleUI = (() => {
         const e = r.energy || r;
         if (e && e.points != null && Energy.adopt) Energy.adopt(st2, e);
         if (r.mastery) adoptMastery(st2, r.mastery);
-        renderEnergy();
-        renderMasterySummary();
         renderTrainerList();
       }).catch(() => {});
     }
@@ -337,49 +333,6 @@ const BattleUI = (() => {
     }));
   }
 
-  /* ---------- 能量點計量條 ---------- */
-  function renderEnergy() {
-    const g = gateStatus();
-    const pips = document.getElementById("energy-pips");
-    if (!pips) return;
-    /* 8 格 = 今日 8 次任務：已領 = on，完成未領 = ready */
-    let html = "";
-    for (let i = 0; i < g.dailyMax; i++) {
-      const on = i < g.claimed;
-      const ready = !on && i < g.quests;
-      html += `<i class="energy-pip${on ? " on" : ""}${ready ? " ready" : ""}"></i>`;
-    }
-    pips.innerHTML = html;
-    const count = document.getElementById("energy-count");
-    if (count) count.textContent = `⚡ ${g.points}`;
-    const note = document.getElementById("energy-note");
-    if (note) {
-      if (g.claimable > 0) {
-        note.textContent = `${g.claimable} quest${g.claimable === 1 ? "" : "s"} ready — open Daily Quests to claim`;
-      } else if (g.done) {
-        note.textContent = `All 8 quests claimed today · 1 EP per battle`;
-      } else {
-        note.textContent = `Today ${g.quests}/${g.dailyMax} quests · ${g.needQuestions} more question${g.needQuestions === 1 ? "" : "s"} for the next`;
-      }
-    }
-    const card = document.getElementById("battle-energy");
-    if (card) card.classList.toggle("energy-empty", !g.allowed);
-  }
-
-  function renderMasterySummary() {
-    const st = loadState();
-    let done = 0;
-    AI_TRAINERS.forEach(t => {
-      const tp = trainerProgress(st, t.id);
-      TIERS.forEach(x => { if (tp[x] > 0) done++; });
-    });
-    const total = AI_TRAINERS.length * TIERS.length;
-    const el = document.getElementById("mastery-count");
-    if (el) el.textContent = `${done} / ${total}`;
-    const bar = document.getElementById("mastery-bar");
-    if (bar) bar.style.width = `${Math.round((done / total) * 100)}%`;
-  }
-
   /* ---------- Inferno 解鎖演出（一次性彩虹火） ---------- */
   function playInfernoUnlock(trainer) {
     const el = document.getElementById("inferno-unlock");
@@ -415,11 +368,13 @@ const BattleUI = (() => {
     const havePokemon = st.entries.some(e => e.ownedSpecies && e.ownedSpecies.length);
     const list = document.getElementById("ai-trainer-list");
     if (!list) return;
+    /* 未解鎖嘅訓練家唔顯示；冇已解鎖成員嘅 zone header 亦唔顯示 */
+    const visible = AI_TRAINERS.map((t, i) => ({ t, i })).filter(x => trainerUnlockedAt(st, x.i));
     let html = "";
     let lastZone = null;
     let zoneIdx = -1;
-    AI_TRAINERS.forEach((t, i) => {
-      /* 每個地區加一條分隔標題，令 14 張卡有層次而唔係一望無際嘅清單 */
+    visible.forEach(({ t, i }) => {
+      /* 每個地區加一條分隔標題，令卡有層次而唔係一望無際嘅清單 */
       if (t.zone !== lastZone) {
         lastZone = t.zone;
         zoneIdx += 1;
@@ -432,21 +387,18 @@ const BattleUI = (() => {
           <small>Lv. ${lo}–${hi} · ${zoneDone}/${inZone.length} beaten</small>
         </div>`;
       }
-      const unlocked = trainerUnlockedAt(st, i);
       const tp = trainerProgress(st, t.id);
       const clearedCount = TIERS.filter(x => tp[x] > 0).length;
       /* 火焰邊框代表「已打贏」而唔係「已解鎖」，否則清完 Normal 就全場紫火 */
       const frame = tp.inferno > 0 ? "frame-rainbow" : tp.hard > 0 ? "frame-purple" : "";
       const rank = String(i + 1).padStart(2, "0");
-      const mastery = unlocked
-        ? `${TIERS.map(x => tierChip(tp, x, tierUnlocked(st, t, x))).join("")}<span class="at-count">${clearedCount}/4</span>`
-        : `<span class="at-lock">🔒 Beat #${String(i).padStart(2, "0")} to unlock</span>`;
-      return html += `<button type="button" class="ai-trainer-card ${unlocked ? "" : "locked"} ${frame}" data-id="${t.id}">
+      const mastery = `${TIERS.map(x => tierChip(tp, x, tierUnlocked(st, t, x))).join("")}<span class="at-count">${clearedCount}/4</span>`;
+      return html += `<button type="button" class="ai-trainer-card ${frame}" data-id="${t.id}">
         <span class="at-portrait"><i class="at-rank">${rank}</i><img src="${t.sprite}" alt="" loading="lazy"></span>
         <span class="at-main">
-          <span class="at-name">${unlocked ? t.name : "???"}</span>
+          <span class="at-name">${t.name}</span>
           <span class="at-meta">
-            <span class="at-lv">${unlocked ? levelRangeText(t) : "??"}</span>
+            <span class="at-lv">${levelRangeText(t)}</span>
             <span class="at-team">${t.team.length} mon${t.team.length > 1 ? "s" : ""}</span>
           </span>
           <span class="at-mastery">${mastery}</span>
