@@ -347,12 +347,14 @@ const Quests = (() => {
     } catch (e) { /* 動畫失敗唔影響領取 */ }
   }
 
-  /* 沿用 CaptureAudio 嘅 one-shot，會自動跟用戶 SFX 音量設定 */
+  /* 領獎 jingle 放喺 assets/bgm，所以行 bgmBus（跟 Music 音量） */
+  let claimJingle = null;
   function playClaimSfx() {
     try {
       const audio = window.CaptureScene && CaptureScene.audio;
-      if (audio && audio.previewSfx) {
-        audio.previewSfx("assets/bgm/obtained-pokemon.mp3", 0.35);
+      if (audio && audio.playMusicOnce) {
+        if (claimJingle && claimJingle.stop) claimJingle.stop();
+        claimJingle = audio.playMusicOnce("assets/bgm/obtained-pokemon.mp3", 0.35);
       }
     } catch (e) { /* 冇音效都可以照領 */ }
   }

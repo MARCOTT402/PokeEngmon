@@ -29,15 +29,23 @@ const Gacha = {
   _sceneB: null,       // lazy 金色背景 A overlay（掛 body）
   _inspect: null,      // lazy 檢視卡 overlay（掛 body）
   _pendingEvolve: null,
+  _townStopped: false,
 
   open(mode) {
     this.mode = mode;
+    this._townStopped = false;   /* 開場會即刻再停，避免 abort 先恢復再停嘅閃爍 */
     this.abort();      // 清走上次殘留；未結算就補結算，唔會「食咗鑽但冇派寵」
     App.openGachaSheet();
     document.getElementById("gacha-title").textContent = "💎 Rare Pull";
     this._bindArm();
     this._resetStage();
     this._refreshControls();
+    /* 扭蛋係全屏演出：入場即收城鎮 BGM，避免同音效疊聲 */
+    const audio = this._audio();
+    if (audio) {
+      audio.stopTownBGM(400);
+      this._townStopped = true;
+    }
   },
 
   /* 中斷當前流程：跳過演出，但經濟交易照樣落地 */
@@ -58,6 +66,14 @@ const Gacha = {
 
     this._resetStage();
     this._refreshControls();
+    this._restoreTownBGM();
+  },
+  /* 離開扭蛋（任何路徑）都要還原城鎮 BGM */
+  _restoreTownBGM() {
+    if (!this._townStopped) return;
+    this._townStopped = false;
+    const audio = this._audio();
+    if (audio) audio.startTownBGM();
   },
 
   /* 所有流程 timeout 都經呢個 wrapper 記錄，中斷時一次過清走 */
@@ -167,7 +183,11 @@ const Gacha = {
     this.busy = true;
     Pokedex.unlockAudio();   // 喺用戶點擊時解鎖音效（手機自動播放限制）
     const audio = this._audio();
-    if (audio) audio.ensure();
+    if (audio) {
+      audio.ensure();
+      audio.stopTownBGM(500);
+      this._townStopped = true;
+    }
 
     /* v99：登入時走 server 權威抽獎 —— gacha_pull RPC 原子扣鑽 +
        server 自己 roll rarity/chain + 拎寵，防止 client 改機率/必中神獸。

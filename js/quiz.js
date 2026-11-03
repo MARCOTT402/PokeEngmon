@@ -1059,6 +1059,10 @@ const Quiz = {
   _complete() {
     if (this.answered) return;
     this.answered = true;
+    try {
+      const audio = window.CaptureScene && CaptureScene.audio;
+      if (audio && audio.correct) audio.correct();
+    } catch (e) { /* audio unavailable */ }
 
     const item = this.queue[0];
     const q = item.q;

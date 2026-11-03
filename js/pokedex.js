@@ -590,8 +590,21 @@ const Pokedex = {
      令幾秒後開球時仍然可以播放叫聲 */
   unlockAudio() {
     try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC && !this._ctx) this._ctx = new AC();
+      /* 優先共用 CaptureAudio 嘅 AudioContext，叫聲就可以行 sfxBus，
+         同其他音效一齊即時跟 Settings 音量 */
+      const cap = window.CaptureScene && CaptureScene.audio;
+      if (cap && cap.ensure) cap.ensure();
+      if (cap && cap.ctx) {
+        if (this._ctx && this._ctx !== cap.ctx) {
+          /* 換 ctx 後舊 buffer 唔可以重用 */
+          this._cryCache = {};
+          this._cryPending = {};
+        }
+        this._ctx = cap.ctx;
+      } else {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC && !this._ctx) this._ctx = new AC();
+      }
       if (!this._ctx) return;
       if (this._ctx.state === "suspended") this._ctx.resume();
       /* 喺手勢內播一個無聲 buffer，確保 iOS 真正啟動 AudioContext */
@@ -659,11 +672,13 @@ const Pokedex = {
     try {
       const src = this._ctx.createBufferSource();
       const gain = this._ctx.createGain();
+      const cap = window.CaptureScene && CaptureScene.audio;
+      const bus = (cap && cap.ctx === this._ctx && cap.sfxBus) ? cap.sfxBus : null;
       const sfx = (typeof loadAudioPrefs === "function") ? loadAudioPrefs().sfx : 1;
-      gain.gain.value = 0.8 * sfx;
+      gain.gain.value = bus ? 0.8 : 0.8 * sfx;
       src.buffer = buffer;
       src.connect(gain);
-      gain.connect(this._ctx.destination);
+      gain.connect(bus || this._ctx.destination);
       src.start(0);
     } catch (e) { /* ignore */ }
   },

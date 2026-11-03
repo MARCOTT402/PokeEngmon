@@ -125,9 +125,15 @@ Checklist:
 
 Current music credits baseline (v144): global BGM = *Flat Water* (BGM channel); battle/jingles = Pokémon RGBY soundtracks (© Nintendo / Creatures Inc. / GAME FREAK inc., via KHInsider); cries = Pokémon Showdown community; data/sprites = PokéAPI.
 
-## Rule 16 — Audio volume prefs are a separate localStorage key (v145)
+## Rule 16 — Audio volume prefs are a separate localStorage key (v145) + three-channel taxonomy
 
-Player Music / SFX sliders live in `pokeengmon_audio_v1` (`loadAudioPrefs` / `saveAudioPrefs` in `js/storage.js`). Do NOT fold them into `pokeengmon_state_v1` or clear them in `clearGameProgress` / `resetState`. CaptureAudio routes BGM through `bgmBus` and SFX through `sfxBus` (`setBgmScale` / `setSfxScale`); designed base gains (town 0.1, battle 0.15) stay hardcoded — the slider is a 0–1 multiplier only.
+Player Music / SFX / Voice sliders live in `pokeengmon_audio_v1` (`loadAudioPrefs` / `saveAudioPrefs` in `js/storage.js`). Do NOT fold them into `pokeengmon_state_v1` or clear them in `clearGameProgress` / `resetState`. CaptureAudio routes BGM through `bgmBus`, SFX through `sfxBus`, and word/TTS audio through `wordBus` (`setBgmScale` / `setSfxScale` / `setVoiceScale`); designed base gains (town 0.1, battle 0.15) stay hardcoded — the slider is a 0–1 multiplier only.
+
+Channel rules:
+- **Music = every file in `assets/bgm/`** (loops + reward jingles/fanfares). Use `playMusicOnce` for one-shot music, never `playOnce`; a `playOnce` on a bgm asset silently puts it under SFX.
+- **SFX = synthesised cues + `assets/battle/sfx/*` + `assets/audio/wrong-answer.mp3`**. Play MP3 SFX via `playOnce` (Web Audio buffer) — never `HTMLAudioElement.volume`, iOS ignores it.
+- **Voice = word pronunciation mp3 + speechSynthesis**. Keep it on `wordBus`; `SpeechSynthesisUtterance.volume` must read `_voiceScale` (speechSynthesis cannot use the bus).
+- Any secondary AudioContext (e.g. `Pokedex`) MUST adopt `CaptureScene.audio.ctx` and connect its gain to `sfxBus`; a private context bypasses sliders and live changes. Clear decoded caches when the ctx changes.
 
 ## Rule 13 — `EVOLUTION_CHAINS` is an array
 

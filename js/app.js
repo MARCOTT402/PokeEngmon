@@ -1498,10 +1498,11 @@ const App = {
       ${rewards.fainted ? `<div class="reward-chip pet-warn">Your partner has fainted — no EXP this round. Feed it a Revival in Partner Care.</div>` : ""}
       ${dropChips}`;
 
-    /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!" */
+    /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!".
+       Both live in assets/bgm, so they follow the Music slider (not SFX). */
     if (cap && window.CaptureScene && CaptureScene.audio) {
       const jingleUrl = cap.caught ? "assets/bgm/obtained-pokemon.mp3" : "assets/bgm/obtained-berry.mp3";
-      CaptureScene.audio.playOnce(jingleUrl, 0.4);
+      CaptureScene.audio.playMusicOnce(jingleUrl, 0.4);
     }
     /* 捕捉完結：jingle 播完後恢復全域 BGM（有進化場景就交返俾場景完結時恢復） */
     if (!rewards.evolving && window.CaptureScene && CaptureScene.audio) {
@@ -2204,28 +2205,33 @@ const App = {
   },
   /* Setting sheet 內嘅音量滑桿（同舊 openSettings 同一套 prefs） */
   _syncAudioSliders() {
-    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
     const bgm = document.getElementById("sheet-bgm");
     const sfx = document.getElementById("sheet-sfx");
-    if (!bgm || !sfx) return;
+    const voice = document.getElementById("sheet-voice");
+    if (!bgm || !sfx || !voice) return;
     bgm.value = Math.round(prefs.bgm * 100);
     sfx.value = Math.round(prefs.sfx * 100);
+    voice.value = Math.round((prefs.voice == null ? 1 : prefs.voice) * 100);
     document.getElementById("sheet-bgm-pct").textContent = bgm.value + "%";
     document.getElementById("sheet-sfx-pct").textContent = sfx.value + "%";
+    document.getElementById("sheet-voice-pct").textContent = voice.value + "%";
     bgm.oninput = () => this._applyAudioVol("bgm", +bgm.value);
     sfx.oninput = () => this._applyAudioVol("sfx", +sfx.value);
+    voice.oninput = () => this._applyAudioVol("voice", +voice.value);
   },
   _applyAudioVol(which, pct) {
     const v = Math.max(0, Math.min(100, pct | 0)) / 100;
-    const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
-    if (which === "bgm") cur.bgm = v; else cur.sfx = v;
+    const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
+    cur[which] = v;
     if (typeof saveAudioPrefs === "function") saveAudioPrefs(cur);
     const audio = window.CaptureScene && CaptureScene.audio;
     if (audio) {
       if (which === "bgm") audio.setBgmScale(v);
-      else audio.setSfxScale(v);
+      else if (which === "sfx") audio.setSfxScale(v);
+      else if (which === "voice" && audio.setVoiceScale) audio.setVoiceScale(v);
     }
-    const pctEl = document.getElementById(which === "bgm" ? "sheet-bgm-pct" : "sheet-sfx-pct");
+    const pctEl = document.getElementById(`sheet-${which}-pct`);
     if (pctEl) pctEl.textContent = Math.round(v * 100) + "%";
   },
 

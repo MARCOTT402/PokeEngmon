@@ -142,13 +142,13 @@
 
 ### 3.11 音效與無障礙
 
-- 全域 BGM：Flat Water（BGM channel），設計基數音量 0.1，捕捉場景暫停、結算 jingle 完後恢復
+- 全域 BGM：Flat Water（BGM channel），設計基數音量 0.1，捕捉場景暫停、結算 jingle 完後恢復；`obtained-*` jingle 同屬 Music channel
 - 進化場景：先播進化前叫聲 → `assets/bgm/evolution.mp3` 8 秒（同時交替閃動進化前／後 GIF）→ 進化後叫聲 → `assets/bgm/evolution-fanfare.mp3` 5 秒；完結後恢復 Flat Water BGM
-- **音量設定（v145–v146）**：Settings 兩個連續滑動條（Music／Sound Effects，0–100%）；`localStorage` `pokeengmon_audio_v1` 持久化（refresh／關網再開都 keep；清進度唔抹）；拖 SFX 停 ~180ms 播 `obtained-pokemon` preview（跟 sfxBus 倍率）
+- **音量設定（v145 起）**：Settings 三條連續滑動條（Music／Sound Effects／Voice，0–100%）；`localStorage` `pokeengmon_audio_v1` 持久化（refresh／關網再開都 keep；清進度唔抹）；拖 SFX 停 ~180ms 播 `assets/battle/sfx/select.wav` preview（跟 sfxBus 倍率）；Voice 控制單字發音 mp3 同 speechSynthesis 音量
 - **UI 掣 click（v147）**：全部 button／chip／menu 短合成 tap（`uiTap`），跟 SFX %；document capture 委派一次
-- 答對／答錯 SFX：Web Audio API 合成（兼容 iOS 自動播放限制）
+- 答對／答錯 SFX：答對用合成 `correct()`；答錯經 sfxBus buffer 播 `assets/audio/wrong-answer.mp3`（兼容 iOS 自動播放限制）
 - 圖片題 TTS：Azure `en-US-JennyNeural` rate -10%，本地 mp3 + **v116 起 speechSynthesis 兜底**（mp3 缺失都唔會靜音）
-- 寶可夢叫聲：本地 1-151 mp3，僅首次解鎖播放
+- 寶可夢叫聲：本地 mp3（捕捉／扭蛋／進化／圖鑑共用），解鎖後經共用 AudioContext 嘅 sfxBus 播放
 - 對戰 UI 素材（feat/battle-system branch）：HP 框、對話框、對戰背景、訓練家、精靈球、屬性／狀態徽章、**招式特效圖**均為 Pokémon FireRed/LeafGreen 原裝圖（© Nintendo / Creatures Inc. / GAME FREAK inc.），來源 The Spriters Resource（rippers: redblueyellow、desgardes、Superjustinbros、Spherical Ice、EternalLight、wormintheworks）及 pret/pokefirered decomp；存於 `assets/battle/ui/`、`assets/battle/fx/`、`assets/trainers/`；對戰字體用 DotGothic16（Fontworks，SIL OFL，Google Fonts，存 `assets/fonts/dotgothic16-latin.woff2`）
 - 對戰文字全英文（Gen 3 風格："X used Y!"、"It's super effective!"、"X fainted!"）；命中音效跟 PokeRogue `se/` 取樣（`hit` / `hit_weak` / `hit_strong`，按相剋強弱選）
 - **逐招原裝動畫（v1.12.7）**：536 招使用 Pokémon Reborn / PokeRogue 的 `battle-anims` 影格資料（`assets/battle/anim/<slug>.json` + `sheets/` 96px spritesheet，60fps、GRAPHIC 圖層、focus anchor、blend/mirror/angle 全保留），由 `js/battle/moveanim.js` 播放；v1.15.17 補埋 PokeRogue 冇資源嘅 27 招（surf / confusion / rest / transform / snowscape / sludge-wave / trick-room 等），**唔新增任何 PNG**，全部由 `tools/gen_missing_anims.js` 重用現有 PRAS sheets 重新編排影格，**563 招全部有動畫，再冇 fallback**。素材來源 `pagefaultgames/pokerogue-assets`（beta）；all Pokémon artwork © Nintendo / Creatures Inc. / GAME FREAK inc.
