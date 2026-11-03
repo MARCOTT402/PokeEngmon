@@ -148,6 +148,147 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 5. 至少再換一部細機（SE）同大機（17 Pro Max）各睇一次。
 6. 截圖留檔，交付時附 HUD 數值。
 
+## Rule 6 — 捲頁（Sheet）互動規格（mobile-first）
+
+手機 PWA 最常用嘅互動模式：**由白色螢幕頂部或底部捲入半頁 / 全頁面板**。本專案嘅 sheet 系統定死以下約束，唔好隨意打破。
+
+### 6.1 定位：必須喺 shell 內，唔可以蓋住 dockbar
+
+```css
+/* sheet 容器定位喺白色螢幕區內 */
+.ph-sheets {
+  position: absolute; inset: 0; z-index: 40;
+  bottom: calc(56px + 8px);  /* 預留 dockbar + gap */
+  overflow: hidden;
+}
+/* top-down sheet（由頂部向下捲入） */
+.ph-sheet-down { top: 0; transform: translateY(-100%); }
+.ph-sheet-down.ph-open { transform: translateY(0); }
+/* bottom-up sheet（由底部向上捲入） */
+.ph-sheet-up { bottom: 0; transform: translateY(100%); }
+.ph-sheet-up.ph-open { transform: translateY(0); }
+```
+
+**鐵律：** sheet 永遠唔可以蓋住 dockbar。`bottom` 預留計算要考慮 dockbar 實際高度（通常 min-height 44 + padding 8 = 52px + 8px gap = 60px）。
+
+### 6.2 捲動時間統一 0.4s
+
+```css
+.ph-sheet { transition: transform .4s cubic-bezier(.25, 1, .5, 1); }
+```
+
+所有 sheet 開 / 關都用同一條 transition。JS 入面 `_closeSheet` / `_closeAllSheets` 嘅 `setTimeout` 要**比 transition 長 10ms**（即 410ms），等 transform 動畫跑完先真隱藏（`hidden = true`）。
+
+**唔好做：** 唔好對唔同 sheet 改唔同 transition time，會令切換兩個 sheet 時其中一個「快過另一個」→ 視覺上好似冇動畫。
+
+### 6.3 按鈕行為 3 種狀態
+
+每個可以開 sheet 嘅按鈕（bezel stat buttons、dockbar、其他入口）必須實現以下 3 種狀態：
+
+| 當前狀態 | 用戶動作 | 行為 |
+|---|---|---|
+| 冇 sheet 開住 | 點按鈕 A | **直接開 A** |
+| sheet A 開住 | 再點按鈕 A | **toggle 關閉 A** |
+| sheet A 開住 | 點按鈕 B（另一個） | **先關 A → 等 410ms → 再開 B** |
+| sheet 開住 | 點非 sheet 區域 / backdrop / dockbar 按鈕 | **先關當前 sheet → 再執行該點擊** |
+
+### 6.4 實現 Pattern（Binder + Debounce）
+
+```js
+let _sheetSwitching = false; /* 捲動中 flag，防重複點擊 */
+
+const binder = (btnId, sheetId, openFn) => {
+  const el = document.getElementById(btnId);
+  if (!el) return;
+  el.onclick = () => {
+    if (_sheetSwitching) return;                    // 捲動中忽略
+    const cur = document.querySelector(".ph-sheet.ph-open");
+    const isToggle = cur && cur.id === sheetId;
+    if (isToggle) {
+      App._closeSheet(sheetId);                      // 同一按鈕 → toggle 關閉
+      return;
+    }
+    if (cur) {
+      _sheetSwitching = true;
+      App._closeAllSheets();                         // 先捲回全部
+      setTimeout(() => { _sheetSwitching = false; openFn(); }, 410);
+    } else {
+      openFn();                                      // 直接開
+    }
+  };
+};
+binder("btn-bezel-diamond", "sheet-gacha", () => { App.openGachaSheet(); });
+binder("btn-bd-battle",    "sheet-battle", () => { App._openSheet("sheet-battle"); });
+/* 直接跳 view 嘅按鈕：sheetId = null（唔會 toggle，只會先 close → 再跳） */
+binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); });
+```
+
+### 6.5 `_closeAllSheets` 唔好「立即消失」
+
+**錯誤做法：** `forEach(s => { s.classList.remove("ph-open"); s.hidden = true; })` → 跳過 transform 動畫，sheet 「閃一下就冇咗」。
+
+**正確做法：** 只 remove `ph-open` class（動畫自然播放），setTimeout 410ms 後先真設 `hidden = true`：
+
+```js
+_closeAllSheets() {
+  const sheets = document.querySelectorAll(".ph-sheet");
+  sheets.forEach(s => s.classList.remove("ph-open"));
+  const bd = document.querySelector(".ph-backdrop");
+  if (bd) bd.classList.remove("ph-open");
+  setTimeout(() => {
+    sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
+    if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+  }, 410);
+}
+```
+
+### 6.6 Sheet 入面嘅子按鈕要關自己
+
+sheet 入面嘅「Open Full Page」按鈕（例如 `btn-calendar-full`），行為必須係：**先 close 當前 sheet → 等動畫跑完 → 再開 target 頁面**。
+
+```js
+document.getElementById("btn-calendar-full").onclick = () => {
+  App._closeSheet("sheet-calendar");
+  setTimeout(() => { Calendar.open(); }, 410);  // 等捲回完
+};
+```
+
+或者如果 target 頁面本身唔需要「捲回完再顯示」，可以直接 `Calendar.open()`（佢會自行捲動 view），但 sheet 關閉動畫仍然要跑。
+
+### 6.7 切換 View 時自動捲回
+
+`showView(id)` 最頂部必須 call `_closeAllSheets()`：
+
+```js
+showView(id) {
+  if (document.getElementById("view-home").classList.contains("active")) {
+    this._closeAllSheets();  // 唔等動畫，直接開下一個 view（動畫同 view 切換平行跑）
+  }
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+```
+
+### 6.8 Backdrop + Esc + X button 關閉
+
+三種關閉路徑：
+- Backdrop（半透明遮罩）點擊 → `_closeAllSheets()`
+- Esc key → `_closeAllSheets()`
+- Sheet 右上 ✕ → `_closeSheet(sheetId)`
+
+全部走同一條 `_closeAllSheets` / `_closeSheet`，確保 transition time 一致。
+
+### 6.9 實戰經驗
+
+| 問題 | 根因 | 解法 |
+|---|---|---|
+| 點按鈕 A 開住 → 點按鈕 B 後變兩個 sheet 同時 open | 新 binder 冇檢查 `curSheet`，直接 `openFn()` | 加 `cur && cur.id !== sheetId` 檢查 → 先 closeAll → wait 410ms → open |
+| Sheet 「閃一下就冇咗」 | `_closeAllSheets()` 立即設 `hidden = true` 跳過 transform | 只 remove class，setTimeout 後先 hidden |
+| 連續快速點擊開唔到第二個 sheet | 捲動動畫未完成（400ms）又被新點擊打開 | 加 `_sheetSwitching` flag，close 時 true、setTimeout 完先 false |
+| 點白色螢幕區域無反應 | 只有 backdrop click handler，白色螢幕（sheet 外）冇 | document click handler：非 sheet / 非 backdrop → `_closeAllSheets()` |
+| Dockbar 按鈕切換 view 時無先關 sheet | dockbar handler 冇加 close 邏輯 | 用同一個 `dockBinder` pattern，加 `curSheet` 檢查 |
+| Gacha 關閉後鑽石冇 update | `_closeSheet("sheet-gacha")` 冇 sync UI | 關閉後 call `App.renderHome()`（但唔好塞落 `_closeSheet`，塞落 `closeGachaSheet()` wrapper） |
+
 ---
 
 ## 本專案對應位置
