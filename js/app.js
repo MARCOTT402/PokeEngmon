@@ -2244,7 +2244,6 @@ const App = {
           <div style="padding:12px; text-align:center;">
             <div style="font-size:36px; font-weight:900; color:#ee1515;">🔥 ${streak}</div>
             <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
-            <div style="font-size:11px; color:#b0a99a; margin-top:10px;">Tap below to open full calendar</div>
           </div>`;
       }
     });
@@ -2285,8 +2284,8 @@ const App = {
       }
     });
 
-    /* 新增 sheet 內的 "Open Full" 按鈕 */
-    binder("btn-calendar-full", () => { this._closeSheet("sheet-calendar"); if (typeof Calendar !== "undefined") Calendar.open(); });
+    /* 底部展開箭咀：關閉 compact sheet → 再向下捲入完整頁面 */
+    binder("btn-calendar-expand", () => { this._closeSheet("sheet-calendar"); if (typeof Calendar !== "undefined") Calendar.open(); });
     binder("btn-pokedex-full", () => { this._closeSheet("sheet-pokedex"); if (typeof Pokedex !== "undefined") Pokedex.open(); });
     binder("btn-quests-full", () => { this._closeSheet("sheet-quests"); if (typeof Quests !== "undefined") Quests.open(); });
 

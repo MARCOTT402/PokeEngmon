@@ -4122,7 +4122,6 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sheet-up.ph-open { transform: translateY(0); }
 .ph-sheet-down { top: 0; border-top: 0; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; transform: translateY(-100%); z-index: 2; }
 .ph-sheet-down.ph-open { transform: translateY(0); }
-.ph-sheet-sm { max-height: 260px; }
 
 /* ---- Gacha sheet：佔滿白色螢幕，內容自己滾動 ---- */
 #sheet-gacha { top: 0; bottom: 0; max-height: none; border-radius: 0; border-left: 0; border-right: 0; }
@@ -4172,6 +4171,19 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .ph-sheet-body.compact { padding: 10px 14px; }
 
+/* 底部展開箭咀（Streak / Pokédex / Quests sheet 用） */
+.ph-sheet-expand {
+  flex: none;
+  height: 48px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-top: 2px solid #e7e4da;
+  background: #fffdf7; color: #7d786c;
+  cursor: pointer;
+  transition: background .15s;
+}
+.ph-sheet-expand:active { background: #f3efe2; }
+.ph-sheet-expand svg { display: block; }
+
 .ph-ssec { margin-top: 8px; }
 .ph-ssec:first-child { margin-top: 2px; }
 .ph-ssec-t {
@@ -4211,11 +4223,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sitem-sites p { margin: 2px 0; }
 .ph-site-ver { margin-top: 4px !important; font-size: 12px !important; color: #3b5ca8 !important; font-weight: 900 !important; }
 
-/* ---- 12. Energy bar (mini) ---- */
-.ph-energy-row { display: flex; flex-direction: column; gap: 6px; }
-.ph-energy-bar { width: 100%; height: 14px; border-radius: 7px; background: #d8d2c4; overflow: hidden; border: 2px solid #1b1b22; }
-.ph-energy-bar > i { display: block; height: 100%; background: #f5a524; width: 0; transition: width .3s ease; }
-.ph-energy-n { text-align: center; font-size: 12px; font-weight: 900; color: #1b1b22; }
+/* ---- 12. End ---- */
 
 /* ---- 13. Streak mini-calendar ---- */
 .ph-streak-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: 11px; text-align: center; margin-top: 4px; }
@@ -4268,7 +4276,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 18. Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  .ph-td, .ph-bd, .ph-sheet, .ph-cta, .ph-sign-expbar > i, .ph-energy-bar > i, .ph-sign-sprite.clickable:active {
+  .ph-td, .ph-bd, .ph-sheet, .ph-cta, .ph-sign-expbar > i, .ph-sign-sprite.clickable:active {
     transition: none !important;
   }
 }

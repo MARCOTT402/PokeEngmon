@@ -183,6 +183,74 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 - Sheet 必須定位喺 `.ph-sheets` 容器（即白色螢幕區內），唔可以自己 `position:fixed` 蓋住紅色 bezel。
 - Sheet 只可以用 `transform: translateY` 做動畫，唔好用 `top/bottom` transition（會觸發 layout reflow）。
 
+### 6.2 頭部結構 + ✕ 關閉鍵（所有 Sheet 必須遵守）
+
+**鐵律：每一個 sheet 嘅 ✕ 關閉鍵一律擺喺右上角。** 唔可以隨意放左邊、中間或者唔放。
+
+#### bottom-up sheet（向上捲，例如 setting / battle）
+
+HTML 順序：**grip → title → ✕**
+
+```html
+<div class="ph-sheet ph-sheet-up" id="sheet-setting">
+  <div class="ph-sheet-head">
+    <span class="ph-sheet-grip"></span>
+    <span class="ph-sheet-t">Settings</span>
+    <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="ph-sheet-body">…</div>
+</div>
+```
+
+CSS：`ph-sheet-grip { margin-right:auto }` 自動把 title + ✕ 推向右。
+
+#### top-down sheet（向下捲，例如 quests / pokedex / gacha）
+
+HTML 順序：**title → ✕**（冇 grip）
+
+```html
+<div class="ph-sheet ph-sheet-down" id="sheet-quests">
+  <div class="ph-sheet-head">
+    <span class="ph-sheet-t">Daily Quests</span>
+    <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="ph-sheet-body">…</div>
+</div>
+```
+
+CSS 用 absolute 定位，確保 title **絕對居中**、✕ **固定右上角**（唔會被 title 長度影響位置）：
+
+```css
+.ph-sheet-down .ph-sheet-head { position: relative; justify-content: center; }
+.ph-sheet-down .ph-sheet-t    { flex: 0 0 auto; }  /* 取消 flex:1 令 title 真正居中 */
+.ph-sheet-down .ph-sheet-x    { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
+.ph-sheet-down .ph-sheet-grip { display: none; }   /* top-down 唔需要 grip */
+```
+
+**點解 top-down 要用 absolute？** 如果 title 太長（例如 "Pokédex · 45 / 151"），flex layout 會把 ✕ 推出右邊界。用 absolute + fixed `right:14px`，無論 title 幾長，✕ 永遠喺同一個位置。
+
+#### ✕ 按鈕規格
+
+```css
+.ph-sheet-x {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 2px solid #1b1b22; background: #f3efe2;
+  font-size: 18px; font-weight: 900; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+```
+
+**最小 34×34（≥44×44 熱區規格已滿足）**，icon 用 `✕` 或 `×` 都得（統一用 `✕`），`aria-label="Close"` 必加。
+
+#### 檢查清單
+
+- [ ] ✕ 係 `<button>`（唔係 `<span>` 或 `<div>`），原生支援 keyboard focus + Enter/Space 觸發
+- [ ] ✕ 有 `aria-label="Close"`
+- [ ] bottom-up：grip → title → ✕ 順序
+- [ ] top-down：title 居中，✕ absolute 固定右上 `right:14px`
+- [ ] 唔好兩個 sheet 唔同規格（例如一個 ✕ 係左邊、一個係右邊）
+
 **結構圖：**
 ```
 .pd-shell (max-width:440, 3-row grid: 48px bezel | 1fr screen | 34px chin)
@@ -199,7 +267,7 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 └── .pd-chin (34px)
 ```
 
-### 6.2 捲動時間統一 0.4s
+### 6.3 捲動時間統一 0.4s
 
 ```css
 .ph-sheet { transition: transform .4s cubic-bezier(.25, 1, .5, 1); }
@@ -209,7 +277,7 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 
 **唔好做：** 唔好對唔同 sheet 改唔同 transition time，會令切換兩個 sheet 時其中一個「快過另一個」→ 視覺上好似冇動畫。
 
-### 6.3 按鈕行為 3 種狀態
+### 6.4 按鈕行為 3 種狀態
 
 每個可以開 sheet 嘅按鈕（bezel stat buttons、dockbar、其他入口）必須實現以下 3 種狀態：
 
@@ -220,7 +288,7 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 | sheet A 開住 | 點按鈕 B（另一個） | **先關 A → 等 410ms → 再開 B** |
 | sheet 開住 | 點非 sheet 區域 / backdrop / dockbar 按鈕 | **先關當前 sheet → 再執行該點擊** |
 
-### 6.4 實現 Pattern（Binder + Debounce）
+### 6.5 實現 Pattern（Binder + Debounce）
 
 ```js
 let _sheetSwitching = false; /* 捲動中 flag，防重複點擊 */
@@ -251,7 +319,7 @@ binder("btn-bd-battle",    "sheet-battle", () => { App._openSheet("sheet-battle"
 binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); });
 ```
 
-### 6.5 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
+### 6.6 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
 
 **錯誤做法 A：** remove class 同時設 hidden → 跳過 transform，「閃一下就冇咗」。
 
@@ -289,7 +357,7 @@ _closeAllSheets() {
 - 一律有 **stillOpen guard**（隱藏前檢查有冇新 `ph-open`）
 - 移除 `_checkCloseAllSheets`（舊時 closeSheet 完再 call closeAllSheets → 雙 timer race）
 
-### 6.6 Sheet 入面嘅子按鈕要關自己
+### 6.7 Sheet 入面嘅子按鈕要關自己
 
 sheet 入面嘅「Open Full Page」按鈕（例如 `btn-calendar-full`），行為必須係：**先 close 當前 sheet → 等動畫跑完 → 再開 target 頁面**。
 
@@ -302,7 +370,7 @@ document.getElementById("btn-calendar-full").onclick = () => {
 
 或者如果 target 頁面本身唔需要「捲回完再顯示」，可以直接 `Calendar.open()`（佢會自行捲動 view），但 sheet 關閉動畫仍然要跑。
 
-### 6.7 切換 View 時自動捲回
+### 6.8 切換 View 時自動捲回
 
 `showView(id)` 最頂部必須 call `_closeAllSheets()`：
 
@@ -316,16 +384,7 @@ showView(id) {
 }
 ```
 
-### 6.8 Backdrop + Esc + X button 關閉
-
-三種關閉路徑：
-- Backdrop（半透明遮罩）點擊 → `_closeAllSheets()`
-- Esc key → `_closeAllSheets()`
-- Sheet 右上 ✕ → `_closeSheet(sheetId)`
-
-全部走同一條 `_closeAllSheets` / `_closeSheet`，確保 transition time 一致。
-
-### 6.8 四種關閉路徑（全部一致）
+### 6.9 四種關閉路徑（全部一致）
 
 | 路徑 | Trigger | Handler |
 |---|---|---|
@@ -353,7 +412,7 @@ document.addEventListener("click", (e) => {
 
 **鐵律：** 所有路徑必須走 `_closeSheet` / `_closeAllSheets`（有 stillOpen guard + 430ms timer），唔好直接 `classList.remove + hidden=true`。
 
-### 6.9 Bezel stat button icon 定位技巧
+### 6.10 Bezel stat button icon 定位技巧
 
 Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如果要把 pill 貼住某個 icon 嘅右上角（例如鑽石 icon）：
 
@@ -370,7 +429,7 @@ Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如�
 
 **鐵律：** 唔好用 `right: -8px` 相對於 44px button（飛去 button 最右邊），要用 `left: calc(50% + 2px)` 精確貼 icon 嘅 right edge。button 必須先設 `position: relative`。
 
-### 6.10 實戰經驗（Incident Log）
+### 6.11 實戰經驗（Incident Log）
 
 | # | 問題 | 根因 | 解法 | Lesson 邊關 |
 |---|---|---|---|---|
