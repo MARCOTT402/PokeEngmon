@@ -75,7 +75,17 @@
     border-radius: 999px; padding: 7px 14px;
     backdrop-filter: blur(8px);
   }
+  .hud { gap: 10px; font-size: 11.5px; }
+  .hud > * { white-space: nowrap; }
   .hud b { color: #d8e0f0; font-weight: 600; }
+  .hud select {
+    font: inherit; color: #d8e0f0; cursor: pointer;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 999px; padding: 4px 8px;
+    outline: none;
+  }
+  .hud select option { background: #161b24; color: #d8e0f0; }
   .hud button {
     font: inherit; color: #cfd8ea; cursor: pointer;
     background: rgba(255, 255, 255, .08);
@@ -83,6 +93,7 @@
     border-radius: 999px; padding: 3px 10px;
   }
   .hud button:hover { background: rgba(255, 255, 255, .16); }
+  .hud .sep { opacity: .35; }
 </style>
 </head>
 <body>
@@ -101,7 +112,9 @@
   </div>
 
   <div class="hud">
-    <span><b id="hud-label">iPhone 17 Pro Max</b> <span id="hud-size">440 × 956</span></span>
+    <select id="device-select" aria-label="手機款式"></select>
+    <span class="sep">|</span>
+    <span><span id="hud-size">440 × 956</span></span>
     <span>安全區 <b id="hud-safe">62 / 34</b></span>
     <span>縮放 <b id="hud-scale">100%</b></span>
     <button id="btn-reload" type="button">重載 App</button>
@@ -111,19 +124,24 @@
 <script>
   const DEVICES = {
     "iphone-17-pro-max": { label: "iPhone 17 Pro Max", w: 440, h: 956, safeTop: 62, safeBottom: 34, radius: 56 },
-    "iphone-16-pro":     { label: "iPhone 16 Pro",     w: 402, h: 874, safeTop: 62, safeBottom: 34, radius: 50 },
-    "iphone-15":         { label: "iPhone 15",         w: 393, h: 852, safeTop: 59, safeBottom: 34, radius: 48 },
-    "iphone-se":         { label: "iPhone SE",         w: 375, h: 667, safeTop: 0,  safeBottom: 0,  radius: 22 }
+    "iphone-17-pro":     { label: "iPhone 17 Pro",     w: 402, h: 874, safeTop: 62, safeBottom: 34, radius: 52 },
+    "iphone-16-pro-max": { label: "iPhone 16 Pro Max", w: 440, h: 956, safeTop: 62, safeBottom: 34, radius: 56 },
+    "iphone-16-pro":     { label: "iPhone 16 Pro",     w: 402, h: 874, safeTop: 62, safeBottom: 34, radius: 52 },
+    "iphone-15-pro-max": { label: "iPhone 15 Pro Max", w: 430, h: 932, safeTop: 59, safeBottom: 34, radius: 50 },
+    "iphone-15":         { label: "iPhone 15",         w: 393, h: 852, safeTop: 59, safeBottom: 34, radius: 46 },
+    "iphone-14":         { label: "iPhone 14",         w: 390, h: 844, safeTop: 47, safeBottom: 34, radius: 44 },
+    "iphone-13-mini":    { label: "iPhone 13 mini",    w: 375, h: 812, safeTop: 47, safeBottom: 34, radius: 40 },
+    "iphone-se":         { label: "iPhone SE",         w: 375, h: 667, safeTop: 0,  safeBottom: 0,  radius: 22, island: false, homebar: false }
   };
 
   const params = new URLSearchParams(location.search);
   const key = params.get("device") || "iphone-17-pro-max";
-  const dev = DEVICES[key] || DEVICES["iphone-17-pro-max"];
+  let dev = DEVICES[key] || DEVICES["iphone-17-pro-max"];
 
   const deviceEl = document.getElementById("device");
   const screenEl = document.getElementById("screen");
   const frame = document.getElementById("app");
-  const hudLabel = document.getElementById("hud-label");
+  const select = document.getElementById("device-select");
   const hudSize = document.getElementById("hud-size");
   const hudSafe = document.getElementById("hud-safe");
   const hudScale = document.getElementById("hud-scale");
@@ -139,9 +157,11 @@
     deviceEl.style.height = (h + 22) + "px";
     deviceEl.style.borderRadius = (landscape ? 44 : dev.radius) + "px";
     screenEl.style.borderRadius = (landscape ? 36 : dev.radius - 10) + "px";
-    hudLabel.textContent = dev.label;
     hudSize.textContent = w + " × " + h;
     hudSafe.textContent = landscape ? "0 / " + dev.safeBottom : dev.safeTop + " / " + dev.safeBottom;
+    /* SE 冇瀏海亦冇 Home indicator */
+    document.querySelector(".island").style.display = dev.island === false ? "none" : "";
+    document.querySelector(".homebar").style.display = dev.homebar === false ? "none" : "";
     fit();
   }
 
@@ -157,9 +177,17 @@
   /* 把模擬安全區注入 app（真機時 env() 數值更大，max() 會用真機值） */
   function injectSafeArea() {
     try {
-      const root = frame.contentDocument.documentElement;
+      const doc = frame.contentDocument;
+      const root = doc.documentElement;
       root.style.setProperty("--sim-safe-top", (landscape ? 0 : dev.safeTop) + "px");
       root.style.setProperty("--sim-safe-bottom", dev.safeBottom + "px");
+      /* 隱藏 iframe 內嘅 scrollbar（桌面 Chrome 會畫一條灰bar，真機唔會有） */
+      if (!doc.getElementById("sim-hide-scrollbar")) {
+        const style = doc.createElement("style");
+        style.id = "sim-hide-scrollbar";
+        style.textContent = "html,body{scrollbar-width:none!important}::-webkit-scrollbar{width:0!important;height:0!important}";
+        doc.head.appendChild(style);
+      }
     } catch (e) {
       console.warn("[preview] 無法注入安全區（可能唔同 origin）", e);
     }
@@ -167,6 +195,23 @@
 
   frame.addEventListener("load", injectSafeArea);
   window.addEventListener("resize", fit);
+
+  /* 手機款式下拉：即時換機身尺寸 + 安全區，唔使重開 */
+  Object.entries(DEVICES).forEach(([id, d]) => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = d.label;
+    select.appendChild(opt);
+  });
+  select.value = key in DEVICES ? key : "iphone-17-pro-max";
+  select.addEventListener("change", () => {
+    dev = DEVICES[select.value] || DEVICES["iphone-17-pro-max"];
+    landscape = false;
+    applyDevice();
+    injectSafeArea();
+    history.replaceState(null, "", "?device=" + select.value);
+  });
+
   document.getElementById("btn-reload").addEventListener("click", () => {
     try { frame.contentWindow.location.reload(); } catch { frame.src = frame.src; }
   });
