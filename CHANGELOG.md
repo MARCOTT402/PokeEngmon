@@ -1,3 +1,11 @@
+## [1.31.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.31.0...v1.31.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **home:** disable calendar day-click popup inside Streak sheet — Calendar.render accepts options.disableClick; expandArrow full-mode passes {disableClick:true} so sheet-preview calendar is read-only. Full view-calendar page keeps click-to-popup enabled ([ce2a78f](https://github.com/MARCOTT402/PokeEngmon/commit/ce2a78f7b721fc124c1a9689cc456b88072988cc))
+* **home:** keep Streak-sheet calendar read-only after month nav ([de78c81](https://github.com/MARCOTT402/PokeEngmon/commit/de78c81bf965c15bad18ba080ee14e78a68b5184))
+
 # [1.31.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.30.0...v1.31.0) (2026-11-03)
 
 
