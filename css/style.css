@@ -3879,8 +3879,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
   display: grid;
   grid-template-rows: 48px 1fr 34px;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* 真機用 env()；本地「手機模擬器」用 --sim-safe-* 注入同一數值 */
+  padding-top: max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px));
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px));
   box-sizing: border-box;
   grid-auto-rows: 0;
   z-index: 10;

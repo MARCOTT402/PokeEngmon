@@ -272,5 +272,6 @@ Phase 1 以手機為先，版面基準就用最大嘅 iPhone：
 | iPhone SE | 375 × 667 | 2 | 0 / 0 |
 
 - `.pd-shell` / `.ph-shell-parent` 嘅 `max-width` **必須 ≥ 440**，否則 440 闊機左右會露底色。
-- 本地預覽：`npm run preview:iphone`（預設 440×956@3x + safe-area 模擬）；其他機 `--device iphone-15`；截圖 `--headless --click "#btn-entry-yes" --shot out.png`。Chrome 桌面 DevTools 嘅 iPhone 預設**唔會**注入 `env(safe-area-inset-*)`，一定要用呢個 CDP script 或 `Emulation.setSafeAreaInsetsOverride`。
+- 本地預覽：`npm run preview:iphone` 開 `tools/device-preview.html`（iPhone 外框 + Dynamic Island + Home indicator，可操作）。外框頁按窗口大小整體縮放，並經 `--sim-safe-top/bottom` 注入安全區；`.pd-shell` 用 `max(env(...), var(--sim-*))` 所以真機仍然用 env()。截圖：`--headless --click "#btn-entry-yes" --shot out.png`。
+- 桌面 Chrome DevTools 嘅 iPhone 預設**唔會**注入 `env(safe-area-inset-*)`（iframe 內更加一定係 0），所以唔好靠 DevTools 對安全區。
 - `.pd-ball` 基類係 `position:absolute; right:18px; top:10px`。任何新容器（下巴、卡角、裝飾）要用佢，必須畀容器 `position:relative` 並重置 `top/right:auto`，否則粒球會飛去 `.pd-shell` 嘅 padding 區（實測飛到 y=10，即狀態欄位置）。

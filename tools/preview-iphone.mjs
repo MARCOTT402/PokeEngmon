@@ -1,11 +1,11 @@
-// 本地真機尺寸預覽：用 CDP 把 Chrome 視口鎖成指定手機尺寸（含 safe-area 模擬）
+// 本地手機模擬器：喺電腦開一個「iPhone 外框」，入面係真嘅 app（可點擊操作）
 //
-//   node tools/preview-iphone.mjs                     # iPhone 17 Pro Max 440x956
+//   node tools/preview-iphone.mjs                       # iPhone 17 Pro Max 440x956
 //   node tools/preview-iphone.mjs --device iphone-15
-//   node tools/preview-iphone.mjs --url http://localhost:8080/index.html
-//   node tools/preview-iphone.mjs --headless --shot out.png   # 自動截圖後結束
+//   node tools/preview-iphone.mjs --headless --click "#btn-entry-yes" --shot out.png
 //
-// 需要 Node 18+（原生 fetch / WebSocket）。
+// 唔用 CDP 做縮放：外框頁 (tools/device-preview.html) 自己按窗口大小整體縮放，
+// 安全區由外框注入 --sim-safe-top/bottom，數值同真機一致。
 
 import { spawn } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
@@ -18,22 +18,13 @@ const arg = (name, fallback) => {
   return i >= 0 && argv[i + 1] ? argv[i + 1] : fallback;
 };
 const flag = (name) => argv.includes("--" + name);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-const DEVICES = {
-  "iphone-17-pro-max": { label: "iPhone 17 Pro Max", w: 440, h: 956, dpr: 3, top: 62, bottom: 34 },
-  "iphone-16-pro":     { label: "iPhone 16 Pro",     w: 402, h: 874, dpr: 3, top: 62, bottom: 34 },
-  "iphone-15":         { label: "iPhone 15",         w: 393, h: 852, dpr: 3, top: 59, bottom: 34 },
-  "iphone-se":         { label: "iPhone SE",         w: 375, h: 667, dpr: 2, top: 0,  bottom: 0  }
-};
-
-const deviceKey = arg("device", "iphone-17-pro-max");
-const dev = DEVICES[deviceKey];
-if (!dev) {
-  console.error(`Unknown device "${deviceKey}". Choose: ${Object.keys(DEVICES).join(", ")}`);
-  process.exit(1);
-}
-const URL = arg("url", "http://localhost:8080/index.html");
+const device = arg("device", "iphone-17-pro-max");
+const URL = arg("url", `http://localhost:8080/tools/device-preview.html?device=${device}`);
 const SHOT = arg("shot", "");
+const CLICK = arg("click", "");
+const PORT = Number(arg("port", 9230));
 
 const CHROME_CANDIDATES = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -45,19 +36,34 @@ const CHROME_CANDIDATES = [
 ];
 const chromePath = CHROME_CANDIDATES.find(p => p && existsSync(p));
 if (!chromePath) {
-  console.error("Chrome not found. Install Chrome or edit CHROME_CANDIDATES in this script.");
+  console.error("Chrome not found.");
   process.exit(1);
 }
 
-const PORT = Number(arg("port", 9230));
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const userDataDir = `--user-data-dir=${join(tmpdir(), "pe-preview-" + Date.now())}`;
+const headless = flag("headless");
 
+/* 一般用法：直接開一個無分頁嘅 app 窗，外框頁自己縮放 */
+if (!headless && !SHOT && !CLICK) {
+  const child = spawn(chromePath, [
+    `--app=${URL}`,
+    userDataDir,
+    "--window-size=620,1180",
+    "--window-position=40,20"
+  ], { stdio: "ignore", detached: true });
+  child.unref();
+  console.log(`[preview] 已開啟手機模擬器：${URL}`);
+  console.log(`[preview] 外框 = ${device}；視窗大小隨你拖動自動縮放，按 Ctrl+R 重載。`);
+  process.exit(0);
+}
+
+/* 截圖 / 自動點擊 / headless：用 CDP */
 const chrome = spawn(chromePath, [
-  flag("headless") ? "--headless=new" : "--new-window",
+  headless ? "--headless=new" : "--new-window",
   "--disable-gpu", "--hide-scrollbars",
   `--remote-debugging-port=${PORT}`,
-  `--user-data-dir=${join(tmpdir(), "pe-preview-" + Date.now())}`,
-  `--window-size=${dev.w + 80},${dev.h + 80}`,
+  userDataDir,
+  "--window-size=620,1180",
   "about:blank"
 ], { stdio: "ignore" });
 
@@ -92,42 +98,32 @@ async function connect() {
 async function main() {
   await connect();
   await send("Page.enable");
-  await send("Emulation.setDeviceMetricsOverride", {
-    width: dev.w, height: dev.h, deviceScaleFactor: dev.dpr, mobile: true,
-    screenWidth: dev.w, screenHeight: dev.h
-  });
-  /* 模擬 iPhone 安全區（notch / Dynamic Island + home indicator） */
-  try {
-    await send("Emulation.setSafeAreaInsetsOverride", {
-      insets: { top: dev.top, bottom: dev.bottom, left: 0, right: 0 }
-    });
-  } catch {
-    console.warn("[preview] 此 Chrome 版本唔支援 safe-area 模擬（env() 會係 0）");
-  }
   await send("Page.navigate", { url: URL });
-  await sleep(2200);
+  await sleep(2600);
 
-  const preClick = arg("click", "");
-  if (preClick) {
+  if (CLICK) {
     await send("Runtime.evaluate", {
-      expression: `(() => { const el = document.querySelector(${JSON.stringify(preClick)}) || document.getElementById(${JSON.stringify(preClick.replace(/^#/, ""))}); if (el) el.click(); })()`
+      expression: `(() => {
+        const doc = document.getElementById('app')?.contentDocument;
+        if (!doc) return 'no-iframe';
+        const el = doc.querySelector(${JSON.stringify(CLICK)}) || doc.getElementById(${JSON.stringify(CLICK.replace(/^#/, ""))});
+        if (!el) return 'not-found';
+        el.click();
+        return 'clicked';
+      })()`,
+      returnByValue: true
     });
-    await sleep(900);
+    await sleep(1200);
   }
-
-  console.log(`[preview] ${dev.label} ${dev.w}x${dev.h}@${dev.dpr}x  safe: ${dev.top}/${dev.bottom}`);
-  console.log(`[preview] ${URL}`);
 
   if (SHOT) {
     const s = await send("Page.captureScreenshot", { format: "png" });
     writeFileSync(SHOT, Buffer.from(s.data, "base64"));
     console.log(`[preview] screenshot → ${SHOT}`);
-    chrome.kill();
-    process.exit(0);
   }
 
-  console.log("[preview] 改完檔案按 Ctrl+R（或叫我在頁面按 F5）即可重載；關窗即結束。");
-  chrome.on("exit", () => process.exit(0));
+  chrome.kill();
+  process.exit(0);
 }
 
 main().catch(err => { console.error(err); chrome.kill(); process.exit(1); });

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeEngmon · 手機模擬器</title>
+<style>
+  html, body {
+    height: 100%; margin: 0; overflow: hidden;
+    background:
+      radial-gradient(1200px 700px at 50% 8%, #2c3444 0%, #171b23 55%, #0d1015 100%);
+    font-family: "Inter", system-ui, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    color: #93a0b8;
+  }
+  .stage {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+    padding: 24px;
+  }
+  .device {
+    position: relative;
+    box-sizing: border-box;
+    padding: 11px;
+    border-radius: 56px;
+    background: linear-gradient(160deg, #3a3f4a 0%, #16191f 45%, #0a0c10 100%);
+    box-shadow:
+      0 0 0 2px #4b515c inset,
+      0 30px 70px rgba(0, 0, 0, .65),
+      0 4px 14px rgba(0, 0, 0, .5);
+    transform-origin: center center;
+  }
+  .screen {
+    position: relative;
+    border-radius: 46px;
+    overflow: hidden;
+    background: #000;
+    width: 100%; height: 100%;
+  }
+  .screen iframe {
+    display: block; width: 100%; height: 100%; border: 0; background: #fff;
+  }
+  .island {
+    position: absolute; z-index: 6; pointer-events: none;
+    top: 11px; left: 50%; transform: translateX(-50%);
+    width: 126px; height: 37px; border-radius: 19px;
+    background: #04060a;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .06);
+  }
+  .island::after {
+    content: ""; position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    width: 11px; height: 11px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #2b4a63, #0b1218 70%);
+  }
+  .homebar {
+    position: absolute; z-index: 6; pointer-events: none;
+    bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 140px; height: 5px; border-radius: 3px;
+    background: rgba(20, 20, 22, .38);
+  }
+  .btn-side {
+    position: absolute; width: 3px; border-radius: 2px;
+    background: linear-gradient(180deg, #4a4f5a, #23262d);
+  }
+  .btn-side.left-1 { left: -3px; top: 168px; height: 34px; }
+  .btn-side.left-2 { left: -3px; top: 224px; height: 62px; }
+  .btn-side.left-3 { left: -3px; top: 300px; height: 62px; }
+  .btn-side.right-1 { right: -3px; top: 246px; height: 96px; }
+
+  .hud {
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    font-size: 12px; letter-spacing: .04em;
+    background: rgba(11, 14, 19, .72);
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 999px; padding: 7px 14px;
+    backdrop-filter: blur(8px);
+  }
+  .hud b { color: #d8e0f0; font-weight: 600; }
+  .hud button {
+    font: inherit; color: #cfd8ea; cursor: pointer;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 999px; padding: 3px 10px;
+  }
+  .hud button:hover { background: rgba(255, 255, 255, .16); }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="device" id="device">
+      <div class="screen" id="screen">
+        <iframe id="app" title="PokeEngmon app" src="../index.html"></iframe>
+        <div class="island" aria-hidden="true"></div>
+        <div class="homebar" aria-hidden="true"></div>
+      </div>
+      <span class="btn-side left-1" aria-hidden="true"></span>
+      <span class="btn-side left-2" aria-hidden="true"></span>
+      <span class="btn-side left-3" aria-hidden="true"></span>
+      <span class="btn-side right-1" aria-hidden="true"></span>
+    </div>
+  </div>
+
+  <div class="hud">
+    <span><b id="hud-label">iPhone 17 Pro Max</b> <span id="hud-size">440 × 956</span></span>
+    <span>安全區 <b id="hud-safe">62 / 34</b></span>
+    <span>縮放 <b id="hud-scale">100%</b></span>
+    <button id="btn-reload" type="button">重載 App</button>
+    <button id="btn-rotate" type="button">橫向</button>
+  </div>
+
+<script>
+  const DEVICES = {
+    "iphone-17-pro-max": { label: "iPhone 17 Pro Max", w: 440, h: 956, safeTop: 62, safeBottom: 34, radius: 56 },
+    "iphone-16-pro":     { label: "iPhone 16 Pro",     w: 402, h: 874, safeTop: 62, safeBottom: 34, radius: 50 },
+    "iphone-15":         { label: "iPhone 15",         w: 393, h: 852, safeTop: 59, safeBottom: 34, radius: 48 },
+    "iphone-se":         { label: "iPhone SE",         w: 375, h: 667, safeTop: 0,  safeBottom: 0,  radius: 22 }
+  };
+
+  const params = new URLSearchParams(location.search);
+  const key = params.get("device") || "iphone-17-pro-max";
+  const dev = DEVICES[key] || DEVICES["iphone-17-pro-max"];
+
+  const deviceEl = document.getElementById("device");
+  const screenEl = document.getElementById("screen");
+  const frame = document.getElementById("app");
+  const hudLabel = document.getElementById("hud-label");
+  const hudSize = document.getElementById("hud-size");
+  const hudSafe = document.getElementById("hud-safe");
+  const hudScale = document.getElementById("hud-scale");
+
+  let landscape = false;
+
+  function applyDevice() {
+    const w = landscape ? dev.h : dev.w;
+    const h = landscape ? dev.w : dev.h;
+    screenEl.style.width = w + "px";
+    screenEl.style.height = h + "px";
+    deviceEl.style.width = (w + 22) + "px";
+    deviceEl.style.height = (h + 22) + "px";
+    deviceEl.style.borderRadius = (landscape ? 44 : dev.radius) + "px";
+    screenEl.style.borderRadius = (landscape ? 36 : dev.radius - 10) + "px";
+    hudLabel.textContent = dev.label;
+    hudSize.textContent = w + " × " + h;
+    hudSafe.textContent = landscape ? "0 / " + dev.safeBottom : dev.safeTop + " / " + dev.safeBottom;
+    fit();
+  }
+
+  function fit() {
+    /* 底部要預留 HUD 空間，否則機身會同 HUD 重疊 */
+    const padX = 48, padY = 112;
+    const dw = deviceEl.offsetWidth, dh = deviceEl.offsetHeight;
+    const s = Math.min(1, (innerWidth - padX) / dw, (innerHeight - padY) / dh);
+    deviceEl.style.transform = "scale(" + s.toFixed(3) + ")";
+    hudScale.textContent = Math.round(s * 100) + "%";
+  }
+
+  /* 把模擬安全區注入 app（真機時 env() 數值更大，max() 會用真機值） */
+  function injectSafeArea() {
+    try {
+      const root = frame.contentDocument.documentElement;
+      root.style.setProperty("--sim-safe-top", (landscape ? 0 : dev.safeTop) + "px");
+      root.style.setProperty("--sim-safe-bottom", dev.safeBottom + "px");
+    } catch (e) {
+      console.warn("[preview] 無法注入安全區（可能唔同 origin）", e);
+    }
+  }
+
+  frame.addEventListener("load", injectSafeArea);
+  window.addEventListener("resize", fit);
+  document.getElementById("btn-reload").addEventListener("click", () => {
+    try { frame.contentWindow.location.reload(); } catch { frame.src = frame.src; }
+  });
+  document.getElementById("btn-rotate").addEventListener("click", () => {
+    landscape = !landscape;
+    applyDevice();
+    injectSafeArea();
+  });
+
+  applyDevice();
+  injectSafeArea();
+</script>
+</body>
+</html>
