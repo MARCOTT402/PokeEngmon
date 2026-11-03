@@ -61,11 +61,12 @@ const App = {
       sprite.onerror = () => { sprite.onerror = null; sprite.src = spriteURL(cur[0]); };
       sprite.src = animatedURL(cur[0]);
       sprite.style.visibility = "visible";
+      sprite.style.display = "";
       nameEl.textContent = cur[1];
       rarityEl.textContent = rz.label;
       rarityEl.style.background = rz.bg;
       rarityEl.style.color = rz.color;
-      lvEl.textContent = "Lv " + level;
+      lvEl.textContent = "Lv." + level;
 
       /* 電子寵物狀態：只跟當前拍檔，其他寶可夢唔受影響 */
       const petSt = window.Pet ? Pet.status(entry) : null;
@@ -102,10 +103,11 @@ const App = {
         const span = levelSpan(cur[0], level);
         const into = Math.max(0, entry.exp - base);
         bar.style.width = Math.min(100, (into / span) * 100) + "%";
-        expText.textContent = `EXP ${into} / ${span} to next Lv.`;
+        expText.textContent = `Lv. ${level} ・ EXP ${into} / ${span} to next Lv.`;
       }
     } else {
       sprite.style.visibility = "hidden";
+      sprite.style.display = "none";
       sprite.classList.remove("fainted");
       nameEl.textContent = "No Pokémon yet";
       rarityEl.textContent = "—";

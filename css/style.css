@@ -3898,7 +3898,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pd-lens {
   position: relative;
   left: auto; top: auto;
-  width: 26px; height: 26px; border-radius: 50%; flex: none;
+  width: 28px; height: 28px; border-radius: 50%; flex: none;
   background: radial-gradient(circle at 35% 32%, #bfe9ff 0 18%, #4aa3df 19% 46%, #1c5d8f 47% 68%, #0d2f4a 69% 100%);
   border: 2.5px solid #111;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.2), inset -3px -3px 6px rgba(0,0,0,.3);
@@ -3916,7 +3916,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: transform .12s cubic-bezier(.25, 1, .5, 1);
 }
 .pd-stat:active { transform: scale(.94); }
-.pd-stat svg { width: 19px; height: 19px; flex: none; display: block; filter: drop-shadow(0 1px 1px rgba(60, 8, 5, .45)); }
+.pd-stat svg { width: 20px; height: 20px; flex: none; display: block; filter: drop-shadow(0 1px 1px rgba(60, 8, 5, .45)); }
 .pd-num {
   font-size: 13px; font-weight: 900; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
@@ -3975,32 +3975,35 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* ---- 6. Signature 卡 ---- */
 .ph-sign {
   flex: none;
-  display: flex; gap: 12px; padding: 10px 12px; align-items: center;
-  background: #fff; border: 2.5px solid #1b1b22; border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 5px; padding: 12px 16px 14px;
+  background: #fffdf7; border: 2.5px solid #1b1b22; border-radius: 16px;
   box-shadow: 0 3px 0 #1b1b22;
   position: relative;
 }
 .ph-sign-sprite {
-  width: 96px; height: 96px; flex: none; object-fit: contain; image-rendering: pixelated;
-  border-radius: 50%; border: 2.5px solid #1b1b22; background: #f5f2e8;
+  width: 132px; height: 132px; flex: none; object-fit: contain; image-rendering: pixelated;
+  margin-top: -6px;
 }
-.ph-sign-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.ph-sign-row1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.ph-sign-name { font-size: 17px; font-weight: 900; }
+.ph-sign-name { font-size: 22px; font-weight: 900; line-height: 1.1; text-align: center; }
+.ph-sign-meta { display: flex; align-items: center; gap: 7px; }
 .ph-sign-rarity {
-  background: #fffbe7; border: 2px solid #1b1b22; border-radius: 8px;
-  padding: 0 7px; font-size: 11px; font-weight: 900; line-height: 1.6;
+  border-radius: 999px; padding: 2px 12px;
+  font-size: 12px; font-weight: 900; line-height: 1.5;
 }
-.ph-sign-lv { font-size: 12px; font-weight: 900; color: #3b5ca8; }
-.ph-sign-row2 { font-size: 11px; font-weight: 700; color: #6b675d; line-height: 1.3; }
-.ph-sign-exp { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
-.ph-sign-explabel { font-size: 11px; font-weight: 800; color: #6b675d; }
-.ph-sign-expbar { height: 4px; border-radius: 2px; background: #d8d2c4; overflow: hidden; }
-.ph-sign-expbar > i { display: block; height: 100%; background: #2f9e44; width: 0; transition: width .6s ease; }
-.ph-sign-hpbar { position: absolute; left: 12px; right: 12px; bottom: 6px; height: 4px; background: #d8d2c4; border-radius: 2px; overflow: hidden; }
-.ph-sign-hpbar > i { display: block; height: 100%; background: #2f9e44; width: 100%; transition: width .3s ease; }
+.ph-sign-lv { font-size: 12px; font-weight: 800; color: #7d786c; }
+.ph-sign-star { font-size: 12px; color: #f2b705; line-height: 1; }
+.ph-sign-note { font-size: 11px; font-weight: 700; color: #8a8478; text-align: center; line-height: 1.3; }
+.ph-sign-hpbar {
+  width: 100%; height: 7px; margin-top: 3px;
+  border-radius: 999px; background: #e7e4da; overflow: hidden;
+}
+.ph-sign-hpbar > i { display: block; height: 100%; background: linear-gradient(180deg, #59d67f, #22a55a); width: 100%; transition: width .3s ease; }
 .ph-sign-hpbar.mid > i { background: #f5a524; }
 .ph-sign-hpbar.low > i { background: #e5383b; }
+.ph-sign-expbar { width: 100%; height: 7px; border-radius: 999px; background: #e7e4da; overflow: hidden; }
+.ph-sign-expbar > i { display: block; height: 100%; background: #3b82f6; width: 0; transition: width .6s ease; }
+.ph-sign-explabel { font-size: 11px; font-weight: 700; color: #8a8478; text-align: center; }
 
 /* ---- 7. TodayStrip ---- */
 .ph-today {

@@ -124,24 +124,19 @@
 
         <!-- 屏幕列 -->
         <div class="pd-screen2">
-          <!-- Signature 卡 -->
+          <!-- Signature 卡：直立置中版（精靈圖 / 名稱 / 稀有度+等級 / 血量 / EXP） -->
           <div class="ph-sign card ph-anim-partner">
             <img id="hero-sprite" class="ph-sign-sprite" alt="My Pokémon">
-            <div class="ph-sign-main">
-              <div class="ph-sign-row1">
-                <span class="ph-sign-name" id="hero-name">No Pokémon yet</span>
-                <span class="ph-sign-rarity" id="hero-rarity">—</span>
-                <span class="ph-sign-lv" id="hero-lv">Lv 1</span>
-              </div>
-              <div class="ph-sign-row2">
-                <span id="hero-pet-note">Health 0/100</span>
-              </div>
-              <div class="ph-sign-exp">
-                <span class="ph-sign-explabel" id="hero-exp-text">Answer → pull Pokémon</span>
-                <div class="ph-sign-expbar"><i id="hero-expbar"></i></div>
-              </div>
+            <span class="ph-sign-name" id="hero-name">No Pokémon yet</span>
+            <div class="ph-sign-meta">
+              <span class="ph-sign-rarity" id="hero-rarity">—</span>
+              <span class="ph-sign-lv" id="hero-lv">Lv.1</span>
+              <span class="ph-sign-star" aria-hidden="true">★</span>
             </div>
             <div class="ph-sign-hpbar" aria-hidden="true"><i id="hero-hpbar"></i></div>
+            <span class="ph-sign-note" id="hero-pet-note"></span>
+            <div class="ph-sign-expbar" aria-hidden="true"><i id="hero-expbar"></i></div>
+            <span class="ph-sign-explabel" id="hero-exp-text"></span>
           </div>
 
           <!-- TodayStrip 44 -->
