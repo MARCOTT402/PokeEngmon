@@ -409,5 +409,11 @@ Incident (2026-11-04)：選題頁 `#topic-list` 設咗 `flex:1; overflow-y:auto`
 
 Incident (2026-11-04)：Leaderboard／Battle Menu／Friends overlay 上下各凸出 6px（頂蓋住 status bar、底蓋住下巴紅邊）。原因：`--frame-screen-top/bottom` 算式冇計 `.pd-screen2` 嘅 `margin: 6px`。修：兩個算式各加 6px。
 
-- 改紅框結構（deco／status bar／chin／pd-screen2 margin）時，必須同步更新 `--frame-screen-top` / `--frame-screen-bottom`，並用 `getBoundingClientRect` 對比 `.pd-screen2` 同 overlay 四邊（差值要係 0）。
+- 改紅框結構（deco／status bar／chin／pd-screen2 margin）時，必須同步更新 `--frame-screen-top/bottom` 算式，並用 `getBoundingClientRect` 對比 `.pd-screen2` 同 overlay 四邊（差值要係 0）。
+
+## Rule 44 — 刪結算頁按鈕前必查 Gym conclude 依賴
+
+Incident (2026-11-04)：刪結算頁「Back to Home」掣時發現 Gym 模式嘅 badge 判定（`Gym.conclude`）掛喺 `btn-settle-home` onclick，靠 `_gymSettleData` 觸發。刪掣前要將呢段邏輯搬去唯一剩低嘅出口（下巴精靈球 `btn-pd-home`），否則 gym badge 永遠唔會判。
+
+- 結算頁而家唯一出口係下巴精靈球；任何「結算後先做」嘅邏輯（gym conclude、之後新增嘅模式）都要掛喺 `btn-pd-home` handler 開頭。
 
