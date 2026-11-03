@@ -3907,9 +3907,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 3. 屏幕列 ---- */
 .pd-screen2 {
-  position: relative; flex: 1 1 auto; min-height: 0;
+  position: relative; min-height: 0;
   background: #fffdf7;
-  border-left: 6px solid #e03a32; border-right: 6px solid #e03a32;
   border: 3px solid #111;
   border-radius: 16px;
   margin: 6px;
