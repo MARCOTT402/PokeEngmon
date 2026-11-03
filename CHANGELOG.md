@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.32.1...v1.33.0) (2026-11-03)
+
+
+### Features
+
+* **home:** expand full Pokédex and Quests inside their sheets ([4cbbb04](https://github.com/MARCOTT402/PokeEngmon/commit/4cbbb04a25dac552589f9aa87dd2bc0cc502e7b1))
+
 ## [1.32.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.32.0...v1.32.1) (2026-11-03)
 
 
