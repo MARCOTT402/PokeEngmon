@@ -4117,12 +4117,18 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: #fff; border: 2.5px solid #1b1b22;
   max-height: 100%; overflow: hidden;
   display: flex; flex-direction: column;
-  transition: transform .4s cubic-bezier(.25,1,.5,1);
+  transition: transform .4s cubic-bezier(.25,1,.5,1), max-height .4s cubic-bezier(.25,1,.5,1);
 }
+.ph-sheet-down { top: 0; border-top: 0; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; transform: translateY(-100%); z-index: 2; }
 .ph-sheet-up { bottom: 0; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom: 0; transform: translateY(100%); z-index: 2; }
 .ph-sheet-up.ph-open { transform: translateY(0); }
-.ph-sheet-down { top: 0; border-top: 0; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; transform: translateY(-100%); z-index: 2; }
 .ph-sheet-down.ph-open { transform: translateY(0); }
+/* compact mode：預設 max-height 只顯示 head + body（自動適應）*/
+.ph-sheet-down:not(.ph-sheet-full) { max-height: 58%; }
+/* full mode：捲滿白色螢幕，用 max-height transition 做捲動畫 */
+.ph-sheet-down.ph-sheet-full {
+  max-height: 100%;
+}
 
 /* ---- Gacha sheet：佔滿白色螢幕，內容自己滾動 ---- */
 #sheet-gacha { top: 0; bottom: 0; max-height: none; border-radius: 0; border-left: 0; border-right: 0; }
@@ -4173,11 +4179,11 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sheet-body.compact { padding: 10px 14px; }
 
 .ph-sheet-down.ph-sheet-full {
-  max-height: none; height: 100%;
-  overflow: visible;
+  max-height: 100%;
 }
 .ph-sheet-down.ph-sheet-full .ph-sheet-body {
   overflow-y: auto;
+  flex: 1; min-height: 0;
 }
 .ph-sheet-expand {
   flex: none;
