@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.28.0...v1.29.0) (2026-11-03)
+
+
+### Features
+
+* **home:** rewrite Home to P1 Pokedex shell with Console+ IA ([78b68d6](https://github.com/MARCOTT402/PokeEngmon/commit/78b68d6e7baa780c1bcbe36a1408c8de89749150))
+
 # [1.28.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.27.0...v1.28.0) (2026-11-03)
 
 
