@@ -152,24 +152,52 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 
 手機 PWA 最常用嘅互動模式：**由白色螢幕頂部或底部捲入半頁 / 全頁面板**。本專案嘅 sheet 系統定死以下約束，唔好隨意打破。
 
-### 6.1 定位：必須喺 shell 內，唔可以蓋住 dockbar
+### 6.1 定位：必須喺 white screen 區內，唔可以蓋住 dockbar / red bezel
 
 ```css
-/* sheet 容器定位喺白色螢幕區內 */
+/* sheet 容器定位喺白色螢幕區內（非紅色 bezel 內、非 dockbar 內） */
 .ph-sheets {
   position: absolute; inset: 0; z-index: 40;
-  bottom: calc(56px + 8px);  /* 預留 dockbar + gap */
-  overflow: hidden;
+  bottom: calc(56px + 8px);  /* 預留 dockbar (min-h 44 + pad 8 = 52) + gap 8 */
+  overflow: hidden;           /* 捲出時唔會露 margin */
+  border-radius: 16px;        /* 跟 white screen 圓角一致 */
 }
-/* top-down sheet（由頂部向下捲入） */
-.ph-sheet-down { top: 0; transform: translateY(-100%); }
+/* top-down sheet（由螢幕頂部向下捲入） */
+.ph-sheet-down {
+  top: 0; left: 0; right: 0; bottom: 0;
+  transform: translateY(-100%); z-index: 2;
+  border-top: 0;
+}
 .ph-sheet-down.ph-open { transform: translateY(0); }
-/* bottom-up sheet（由底部向上捲入） */
-.ph-sheet-up { bottom: 0; transform: translateY(100%); }
+/* bottom-up sheet（由螢幕底部向上捲入，例如 setting / battle） */
+.ph-sheet-up {
+  bottom: 0; left: 0; right: 0; top: 0;
+  transform: translateY(100%); z-index: 2;
+  border-bottom: 0;
+}
 .ph-sheet-up.ph-open { transform: translateY(0); }
 ```
 
-**鐵律：** sheet 永遠唔可以蓋住 dockbar。`bottom` 預留計算要考慮 dockbar 實際高度（通常 min-height 44 + padding 8 = 52px + 8px gap = 60px）。
+**鐵律：**
+- Sheet 永遠唔可以蓋住 dockbar。`bottom` 必須預留 dockbar + gap。
+- Sheet 必須定位喺 `.ph-sheets` 容器（即白色螢幕區內），唔可以自己 `position:fixed` 蓋住紅色 bezel。
+- Sheet 只可以用 `transform: translateY` 做動畫，唔好用 `top/bottom` transition（會觸發 layout reflow）。
+
+**結構圖：**
+```
+.pd-shell (max-width:440, 3-row grid: 48px bezel | 1fr screen | 34px chin)
+├── .pd-bezel (48px, 紅色, 4 stat buttons)
+├── .pd-screen2 (1fr, 白色, 內容區)
+│   └── .ph-sheets (position:absolute, bottom:calc(56px+8px))  ← sheet 入呢度
+│       ├── .ph-sheet-down#sheet-calendar
+│       ├── .ph-sheet-down#sheet-pokedex
+│       ├── .ph-sheet-down#sheet-quests
+│       ├── .ph-sheet-down#sheet-gacha
+│       ├── .ph-sheet-up#sheet-battle
+│       ├── .ph-sheet-up#sheet-setting
+│       └── .ph-backdrop
+└── .pd-chin (34px)
+```
 
 ### 6.2 捲動時間統一 0.4s
 
@@ -297,16 +325,63 @@ showView(id) {
 
 全部走同一條 `_closeAllSheets` / `_closeSheet`，確保 transition time 一致。
 
-### 6.9 實戰經驗
+### 6.8 四種關閉路徑（全部一致）
 
-| 問題 | 根因 | 解法 |
+| 路徑 | Trigger | Handler |
 |---|---|---|
-| 點按鈕 A 開住 → 點按鈕 B 後變兩個 sheet 同時 open | 新 binder 冇檢查 `curSheet`，直接 `openFn()` | 加 `cur && cur.id !== sheetId` 檢查 → 先 closeAll → wait 410ms → open |
-| Sheet 「閃一下就冇咗」 | `_closeAllSheets()` 立即設 `hidden = true` 跳過 transform | 只 remove class，setTimeout 後先 hidden |
-| 連續快速點擊開唔到第二個 sheet | 捲動動畫未完成（400ms）又被新點擊打開 | 加 `_sheetSwitching` flag，close 時 true、setTimeout 完先 false |
-| 點白色螢幕區域無反應 | 只有 backdrop click handler，白色螢幕（sheet 外）冇 | document click handler：非 sheet / 非 backdrop → `_closeAllSheets()` |
-| Dockbar 按鈕切換 view 時無先關 sheet | dockbar handler 冇加 close 邏輯 | 用同一個 `dockBinder` pattern，加 `curSheet` 檢查 |
-| Gacha 關閉後鑽石冇 update | `_closeSheet("sheet-gacha")` 冇 sync UI | 關閉後 call `App.renderHome()`（但唔好塞落 `_closeSheet`，塞落 `closeGachaSheet()` wrapper） |
+| ① Backdrop 點擊 | 半透明遮罩 click → target.closest(ph-backdrop) | `_closeAllSheets()` |
+| ② Esc key | `document keydown e.key === "Escape"` | `_closeAllSheets()` |
+| ③ Sheet ✕ | `.ph-sheet-x` click → 取 parent sheet id | `_closeSheet(sheetId)` |
+| ④ 點非 sheet 區域 | document click handler，排除 sheet 內 + backdrop + button 本身 | `_closeAllSheets()`（click 繼續冒泡到目標元素） |
+
+```js
+document.addEventListener("click", (e) => {
+  const openSheet = document.querySelector("#view-home .ph-sheet.ph-open");
+  if (!openSheet) return;
+
+  // 路徑①：backdrop click → close all
+  if (e.target.closest("#view-home .ph-backdrop")) { App._closeAllSheets(); return; }
+  // 路徑③：sheet ✕ → close single
+  const xBtn = e.target.closest("#view-home .ph-sheet-x");
+  if (xBtn) { const s = xBtn.closest(".ph-sheet"); if (s) App._closeSheet(s.id); return; }
+  // 路徑④：點 sheet 內部 → 唔攔（由 sheet 子按鈕自行 close）
+  if (e.target.closest("#view-home .ph-sheet")) return;
+  // 路徑④：點任何其他地方 → close all，click 繼續冒泡到目標元素
+  App._closeAllSheets();
+});
+```
+
+**鐵律：** 所有路徑必須走 `_closeSheet` / `_closeAllSheets`（有 stillOpen guard + 430ms timer），唔好直接 `classList.remove + hidden=true`。
+
+### 6.9 Bezel stat button icon 定位技巧
+
+Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如果要把 pill 貼住某個 icon 嘅右上角（例如鑽石 icon）：
+
+```css
+.pd-stat-diamond { position: relative; }           /* button 做定位參考 */
+.pd-topdiamond {
+  position: absolute;
+  /* button 44px 寬，icon 22px 佔左半 → gem right edge = button 嘅 50% 位置 */
+  left: calc(50% + 2px);  /* 貼 gem 右邊 */
+  top: -8px;               /* 向上偏移貼 gem 頂部 */
+  pointer-events: none;    /* 唔擋 click */
+}
+```
+
+**鐵律：** 唔好用 `right: -8px` 相對於 44px button（飛去 button 最右邊），要用 `left: calc(50% + 2px)` 精確貼 icon 嘅 right edge。button 必須先設 `position: relative`。
+
+### 6.10 實戰經驗（Incident Log）
+
+| # | 問題 | 根因 | 解法 | Lesson 邊關 |
+|---|---|---|---|---|
+| 1 | 點 A → 點 B 變兩個 sheet 同時 open | Binder 冇檢查 `curSheet`，直接 `openFn()` | 加 `cur && cur.id !== sheetId` 檢查 → closeAll → wait 410ms → open | 6.3 / 6.4 |
+| 2 | Sheet「閃一下就冇咗」| `_closeAllSheets` 立即設 `hidden=true` 跳過 transform | 只 remove class，setTimeout 後先 hidden | 6.5 |
+| 3 | 連續快速點擊開唔到第二個 sheet | 捲動未完成（400ms）又被打開 | 加 `_sheetSwitching` flag | 6.4 |
+| 4 | 點白色螢幕無反應 | 只有 backdrop handler，白色區域冇 | document click handler 路徑④ | 6.8 |
+| 5 | Dockbar 切換 view 無先關 sheet | dockbar handler 冇 close 邏輯 | 同 `dockBinder` pattern，加 curSheet 檢查 | 6.4 |
+| 6 | Gacha 關閉後鑽石冇 update | `_closeSheet(gacha)` 冇 sync UI | wrapper `closeGachaSheet()` 入面 call renderHome | 6.4 |
+| 7 | 點閃電 → 點電池，新 sheet 直接彈出冇動畫 | **Timer race**：`_closeAllSheets` 410ms + binder 410ms 同時 race，JS event loop ordering 唔 guarentee → 新 sheet 可能被舊 timer 設 hidden | close timer 改 **430ms**（遲 binder 20ms）+ 加 **stillOpen guard**（timer 跑時檢查有冇新 ph-open）→ 兩條 close 路徑統一 | 6.2 / 6.5 |
+| 8 | 逐個 toggle close 後再 closeAllSheets | `_checkCloseAllSheets` 令單獨 close 完再 call closeAllSheets → **雙 timer race** | 移除 `_checkCloseAllSheets()`；每條 close 路徑有自己嘅 guard timer 就夠 | 6.5 |
 
 ---
 
