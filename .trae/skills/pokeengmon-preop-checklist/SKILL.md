@@ -307,9 +307,18 @@ Incident 4 (setting→diamond cross-button, v1.30): 點 setting → 點寶石，
 
 ## Rule 32 — Render 函數新增選項後，要審查所有「內部再 render」入口
 
-Incident (2026-11-03 Streak sheet 日曆): `Calendar.render()` 加了 `options.disableClick`，但月切換 nav 的 handler 寫成 `this.render(containerId)`（冇帶 options）。結果 sheet 內日曆一按 ‹/› 就回復預設（可點擊），再點日期又彈 `showDay` modal —— 同一個 bug 第二次出現。
+Incident (2026-11-03 Calendar): `Calendar.render()` 曾加咗 `disableClick` option，但月切換 nav 的 handler 寫成 `this.render(containerId)`（冇帶 options），令同一 option 喺另一個入口失效（該 option 後來因需求改變而移除，但教訓通用）。
 
-- 為 render/virtual-render 加任何 option 時，逐一列出所有會再次呼叫它嘅入口：內部 nav/pagination、sync pull 後 refresh、resize、動畫結束後 re-render。每個入口都必須傳回同一份 options（或把 options 存在 root 上）。
+- 為 render 加任何 option 時，逐一列出所有會再次呼叫它嘅入口：內部 nav/pagination、sync pull 後 refresh、resize、動畫結束後 re-render。每個入口都必須傳回同一份 options（或把 options 存在 root 上）。
 - 事件 handler 唔好在首次注入時 bind 一次就算；每次 render 都重綁，令 closure 永遠帶住最新 options。
-- 驗收方法：用 headless 打開該情境，檢查受影響 cell/按鈕 `el.onclick` 是否為 null（唯讀情境應全為 0），並實際 click 一次確認冇 modal。
+- 驗收方法：用 headless 打開該情境，實際 click 一次確認行為同預期一致，而唔止係讀 code。
+
+## Rule 33 — 「冇彈／有彈」類投訴，先確認邊個才係想要嘅行為，唔好自作聰明移除功能
+
+Incident (2026-11-03 Calendar): 用戶報「點擊日曆日期會彈資訊」，當時理解成「彈窗係 bug」而加 `disableClick` 將 sheet 內日曆變唯讀；下一輪用戶報「點擊有答題紀錄嘅日期冇 popup，睇唔到紀錄」→ 還原彈窗；第三輪用戶再講「要睇得番紀錄又唔會彈窗」→ 真正想要嘅係**日曆下方內嵌展開**，唔係 modal。連續兩輪都係靠猜，白改兩次。
+
+- 收到「X 會彈出 / X 冇反應」呢類描述，唔可以靠字面推斷好壞；先講清楚你理解嘅 desired behavior，或用 AskUserQuestion 確認（要彈 vs 唔要彈 vs 內嵌）。
+- 任何會移除／禁用現有可見功能嘅改動，一定要先確認，唔好當成 bug fix 直接做。
+- 用戶「要內容但唔要 popup」時，正解通常係**原位置 inline / accordion 展開**（同一容器、可再點收起、切換日期會換內容），而唔係刪掉功能或保留 modal。
+- 修完要重現用戶原話嘅場景驗收（例如「點有紀錄嘅日期 → 應該喺日曆下方見到 Set 詳情，且冇 modal」），而唔止驗自己假設嘅方向。
 

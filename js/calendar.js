@@ -12,11 +12,11 @@ const Calendar = {
     this.render("view-calendar");
   },
 
-  /* render 到指定 container。options.disableClick=true 時唔彈 showDay modal（Streak sheet 預覽用）*/
-  render(containerId, options = {}) {
+  /* render 到指定 container（預設 view-calendar）；
+     點擊有紀錄的日子會喺日曆下方內嵌顯示當日詳情（唔彈 modal） */
+  render(containerId) {
     const root = containerId ? document.querySelector(containerId) : document.getElementById("view-calendar");
     if (!root) return;
-    const disableClick = !!options.disableClick;
 
     const MONTHS = ["January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"];
@@ -36,14 +36,12 @@ const Calendar = {
         </div>`;
     }
 
-    /* 綁 nav：每次 render 都重綁並帶回同一個 options。
-       否則 Streak sheet 內切換月份時會用預設 options 重新 render，
-       disableClick 失效 → 點日期又彈 showDay modal。 */
+    /* 綁 nav：每次 render 都重綁，確保注入新結構後仍然可切月 */
     const stepMonth = (delta) => {
       this.month += delta;
       if (this.month < 0) { this.month = 11; this.year--; }
       if (this.month > 11) { this.month = 0; this.year++; }
-      this.render(containerId, options);
+      this.render(containerId);
     };
     root.querySelector(".cal-nav:first-child").onclick = () => stepMonth(-1);
     root.querySelector(".cal-nav:last-child").onclick = () => stepMonth(1);
@@ -54,6 +52,42 @@ const Calendar = {
     /* Weekday header */
     root.querySelector(".cal-weekdays").innerHTML =
       ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => `<span>${d}</span>`).join("");
+
+    /* 內嵌詳情容器：每次 render（開 sheet／切月）都清空，避免殘留上一頁紀錄 */
+    let detail = root.querySelector(".cal-day-inline");
+    if (!detail) {
+      detail = document.createElement("div");
+      detail.className = "cal-day-inline";
+      const legend = root.querySelector(".cal-legend");
+      if (legend) legend.insertAdjacentElement("afterend", detail);
+      else root.appendChild(detail);
+    }
+    detail.hidden = true;
+    detail.innerHTML = "";
+    delete detail.dataset.key;
+
+    const showInline = (key) => {
+      const html = this.dayDetailHTML(key);
+      /* 點冇紀錄的日子 → 收起目前展開嘅詳情 */
+      if (!html) {
+        detail.hidden = true;
+        detail.innerHTML = "";
+        delete detail.dataset.key;
+        return;
+      }
+      /* 再點同一日 → 收起 */
+      if (detail.dataset.key === key) {
+        detail.hidden = true;
+        detail.innerHTML = "";
+        delete detail.dataset.key;
+        return;
+      }
+      detail.dataset.key = key;
+      detail.innerHTML = html;
+      detail.hidden = false;
+      this._renderExplains(key, detail);
+      detail.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    };
 
     /* 日期格 */
     const grid = root.querySelector(".cal-grid");
@@ -74,7 +108,7 @@ const Calendar = {
       const setsN = Math.max(recs.length, (st.practiceDays && st.practiceDays[key]) || 0);
       cell.innerHTML = `<span class="cal-day">${d}</span>` +
         (level > 0 ? `<span class="cal-count">${setsN}</span>` : "");
-      if (level > 0 && !disableClick) cell.onclick = () => this.showDay(key);
+      cell.onclick = () => showInline(key);
       grid.appendChild(cell);
     }
 
@@ -98,11 +132,11 @@ const Calendar = {
     this.render();
   },
 
-  /* 當日詳細記錄 Modal：各組成績 + 錯題解釋 */
-  showDay(key) {
+  /* 當日詳細記錄 HTML：各組成績 + 錯題位置；冇紀錄回傳 "" */
+  dayDetailHTML(key) {
     const st = loadState();
     const sets = st.records[key] || [];
-    if (sets.length === 0) return;
+    if (sets.length === 0) return "";
 
     const detailed = sets.filter(r => Array.isArray(r.results) && r.results.length);
     const totalScore = detailed.reduce((s, r) => s + r.score, 0);
@@ -121,7 +155,7 @@ const Calendar = {
         ? `<div class="day-allright">Answers not synced to this device</div>`
         : (wrongs.length === 0
             ? `<div class="day-allright">All correct — nice! 🌟</div>`
-            : `<div class="day-wrongs" id="day-wrongs-${idx}"></div>`);
+            : `<div class="day-wrongs" data-wrongs="${idx}"></div>`);
       return `
         <div class="day-set">
           <div class="day-set-head">
@@ -134,17 +168,19 @@ const Calendar = {
         </div>`;
     }).join("");
 
-    App.showModal(`
+    return `
       <div class="day-detail">
         <h3>${key.replace(/-/g, "/")} Practice record</h3>
         <div class="day-summary">${summary}</div>
         ${setBlocks}
-      </div>
-    `);
+      </div>`;
+  },
 
-    /* 錯題解釋（需要 DOM 排好版先畫箭咀） */
+  /* 錯題解釋（需要詳情 DOM 已插入先畫箭咀） */
+  _renderExplains(key, root) {
+    const sets = loadState().records[key] || [];
     sets.forEach((r, idx) => {
-      const box = document.getElementById(`day-wrongs-${idx}`);
+      const box = root.querySelector(`[data-wrongs="${idx}"]`);
       if (!box) return;
       (Array.isArray(r.results) ? r.results : []).filter(x => !x.correct).forEach(w => {
         const q = findQuestion(w.qid);
