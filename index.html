@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -253,17 +253,16 @@
             START QUIZ <span>(10 questions)</span>
           </button>
 
-          <!-- 底部 dock 4 格：答題 / Quests / Battle / Setting -->
+          <!-- 底部 dock 4 格：Battle / Leaderboard / Friends / Setting -->
           <nav class="ph-bottomdock" aria-label="Bottom dock">
-            <button class="ph-bd" data-bd="quiz" type="button" id="btn-bd-quiz" aria-label="Quiz">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.75.4-1.3.95-1.3 1.8v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.2" fill="currentColor"/></svg>
-            </button>
-            <button class="ph-bd" data-bd="quests" type="button" id="btn-bd-quests" aria-label="Quests">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5.5" y="4.5" width="13" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-              <span class="ph-badge" id="home-quests-badge" hidden>0</span>
-            </button>
             <button class="ph-bd" data-bd="battle" type="button" id="btn-bd-battle" aria-label="Battle">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="leaderboard" type="button" id="btn-bd-leaderboard" aria-label="Leaderboard">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4v16M7 8h4M7 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 16l2.5 2.5L17 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="friends" type="button" id="btn-bd-friends" aria-label="Friends">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="9" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="9" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M17 14.5c2.4 0 4.3 1.8 4.5 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </button>
             <button class="ph-bd" data-bd="setting" type="button" id="btn-bd-setting" aria-label="Settings">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.51 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.18a1.7 1.7 0 0 0 1-1.51V2.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.82V9a1.7 1.7 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
@@ -423,16 +422,6 @@
               <span class="ph-sitem-t">Battle Menu</span>
               <span class="ph-s-arrow">›</span>
             </button>
-            <button class="ph-sitem" id="btn-leaderboard-sheet" type="button">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 1.5l2.5 3.1 3.9-.8.8 3.9 3.1 2.5-2 2.8 2 2.8-3.1 2.5-.8 3.9-3.9-.8L12 22.5l-2.5-3.1-3.9.8-.8-3.9-3.1-2.5 2-2.8-2-2.8 3.1-2.5.8-3.9 3.9.8z" fill="#f5b301" stroke="#8a6d00" stroke-width="1" stroke-linejoin="round"/><circle cx="12" cy="12" r="4.2" fill="#2a75bb" stroke="#fff" stroke-width="1.4"/></svg>
-              <span class="ph-sitem-t">Leaderboard</span>
-              <span class="ph-s-arrow">›</span>
-            </button>
-            <button class="ph-sitem" id="btn-friends-sheet" type="button">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="9" cy="8.5" r="3"/><circle cx="16.8" cy="9.5" r="2.5"/><path d="M3.8 19.5c0-3.2 2.3-5.2 5.2-5.2s5.2 2 5.2 5.2M15.4 14.6c2.4.3 4.3 2.1 4.3 4.9"/></svg>
-              <span class="ph-sitem-t">Friends</span>
-              <span class="ph-s-arrow">›</span>
-            </button>
           </div>
         </div>
 
@@ -513,7 +502,6 @@
     <!-- ============ 題型選擇（做題前） ============ -->
     <section id="view-quiz-setup" class="view">
       <h2 class="setup-title">📚 Choose Categories & Topics</h2>
-      <p class="setup-sub">Pick a category, open a unit, then choose the topics you want to train</p>
       <div class="setup-mini-row">
         <button id="btn-topic-all" class="btn-mini">Select all</button>
         <button id="btn-topic-none" class="btn-mini">Clear all</button>
@@ -522,7 +510,6 @@
       <div id="custom-q-count" class="custom-q-count"></div>
       <div class="hub-spacer"></div>
       <div class="hub-bar">
-        <button id="btn-setup-back" class="btn-big btn-plain">‹ Home</button>
         <button id="btn-setup-start" class="btn-big btn-primary">▶ Start</button>
       </div>
     </section>
@@ -639,10 +626,6 @@
       <p class="lb-subtitle">Top 50 Trainers · Ranked by Pokémon owned</p>
       <div id="lb-you" class="lb-you-card" hidden></div>
       <div id="leaderboard-list" class="lb-list"></div>
-      <div class="hub-spacer"></div>
-      <div class="hub-bar">
-        <button id="btn-lb-back" class="btn-big btn-secondary">‹ Back to Home</button>
-      </div>
     </section>
 
     <!-- ============ 日曆 ============ -->
@@ -715,9 +698,6 @@
     <section id="view-friends" class="view friends-view">
       <header class="topbar">
         <div class="topbar-name">Friends</div>
-        <div class="topbar-res">
-          <button id="friends-back" class="icon-btn" aria-label="Back">✕</button>
-        </div>
       </header>
       <!-- 1. 我的訓練家卡：partner + 名 + 好友碼 -->
       <div id="friends-identity" class="friends-identity">
@@ -768,10 +748,6 @@
         </div>
         <div id="friends-search-results" class="friends-search-results"></div>
       </div>
-      <div class="hub-spacer"></div>
-      <div class="hub-bar">
-        <button id="friends-back-bottom" class="btn-big btn-plain">‹ Home</button>
-      </div>
     </section>
 
     <!-- ============ 每日任務板 ============ -->
@@ -818,9 +794,6 @@
     <section id="view-battle-menu" class="view battle-menu-view">
       <header class="topbar">
         <div class="topbar-name">Battle</div>
-        <div class="topbar-res">
-          <button class="chip chip-diamond">💎 <b id="topbar-diamonds-bm">0</b></button>
-        </div>
       </header>
       <div class="battle-menu-inner">
         <div class="bm-hero">
@@ -868,9 +841,6 @@
           <small>Tap a trainer, then pick a tier</small>
         </div>
         <div id="ai-trainer-list" class="ai-trainer-list"></div>
-        <div class="hub-bar">
-          <button id="battle-menu-back" class="btn-big btn-plain">‹ Home</button>
-        </div>
       </div>
     </section>
 

@@ -108,7 +108,6 @@ const BattleUI = (() => {
       startPvP();
     };
     const trainerList = document.getElementById("ai-trainer-list");
-    document.getElementById("battle-menu-back").onclick = () => { App.renderHome(); App.showView("view-home"); };
     /* 梯隊一入 Battle 頁就列出，唔使先撳 AI Trainers 先見到 */
     if (trainerList) trainerList.hidden = false;
     renderTrainerList();
@@ -2141,7 +2140,6 @@ const BattleUI = (() => {
         forfeitBattle();
       };
     };
-    document.getElementById("battle-menu-back").onclick = () => { App.renderHome(); App.showView("view-home"); };
     /* 難度選擇彈窗：關閉／撳背景＝取消（唔會亂開戰） */
     const tierClose = document.getElementById("tier-select-close");
     if (tierClose) tierClose.onclick = closeTierPicker;

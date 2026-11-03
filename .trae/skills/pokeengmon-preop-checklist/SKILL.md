@@ -366,3 +366,12 @@ Incident (2026-11-03 紅框頂裁切): 真機 Safari 瀏覽器模式下 `safe-ar
 - 驗證版面時**必須**加跑一次 safe-area=0 嘅配置（`node tools/preview-iphone.mjs --device iphone-se`），唔好只驗 17 Pro Max（62px 會 mask 晒所有頂部裁切問題）。
 - 外框頂邊要可見時，用 `--frame-inset-top` 統一調整 shell `top` + `height: calc(100dvh - ...)`，並同步更新 `--frame-screen-top`（gacha overlay 定位用），三處算式要共用同一份 max() 表達式。
 
+## Rule 38 — preview 工具 `--js`：`const` 全域（Gacha/App/Quiz）唔喺 `window` 上，要 click 真掣或 iframe `eval`
+
+Incident (2026-11-04 Lucky Draw 驗證): `preview-iphone.mjs --js` 喺外框頁執行，`doc.defaultView.Gacha` 係 `undefined` —— app 入面 `const Gacha = {...}` 呢類 top-level const/let 只存在 global lexical scope，**唔會**變 `window` property（`loadState` 呢類 `function` 宣告先至會）。用 `w.eval('Gacha.open(...)')` 又得，但 PowerShell 巢狀引號极易 SyntaxError。
+
+- 首選：**click 真 UI 掣**間接觸發，例如入 gacha 用 `doc.querySelector('#btn-bezel-diamond').click()`，唔使直接掂 const 物件。
+- 改 state 用 `w.loadState()` / `w.saveState()`（function 宣告，有掛 window）。
+- 一定要 eval：用 `w.eval('...')`，eval 字串入面只用單引號；外層 PowerShell 用雙引號，唔好再嵌雙引號。
+- 模擬拖拽：`new w.PointerEvent('pointerdown', {clientY, pointerId:1, bubbles:true})` dispatch 落 `#dm-arm`，再 `pointermove` 加 clientY 偏移（≥108px 即過 72% 閾值），可無頭行完整個抽獎流程。
+

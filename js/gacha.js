@@ -70,6 +70,10 @@ const Gacha = {
     this._resetStage();
     this._refreshControls();
     this._restoreTownBGM();
+    /* 任何離開路徑（包括下巴 Home 掣）都要補返進化揭示 */
+    const evo = this._pendingEvolve;
+    this._pendingEvolve = null;
+    if (evo) App.showEvolveModal(evo);
   },
   /* 離開扭蛋（任何路徑）都要還原城鎮 BGM */
   _restoreTownBGM() {
@@ -787,12 +791,10 @@ const Gacha = {
         <div class="gi-note"></div>
         <div class="gi-actions">
           <button class="btn-big btn-primary gi-again"></button>
-          <button class="btn-big btn-plain gi-home">‹ Back to Home</button>
         </div>
       </div>`;
     document.body.appendChild(el);
     el.querySelector(".gi-again").addEventListener("click", () => this._pullAgain());
-    el.querySelector(".gi-home").addEventListener("click", () => this._goHome());
     this._inspect = el;
     return el;
   },
@@ -882,16 +884,6 @@ const Gacha = {
     App.maybeShowGenUnlock();
     this._setPull(1);
     this._triggerPull();
-  },
-
-  /* 檢視卡「Back to Home」 */
-  _goHome() {
-    this._cleanupScene();
-    const evo = this._pendingEvolve;
-    this._pendingEvolve = null;
-    App.closeGachaSheet();
-    if (evo) App.showEvolveModal(evo);
-    App.maybeShowGenUnlock();
   },
 
   /* 執場：overlay / 艙門 / 拖拽旗標全部還原（Prototype 教訓：旗標唔重置會卡死再抽） */

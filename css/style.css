@@ -1350,7 +1350,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   30% { opacity: 1; }
   100% { transform: translateX(-50%) scaleY(1); opacity: 1; }
 }
-.gsb-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.gsb-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
 .gsb-flash.on { animation: flash-pop .5s ease-out; }
 .gsb-flash.on.big { animation: flash-pop .8s ease-out; }
 @keyframes flash-pop { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
@@ -1373,7 +1373,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 }
 #gacha-inspect.show { opacity: 1; }
 .gi-rays {
-  position: fixed; left: 50%; top: 50%; width: 180vmax; height: 180vmax; transform: translate(-50%, -50%);
+  position: absolute; left: 50%; top: 50%; width: 180vmax; height: 180vmax; transform: translate(-50%, -50%);
   pointer-events: none; opacity: .5;
   background: repeating-conic-gradient(from 0deg, var(--ray, #ffc93c) 0 7deg, transparent 7deg 17deg);
   -webkit-mask: radial-gradient(circle, #000 0 34%, transparent 62%);
@@ -2212,6 +2212,39 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .hub-bar .btn-big { flex: 1; margin: 0; }
 @media (min-width: 768px) { .hub-bar { max-width: 560px; } }
 
+/* ============ 選題 / 結算 / Leaderboard / Battle Menu：限 display window（紅框保留可見） ============ */
+/* overlay 蓋住螢幕區；view-home 嘅 shell 留喺後面（見 App.showView） */
+#view-quiz-setup.active, #view-settlement.active, #view-leaderboard.active, #view-friends.active, #view-battle-menu.active {
+  position: fixed;
+  top: var(--frame-screen-top);
+  bottom: var(--frame-screen-bottom);
+  left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 428px; /* 殼 440 - 螢幕區左右 2×6px margin */
+  min-height: 0;
+  margin: 0;
+  padding: 12px 12px 10px;
+  background: #fffdf7;
+  box-sizing: border-box;
+  /* 貼合白螢幕區 16px 圓角，底部唔好起角穿出去 */
+  border-radius: 0 0 14px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 120;
+}
+/* 選題頁：Start 釘死喺 display window 底（精靈球 Home 鍵上方），內容區自己滾動 */
+#view-quiz-setup.active { overflow: hidden; }
+#view-quiz-setup .topic-list {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+}
+#view-quiz-setup .hub-spacer { display: none; }
+#view-quiz-setup.active .hub-bar {
+  position: static; left: auto; transform: none;
+  flex: none;
+  width: 100%; max-width: none;
+  background: transparent; border-top: 0; box-shadow: none; backdrop-filter: none;
+  padding: 8px 0 2px;
+}
+
 /* ============ Reset progress (danger) ============ */
 .btn-danger { background: linear-gradient(180deg, #e74c3c, #c0392b) !important; color: #fff !important; }
 .btn-danger:disabled { background: #5a3a38 !important; color: #b99 !important; opacity: 0.6; cursor: not-allowed; }
@@ -2608,7 +2641,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
    ============================================================ */
 
 /* ----- 對戰選單頁（Arena lobby） ----- */
-.battle-menu-view { padding-bottom: 90px; }
+.battle-menu-view { padding-bottom: 16px; }
 .battle-menu-inner {
   display: flex; flex-direction: column; gap: 14px;
   padding: 14px 14px 22px; max-width: 560px; margin: 0 auto; width: 100%;
@@ -4141,14 +4174,14 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-badge[hidden] { display: none !important; }
 
 /* ---- 11. Sheet（定位喺白色螢幕區內，由框內邊捲出捲入） ---- */
-/* sheet bottom 必須喺 dockbar 頂部之上，dockbar 由 flex 自動高度決定 */
+/* display window 計埋 dockbar：sheets 展開後蓋過 dockbar */
 .ph-sheets {
   position: absolute; inset: 0; z-index: 40;
   pointer-events: none;
   overflow: hidden;
   border-radius: 16px;
-  /* bottomdock 高度大約 52px（min-height 44 + padding 8）+ gap 8 = 60px 預留 */
-  bottom: calc(56px + 8px);
+  /* display window 定義包埋 dockbar：sheets 展開後直落到底，蓋過 dock */
+  bottom: 0;
 }
 .ph-sheet, .ph-backdrop { pointer-events: auto; }
 .ph-sheet[hidden], .ph-backdrop[hidden] { display: none !important; }
@@ -4193,7 +4226,10 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 #gacha-scene-b, #gacha-inspect {
   top: var(--frame-screen-top);
   bottom: var(--frame-screen-bottom);
+  left: 50%; right: auto; transform: translateX(-50%);
+  width: 100%; max-width: 428px; /* 同其他 display-window overlay 一致：殼 440 - 2×6px */
   height: auto;
+  border-radius: 0 0 14px 14px; /* 貼合白螢幕區底部圓角 */
 }
 .ph-sheet-head {
   flex: none;
@@ -4548,8 +4584,6 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 
 #btn-top-quests { position: relative; }
-#home-quests-badge { margin-left: auto; }
-#home-quests-badge.is-claimable { background: #e53935; color: #fff; }
 
 /* 桌面：Friends 專用闊版面，左邊身分／待辦，右邊名單 */
 @media (min-width: 768px) {

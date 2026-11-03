@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================================
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
@@ -23,10 +23,14 @@ const App = {
     }
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
+    /* 選題 / 結算 / Leaderboard / Friends / Battle Menu 係 display window 內嘅 overlay：紅框（view-home shell）要留喺後面 */
+    if (id === "view-quiz-setup" || id === "view-settlement" || id === "view-leaderboard" || id === "view-friends" || id === "view-battle-menu") {
+      document.getElementById("view-home").classList.add("active");
+    }
     document.body.classList.toggle("capture-mode", id === "view-capture");
-    /* Friends / Daily Quests dashboard 喺桌面用闊版面（≥768px 兩欄） */
+    /* Daily Quests dashboard 喺桌面用闊版面（≥768px 兩欄） */
     const appEl = document.getElementById("app");
-    if (appEl) appEl.classList.toggle("app-wide", id === "view-friends" || id === "view-quests");
+    if (appEl) appEl.classList.toggle("app-wide", id === "view-quests");
     /* 離開任務板就停倒數 timer */
     if (id !== "view-quests" && typeof Quests !== "undefined" && Quests.stopTimer) Quests.stopTimer();
     window.scrollTo(0, 0);
@@ -797,7 +801,7 @@ const App = {
       ? "Pick at least one topic"
       : totalCount === 0
         ? "No questions match — pick another topic"
-        : `▶ Start (${totalCount} questions)`;
+        : "▶ Start";
 
     /* Question source counts */
     const st = loadState();
@@ -2601,20 +2605,15 @@ const App = {
         }
       };
     };
-    dockBinder("btn-bd-quiz", null, () => this.openSetup());
-    dockBinder("btn-bd-quests", null, () => { if (typeof Quests !== "undefined") Quests.open(); });
     dockBinder("btn-bd-battle", "sheet-battle", () => this._openSheet("sheet-battle"));
+    dockBinder("btn-bd-leaderboard", null, () => { if (typeof Leaderboard !== "undefined") Leaderboard.open(); });
+    dockBinder("btn-bd-friends", null, () => { if (typeof Friends !== "undefined") Friends.open(); });
     dockBinder("btn-bd-setting", "sheet-setting", () => this._openSheet("sheet-setting"));
 
     /* Battle sheet 內容按鈕 */
     document.getElementById("btn-home-battle").onclick = () => {
       this._closeSheet("sheet-battle");
       if (typeof BattleUI !== "undefined") BattleUI.openMenu();
-    };
-    document.getElementById("btn-leaderboard-sheet").onclick = () => { this._closeSheet("sheet-battle"); Leaderboard.open(); };
-    document.getElementById("btn-friends-sheet").onclick = () => {
-      this._closeSheet("sheet-battle");
-      if (typeof Friends !== "undefined") Friends.open();
     };
 
     /* Setting sheet 內容按鈕 */
@@ -2680,9 +2679,6 @@ const App = {
     else {
       document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     }
-    document.getElementById("btn-lb-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
-    document.getElementById("friends-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
-    document.getElementById("friends-back-bottom").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     /* 下巴精靈球 = Home 鍵：任何畫面一撳返主頁；順手收埋對戰 BGM、恢復城鎮音樂 */
     document.getElementById("btn-pd-home").onclick = () => {
@@ -2709,7 +2705,6 @@ const App = {
       this.selectedTopics = new Set();
       this.renderSetup();
     };
-    document.getElementById("btn-setup-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
 
     /* 做題：✓ 確認 / Hint / 下一題 / 齒輪設定 */
     document.getElementById("btn-quiz-check").onclick = () => Quiz.check();
