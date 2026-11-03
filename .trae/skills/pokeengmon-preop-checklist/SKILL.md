@@ -340,6 +340,7 @@ Incident (2026-11-03 Pokédex compact preview): 喺 sheet 入面嘅 chip／按�
 
 - 任何 sheet 內 handler 會**同步** re-render（尤其清空 container）都要 `ev.stopPropagation()`。
 - 或者延後 re-render（`setTimeout 0` / `requestAnimationFrame`），等 click 冒泡完先換 DOM。
+- **最穩妥（現已採用，Rule 35 更新）**：document 嘅 click handler 喺 **capture phase** 先用 `e.target.closest()` 記低 backdrop / sheet / close button 命中結果，bubble 階段只讀呢個記錄。咁就算 handler 中途 re-render 令 target detach，判斷仍然正確 — 唔使逐個 handler 補 `stopPropagation`。
 - 測試唔好只驗內容有冇更新，要同時驗返 sheet 仍然 `ph-open`。
 
 ## Rule 36 — sheet compact → full 要共用同一個頂部 unit，唔好各整一份
@@ -350,4 +351,12 @@ Incident (2026-11-03 Pokédex): 初版用自製 compact preview markup，full �
 - `_unmountSheetView` 要用 `prepend`（收起狀態下 lower 內容已搬返 view，頂部 unit 要放返最前），否則次序會變。
 - `expandArrow` 支援 opts `onDragStart` / `onDragEnd`：拖曳期間先放出 lower content（避免拉出空白），未夠力就收起返。
 - `renderHub()` 嘅 `scrollIntoView` 喺 sheet mount 時要 skip（flag），否則一開 sheet 就橫向捲走第一格；mount 完再 `scrollLeft = 0`。
+
+## Rule 37 — 唔好假設 `env(safe-area-inset-top)` 一定大過 0；負 offset 元素要畀 shell 留白下限
+
+Incident (2026-11-03 紅框頂裁切): 真機 Safari 瀏覽器模式下 `safe-area-inset-top = 0`（webview 由狀態欄下方先開始），`.pd-shell` 用 `top:0` 貼死 viewport 頂，結果鑽石數值 pill（`.pd-topdiamond`，`top:-8px` 突出 bezel 上方 6px）被 viewport 頂邊裁切一半，紅框亦冇可見頂邊。手機模擬器長期注入 `--sim-safe-top: 62px`，所以呢類「safe-area=0」嘅破版喺模擬器永遠睇唔到。
+
+- 任何靠 safe-area 留白收容嘅突出元素（負 top/right offset 嘅 pill、badge），容器 padding 要用 `max(env(...), var(--sim-*), <下限>)` 設下限，唔可以淨靠 env()。
+- 驗證版面時**必須**加跑一次 safe-area=0 嘅配置（`node tools/preview-iphone.mjs --device iphone-se`），唔好只驗 17 Pro Max（62px 會 mask 晒所有頂部裁切問題）。
+- 外框頂邊要可見時，用 `--frame-inset-top` 統一調整 shell `top` + `height: calc(100dvh - ...)`，並同步更新 `--frame-screen-top`（gacha overlay 定位用），三處算式要共用同一份 max() 表達式。
 

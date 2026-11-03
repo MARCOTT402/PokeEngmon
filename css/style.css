@@ -3877,19 +3877,23 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-shell-parent .pd-hero { display: none; }
 
 .pd-shell {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  height: 100dvh;
+  /* 頂部讓出 --frame-inset-top，令紅框頂邊完整可見；螢幕列（1fr）自動吸收呢段空間 */
+  position: fixed; top: var(--frame-inset-top); left: 0; right: 0; bottom: 0;
+  height: calc(100dvh - var(--frame-inset-top));
   max-width: 440px; margin: 0 auto;
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
   display: grid;
   grid-template-rows: 48px 1fr 34px;
-  /* 真機用 env()；本地「手機模擬器」用 --sim-safe-* 注入同一數值 */
-  padding-top: max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px));
+  /* 真機用 env()；本地「手機模擬器」用 --sim-safe-* 注入同一數值；
+     下限 8px：safe-area=0（Safari 瀏覽器）時 bezel 內容唔會貼死框頂，
+     鑽石 pill（突出 bezel 上方 6px）亦完整顯示 */
+  padding-top: max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px);
   padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px));
   box-sizing: border-box;
   grid-auto-rows: 0;
   z-index: 10;
   border-left: 0; border-right: 0;
+  border-top-left-radius: 18px; border-top-right-radius: 18px;
 }
 
 /* ---- 2. 上框 48px ---- */
@@ -4145,7 +4149,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 抽獎 overlay 只覆蓋白色螢幕區，唔蓋住紅色機身 */
 :root {
-  --frame-screen-top: calc(48px + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px)));
+  /* 紅框頂部留白：螢幕列自動讓出呢段空間，紅框頂邊 + 圓角完整可見 */
+  --frame-inset-top: 10px;
+  --frame-screen-top: calc(var(--frame-inset-top) + 48px + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px));
   --frame-screen-bottom: calc(34px + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
 }
 #gacha-scene-b, #gacha-inspect {
