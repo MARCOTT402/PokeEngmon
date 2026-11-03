@@ -321,30 +321,49 @@ binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); })
 
 ### 6.4.1 子按鈕唔好用 binder！用 expandArrow()
 
-**錯誤做法：** 把 sheet 內嘅展開箭咀 / 子按鈕綁入 `binder()` 而唔傳 `sheetId`。結果 binder 見到 `curSheet` 存在 → `isToggle = curSheet.id === undefined → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + debounce flag 鎖死。子按鈕點擊後功能冇執行！
+**錯誤做法：** 把 sheet 內嘅展開箭咀 / 子按鈕綁入 `binder()` 而唔傳 `sheetId`。結果 binder 見到 `curSheet` 存在 → `isToggle = curSheet.id === undefined → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + debounce flag 鎖死。子按鈕點擊後功能冇執行！（Incident 9）
 
-**正確做法：** 新增 `expandArrow()` pattern — 直接 call `_closeSheet` → wait 430ms → openFn：
+**正確做法：** 新增 `expandArrow()` pattern — **模式切換**（唔 close sheet、唔跳 view），同一 sheet 內切換 compact ↔ full：
 
 ```js
-const expandArrow = (id, closeSheetId, openFn) => {
+const expandArrow = (id, sheetId, renderCompact, renderFull) => {
   const el = document.getElementById(id);
-  if (!el) return;
   el.onclick = () => {
-    App._closeSheet(closeSheetId);
-    setTimeout(() => openFn(), 430); /* 等捲回動畫 */
+    const sheet = document.getElementById(sheetId);
+    const isFull = sheet.classList.contains("ph-sheet-full");
+    if (isFull) {
+      sheet.classList.remove("ph-sheet-full");
+      renderCompact();
+      el.innerHTML = /* 向下箭咀 */;
+    } else {
+      sheet.classList.add("ph-sheet-full");
+      renderFull();
+      el.innerHTML = /* 向上箭咀 */;
+    }
   };
 };
-expandArrow("btn-calendar-expand", "sheet-calendar", () => Calendar.open());
+expandArrow("btn-calendar-expand", "sheet-calendar",
+  () => { /* 顯示 streak 大數字 */ },
+  () => { Calendar.render("#sheet-calendar-content"); }
+);
 ```
+
+**配套 CSS：**
+```css
+.ph-sheet-down.ph-sheet-full { max-height: none; height: 100%; }
+```
+
+**Calendar.render() 改裝：** 接受 `containerId` 參數，自動注入 `.cal-month-label / .cal-grid / .cal-legend / .cal-nav` 結構（如果 root 內冇），所以可以 render 到任意 container（view-calendar 或者 sheet 內）。
 
 **Pattern 使用場景：**
 
-| Pattern | 使用者 | Debounce `_sheetSwitching` | Toggle | Cross-button close→open |
-|---|---|---|---|---|
-| `binder()` | **Bezel stat buttons + Dockbar buttons** | ✅ | ✅ | ✅ |
-| `expandArrow()` | **Sheet 內子按鈕**（箭咀、Open Full、Settings sub-entry） | ❌ | ❌ | ❌（直接 close → wait → open） |
+| Pattern | 使用者 | Debounce | Toggle | Cross-button | 模式切換（compact↔full） |
+|---|---|---|---|---|---|
+| `binder()` | **Bezel stat + Dockbar** | ✅ | ✅ | ✅ | ❌ |
+| `expandArrow()` | **Sheet 內子按鈕**（箭咀、expand） | ❌ | ✅（同一 sheet 模式切換） | ❌ | ✅ |
+| 直接 `el.onclick` | Setting 內 sub-entry | ❌ | ❌ | 自訂 | ❌ |
 
-**鐵律：** 永遠唔好把「子按鈕」綁入 binder。binder 係頂層導航按鈕專用（有 debounce + toggle + cross-button 邏輯），子按鈕需要「點咗即刻執行，唔好 debounce」。
+**鐵律：** 永遠唔好把子按鈕綁入 binder。binder 係頂層導航專用（有 debounce + toggle + cross-button 邏輯），子按鈕需要「點咗即刻執行」。
 
 ### 6.6 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
 
