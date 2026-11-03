@@ -2063,57 +2063,39 @@ const App = {
     if (!sheet) return;
     if (id === "sheet-gacha" && typeof Gacha !== "undefined") Gacha.abort();
     sheet.classList.remove("ph-open");
+    /* remove 自己後即刻檢查：如果冇其他 sheet 仲開住 → 一併 remove backdrop */
     const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
     if (!anyOpen) {
       const bd = document.querySelector("#view-home .ph-backdrop");
       if (bd) bd.classList.remove("ph-open");
     }
-    /* 清理邏輯：
-     * 1. 雙重 rAF 等 openSheet 嘅 rAF 加 ph-open 完成（避免 race）
-     * 2. 檢查 sheet.ph-open 同 bd.ph-open（兩個都要關）
-     * 3. retry 最多 3 次（200ms 間隔）→ 之後強制 remove 所有 ph-open + hidden */
-    const tryCleanup = (attempts = 0) => {
+    setTimeout(() => {
+      /* 雙重 rAF 確保 _openSheet 嘅 rAF ph-open 已跑完 */
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+        if (stillOpen) return; /* 合法 sheet 開住（user 真係想睇）→ skip，唔好 force close */
+        /* 真係冇任何 sheet 開住 → 清理所有已關閉 sheet + backdrop */
         const bd = document.querySelector("#view-home .ph-backdrop");
-        const bdOpen = bd && bd.classList.contains("ph-open");
-        if ((stillOpen || bdOpen) && attempts < 3) {
-          setTimeout(() => tryCleanup(attempts + 1), 200);
-          return;
-        }
-        /* 強制關閉所有 ph-open（包括快速切換遺留） */
-        if (stillOpen) stillOpen.classList.remove("ph-open");
-        if (bdOpen) bd.classList.remove("ph-open");
-        sheet.hidden = true;
         if (bd) bd.hidden = true;
         document.querySelectorAll("#view-home .ph-sheet").forEach(s => {
           if (!s.classList.contains("ph-open")) s.hidden = true;
         });
       }));
-    };
-    setTimeout(tryCleanup, 430);
+    }, 430);
   },
   _closeAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet");
     sheets.forEach(s => s.classList.remove("ph-open"));
     const bd = document.querySelector("#view-home .ph-backdrop");
     if (bd) bd.classList.remove("ph-open");
-    const tryCleanup = (attempts = 0) => {
+    setTimeout(() => {
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
-        const bd2 = document.querySelector("#view-home .ph-backdrop");
-        const bdOpen = bd2 && bd2.classList.contains("ph-open");
-        if ((stillOpen || bdOpen) && attempts < 3) {
-          setTimeout(() => tryCleanup(attempts + 1), 200);
-          return;
-        }
-        if (stillOpen) stillOpen.classList.remove("ph-open");
-        if (bdOpen) bd2.classList.remove("ph-open");
+        if (stillOpen) return; /* binder 410ms 後開咗新 sheet → skip */
         sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
-        if (bd2) bd2.hidden = true;
+        if (bd) bd.hidden = true;
       }));
-    };
-    setTimeout(tryCleanup, 430);
+    }, 430);
   },
   /* 移除：舊時逐個 close 完再 closeAll → 會雙 timer race。
    * 所有 close 路徑（_closeSheet / _closeAllSheets）都有自己嘅 stillOpen guard timer */

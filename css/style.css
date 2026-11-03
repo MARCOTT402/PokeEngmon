@@ -4154,7 +4154,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: #fffbe7;
 }
 .ph-sheet-t { font-size: 16px; font-weight: 900; flex: 1; }
-.ph-sheet-down .ph-sheet-head { justify-content: space-between; }
+.ph-sheet-down .ph-sheet-head { position: relative; justify-content: center; }
+.ph-sheet-down .ph-sheet-t { flex: 0 0 auto; }
+.ph-sheet-down .ph-sheet-x { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
 .ph-sheet-x {
   width: 34px; height: 34px; border-radius: 9px;
   border: 2px solid #1b1b22; background: #f3efe2;

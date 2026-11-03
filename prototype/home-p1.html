@@ -185,7 +185,8 @@ svg{ display:block; }
 
 .sheet-head{ flex:none; display:flex; align-items:center; gap:10px; padding:12px 14px 8px; }
 .sheet-grip{ width:36px; height:4px; border-radius:2px; background:#d2cdc0; margin-right:auto; display:block; }
-.sheet-down .sheet-head{ justify-content:center; padding:10px 14px 6px; }
+.sheet-down .sheet-head{ position:relative; justify-content:center; padding:10px 14px 6px; }
+.sheet-down .sheet-x{ position:absolute; right:14px; top:50%; transform:translateY(-50%); }
 .sheet-t{ font-size:15px; font-weight:900; flex:1; }
 .sheet-down .sheet-t{ flex:0 0 auto; }
 .sheet-x{ width:34px; height:34px; border-radius:9px; background:#efece3; font-size:18px; font-weight:900;
@@ -577,7 +578,7 @@ svg{ display:block; }
 
 <!-- top sheets (向下捲) -->
 <div class="sheet-down" id="sheet-diamond" hidden aria-hidden="true" aria-label="Diamonds">
-  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Rare Pull</span></div>
+  <div class="sheet-head"><span class="sheet-t">Rare Pull</span><button type="button" class="sheet-x" data-close>×</button></div>
   <div class="sheet-body">
     <div class="gacha-card">
       <span class="gacha-h">Pull a rare partner</span>
@@ -592,7 +593,7 @@ svg{ display:block; }
 </div>
 
 <div class="sheet-down sm" id="sheet-energy" hidden aria-hidden="true" aria-label="Energy">
-  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Energy</span></div>
+  <div class="sheet-head"><span class="sheet-t">Energy</span><button type="button" class="sheet-x" data-close>×</button></div>
   <div class="sheet-body compact">
     <div class="energy-bar">
       <span style="width:60%;background:#f7d02c"></span>
@@ -602,7 +603,7 @@ svg{ display:block; }
 </div>
 
 <div class="sheet-down sm" id="sheet-calendar" hidden aria-hidden="true" aria-label="Streak">
-  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Streak · 12 days</span></div>
+  <div class="sheet-head"><span class="sheet-t">Streak · 12 days</span><button type="button" class="sheet-x" data-close>×</button></div>
   <div class="sheet-body compact">
     <div class="mini-cal">
       <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
@@ -615,7 +616,7 @@ svg{ display:block; }
 </div>
 
 <div class="sheet-down sm" id="sheet-dex" hidden aria-hidden="true" aria-label="Pokédex">
-  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Pokédex · 45 / 151</span></div>
+  <div class="sheet-head"><span class="sheet-t">Pokédex · 45 / 151</span><button type="button" class="sheet-x" data-close>×</button></div>
   <div class="sheet-body compact">
     <div class="dex-cells">
       <div class="dex-cell got"></div><div class="dex-cell got"></div><div class="dex-cell got"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell got"></div><div class="dex-cell got"></div><div class="dex-cell"></div><div class="dex-cell"></div>
