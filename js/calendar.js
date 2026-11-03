@@ -12,10 +12,11 @@ const Calendar = {
     this.render("view-calendar");
   },
 
-  /* render 到指定 container（預設 view-calendar；Streak sheet 傳 "#sheet-calendar-content"） */
-  render(containerId) {
+  /* render 到指定 container。options.disableClick=true 時唔彈 showDay modal（Streak sheet 預覽用）*/
+  render(containerId, options = {}) {
     const root = containerId ? document.querySelector(containerId) : document.getElementById("view-calendar");
     if (!root) return;
+    const disableClick = !!options.disableClick;
 
     const MONTHS = ["January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"];
@@ -64,7 +65,7 @@ const Calendar = {
       const setsN = Math.max(recs.length, (st.practiceDays && st.practiceDays[key]) || 0);
       cell.innerHTML = `<span class="cal-day">${d}</span>` +
         (level > 0 ? `<span class="cal-count">${setsN}</span>` : "");
-      if (level > 0) cell.onclick = () => this.showDay(key);
+      if (level > 0 && !disableClick) cell.onclick = () => this.showDay(key);
       grid.appendChild(cell);
     }
 

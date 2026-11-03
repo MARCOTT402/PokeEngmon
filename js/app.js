@@ -2354,7 +2354,7 @@ const App = {
             <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
           </div>
           <div class="cal-wrap"></div>`;
-        if (typeof Calendar !== "undefined") Calendar.render("#sheet-calendar-content .cal-wrap");
+        if (typeof Calendar !== "undefined") Calendar.render("#sheet-calendar-content .cal-wrap", { disableClick: true });
       }
     );
 
