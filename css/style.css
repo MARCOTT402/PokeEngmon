@@ -4116,7 +4116,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: #fff; border: 2.5px solid #1b1b22;
   max-height: 100%; overflow: hidden;
   display: flex; flex-direction: column;
-  transition: transform .28s cubic-bezier(.25,1,.5,1);
+  transition: transform .4s cubic-bezier(.25,1,.5,1);
 }
 .ph-sheet-up { bottom: 0; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom: 0; transform: translateY(100%); z-index: 2; }
 .ph-sheet-up.ph-open { transform: translateY(0); }

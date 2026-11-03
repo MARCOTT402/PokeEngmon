@@ -2057,18 +2057,18 @@ const App = {
     /* 關抽獎 sheet = 中斷流程（abort 會照樣結算，唔會食鑽唔派寵） */
     if (id === "sheet-gacha" && typeof Gacha !== "undefined") Gacha.abort();
     sheet.classList.remove("ph-open");
-    setTimeout(() => { sheet.hidden = true; this._checkCloseAllSheets(); }, 280);
+    setTimeout(() => { sheet.hidden = true; this._checkCloseAllSheets(); }, 410);
   },
   _closeAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet");
     sheets.forEach(s => { s.classList.remove("ph-open"); });
     const backdrop = document.querySelector("#view-home .ph-backdrop");
     if (backdrop) { backdrop.classList.remove("ph-open"); }
-    /* 等動畫完（280ms）再真隱藏 */
+    /* 等動畫完（400ms）再真隱藏 */
     setTimeout(() => {
       sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
       if (backdrop && !backdrop.classList.contains("ph-open")) backdrop.hidden = true;
-    }, 290);
+    }, 410);
   },
   _checkCloseAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet:not([hidden])");
@@ -2173,30 +2173,42 @@ const App = {
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
 
     /* 上框 4 格：全部捲入 top-down sheets
-     * 重要 pattern：如果已經有 sheet 開住，先捲回（等動畫 280ms），再開新 sheet
-     * 用 debounce 避免捲動未完成又被打開 */
+     * 行為：同一按鈕再點一次 → 關閉（toggle）；唔同按鈕 → 先捲回再開新
+     * toggleOpenMap: buttonId → sheetId */
     let _sheetSwitching = false;
-    const binder = (id, openFn) => {
+    const _toggleOpenMap = {}; /* btnId → sheetId 嘅映射 */
+
+    const binder = (id, sheetId, openFn) => {
+      _toggleOpenMap[id] = sheetId;
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
         if (_sheetSwitching) return; /* 捲動中，忽略重複點擊 */
-        const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
-        if (anyOpen) {
+        const curSheet = document.querySelector("#view-home .ph-sheet.ph-open");
+        const isToggle = curSheet && curSheet.id === sheetId;
+        if (isToggle) {
+          /* 同一個 sheet 開住 → toggle 關閉 */
+          this._closeSheet(sheetId);
+          return;
+        }
+        if (curSheet) {
+          /* 另一個 sheet 開住 → 先捲回（等動畫 400ms），再開新 */
           _sheetSwitching = true;
-          App._closeAllSheets();
-          setTimeout(() => { _sheetSwitching = false; openFn(); }, 290);
+          this._closeAllSheets();
+          setTimeout(() => { _sheetSwitching = false; openFn(); }, 410);
         } else {
+          /* 冇 sheet 開住 → 直接開 */
           openFn();
         }
       };
     };
-    binder("btn-bezel-diamond", () => {
+
+    binder("btn-bezel-diamond", "sheet-gacha", () => {
       if (!document.getElementById("view-home").classList.contains("active")) this.showView("view-home");
       this._openSheet("sheet-gacha");
       if (typeof Gacha !== "undefined") Gacha.open("rare");
     });
-    binder("btn-bezel-streak", () => {
+    binder("btn-bezel-streak", "sheet-calendar", () => {
       this._openSheet("sheet-calendar");
       const container = document.getElementById("sheet-calendar-content");
       if (container) {
@@ -2210,7 +2222,7 @@ const App = {
           </div>`;
       }
     });
-    binder("btn-bezel-dex", () => {
+    binder("btn-bezel-dex", "sheet-pokedex", () => {
       this._openSheet("sheet-pokedex");
       const container = document.getElementById("sheet-pokedex-content");
       if (container) {
@@ -2230,7 +2242,7 @@ const App = {
           </div>`;
       }
     });
-    binder("btn-bezel-energy", () => {
+    binder("btn-bezel-energy", "sheet-quests", () => {
       this._openSheet("sheet-quests");
       const container = document.getElementById("sheet-quests-content");
       if (container) {
@@ -2253,26 +2265,31 @@ const App = {
     binder("btn-quests-full", () => { this._closeSheet("sheet-quests"); if (typeof Quests !== "undefined") Quests.open(); });
 
     /* 舊 energy sheet 按鈕（保留但唔綁定） */
-    /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」 */
-    const dockBinder = (id, fn) => {
+    /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」+ toggle */
+    const dockBinder = (id, sheetId, fn) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
         if (_sheetSwitching) return;
-        const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
-        if (anyOpen) {
+        const curSheet = document.querySelector("#view-home .ph-sheet.ph-open");
+        const isToggle = curSheet && curSheet.id === sheetId;
+        if (isToggle) {
+          this._closeSheet(sheetId);
+          return;
+        }
+        if (curSheet) {
           _sheetSwitching = true;
-          App._closeAllSheets();
-          setTimeout(() => { _sheetSwitching = false; fn(); }, 290);
+          this._closeAllSheets();
+          setTimeout(() => { _sheetSwitching = false; fn(); }, 410);
         } else {
           fn();
         }
       };
     };
-    dockBinder("btn-bd-quiz", () => this.openSetup());
-    dockBinder("btn-bd-quests", () => { if (typeof Quests !== "undefined") Quests.open(); });
-    dockBinder("btn-bd-battle", () => this._openSheet("sheet-battle"));
-    dockBinder("btn-bd-setting", () => this._openSheet("sheet-setting"));
+    dockBinder("btn-bd-quiz", null, () => this.openSetup());
+    dockBinder("btn-bd-quests", null, () => { if (typeof Quests !== "undefined") Quests.open(); });
+    dockBinder("btn-bd-battle", "sheet-battle", () => this._openSheet("sheet-battle"));
+    dockBinder("btn-bd-setting", "sheet-setting", () => this._openSheet("sheet-setting"));
 
     /* Battle sheet 內容按鈕 */
     document.getElementById("btn-home-battle").onclick = () => {
