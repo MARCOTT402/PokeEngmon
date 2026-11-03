@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.27.0...v1.28.0) (2026-11-03)
+
+
+### Features
+
+* **home:** add P1 prototype — Pokedex shell and Console+ IA ([2f2fbf7](https://github.com/MARCOTT402/PokeEngmon/commit/2f2fbf7f857fb9ee4f21742334697008c72c338d))
+
 # [1.27.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.26.0...v1.27.0) (2026-11-02)
 
 
