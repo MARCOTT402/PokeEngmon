@@ -177,7 +177,7 @@ Pointer / Keyboard / Gamepad  →  Input 層  →  語意動作  →  App / Game
 .ph-sheet { transition: transform .4s cubic-bezier(.25, 1, .5, 1); }
 ```
 
-所有 sheet 開 / 關都用同一條 transition。JS 入面 `_closeSheet` / `_closeAllSheets` 嘅 `setTimeout` 要**比 transition 長 10ms**（即 410ms），等 transform 動畫跑完先真隱藏（`hidden = true`）。
+所有 sheet 開 / 關都用同一條 transition。JS 入面所有 close timer 一律 **430ms**（transition 400ms + 30ms buffer），binder 嘅 cross-button open 延遲一律 **410ms**（transition 400ms + 10ms buffer），close timer 遲過 open timer 20ms 確保 race condition 安全。
 
 **唔好做：** 唔好對唔同 sheet 改唔同 transition time，會令切換兩個 sheet 時其中一個「快過另一個」→ 視覺上好似冇動畫。
 
@@ -223,24 +223,43 @@ binder("btn-bd-battle",    "sheet-battle", () => { App._openSheet("sheet-battle"
 binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); });
 ```
 
-### 6.5 `_closeAllSheets` 唔好「立即消失」
+### 6.5 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
 
-**錯誤做法：** `forEach(s => { s.classList.remove("ph-open"); s.hidden = true; })` → 跳過 transform 動畫，sheet 「閃一下就冇咗」。
+**錯誤做法 A：** remove class 同時設 hidden → 跳過 transform，「閃一下就冇咗」。
 
-**正確做法：** 只 remove `ph-open` class（動畫自然播放），setTimeout 410ms 後先真設 `hidden = true`：
+**錯誤做法 B：** `_closeSheet` 410ms、`_closeAllSheets` 410ms，但 binder 都係 410ms → timer race，新 sheet 被舊 timer 設 hidden。
+
+**正確做法：** 兩條路徑共享同一規則：
 
 ```js
+_closeSheet(id) {
+  const sheet = document.getElementById(id);
+  sheet.classList.remove("ph-open");
+  setTimeout(() => {
+    if (document.querySelector(".ph-sheet.ph-open")) return; /* stillOpen guard */
+    sheet.hidden = true;
+    const bd = document.querySelector(".ph-backdrop");
+    if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+  }, 430); /* 比 transition + binder open 嘅 410ms 遲 20ms */
+},
 _closeAllSheets() {
-  const sheets = document.querySelectorAll(".ph-sheet");
-  sheets.forEach(s => s.classList.remove("ph-open"));
+  document.querySelectorAll(".ph-sheet").forEach(s => s.classList.remove("ph-open"));
   const bd = document.querySelector(".ph-backdrop");
   if (bd) bd.classList.remove("ph-open");
   setTimeout(() => {
-    sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
+    if (document.querySelector(".ph-sheet.ph-open")) return; /* stillOpen guard */
+    document.querySelectorAll(".ph-sheet").forEach(s => {
+      if (!s.classList.contains("ph-open")) s.hidden = true;
+    });
     if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
-  }, 410);
+  }, 430);
 }
 ```
+
+**鐵律：**
+- `setTimeout` 一律 **430ms**（transition 400ms + buffer 10ms + binder open defer 20ms）
+- 一律有 **stillOpen guard**（隱藏前檢查有冇新 `ph-open`）
+- 移除 `_checkCloseAllSheets`（舊時 closeSheet 完再 call closeAllSheets → 雙 timer race）
 
 ### 6.6 Sheet 入面嘅子按鈕要關自己
 
