@@ -319,16 +319,20 @@ binder("btn-bd-battle",    "sheet-battle", () => { App._openSheet("sheet-battle"
 binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); });
 ```
 
-### 6.4.1 子按鈕唔好用 binder！用 expandArrow()
+### 6.4.1 子按鈕唔好用 binder！用 expandArrow() — Accordion 模式
 
-**錯誤做法：** 把 sheet 內嘅展開箭咀 / 子按鈕綁入 `binder()` 而唔傳 `sheetId`。結果 binder 見到 `curSheet` 存在 → `isToggle = curSheet.id === undefined → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + debounce flag 鎖死。子按鈕點擊後功能冇執行！（Incident 9）
+**錯誤做法 A（binder 謬用）：** 把子按鈕綁入 `binder()` 而唔傳 `sheetId` → binder 見到 curSheet 存在 → `isToggle = undefined === curSheet.id → false` → 以為係 cross-button → debounce 鎖死（Incident 9）。
 
-**正確做法：** 新增 `expandArrow()` pattern — **模式切換**（唔 close sheet、唔跳 view），同一 sheet 內切換 compact ↔ full：
+**錯誤做法 B（mode-switch 謬用）：** 展開時 `innerHTML` 覆蓋 container → 把 compact streak 數字都洗掉，只剩下 calendar。用戶要嘅係 **accordion（保留頂部 + 展開下面）**。
+
+**正確做法：**
 
 ```js
 const expandArrow = (id, sheetId, renderCompact, renderFull) => {
   const el = document.getElementById(id);
-  el.onclick = () => {
+  el.onclick = (e) => {
+    e.stopPropagation();  // 鐵律！防止 bubble 到 document click handler
+    e.preventDefault();
     const sheet = document.getElementById(sheetId);
     const isFull = sheet.classList.contains("ph-sheet-full");
     if (isFull) {
@@ -337,33 +341,39 @@ const expandArrow = (id, sheetId, renderCompact, renderFull) => {
       el.innerHTML = /* 向下箭咀 */;
     } else {
       sheet.classList.add("ph-sheet-full");
-      renderFull();
+      renderFull();  // ← accordion：保留 compact 內容 + append 更多
       el.innerHTML = /* 向上箭咀 */;
     }
   };
 };
 expandArrow("btn-calendar-expand", "sheet-calendar",
-  () => { /* 顯示 streak 大數字 */ },
-  () => { Calendar.render("#sheet-calendar-content"); }
+  () => { container.innerHTML = `🔥 ${streak}\nDay streak`; },  // compact
+  () => { container.innerHTML = `🔥 ${streak}\nDay streak<div class="cal-wrap"></div>`;
+          Calendar.render("#sheet-calendar-content .cal-wrap"); }  // accordion：保留頂部 + 加 calendar
 );
 ```
 
-**配套 CSS：**
+**配套 CSS（必須！）：**
 ```css
-.ph-sheet-down.ph-sheet-full { max-height: none; height: 100%; }
+.ph-sheet { max-height: 100%; overflow: hidden; }  /* 預設鎖高度 */
+.ph-sheet-down.ph-sheet-full { max-height: none; height: 100%; overflow: visible; }  /* 展開解鎖！*/
+.ph-sheet-down.ph-sheet-full .ph-sheet-body { overflow-y: auto; }  /* body 自己滾動 */
 ```
-
-**Calendar.render() 改裝：** 接受 `containerId` 參數，自動注入 `.cal-month-label / .cal-grid / .cal-legend / .cal-nav` 結構（如果 root 內冇），所以可以 render 到任意 container（view-calendar 或者 sheet 內）。
+**關鍵：** `.ph-sheet-full` 必須設 `overflow: visible`（或者至少唔係 hidden），否則 append 嘅內容會被裁切！之前只設 `max-height: none` 但冇改 overflow → calendar render 咗但被 `overflow: hidden` 隱藏！
 
 **Pattern 使用場景：**
 
-| Pattern | 使用者 | Debounce | Toggle | Cross-button | 模式切換（compact↔full） |
+| Pattern | 使用者 | Debounce | Toggle | Cross-button | Accordion |
 |---|---|---|---|---|---|
 | `binder()` | **Bezel stat + Dockbar** | ✅ | ✅ | ✅ | ❌ |
-| `expandArrow()` | **Sheet 內子按鈕**（箭咀、expand） | ❌ | ✅（同一 sheet 模式切換） | ❌ | ✅ |
-| 直接 `el.onclick` | Setting 內 sub-entry | ❌ | ❌ | 自訂 | ❌ |
+| `expandArrow()` | **Sheet 內子按鈕** | ❌ | ✅（模式切換） | ❌ | ✅（保留頂部 + append） |
 
-**鐵律：** 永遠唔好把子按鈕綁入 binder。binder 係頂層導航專用（有 debounce + toggle + cross-button 邏輯），子按鈕需要「點咗即刻執行」。
+**鐵律：**
+1. 永遠唔好把子按鈕綁入 binder（binder 係頂層導航專用）
+2. expandArrow onclick 必須 `stopPropagation()` + `preventDefault()`
+3. `renderFull` 必須保留 compact 頂部內容（accordion 原則）
+4. `_openSheet()` 必須永遠重置 `.ph-sheet-full` class + arrow 方向 + content（確保每次開都由 compact 開始）
+5. `.ph-sheet-full` 必須解鎖 `overflow`（唔係只改 max-height）
 
 ### 6.6 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
 
