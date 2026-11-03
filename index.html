@@ -98,6 +98,16 @@
     <section id="view-home" class="view ph-shell-parent">
       <!-- Pokedex shell（safe-area 五列 Grid） -->
       <div class="pd-shell" id="pd-shell">
+        <!-- 機頂裝飾列：經典 Pokédex 鏡頭 + 階梯凹槽線 + 品牌字 + 精靈球（純裝飾） -->
+        <div class="pd-deco" aria-hidden="true">
+          <svg class="pd-deco-seam" viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 24 H11 L15 34 H100" fill="none" stroke="#8a1712" stroke-width="2.5"
+                  stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <span class="pd-deco-lens"></span>
+          <span class="pd-deco-brand">POKÉDEX OF ANOMALIES</span>
+          <span class="pd-ball pd-deco-ball"></span>
+        </div>
         <!-- 上框 48px：4 個數據入口（左：鑽石 / 連續天數；右：圖鑑 / 能量） -->
         <div class="pd-bezel">
           <div class="pd-stats pd-stats-l">
