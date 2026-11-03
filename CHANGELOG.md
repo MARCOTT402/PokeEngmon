@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.31.2...v1.32.0) (2026-11-03)
+
+
+### Features
+
+* **home:** swipe calendar months and drag the sheet handle ([a225ed9](https://github.com/MARCOTT402/PokeEngmon/commit/a225ed92ce3dbf7b9728d9fdbb3db40c69c7b532))
+
 ## [1.31.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.31.1...v1.31.2) (2026-11-03)
 
 
