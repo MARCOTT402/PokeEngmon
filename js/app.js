@@ -198,9 +198,7 @@ const App = {
           } else if (petSt.faint) {
             hpNote.textContent = "Fainted — open Partner Care to use a Revival";
           } else if (petSt.health >= 100) {
-            hpNote.textContent = `Health ${petSt.health}/100 ・ Decay −50 at 15:00 HKT${petSt.streak ? ` ・ 🔥 ${petSt.streak}` : ""}`;
-          } else if (!petSt.windowOpen) {
-            hpNote.textContent = `Health ${petSt.health}/100 ・ Feeding 15:00–20:59 (HKT)`;
+            hpNote.textContent = `Health ${petSt.health}/100 ・ Decay −100 per 25h${petSt.streak ? ` ・ 🔥 ${petSt.streak}` : ""}`;
           } else {
             hpNote.textContent = `Health ${petSt.health}/100 ・ Hungry — tap to feed`;
           }
@@ -352,7 +350,7 @@ const App = {
             <div class="pc-hpbar" id="pc-hpbar"><i id="pc-hpfill"></i></div>
             <div class="pc-hptext" id="pc-hptext">Health 100 / 100</div>
           </div>
-          <div class="pc-decay">Daily decay −50 · 15:00 HKT</div>
+          <div class="pc-decay">Continuous decay −100 per 25h</div>
           <div class="pc-floatwrap" id="pc-float"></div>
         </div>
         <div class="pc-state" id="pc-state"></div>
@@ -444,7 +442,7 @@ const App = {
 
     this._syncPetCare();
 
-    /* 開啟時即時結算：跨過 15:00 就即刻反映，並顯示扣血浮字 */
+    /* 開啟時即時結算：補扣錨點起計嘅連續消耗，並顯示扣血浮字 */
     const before = Pet.healthOf(getActiveEntry());
     Pet.runDailyCheck();
     this._syncPetCare();
@@ -558,15 +556,10 @@ const App = {
         state.textContent = `${cur[1]} has fainted — answers still count but earn 0 EXP. Use a Revival to wake it.`;
       } else if (p.health >= 100) {
         state.classList.add("full");
-        state.textContent = "Health is full — daily decay (−50) happens at 15:00 HKT.";
-      } else if (!Pet.inWindow()) {
-        state.classList.add("closed");
-        state.textContent = Pet.minuteOfDay() < Pet.LIMITS.FEED_START
-          ? "Zzz… feeding opens at 15:00 HKT (decay −50 at the same time)"
-          : "Feeding closed for today — resumes 15:00 HKT tomorrow";
+        state.textContent = "Health is full — health slowly decays over time (−100 per 25h).";
       } else {
         state.classList.add("hungry");
-        state.textContent = `${cur[1]} is hungry — keep feeding until health is full. Daily decay −50 at 15:00 HKT.`;
+        state.textContent = `${cur[1]} is hungry — feed anytime to restore health. Decay −100 per 25h.`;
       }
     }
 
@@ -1515,12 +1508,14 @@ const App = {
 
     const st = loadState();
     const rareBtn = document.getElementById("btn-pull-rare");
-    /* 永遠顯示：唔夠鑽石就 disabled + 顯示差額（目標可見，唔會版面跳動） */
+    /* 永遠顯示：唔夠鑽石就 disabled + 顯示差額（目標可見，唔會版面跳動）
+       圖案用 status bar 同款寶石（#gem-blue gradient 喺 topbar SVG defs，成個 document 引用到） */
+    const gemSvg = `<svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/><circle cx="12" cy="12" r="10" fill="url(#gem-blue)"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/><ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/><ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/></svg>`;
     const enough = st.diamonds >= GAME_CONFIG.RARE_PULL_COST;
     rareBtn.disabled = !enough;
     rareBtn.innerHTML = enough
-      ? `💎 Rare Pull — ${GAME_CONFIG.RARE_PULL_COST}💎 <small class="settle-btn-gap">you have ${st.diamonds}</small>`
-      : `💎 Rare Pull <small class="settle-btn-gap">need ${GAME_CONFIG.RARE_PULL_COST - st.diamonds} more</small>`;
+      ? `${gemSvg} Lucky Draw ×${GAME_CONFIG.RARE_PULL_COST}`
+      : `${gemSvg} Lucky Draw <small class="settle-btn-gap">need ${GAME_CONFIG.RARE_PULL_COST - st.diamonds} more</small>`;
   },
 
   /* ---------- 錯題回顧 ---------- */
@@ -2666,7 +2661,14 @@ const App = {
     /* btn-top-pull hidden since v48 — skip binding */
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();
-    document.getElementById("btn-settle-home").onclick = () => {
+    if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
+    else {
+      document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    }
+    document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    /* 下巴精靈球 = Home 鍵：任何畫面一撳返主頁；順手收埋對戰 BGM、恢復城鎮音樂
+       Gym 模式：結算頁離開（包括呢粒掣）時判 badge（Hint／錯題已計入 results） */
+    document.getElementById("btn-pd-home").onclick = () => {
       if (this._gymSettleData && typeof Gym !== "undefined") {
         const d = this._gymSettleData;
         this._gymSettleData = null;
@@ -2674,16 +2676,6 @@ const App = {
         Gym.conclude(d);
         return;
       }
-      this.renderHome();
-      this.showView("view-home");
-    };
-    if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
-    else {
-      document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
-    }
-    document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
-    /* 下巴精靈球 = Home 鍵：任何畫面一撳返主頁；順手收埋對戰 BGM、恢復城鎮音樂 */
-    document.getElementById("btn-pd-home").onclick = () => {
       try {
         const audio = window.CaptureScene && CaptureScene.audio;
         if (audio) { audio.stopBGM(300); audio.startTownBGM(); }
@@ -2860,7 +2852,7 @@ const App = {
         this.renderHome();
       }).catch(() => {});
     }
-    /* 15:00 HKT 即時更新：單一 timer（零輪詢）＋切返頁面補位 */
+    /* 連續消耗即時更新：單一 timer（零輪詢）＋切返頁面補位 */
     if (window.Pet && !this._petTimerBound) {
       this._petTimerBound = true;
       const tickPet = () => {

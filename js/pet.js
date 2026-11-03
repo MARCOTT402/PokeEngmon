@@ -2,24 +2,24 @@
    Pet — 電子寵物養成（只服務「當前拍檔」）
    ------------------------------------------------------------
    規則摘要：
-   - 每隻 entry 帶 pet 狀態 { health 0-100, streak, lastFedDay, settledDay, decayDay }
+   - 每隻 entry 帶 pet 狀態 { health 0-100, streak, lastFedDay, settledDay, updatedAt }
    - 只有當前拍檔會隨時間結算；其他 entry 嘅 health 完全凍結
    - 結算時區固定 UTC+8（HKT），唔受裝置時區影響
-   - 進食時段 15:00–20:59（HKT）；血滿 100 唔可以再餵；血未滿可無限次餵
-   - 每日 15:00（HKT）自然消耗 −50（每日一次，離線多日逐日補扣）
-   - 該日冇餵過 → streak 歸 0（唔再額外扣血）
+   - 任何時間都可以餵；血滿 100 唔可以再餵；血未滿可無限次餵
+   - 自然消耗連續線性：每 25 小時 −100（每 15 分鐘 −1，整數扣、餘數累積，
+     以 updatedAt 做錨點，離線再開會一次過補扣）
+   - 該日冇餵過 → 日子完結後 streak 歸 0（唔再額外扣血）
    - health 0 → Faint：唔再扣血（只更新結算標記）
    - 道具：food +25、premium +50、revive（Faint 專用，回滿血）
    - 掉落：10/10 → 復活藥 1 + 高級食物 1，另有 10% 額外復活藥
             1–9   → 普通食物 1，另有 10% 復活藥
    ============================================================ */
 const Pet = (() => {
-  const FEED_START = 15 * 60;     // 15:00 HKT 開放餵食（同時係每日自然消耗時刻）
-  const FEED_END = 21 * 60;       // 21:00 HKT 關閉
-  const DECAY_START = 15 * 60;    // 15:00 HKT 每日自然消耗
-  const DECAY_AMOUNT = 50;        // 自然消耗 = 最大血量 50%
+  const DECAY_HP = 100;           // 連續自然消耗：每 25 小時 −100
+  const DECAY_HOURS = 25;
+  const MS_PER_HP = (DECAY_HOURS * 3600 * 1000) / DECAY_HP;  // 每 1 HP 所需毫秒（15 分鐘）
   const DEFAULT_HEALTH = 100;
-  const MAX_SETTLE_DAYS = 60;     // 防止離線超久時無限 loop
+  const MAX_SETTLE_DAYS = 60;     // 防止離線超久時無限補扣
   const ITEM_KINDS = ["food", "premium", "revive", ...STONE_KINDS];
 
   /* 結算時區：固定 UTC+8。HKT 無夏令時間，所以恆定 +8h。 */
@@ -99,10 +99,37 @@ const Pet = (() => {
     return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
   }
 
-  function touch(p) { p.updatedAt = new Date().toISOString(); }
+  /* updatedAt 同時係連續消耗嘅時間錨點，統一用校正後時鐘 */
+  function touch(p) { p.updatedAt = new Date(nowTs()).toISOString(); }
 
-  /* 補齊/遷移 pet 狀態（舊存檔默認滿血，唔會追溯扣血）
-     首次建立嘅日子當日「唔追討」：新捉返嚟唔應該即刻 −50 */
+  function _anchorMs(p) {
+    const t = p.updatedAt ? Date.parse(p.updatedAt) : 0;
+    return (t && isFinite(t)) ? t : nowTs();
+  }
+
+  /* 由錨點起計連續消耗：整數 HP 扣減，唔夠 1 HP 嘅零頭留返下次。
+     Faint（health ≤ 0）唔再扣，只推錨點。回傳有冇實際變更。 */
+  function _applyDecay(p, nowMs) {
+    const anchor = _anchorMs(p);
+    let elapsed = nowMs - anchor;
+    if (elapsed <= 0) return false;
+    const cap = MAX_SETTLE_DAYS * 24 * 3600 * 1000;
+    if (elapsed > cap) elapsed = cap;
+    if (p.health <= 0) {
+      p.updatedAt = new Date(nowMs).toISOString();
+      return true;
+    }
+    const loss = Math.floor(elapsed / MS_PER_HP);
+    if (loss <= 0) return false;
+    p.health = Math.max(0, p.health - loss);
+    p.decayDay = dayKey(nowMs);              // 向後兼容（雲端舊欄位照寫）
+    p.updatedAt = p.health <= 0
+      ? new Date(nowMs).toISOString()        // 歸零即停扣，錨點推到而家
+      : new Date(anchor + loss * MS_PER_HP).toISOString();
+    return true;
+  }
+
+  /* 補齊/遷移 pet 狀態（舊存檔默認滿血，唔會追溯扣血） */
   function ensure(entry) {
     if (!entry) return null;
     if (!entry.pet || typeof entry.pet !== "object") entry.pet = {};
@@ -111,25 +138,17 @@ const Pet = (() => {
     if (typeof p.streak !== "number") p.streak = 0;
     if (typeof p.lastFedDay !== "string") p.lastFedDay = "";
     if (typeof p.settledDay !== "string" || !p.settledDay) p.settledDay = dayKey();
-    if (typeof p.decayDay !== "string" || !p.decayDay) {
-      /* 今日已過 15:00 → 當今日已結算；未過 → 當昨日已結算，等下一個 15:00 再扣 */
-      p.decayDay = minuteOfDay() >= DECAY_START ? dayKey() : shiftDay(dayKey(), -1);
-    }
+    if (typeof p.decayDay !== "string" || !p.decayDay) p.decayDay = dayKey();
+    /* 消耗錨點：舊存檔冇 updatedAt 就由而家起計，唔追溯補扣 */
+    if (typeof p.updatedAt !== "string" || !p.updatedAt) touch(p);
     return p;
   }
 
-  /* 換入成為拍檔：由今日起計，唔追討放喺盒子期間嘅自然消耗 */
+  /* 換入成為拍檔：錨點由而家起計，唔追討放喺盒子期間嘅自然消耗 */
   function adoptActive(entry) {
     const p = ensure(entry);
     if (!p) return null;
-    const today = dayKey();
-    const yesterday = shiftDay(today, -1);
-    p.settledDay = today;
-    if (minuteOfDay() >= DECAY_START) {
-      if (p.decayDay < today) p.decayDay = today;   // 今日扣血點已過 → 唔追討
-    } else if (p.decayDay < yesterday) {
-      p.decayDay = yesterday;                        // 今日未到 15:00 → 只補到昨日
-    }
+    p.settledDay = dayKey();
     touch(p);
     saveState();
     return p;
@@ -142,11 +161,6 @@ const Pet = (() => {
 
   function isFaint(entry) {
     return healthOf(entry) <= 0;
-  }
-
-  function inWindow(now) {
-    const mins = minuteOfDay(now);
-    return mins >= FEED_START && mins < FEED_END;
   }
 
   /* 今日第一次餵食就會累積 Streak */
@@ -164,16 +178,15 @@ const Pet = (() => {
       health: p.health,
       faint: p.health <= 0,
       fed: p.lastFedDay === dayKey(),
-      hungry: !inWindow() ? false : (p.health < 100 && p.lastFedDay !== dayKey()),
+      hungry: p.health < 100,
       streak: p.streak,
-      windowOpen: inWindow(),
       frozen
     };
   }
 
   /* ---------- 每日結算（只針對當前拍檔） ----------
-     - 每日 15:00 HKT 自然消耗 −50（每日一次，離線多日會逐日補扣）
-     - 該日冇餵過 → streak 歸 0（唔再扣血）
+     - 自然消耗連續線性 −100/25h，由 updatedAt 錨點起計，離線再開一次過補扣
+     - 已完結嘅日子冇餵過 → streak 歸 0（唔再扣血）
      - 時鐘被倒撥 → 凍結，唔扣血（避免改鐘避罰／誤扣） */
   function runDailyCheck(now) {
     const st = loadState();
@@ -187,46 +200,34 @@ const Pet = (() => {
     }
     const p = ensure(entry);
     const today = dayKey(now);
-    const mine = minuteOfDay(now);
     let changed = false;
 
-    const applyDecay = key => {
-      if (p.decayDay >= key) return;          // 單調：唔可以倒退重扣
-      if (p.health > 0) p.health = Math.max(0, p.health - DECAY_AMOUNT);
-      p.decayDay = key;
-      touch(p);
-      changed = true;
-    };
-
-    /* 逐日補算已完結嘅日子（離線／多日冇開 App），由舊到新順序處理 */
+    /* 逐日補算已完結嘅日子（離線／多日冇開 App）：只負責 streak */
     let key = shiftDay(p.settledDay, 1);
-    for (let i = 0; i < MAX_SETTLE_DAYS && key <= today; i++) {
-      const elapsed = key < today || mine >= FEED_START;   // 該日已完全過去，或今日已過 15:00
-      if (!elapsed) break;
-
-      applyDecay(key);                                   // 該日 15:00 消耗
+    for (let i = 0; i < MAX_SETTLE_DAYS && key < today; i++) {
       if (p.lastFedDay !== key) {                        // 該日冇餵 → 斷 streak
         p.streak = 0;
       }
       p.settledDay = key;
       changed = true;
-      if (key === today) break;
       key = shiftDay(key, 1);
     }
 
-    /* 今日 15:00 自然消耗（最後做，避免同上面 loop 重複扣） */
-    if (mine >= DECAY_START) applyDecay(today);
+    /* 連續自然消耗（整數扣、餘數累積） */
+    const nowMs = (now !== undefined) ? _tsOf(now) : nowTs();
+    if (_applyDecay(p, nowMs)) changed = true;
 
     if (changed || fresh) saveState();
     return changed;
   }
 
-  /* 距離下一個 15:00 HKT 仲有幾多毫秒（排程用，唔需要輪詢） */
+  /* 距離下一次 −1 HP 仲有幾多毫秒（排程用，唔需要輪詢） */
   function msUntilNextDecay() {
-    const t = new Date(nowTs() + HKT_MS);
-    const mins = t.getUTCHours() * 60 + t.getUTCMinutes();
-    const ms = (FEED_START - mins) * 60 * 1000 - t.getUTCSeconds() * 1000 - t.getUTCMilliseconds();
-    return ms > 0 ? ms : ms + 24 * 3600 * 1000;
+    const entry = getActiveEntry();
+    const p = entry ? ensure(entry) : null;
+    if (!p || p.health <= 0) return MS_PER_HP;
+    const waited = nowTs() - _anchorMs(p);
+    return MS_PER_HP - (waited % MS_PER_HP);
   }
 
   /* ---------- 背包 ---------- */
@@ -257,7 +258,6 @@ const Pet = (() => {
     if (STONE_KINDS.includes(kind)) return canStoneEvolve(entry, kind).ok;
     if (kind === "revive") return p.health <= 0;
     if (p.health <= 0) return false;           // 食物救唔到 Faint
-    if (!inWindow(now)) return false;          // 只限 15:00–20:59 HKT
     return p.health < 100;                     // 血滿停餵
   }
 
@@ -292,8 +292,9 @@ const Pet = (() => {
       saveState();
       return { ok: true, msg: "Revived!", heal: DEFAULT_HEALTH };
     }
+    /* 餵前先結算錨點起計嘅消耗，避免餵食動作重置錨點而蝕扣 */
+    _applyDecay(p, (now !== undefined) ? _tsOf(now) : nowTs());
     if (p.health <= 0) return { ok: false, msg: "Food cannot wake a fainted Pokémon" };
-    if (!inWindow(now)) return { ok: false, msg: "Feeding window is 15:00–20:59 (HKT)" };
     if (p.health >= 100) return { ok: false, msg: "Health is full — no need to feed" };
 
     const heal = kind === "premium" ? 50 : 25;
@@ -335,12 +336,12 @@ const Pet = (() => {
   }
 
   return {
-    ensure, adoptActive, healthOf, isFaint, inWindow, fedToday, status,
+    ensure, adoptActive, healthOf, isFaint, fedToday, status,
     runDailyCheck, msUntilNextDecay, items, addItem, countOf, canUse, useItem, rollDrops,
     dayKey, minuteOfDay,
     setClockOffset, clockOffset, clockSuspicious,
     ITEM_KINDS,
-    LIMITS: { FEED_START, FEED_END, DECAY_START, DECAY_AMOUNT, DEFAULT_HEALTH, HKT_MS }
+    LIMITS: { DECAY_HP, DECAY_HOURS, MS_PER_HP, DEFAULT_HEALTH, HKT_MS }
   };
 })();
 

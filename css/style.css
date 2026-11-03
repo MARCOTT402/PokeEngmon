@@ -4089,7 +4089,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   position: relative;
 }
 .ph-sign-sprite {
-  width: 132px; height: 132px; flex: none; object-fit: contain; image-rendering: pixelated;
+  width: 264px; height: 264px; flex: none; object-fit: contain; image-rendering: pixelated;
   margin-top: -6px;
 }
 .ph-sign-name { font-size: 22px; font-weight: 900; line-height: 1.1; text-align: center; }
@@ -4105,7 +4105,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   width: 100%; height: 7px; margin-top: 3px;
   border-radius: 999px; background: #e7e4da; overflow: hidden;
 }
-.ph-sign-hpbar > i { display: block; height: 100%; background: linear-gradient(180deg, #59d67f, #22a55a); width: 100%; transition: width .3s ease; }
+.ph-sign-hpbar > i { display: block; height: 100%; background: linear-gradient(180deg, #59d67f, #22a55a); width: 100%; transition: width .3s linear; }
 .ph-sign-hpbar.mid > i { background: #f5a524; }
 .ph-sign-hpbar.low > i { background: #e5383b; }
 .ph-sign-expbar { width: 100%; height: 7px; border-radius: 999px; background: #e7e4da; overflow: hidden; }
@@ -4382,7 +4382,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   .pd-deco-brand { font-size: 9px; right: 44px; }
   .pd-deco .pd-deco-ball { width: 20px; height: 20px; }
   .pd-screen2 { padding: 8px 8px 0; margin: 5px; }
-  .ph-sign-sprite { width: 80px; height: 80px; }
+  .ph-sign-sprite { width: 160px; height: 160px; }
   .ph-sign-name { font-size: 15px; }
   .ph-td { padding: 4px; font-size: 11px; }
   .ph-cta { height: 56px; font-size: 14px; }
