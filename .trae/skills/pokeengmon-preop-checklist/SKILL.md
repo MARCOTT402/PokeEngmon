@@ -282,11 +282,23 @@ Incident 1 (Home sheet close, v1.30): `_closeAllSheets()` 直接 `s.hidden = tru
 
 Incident 2 (cross-button transition, v1.30): 點閃電 → 再點電池，新 sheet 直接彈出冇動畫。根因：`_closeAllSheets` timer (410ms) 同 binder timer (410ms) 同時 race，新 sheet 可能被舊 timer 設 `hidden=true`。
 
-正確做法：
-- `_closeAllSheets()` 只 remove `ph-open` class（動畫自然播），setTimeout **430ms 後**（比 binder 嘅 410ms 遲 20ms）先檢查隱藏。
-- 隱藏前加 guard：`if (document.querySelector(".ph-sheet.ph-open")) return;` —— 如果 binder 已經 call `_openSheet` 加咗新 `ph-open`，就唔設 hidden。
-- `_closeSheet(id)`（單獨關）嘅 setTimeout 仍然可以 410ms（因為單獨關冇 race）。
-- Binder pattern：`binder(btnId, sheetId, openFn)` 必須實現 3 種狀態（§6.3），加 `_sheetSwitching` debounce flag。
-- 切換 view 時 `showView()` 最頂部 call `_closeAllSheets()`，但 **唔等動畫**。
+Incident 3 (rapid toggle lock, v1.30 迭代): 快速來回點擊 5+ 次 icon 捲開捲收後，主頁 window 鎖住 — `.ph-backdrop` 留喺 DOM 有 `ph-open` + `pointer-events:auto`，遮晒主頁所有 element。根因鏈：
+(a) `_closeSheet`（單獨關）冇 remove backdrop.ph-open（只有 `_closeAllSheets` 有）→ toggle close 時 backdrop 永遠留喺度
+(b) 快速 cross-button → 多個 close timer 同時排 → 每個 timer 見到 stillOpen 就 skip → 冇 timer 真正執行 hidden
+(c) `_openSheet` 入面 `backdrop.ph-open` 係同步加，但 `sheet.ph-open` 係 rAF 加 → cleanup timer 跑時檢查 sheet.ph-open（rAF 未跑）→ null → 唔 retry，但 backdrop.ph-open 已經喺度 → 遺留
+
+最終正確做法（v1.30 commit `3f50802`）：
+- 兩條 close 路徑（`_closeSheet` / `_closeAllSheets`）**完全一致**：
+  1. 只 remove `ph-open` class（動畫自然播）
+  2. setTimeout 430ms（比 transition 400ms + binder open 410ms 遲 20ms）
+  3. 雙重 `requestAnimationFrame(() => requestAnimationFrame(...))` 確保 `_openSheet` 嘅 rAF 已經跑完
+  4. 同時檢查 **`sheet.ph-open` 同 `backdrop.ph-open`**（兩個都要 close）
+  5. retry 最多 3 次（200ms 間隔）→ attempts >= 3 時**強制 remove 所有餘下 ph-open + hidden**
+- `_closeSheet` remove 自己後即刻檢查 `anyOpen` → 冇其他 sheet 開住就一併 remove backdrop.ph-open
+- 移除 `_checkCloseAllSheets()`（舊時單獨 close 完再 call closeAll → 雙 timer race）
+- Binder pattern：`_sheetSwitching` debounce flag（cross-button path 先設，toggle path 唔設）
+- 切換 view 時 `showView()` 最頂部 call `_closeAllSheets()`（唔等動畫）
+
+**仍然未解決：** 快速 cross-button（間隔 < 410ms）時，後續 click 會被 `_sheetSwitching` flag  skip（要等前一個 cross-button 嘅 open timer 跑完先 reset flag）。呢個係刻意 debounce，但用戶體驗上會覺得「點擊冇反應」。如果要完全解決，需要用 **最後一次 click 優先** 模式（新 click 會 cancel 舊 timer）而唔係 debounce skip。
 
 完整規格見 `.trae/skills/webapp-mobile-dev/SKILL.md` Rule 6。
