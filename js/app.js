@@ -2038,16 +2038,31 @@ const App = {
     const sheet = document.getElementById(id);
     if (!sheet) return;
     if (id === "sheet-setting") this._syncAudioSliders();
+    /* 永遠重置 full 模式 + arrow 方向（確保每次開都由 compact 開始） */
+    sheet.classList.remove("ph-sheet-full");
+    const arrow = sheet.querySelector(".ph-sheet-expand");
+    if (arrow) arrow.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    /* 如果係 Streak sheet，重置 content 為 compact */
+    if (id === "sheet-calendar") {
+      const container = document.getElementById("sheet-calendar-content");
+      if (container) {
+        const streak = calcStreak();
+        container.innerHTML = `
+          <div style="padding:12px; text-align:center;">
+            <div style="font-size:36px; font-weight:900; color:#ee1515;">🔥 ${streak}</div>
+            <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
+          </div>`;
+      }
+    }
+
     const parent = document.querySelector("#view-home .ph-sheets");
     const backdrop = parent ? parent.querySelector(".ph-backdrop") : null;
-    /* 先開 backdrop（如果未開） */
     if (backdrop && backdrop.hidden) {
       backdrop.hidden = false;
       requestAnimationFrame(() => { backdrop.classList.add("ph-open"); });
     } else if (backdrop) {
       backdrop.classList.add("ph-open");
     }
-    /* 開 sheet */
     sheet.hidden = false;
     requestAnimationFrame(() => { sheet.classList.add("ph-open"); });
   },
@@ -2289,17 +2304,16 @@ const App = {
     const expandArrow = (id, sheetId, renderCompact, renderFull) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.onclick = () => {
+      el.onclick = (e) => {
+        e.stopPropagation(); /* 防止 bubble 到 document click handler 觸發 _closeAllSheets */
+        e.preventDefault();
         const sheet = document.getElementById(sheetId);
         const isFull = sheet && sheet.classList.contains("ph-sheet-full");
         if (isFull) {
-          /* 返 compact */
           sheet.classList.remove("ph-sheet-full");
-          sheet.style.maxHeight = "";
           renderCompact();
           el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
         } else {
-          /* 展開 full */
           sheet.classList.add("ph-sheet-full");
           renderFull();
           el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 13.5L10 7.5L16 13.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
