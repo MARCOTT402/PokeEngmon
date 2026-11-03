@@ -2038,8 +2038,10 @@ const App = {
     const sheet = document.getElementById(id);
     if (!sheet) return;
     if (id === "sheet-setting") this._syncAudioSliders();
-    /* 永遠重置 full 模式 + arrow 方向（確保每次開都由 compact 開始） */
+    /* 永遠重置 full 模式 + height style + arrow 方向（確保每次開都由 compact 開始） */
     sheet.classList.remove("ph-sheet-full");
+    sheet.style.height = "";
+    sheet.style.maxHeight = "";
     const arrow = sheet.querySelector(".ph-sheet-expand");
     if (arrow) arrow.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     /* 如果係 Streak sheet，重置 content 為 compact（只顯示 streak） */
@@ -2308,14 +2310,21 @@ const App = {
         e.stopPropagation(); /* 防止 bubble 到 document click handler 觸發 _closeAllSheets */
         e.preventDefault();
         const sheet = document.getElementById(sheetId);
-        const isFull = sheet && sheet.classList.contains("ph-sheet-full");
+        if (!sheet) return;
+        const isFull = sheet.classList.contains("ph-sheet-full");
         if (isFull) {
+          /* 收起 compact：移除 full class + 設 height auto（讓內容自動撐開）*/
           sheet.classList.remove("ph-sheet-full");
+          sheet.style.height = "";  /* 回復 auto */
+          sheet.style.maxHeight = "";
           renderCompact();
           el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
         } else {
-          sheet.classList.add("ph-sheet-full");
+          /* 展開 full：先 renderFull 讓 calendar DOM 存在，再加 full class + height 100% */
           renderFull();
+          sheet.classList.add("ph-sheet-full");
+          sheet.style.height = "100%";
+          sheet.style.maxHeight = "none";
           el.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 13.5L10 7.5L16 13.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
         }
       };
