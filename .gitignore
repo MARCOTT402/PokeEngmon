@@ -14,3 +14,6 @@ tools/.cache_pkmn/
 
 # Trae temp share artifacts
 .trae-html-share-packages/
+
+# Headless Chrome user-data-dir for CDP capture script
+prototype/**/.chrome-tmp/

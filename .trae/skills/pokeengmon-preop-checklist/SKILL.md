@@ -226,3 +226,10 @@ Trigger: 用戶纠正你、同一類錯誤第二次出現、或者你第一次�
 - Record the **workflow** lesson, not just the code detail. If the real failure was "I ran it without checking", "I only capture when asked", "I tested the happy path only", that is the rule.
 - Do not narrow it to one symptom (e.g. only `end if;`). State the invariant that prevents the whole class of mistake.
 - If the user says "that's not the lesson" — the rule was too narrow; widen it in the same turn.
+
+## Rule 26 — Headless Chrome 截手機版圖：`--window-size` 出唔到 375×667，要用 CDP `Emulation.setDeviceMetricsOverride`
+
+Incident (P1 home 原型驗收, 2026-11-03): `--headless=new --window-size=375,667` 實際視口變咗 500×572 —— new headless 有最小視窗寬（≈516px）兼扣窗框（寬 −16／高 −95）。用 `--force-device-scale-factor=2` 都冇用（只放大渲染，唔改 CSS 視口）。截圖一度以為版面右側溢出，其實係 500px 視口 + 430 max-width 居中造成嘅黑邊假象 —— 先讀 HUD/JS 實測 `innerWidth` 再斷症，唔好信截圖第一印象。
+
+- 正解：Node ≥22 內建 WebSocket，零依賴講 CDP —— `--remote-debugging-port` 起 Chrome，`Emulation.setDeviceMetricsOverride {width:375,height:667,deviceScaleFactor:2,mobile:true}` 先係真 375×667。現成腳本：`prototype/home-p1/capture.mjs`（兼可用 `Input.dispatchTouchEvent` 做合成下拉/誤觸測試）。
+- 同場兩個版面教訓：(1) 彈出式元素（offline banner）會改變固定高度預算，用 CSS 變數 `--fixed` 補償而唔係寫死；(2) sticky CTA 要設 `z-index` 高過卡內 badge，否則滾動時 badge 會透出 CTA 邊緣。

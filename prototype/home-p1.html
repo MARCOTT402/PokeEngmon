@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PokeEngmon · Home P1</title>
+<style>
+/* ============ tokens ============ */
+:root{
+  --shell:#e03a32;      /* 機身紅 */
+  --seam:#8a1712;       /* 接縫深紅 */
+  --ink:#1b1b22;
+  --paper:#f7f4ec;      /* 屏幕底 */
+  --card:#fffdf7;
+  --gold:#f7d02c;
+  --blue:#57c7ff;
+  --green:#2f9e44;
+  --amber:#ffb020;
+  --bezel:48px;         /* A 上框高；B 改 76 */
+  --rail:6px;           /* 左右側條 */
+  --rad:16px;           /* 玻璃圓角 */
+  --bw:3px;             /* 黑框 */
+  --pad:12px;
+}
+.f-b{ --bezel:76px; }
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; height:100%; }
+html{ overscroll-behavior:none; }
+body{
+  background:#171014;
+  font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:var(--ink);
+  overscroll-behavior:none;
+  touch-action:manipulation;
+  user-select:none; -webkit-user-select:none;
+}
+button{ font:inherit; color:inherit; border:0; background:none; padding:0; cursor:pointer;
+  touch-action:manipulation; -webkit-touch-callout:none; }
+button:focus-visible{ outline:3px solid #1e6fff; outline-offset:2px; }
+svg{ display:block; }
+
+/* ============ M0 shell ============ */
+/* fixed + 100dvh，max-width 430 居中；禁止 transform */
+#shell{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  height:100dvh;
+  max-width:430px; margin:0 auto;
+  background:var(--shell);
+  display:grid;
+  grid-template-rows:env(safe-area-inset-top,0px) var(--bezel) 1fr 34px env(safe-area-inset-bottom,0px);
+  z-index:1;
+}
+.sim-kb #shell{ bottom:300px; height:auto; }
+.sim-kb .bottomdock{ display:none; }
+
+.row-safe{ background:var(--shell); }
+
+/* 上框（全列機身紅） */
+.bezel{
+  position:relative; background:var(--shell);
+  border-bottom:2.5px solid var(--seam);   /* A1 接縫 */
+  display:flex; align-items:center;
+  padding:0 16px;
+}
+/* A：鏡頭 30（左16）＋精靈球 24（右16） */
+.cam{ border-radius:50%; flex:none;
+  background:radial-gradient(circle at 35% 32%, #bfe9ff 0 18%, #4aa3df 19% 46%, #1c5d8f 47% 68%, #0d2f4a 69% 100%);
+  border:2.5px solid #111; box-shadow:inset 0 0 0 2px #ffffff33;
+}
+.f-a .cam{ width:30px; height:30px; }
+.bezel .ball{ margin-left:auto; flex:none; }
+.f-a .bezel .ball{ width:24px; height:24px; }
+/* B：上框 76、鏡頭 34、三 LED、球 28 */
+.f-b .cam{ width:34px; height:34px; }
+.f-b .bezel{ align-items:flex-start; padding-top:10px; }
+.leds{ display:none; gap:7px; margin-left:12px; margin-top:3px; }
+.f-b .leds{ display:flex; }
+.led{ width:8px; height:8px; border-radius:50%; border:1.5px solid #111; }
+.led.r{ background:#ff5f57; } .led.y{ background:#febc2e; } .led.g{ background:#28c840; }
+.f-b .bezel .ball{ width:28px; height:28px; margin-top:2px; }
+
+/* 屏幕列：左右側條 6px 機身紅 */
+.rail{ background:var(--shell); padding:0 var(--rail); min-height:0; display:flex; }
+.screen{
+  position:relative; flex:1; min-height:0;
+  background:var(--paper);
+  border:var(--bw) solid #111; border-radius:var(--rad);
+  padding:var(--pad);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.sim-kb .screen{ overflow-y:auto; overscroll-behavior:contain; }
+
+/* 下巴 34 */
+.chin{ background:var(--shell); display:flex; align-items:center; justify-content:center; gap:5px; }
+.chin i{ width:3px; height:14px; border-radius:2px; background:var(--seam); }
+
+/* ============ 共用元件 ============ */
+.card{ background:var(--card); border:2.5px solid var(--ink); border-radius:14px;
+  box-shadow:0 3px 0 var(--ink); }
+
+/* EXP 4px 全寬 */
+.exp{ position:absolute; left:0; right:0; bottom:0; height:4px; background:#d8d2c4; }
+.exp > i{ display:block; height:100%; width:68%; background:var(--green); } /* 340/500 = 68% */
+
+/* badge 18px（純指示，非互動） */
+.badge{
+  position:absolute; top:6px; right:6px; z-index:2;
+  min-width:18px; height:18px; padding:0 5px; border-radius:9px;
+  background:var(--shell); color:#fff; border:1.5px solid #111;
+  font-size:10.5px; font-weight:800; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  font-variant-numeric:tabular-nums; pointer-events:none;
+}
+.sim-empty .badge{ display:none; }
+
+/* ============ Console+ ============ */
+.ia-console .screen{ gap:10px; }
+
+/* StatusStrip 64：sprite 56／名／Lv／鑽石／齒輪 44／EXP 4px 全寬 */
+.status{ position:relative; flex:none; height:64px; display:flex; align-items:stretch; gap:8px;
+  padding:4px 8px; }
+.status .partner{ display:flex; align-items:center; gap:8px; min-width:0; flex:1;
+  border-radius:10px; text-align:left; padding:2px 4px; }
+.status .sprite{ width:56px; height:56px; flex:none; }
+.status .nm{ font-size:15px; font-weight:900; line-height:1.1; }
+.status .sub{ font-size:11px; font-weight:700; color:#6b675d; margin-top:2px; font-variant-numeric:tabular-nums; }
+.chip{ flex:none; align-self:center; min-height:44px; padding:0 10px;
+  display:flex; align-items:center; gap:5px; border-radius:12px;
+  background:#eef6ff; border:2px solid var(--ink);
+  font-size:14px; font-weight:900; font-variant-numeric:tabular-nums; }
+.gearbtn{ flex:none; align-self:center; width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background:#efece3; border:2px solid var(--ink); }
+/* ============ top dock（Console+ 新結構） ============ */
+.topdock{ flex:none; min-height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 4px; gap:4px; }
+.td{ display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; min-height:44px;
+  font-size:13px; font-weight:800; font-variant-numeric:tabular-nums;
+  background:#f3efe2; border:2px solid var(--ink); flex:1; min-width:0; }
+.td-n{ color:var(--ink); }
+.td:active{ background:#ffe9e7; }
+
+/* ============ signature card ============ */
+.sign{ flex:none; display:flex; gap:12px; padding:12px 14px; align-items:center; }
+.sign-sprite{ width:120px; height:120px; flex:none; }
+.sign-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+.sign-row1{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.sign-name{ font-size:18px; font-weight:900; }
+.sign-rare{ background:#fffbe7; border:2px solid var(--ink); border-radius:9px; padding:1px 8px; font-size:12px; font-weight:800; }
+.sign-lv{ font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:3px; }
+.sign-row2{ font-size:12px; font-weight:700; color:#6b675d; }
+.sign-sep{ margin:0 4px; }
+.sign-exp{ display:flex; flex-direction:column; gap:3px; margin-top:3px; }
+.sign-exp-label{ font-size:11.5px; font-weight:700; color:#6b675d; }
+.sign-expbar{ height:4px; border-radius:2px; background:#d8d2c4; overflow:hidden; }
+.sign-expbar > i{ display:block; height:100%; background:var(--green); }
+
+/* ============ bottom dock（Console+ 新結構） ============ */
+.bottomdock{ flex:none; height:60px; display:flex; align-items:center; gap:4px; padding:4px;
+  background:var(--card); border:2.5px solid var(--ink); border-radius:16px;
+  box-shadow:0 3px 0 var(--ink);
+  position:sticky; bottom:10px; z-index:3; }
+.bd{ flex:1; height:100%; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  color:var(--ink); }
+.bd.on{ background:#ffe9e7; }
+.bd:active{ background:#ffe0dc; }
+
+/* ============ Sheets ============ */
+.sheet-backdrop{ position:fixed; inset:0; background:#00000066; z-index:55; max-width:430px; margin:0 auto; }
+.sheet-backdrop[hidden]{ display:none; }
+
+.sheet-up,.sheet-down{ position:fixed; left:0; right:0; z-index:60; max-width:430px; margin:0 auto;
+  background:var(--card); border-top:2.5px solid var(--ink); border-radius:20px 20px 0 0;
+  transform:none; transition:transform .28s cubic-bezier(.25,1,.5,1);
+  box-shadow:0 -6px 16px #0000001f; max-height:82dvh; overflow:hidden; display:flex; flex-direction:column; }
+.sheet-up[hidden],.sheet-down[hidden]{ display:none; }
+.sheet-up{ bottom:0; transform:translateY(100%); }
+.sheet-up.open{ transform:translateY(0); }
+.sheet-down{ top:0; border-top:0; border-bottom:2.5px solid var(--ink); border-radius:0 0 20px 20px;
+  transform:translateY(-100%); }
+.sheet-down.open{ transform:translateY(0); }
+.sheet-down.sm{ max-height:260px; }
+.sheet-down:not(.sm){ max-height:70dvh; border-radius:0 0 20px 20px; }
+
+.sheet-head{ flex:none; display:flex; align-items:center; gap:10px; padding:12px 14px 8px; }
+.sheet-grip{ width:36px; height:4px; border-radius:2px; background:#d2cdc0; margin-right:auto; display:block; }
+.sheet-down .sheet-head{ justify-content:center; padding:10px 14px 6px; }
+.sheet-t{ font-size:15px; font-weight:900; flex:1; }
+.sheet-down .sheet-t{ flex:0 0 auto; }
+.sheet-x{ width:34px; height:34px; border-radius:9px; background:#efece3; font-size:18px; font-weight:900;
+  display:flex; align-items:center; justify-content:center; line-height:1; }
+
+.sheet-body{ flex:1; overflow-y:auto; overscroll-behavior:contain; padding:0 14px 18px; }
+.sheet-body.compact{ padding:6px 14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
+
+.ssec{ margin-top:8px; }
+.ssec:first-child{ margin-top:2px; }
+.ssec-t{ font-size:11px; font-weight:800; color:#6b675d; text-transform:uppercase; letter-spacing:1.2px; padding:10px 4px 4px; }
+
+.sitem{ width:100%; display:flex; align-items:center; gap:10px; padding:12px 10px; border-radius:12px;
+  font-size:14px; font-weight:800; color:var(--ink); }
+.sitem + .sitem{ margin-top:2px; }
+.sitem:active{ background:#ffe9e7; }
+.s-arrow{ margin-left:auto; color:#6b675d; font-size:18px; font-weight:700; }
+.sitem .s-arrow:last-child{ margin-left:8px; color:var(--shell); font-size:12px; }
+
+/* diamond sheet */
+.gacha-card{ display:flex; flex-direction:column; gap:10px; padding:14px; border:2.5px solid var(--ink);
+  border-radius:16px; background:linear-gradient(135deg,#fffbe7,#ffe9c7); margin-top:6px; }
+.gacha-h{ font-size:16px; font-weight:900; }
+.gacha-m{ font-size:12px; font-weight:800; color:#6b675d; }
+.cta.sm{ height:44px; font-size:14px; }
+.gacha-row{ display:flex; gap:8px; margin-top:10px; }
+.gacha-cell{ flex:1; padding:10px; border:2px solid var(--ink); border-radius:12px;
+  display:flex; flex-direction:column; align-items:center; gap:2px; background:#fff; }
+.g-cell-t{ font-size:10px; font-weight:700; color:#6b675d; text-transform:uppercase; letter-spacing:.8px; }
+.g-cell-v{ font-size:16px; font-weight:900; font-variant-numeric:tabular-nums; }
+
+/* energy sheet */
+.energy-bar{ width:100%; height:14px; border-radius:7px; background:#d8d2c4; overflow:hidden; border:2px solid var(--ink); }
+.energy-bar > span{ display:block; height:100%; border-radius:5px; }
+.energy-n{ font-size:12px; font-weight:800; color:#6b675d; }
+
+/* calendar sheet */
+.mini-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:11px; text-align:center; margin-top:4px; }
+.mini-cal > div{ aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-weight:800;
+  border-radius:8px; border:1.5px solid #e8e3d6; }
+.mini-cal > div:first-child{ color:#6b675d; border:0; }
+.mini-cal > div:nth-child(7n+1){ color:#6b675d; border:0; }
+.mini-cal .today{ background:#fff1ee; border-color:var(--shell); color:var(--shell); font-weight:900; }
+
+/* dex sheet */
+.dex-cells{ display:flex; flex-wrap:wrap; gap:4px; justify-content:center; }
+.dex-cell{ width:18px; height:18px; border-radius:4px; border:1.5px solid #d8d2c4; background:#fff; }
+.dex-cell.got{ background:var(--shell); border-color:var(--ink); }
+.dex-fact{ font-size:11px; font-weight:700; color:#6b675d; margin-top:6px; }
+
+/* 按壓動效 token：120ms cubic-bezier(.25,1,.5,1) */
+.tile,.cta,.chip,.gearbtn,.status .partner,.tabbar button{
+  transition:transform .12s cubic-bezier(.25,1,.5,1), box-shadow .12s cubic-bezier(.25,1,.5,1), background-color .12s cubic-bezier(.25,1,.5,1);
+}
+@media (prefers-reduced-motion:reduce){
+  .tile,.cta,.chip,.gearbtn,.status .partner,.tabbar button{ transition:none; }
+}
+.chip:active,.gearbtn:active,.status .partner:active{ transform:translateY(1px); }
+
+/* TodayStrip 44（無資料隱藏） */
+.today{ flex:none; height:44px; display:flex; align-items:center; gap:14px; padding:0 12px;
+  font-size:12.5px; font-weight:800; font-variant-numeric:tabular-nums; }
+.today .t{ display:flex; align-items:center; gap:5px; }
+.today .mut{ color:#6b675d; font-weight:700; }
+.sim-empty .today{ display:none; }
+
+/* 彈性空白：只在 TodayStrip 與 Grid 之間 */
+.spacer{ flex:1 1 auto; min-height:6px; }
+
+/* 2×3 Grid：高隨屏幕 clamp(3×64, 剩餘, 3×140)，gap10；多餘空間全歸 spacer */
+.screen{ container-type:size; }
+.grid{ flex:0 0 auto; display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  grid-template-rows:repeat(3,1fr);
+  height:clamp(212px, calc(100cqh - var(--fixed,214px)), 440px); }
+.sim-offline .grid{ --fixed:264px; }   /* offbar 40 + gap 10 */
+.tile{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px;
+  min-height:64px; }
+.tile .ic{ color:var(--ink); }
+.tile .ic svg{ width:26px; height:26px; }
+@media (min-width:390px){ .tile .ic svg{ width:28px; height:28px; } }
+@media (min-width:430px){ .tile .ic svg{ width:30px; height:30px; } }
+.tile .lb{ font-size:13px; font-weight:800; letter-spacing:.2px; }
+.tile:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--ink); }
+
+/* CTA 60 sticky */
+.cta{ flex:none; position:sticky; bottom:0; z-index:3; height:60px; border-radius:16px;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  background:var(--shell); color:#fff; border:2.5px solid var(--ink);
+  box-shadow:0 4px 0 var(--ink);
+  font-size:17px; font-weight:900; letter-spacing:.4px; }
+.cta:active{ transform:translateY(2px); box-shadow:0 2px 0 var(--ink); }
+.cta[aria-disabled="true"]{ opacity:.55; }
+
+/* ============ Hero ============ */
+.ia-hero .screen{ gap:10px; }
+.hero{ flex:none; height:220px; padding:4px 10px 8px; display:flex; flex-direction:column; align-items:center; }
+.hero .top{ width:100%; display:flex; align-items:center; gap:8px; }
+.hero .who{ font-size:12px; font-weight:800; color:#6b675d; }
+.hero .who b{ color:var(--ink); font-size:13px; }
+.hero .ballbig{ width:120px; height:120px; flex:none; }
+.hero .nm{ font-size:16px; font-weight:900; line-height:1.2; }
+.hero .sub{ font-size:11px; font-weight:700; color:#6b675d; font-variant-numeric:tabular-nums; line-height:1.2; }
+.hero .expbar{ width:170px; height:6px; border-radius:3px; background:#d8d2c4; margin-top:4px; overflow:hidden; flex:none; }
+.hero .expbar i{ display:block; height:100%; width:68%; background:var(--green); }
+.tabbar{ flex:none; height:56px; display:flex; padding:4px; gap:4px; }
+.tabbar button{ flex:1; border-radius:10px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px; position:relative; }
+.tabbar button .lb{ font-size:10px; font-weight:800; }
+.tabbar button svg{ width:22px; height:22px; }
+.tabbar button.on{ background:#ffe9e7; }
+.tabbar button:active{ background:#f0ede4; }
+
+/* ============ sim 狀態 ============ */
+/* offline 提示條 */
+.offbar{ flex:none; min-height:40px; border-radius:12px; background:#3a352d; color:#ffe9c9;
+  display:none; align-items:center; gap:8px; padding:6px 12px; font-size:12px; font-weight:800; }
+.sim-offline .offbar{ display:flex; }
+
+/* loading skeleton（唔用 blur/transform） */
+.sim-loading .skl{ position:relative; overflow:hidden; color:transparent !important;
+  background:#e4dfd2 !important; border-color:#e4dfd2 !important; box-shadow:none !important;
+  border-radius:10px; pointer-events:none; }
+.sim-loading .skl *{ visibility:hidden; }
+.sim-loading .skl::after{ content:""; position:absolute; inset:0;
+  background:linear-gradient(100deg,#e4dfd2 20%,#f2eee3 50%,#e4dfd2 80%);
+  background-size:200% 100%; animation:shimmer 1.2s linear infinite; }
+@keyframes shimmer{ from{ background-position:180% 0; } to{ background-position:-80% 0; } }
+@media (prefers-reduced-motion:reduce){ .sim-loading .skl::after{ animation:none; } }
+
+/* 模擬鍵盤 300px（44 工具條 + 256 鍵面） */
+#kb{ position:fixed; left:0; right:0; bottom:0; height:300px; z-index:60; display:none;
+  max-width:430px; margin:0 auto;
+  background:#d3d7de; border-top:1px solid #9aa0aa; }
+.sim-kb #kb{ display:block; }
+.kb-acc{ height:44px; background:#eef0f4; border-bottom:1px solid #b7bcc6;
+  display:flex; align-items:center; gap:8px; padding:0 10px; }
+.kb-acc input{ flex:1; height:34px; border:2px solid var(--ink); border-radius:9px;
+  padding:0 10px; font-size:14px; font-weight:700; background:#fff; }
+.kb-acc button{ height:34px; padding:0 14px; border-radius:9px; background:var(--shell); color:#fff;
+  font-weight:900; font-size:13px; border:2px solid var(--ink); }
+.kb-keys{ padding:8px 6px; display:grid; grid-template-rows:repeat(4,1fr); gap:6px; height:256px; }
+.kb-keys .kr{ display:flex; gap:6px; justify-content:center; }
+.kb-keys i{ flex:1; max-width:38px; background:#fff; border-radius:6px; box-shadow:0 1px 0 #9aa0aa; }
+.kb-keys i.w{ max-width:64px; background:#b7bcc6; }
+
+/* ============ HUD ============ */
+#hud{ position:absolute; z-index:50; left:16px; right:16px;
+  top:calc(env(safe-area-inset-top,0px) + var(--bezel) + 8px);
+  background:#10131ae6; color:#9fe8a9; border:1.5px solid #000; border-radius:10px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:10px; line-height:1.5;
+  display:none; max-height:46%; overflow:auto; overscroll-behavior:contain; }
+.hud-on #hud{ display:block; }
+#hud .hd{ position:sticky; top:0; display:flex; align-items:center; gap:6px;
+  background:#10131a; padding:6px 8px; border-bottom:1px solid #2a2f3a; color:#cfe6ff; }
+#hud .hd b{ flex:1; font-size:10.5px; }
+#hud .hd button{ min-width:44px; height:44px; margin:-6px -4px -6px 0; color:#cfe6ff;
+  font-family:inherit; font-size:10px; font-weight:700; }
+#hud pre{ margin:0; padding:8px; white-space:pre-wrap; word-break:break-all; }
+#hudjson{ display:none; }
+
+/* probes（隱藏量測元素） */
+#probe-dvh{ position:fixed; top:0; left:0; height:100dvh; width:1px; visibility:hidden; pointer-events:none; }
+#probe-safe{ position:fixed; top:0; left:0; visibility:hidden; pointer-events:none;
+  padding-top:env(safe-area-inset-top,0px); padding-right:env(safe-area-inset-right,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px); padding-left:env(safe-area-inset-left,0px); }
+</style>
+</head>
+<body>
+
+<!-- ============ 外殼 ============ -->
+<div id="shell">
+  <div class="row-safe"></div>
+
+  <header class="bezel" aria-hidden="true">
+    <span class="cam"></span>
+    <span class="leds"><i class="led r"></i><i class="led y"></i><i class="led g"></i></span>
+    <svg class="ball" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="21" fill="#fff" stroke="#111" stroke-width="3.5"/>
+      <path d="M3.5 24a20.5 20.5 0 0 1 41 0Z" fill="#e03a32"/>
+      <line x1="3.5" y1="24" x2="44.5" y2="24" stroke="#111" stroke-width="4"/>
+      <circle cx="24" cy="24" r="6.5" fill="#111"/><circle cx="24" cy="24" r="3.2" fill="#fff"/>
+    </svg>
+  </header>
+
+  <div class="rail">
+    <main class="screen" id="screen" aria-label="Home">
+
+      <!-- offline 提示（sim=offline） -->
+      <div class="offbar" role="status">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ffe9c9" stroke-width="2" stroke-linecap="round">
+          <path d="M4 9.5a12 12 0 0 1 16 0"/><path d="M7.5 13a7 7 0 0 1 9 0"/><circle cx="12" cy="17" r="1.4" fill="#ffe9c9" stroke="none"/>
+          <line x1="3.5" y1="3.5" x2="20.5" y2="20.5" stroke="#ff8a80" stroke-width="2.4"/>
+        </svg>
+        Offline · showing saved data
+      </div>
+
+      <!-- ===== Console+ 新結構 ===== -->
+
+      <!-- 頂 dock：dex 數量 / streak 閃電 / 鑽石 / 能量 -->
+      <nav class="topdock c-only" aria-label="Top dock">
+        <button type="button" class="td" data-sheet="sheet-calendar" aria-label="Streak 12 days">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M13 2 5.8 13.4h5.4l-1.1 8.6L18.2 10h-5.4Z" fill="#ffb020" stroke="#1b1b22" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span class="td-n">12</span>
+        </button>
+        <button type="button" class="td" data-sheet="sheet-diamond" aria-label="Diamonds 120">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.5 9 8 4.5h8L20.5 9 12 19.5Z" fill="#57c7ff" stroke="#1b1b22" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.5 9h17M8 4.5 12 9l4-4.5M12 19.5 9.2 9M12 19.5 14.8 9" fill="none" stroke="#1b1b22" stroke-width="1.3"/></svg>
+          <span class="td-n">120</span>
+        </button>
+        <button type="button" class="td" data-sheet="sheet-energy" aria-label="Energy 3/5">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8.5 3.5h7l-1.5 4.5h4.5l-4 10.5h-8L8 12h4Z" fill="#f7d02c" stroke="#1b1b22" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span class="td-n">3/5</span>
+        </button>
+        <button type="button" class="td" data-sheet="sheet-dex" aria-label="Pokedex 45 of 151">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" fill="#fff" stroke="#1b1b22" stroke-width="1.8"/><circle cx="12" cy="8" r="1.7" fill="#1b1b22"/><path d="M8.3 13h7.4M8.3 16.2h5" fill="none" stroke="#1b1b22" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <span class="td-n">45/151</span>
+        </button>
+      </nav>
+
+      <!-- Signature：Sprite + 名 + 稀有度 + Lv 星 + HP/Decay + EXP -->
+      <section class="sign card c-only" aria-label="Signature">
+        <div class="sign-sprite" data-squirtle></div>
+        <div class="sign-main">
+          <div class="sign-row1">
+            <span class="sign-name">Squirtle</span>
+            <span class="sign-rare">Common</span>
+            <span class="sign-lv">Lv 1 <svg viewBox="0 0 24 24" width="12" height="12"><path d="M12 2.2 14.8 9l7.5.6-5.7 4.9 1.8 7.4L12 17.8 5.6 21.9l1.8-7.4L1.7 9.6l7.5-.6Z" fill="#f7d02c" stroke="#1b1b22" stroke-width="1.2" stroke-linejoin="round"/></svg></span>
+          </div>
+          <div class="sign-row2">
+            Health 100/100
+            <span class="sign-sep">·</span>
+            Decay —50 at 15:00 HKT
+          </div>
+          <div class="sign-exp">
+            <span class="sign-exp-label">Lv 1 · EXP 0 / 9 to next Lv.</span>
+            <span class="sign-expbar"><i style="width:0%"></i></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="today card c-only" aria-label="Today">
+        <span class="t">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M12 3c1.2 2.8 4.6 4.6 4.6 9a4.6 4.6 0 0 1-9.2 0c0-2.3 1.3-3.4 2-5 .9 1 1.4 1.5 1.5 2.4.4-2 .7-4.2 1.1-6.4Z" fill="#ff7a00" stroke="#1b1b22" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          12 <span class="mut">day streak</span>
+        </span>
+        <span class="t">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#1b1b22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4"/>
+          </svg>
+          3/5 <span class="mut">quests</span>
+        </span>
+      </div>
+
+      <div class="spacer c-only" aria-hidden="true"></div>
+
+      <!-- ===== Console+ CTA（Console+ 變體顯示） ===== -->
+      <button type="button" class="cta c-only" id="cta">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5 17.5 12 8 18.5Z" fill="#fff"/></svg>
+        START QUIZ (10 questions)
+      </button>
+
+      <!-- 底部 dock：dashboard/quiz/quests/battle/setting（icon-only） -->
+      <nav class="bottomdock c-only" aria-label="Bottom dock">
+        <button type="button" class="bd on" data-nav="dashboard" aria-label="Dashboard">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="9" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="10.5" width="7" height="10" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <button type="button" class="bd" data-nav="quiz" aria-label="Quiz">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M8.5 3.5h7l-1.5 4.5h4.5l-4 10.5h-8L8 12h4Z" fill="#f7d02c" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="bd" data-nav="quests" aria-label="Quests">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="5.5" y="4.5" width="13" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="bd" data-sheet="sheet-battle" aria-label="Battle">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="bd" data-sheet="sheet-setting" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.51 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.18a1.7 1.7 0 0 0 1-1.51V2.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.82V9a1.7 1.7 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        </button>
+      </nav>
+
+      <!-- ===== Hero ===== -->
+      <section class="hero card h-only" aria-label="Partner">
+        <div class="top">
+          <span class="who">Trainer <b>Ash</b></span>
+          <span style="flex:1"></span>
+          <button type="button" class="chip" aria-label="Diamonds 120" style="min-height:44px">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path d="M3.5 9 8 4.5h8L20.5 9 12 19.5Z" fill="#57c7ff" stroke="#1b1b22" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M3.5 9h17M8 4.5 12 9l4-4.5M12 19.5 9.2 9M12 19.5 14.8 9" fill="none" stroke="#1b1b22" stroke-width="1.3"/>
+            </svg>
+            120
+          </button>
+          <button type="button" class="gearbtn" aria-label="Settings">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1b1b22" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.51 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.18a1.7 1.7 0 0 0 1-1.51V2.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.82V9a1.7 1.7 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>
+            </svg>
+          </button>
+        </div>
+        <span class="ballbig" data-pika></span>
+        <span class="nm">Pikachu <span style="color:#6b675d;font-size:12px">Lv 12</span></span>
+        <span class="sub">EXP 340 / 500</span>
+        <span class="expbar" aria-hidden="true"><i></i></span>
+      </section>
+
+      <div class="spacer h-only" aria-hidden="true"></div>
+
+      <!-- ===== Hero CTA（只係 Hero 變體顯示） ===== -->
+      <button type="button" class="cta h-only" id="cta-h">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5 17.5 12 8 18.5Z" fill="#fff"/></svg>
+        START QUIZ (10 questions)
+      </button>
+
+      <nav class="tabbar card h-only" aria-label="Tabs">
+        <button type="button" aria-label="Pokédex">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="12" cy="8" r="1.7"/><path d="M8.3 13h7.4M8.3 16.2h5"/></svg>
+          <span class="lb">Dex</span>
+        </button>
+        <button type="button" aria-label="Battle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5"/></svg>
+          <span class="lb">Battle</span>
+        </button>
+        <button type="button" aria-label="Quests" class="on">
+          <span class="badge" style="top:2px;right:10px">3/5</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4"/></svg>
+          <span class="lb">Quests</span>
+        </button>
+        <button type="button" aria-label="More">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18.5" cy="12" r="2"/></svg>
+          <span class="lb">More</span>
+        </button>
+      </nav>
+
+    </main>
+  </div>
+
+  <footer class="chin" aria-hidden="true"><i></i><i></i><i></i></footer>
+  <div class="row-safe"></div>
+
+  <!-- HUD -->
+  <div id="hud" role="status" aria-label="HUD">
+    <div class="hd">
+      <b id="hud-title">P1 HUD</b>
+      <button type="button" id="hud-copy">Copy JSON</button>
+      <button type="button" id="hud-fold">–</button>
+    </div>
+    <pre id="hud-body"></pre>
+  </div>
+</div>
+
+<!-- ============ SHEETS ============ -->
+<div class="sheet-backdrop" hidden></div>
+
+<!-- bottom sheets (向上捲) -->
+<div class="sheet-up" id="sheet-battle" hidden aria-hidden="true" aria-label="Battle">
+  <div class="sheet-head"><span class="sheet-grip"></span><span class="sheet-t">Battle</span><button type="button" class="sheet-x" data-close>×</button></div>
+  <div class="sheet-body">
+    <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="5" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 9h10M9 12h6M7 16h10v3a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Leaderboard</span><span class="s-arrow">›</span></button>
+    <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.8" cy="9.5" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.8 19.5c0-3.2 2.3-5.2 5.2-5.2s5.2 2 5.2 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.4 14.6c2.4.3 4.3 2.1 4.3 4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Friends</span><span class="s-arrow">›</span></button>
+    <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Start Battle</span><span class="s-arrow">›</span></button>
+  </div>
+</div>
+
+<div class="sheet-up" id="sheet-setting" hidden aria-hidden="true" aria-label="Settings">
+  <div class="sheet-head"><span class="sheet-grip"></span><span class="sheet-t">Settings</span><button type="button" class="sheet-x" data-close>×</button></div>
+  <div class="sheet-body">
+    <div class="ssec"><div class="ssec-t">基本設定</div>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 15c1-1.5 2-2 4-2s3 .5 4 2M9 10.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Trainer Name / Avatar</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 10h4l4-6v16l-4-6H4Z M16 8a6 6 0 1 1 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Volume</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Reset Progress</span><span class="s-arrow">›</span></button>
+    </div>
+    <div class="ssec"><div class="ssec-t">學習設定</div>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 18c4-6 7-6 11 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 8c2 3 4 3 6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Curve Mode</span><span class="s-arrow">›</span></button>
+    </div>
+    <div class="ssec"><div class="ssec-t">題目導入</div>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="4" y="3.5" width="16" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Add Sentence Question</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3.5" y="4" width="17" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="m5.5 17 4-4 3 3 4-5 4.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Add Picture Question</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M14 3v7h7M14 3l7 7M5 3h9l7 7v11H5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Import CSV</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 4h16v16H4Z M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>View My Questions</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v6M12 17v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Create Your Own Question · Tutorial</span><span class="s-arrow">›</span></button>
+    </div>
+    <div class="ssec"><div class="ssec-t">關於</div>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 16v-4M12 7.5v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Copyright & Disclaimer</span><span class="s-arrow">›</span></button>
+      <button type="button" class="sitem"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 7h4l1-3h8l1 3h4M5 7v13h14V7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6M9 15h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Version</span><span class="s-arrow">P1-dock</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- top sheets (向下捲) -->
+<div class="sheet-down" id="sheet-diamond" hidden aria-hidden="true" aria-label="Diamonds">
+  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Rare Pull</span></div>
+  <div class="sheet-body">
+    <div class="gacha-card">
+      <span class="gacha-h">Pull a rare partner</span>
+      <span class="gacha-m">120 💎 · next in 6h</span>
+      <button type="button" class="cta sm" style="width:100%;border-radius:14px">Pull Now</button>
+    </div>
+    <div class="gacha-row">
+      <div class="gacha-cell"><span class="g-cell-t">Diamonds</span><span class="g-cell-v">120</span></div>
+      <div class="gacha-cell"><span class="g-cell-t">Next Free</span><span class="g-cell-v">6h</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-down sm" id="sheet-energy" hidden aria-hidden="true" aria-label="Energy">
+  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Energy</span></div>
+  <div class="sheet-body compact">
+    <div class="energy-bar">
+      <span style="width:60%;background:#f7d02c"></span>
+    </div>
+    <span class="energy-n">3 / 5 · +1 every 20 min</span>
+  </div>
+</div>
+
+<div class="sheet-down sm" id="sheet-calendar" hidden aria-hidden="true" aria-label="Streak">
+  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Streak · 12 days</span></div>
+  <div class="sheet-body compact">
+    <div class="mini-cal">
+      <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+      <div></div><div></div><div></div><div></div><div></div><div>1</div><div>2</div>
+      <div>3</div><div>4 🔥</div><div>5 🔥</div><div>6 🔥</div><div>7 🔥</div><div>8 🔥</div><div>9 🔥</div>
+      <div>10 🔥</div><div>11 🔥</div><div>12 🔥</div><div>13 🔥</div><div>14 🔥</div><div>15 🔥</div><div>16 🔥</div>
+      <div>17 🔥</div><div class="today">18</div><div>19</div><div>20</div><div>21</div><div>22</div><div>23</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-down sm" id="sheet-dex" hidden aria-hidden="true" aria-label="Pokédex">
+  <div class="sheet-head"><button type="button" class="sheet-x" data-close>×</button><span class="sheet-t">Pokédex · 45 / 151</span></div>
+  <div class="sheet-body compact">
+    <div class="dex-cells">
+      <div class="dex-cell got"></div><div class="dex-cell got"></div><div class="dex-cell got"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell"></div><div class="dex-cell got"></div><div class="dex-cell got"></div><div class="dex-cell"></div><div class="dex-cell"></div>
+    </div>
+    <div class="dex-fact">Completed <b>29.8%</b> · Unlock Gen 2 at 75 captures</div>
+  </div>
+</div>
+
+<!-- 模擬鍵盤 -->
+<div id="kb" aria-hidden="true">
+  <div class="kb-acc">
+    <input value="Ash" aria-label="Trainer name" readonly>
+    <button type="button" tabindex="-1">Done</button>
+  </div>
+  <div class="kb-keys">
+    <div class="kr"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="kr"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="kr"><i class="w"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="w"></i></div>
+    <div class="kr"><i class="w"></i><i style="max-width:190px"></i><i class="w"></i></div>
+  </div>
+</div>
+
+<div id="probe-dvh" aria-hidden="true"></div>
+<div id="probe-safe" aria-hidden="true"></div>
+
+<script>
+(function(){
+  "use strict";
+  /* ---------- 參數 ---------- */
+  const q = new URLSearchParams(location.search);
+  const frame = (q.get("frame")||"a").toLowerCase()==="b" ? "b" : "a";
+  const ia    = (q.get("ia")||"console").toLowerCase()==="hero" ? "hero" : "console";
+  const sim   = (q.get("sim")||"").toLowerCase();
+  const hudOn = q.get("hud")==="1" || q.get("json")==="1";
+  if(q.get("reset")==="1"){ try{ sessionStorage.removeItem("p1reload"); }catch(e){} }
+
+  document.body.classList.add(frame==="b"?"f-b":"f-a");
+  document.body.classList.add(ia==="hero"?"ia-hero":"ia-console");
+  if(["empty","loading","offline","kb"].includes(sim)) document.body.classList.add("sim-"+sim);
+  if(hudOn) document.body.classList.add("hud-on");
+
+  /* IA 顯示切換 */
+  const style = document.createElement("style");
+  style.textContent = ia==="hero" ? ".c-only{display:none!important}" : ".h-only{display:none!important}";
+  document.head.appendChild(style);
+
+  /* ---------- Pikachu sprite（inline SVG，兩尺寸共用） ---------- */
+  const PIKA =
+   '<svg viewBox="0 0 96 96" width="100%" height="100%" role="img" aria-label="Pikachu">'+
+   '<path d="M20 36 7 5l34 15Z" fill="#f7d02c" stroke="#1b1b22" stroke-width="2.5" stroke-linejoin="round"/>'+
+   '<path d="M7 5l7.5 11.5L22.7 11.7Z" fill="#1b1b22"/>'+
+   '<path d="M76 36 89 5 55 20Z" fill="#f7d02c" stroke="#1b1b22" stroke-width="2.5" stroke-linejoin="round"/>'+
+   '<path d="M89 5l-7.5 11.5L73.3 11.7Z" fill="#1b1b22"/>'+
+   '<circle cx="48" cy="56" r="30" fill="#f7d02c" stroke="#1b1b22" stroke-width="2.5"/>'+
+   '<circle cx="37" cy="52" r="4.2" fill="#1b1b22"/><circle cx="38.4" cy="50.6" r="1.4" fill="#fff"/>'+
+   '<circle cx="59" cy="52" r="4.2" fill="#1b1b22"/><circle cx="60.4" cy="50.6" r="1.4" fill="#fff"/>'+
+   '<circle cx="27" cy="65" r="6.5" fill="#e03a32"/><circle cx="69" cy="65" r="6.5" fill="#e03a32"/>'+
+   '<circle cx="48" cy="58.5" r="1.2" fill="#1b1b22"/>'+
+   '<path d="M43 64.5Q48 68.5 53 64.5" fill="none" stroke="#1b1b22" stroke-width="2" stroke-linecap="round"/>'+
+   '</svg>';
+  /* ---------- Squirtle sprite（inline SVG，signature 用） ---------- */
+  const SQUIRTLE =
+   '<svg viewBox="0 0 120 120" width="100%" height="100%" role="img" aria-label="Squirtle">'+
+   // 頭（藍色）
+   '<ellipse cx="60" cy="58" rx="42" ry="38" fill="#7ab8e0" stroke="#1b1b22" stroke-width="2.5"/>'+
+   // 殼（背後）
+   '<path d="M20 58Q60 20 100 58 Q96 78 80 84 Q60 90 40 84 Q24 78 20 58 Z" fill="#f7d02c" stroke="#1b1b22" stroke-width="2.5" stroke-linejoin="round"/>'+
+   '<path d="M42 62 Q60 46 78 62 M38 72 Q60 58 82 72 M44 82 Q60 72 76 82" fill="none" stroke="#1b1b22" stroke-width="1.5"/>'+
+   // 腳
+   '<ellipse cx="38" cy="96" rx="10" ry="6" fill="#5a94ba" stroke="#1b1b22" stroke-width="2"/>'+
+   '<ellipse cx="82" cy="96" rx="10" ry="6" fill="#5a94ba" stroke="#1b1b22" stroke-width="2"/>'+
+   // 尾
+   '<path d="M82 80 Q100 70 108 82 Q102 86 96 82 Z" fill="#7ab8e0" stroke="#1b1b22" stroke-width="2"/>'+
+   // 眼睛
+   '<circle cx="48" cy="50" r="5.5" fill="#1b1b22"/>'+
+   '<circle cx="49.5" cy="48.5" r="2" fill="#fff"/>'+
+   '<circle cx="72" cy="50" r="5.5" fill="#1b1b22"/>'+
+   '<circle cx="73.5" cy="48.5" r="2" fill="#fff"/>'+
+   // 腮红
+   '<ellipse cx="35" cy="64" rx="5" ry="3" fill="#ff7a7a" opacity=".7"/>'+
+   '<ellipse cx="85" cy="64" rx="5" ry="3" fill="#ff7a7a" opacity=".7"/>'+
+   // 嘴
+   '<path d="M54 68 Q60 72 66 68" fill="none" stroke="#1b1b22" stroke-width="2" stroke-linecap="round"/>'+
+   '</svg>';
+
+  document.querySelectorAll("[data-squirtle]").forEach(function(el){ el.innerHTML = SQUIRTLE; });
+  document.querySelectorAll("[data-pika]").forEach(function(el){ el.innerHTML = PIKA; });
+
+  /* ---------- Sheet toggle ---------- */
+  const backdrop = document.querySelector(".sheet-backdrop");
+  const openSheet = function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.hidden = false;
+    backdrop.hidden = false;
+    requestAnimationFrame(function(){ el.classList.add("open"); });
+  };
+  const closeAll = function(){
+    document.querySelectorAll(".sheet-up.open,.sheet-down.open").forEach(function(el){ el.classList.remove("open"); });
+    backdrop.classList.add("closing");
+    setTimeout(function(){
+      document.querySelectorAll(".sheet-up:not(.open),.sheet-down:not(.open)").forEach(function(el){ el.hidden = true; });
+      backdrop.classList.remove("closing");
+      backdrop.hidden = true;
+    }, 280);
+  };
+  document.querySelectorAll("[data-sheet]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      const id = btn.getAttribute("data-sheet");
+      const el = document.getElementById(id);
+      if(el && el.classList.contains("open")) closeAll();
+      else closeAll(), openSheet(id);
+    });
+  });
+  document.querySelectorAll("[data-close]").forEach(function(btn){
+    btn.addEventListener("click", closeAll);
+  });
+  backdrop.addEventListener("click", closeAll);
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(); });
+  /* 防止 sheet 內滾動透出外層 */
+  document.addEventListener("touchmove", function(e){
+    if(!e.target.closest(".sheet-up.open,.sheet-down.open")) return;
+    const sc = e.target.closest(".sheet-body");
+    if(sc && sc.scrollTop>0 && sc.scrollTop + sc.clientHeight < sc.scrollHeight) return;
+    e.preventDefault();
+  }, { passive:false });
+
+  /* ---------- Bottom dock 互動 ---------- */
+  document.querySelectorAll(".bd[data-nav]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".bd[data-nav]").forEach(function(b){ b.classList.remove("on"); });
+      btn.classList.add("on");
+    });
+  });
+
+  /* ---------- HUD 指標 ---------- */
+  const screen_ = document.getElementById("screen");
+  const M = {
+    variant:{ frame:frame.toUpperCase(), ia:ia, sim:sim||"none" },
+    viewport:{ w:0, h:0, dvhPx:0, shellH:0, dpr:1 },
+    safe:{ top:0, right:0, bottom:0, left:0 },
+    scroll:{ screenDiff:0, docDiff:0, count:0 },
+    pull:{ maxDistancePx:0, reloadCount:null },
+    firstStartClickMs:null, firstStartClickISO:null,
+    misTaps:0, smallInteractive:{ count:0, items:[] },
+    fps:null, cls:0,
+    ua:navigator.userAgent, ts:null
+  };
+
+  try{
+    const nav = performance.getEntriesByType("navigation")[0];
+    let c = +(sessionStorage.getItem("p1reload")||0);
+    if(nav && nav.type==="reload"){ c++; try{ sessionStorage.setItem("p1reload", String(c)); }catch(e){} }
+    M.pull.reloadCount = c;
+  }catch(e){}
+
+  function measure(){
+    const pd = document.getElementById("probe-dvh");
+    const ps = document.getElementById("probe-safe");
+    const cs = getComputedStyle(ps);
+    M.viewport.w = innerWidth; M.viewport.h = innerHeight;
+    M.viewport.dvhPx = pd.offsetHeight;
+    M.viewport.shellH = document.getElementById("shell").getBoundingClientRect().height|0;
+    M.viewport.dpr = +((window.devicePixelRatio||1).toFixed(2));
+    M.safe = { top:parseFloat(cs.paddingTop)||0, right:parseFloat(cs.paddingRight)||0,
+               bottom:parseFloat(cs.paddingBottom)||0, left:parseFloat(cs.paddingLeft)||0 };
+    M.scroll.screenDiff = screen_.scrollHeight - screen_.clientHeight;
+    M.scroll.docDiff = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    M.ts = new Date().toISOString();
+    audit44();
+  }
+
+  function audit44(){
+    const els = Array.prototype.slice.call(
+      document.querySelectorAll("#shell button, #shell a, #shell input"))
+      .filter(function(el){ return !el.closest("#hud"); });
+    const small = els.filter(function(el){
+      const r = el.getBoundingClientRect();
+      return r.width>0 && (r.width<44 || r.height<44);
+    }).map(function(el){
+      const r = el.getBoundingClientRect();
+      return { label:(el.getAttribute("aria-label")||el.textContent||"").trim().slice(0,18),
+               w:Math.round(r.width), h:Math.round(r.height) };
+    });
+    M.smallInteractive = { count:small.length, items:small };
+  }
+
+  /* scroll 次數 */
+  window.addEventListener("scroll", function(e){
+    if(e.target===document || e.target===screen_) M.scroll.count++;
+  }, { capture:true, passive:true });
+
+  /* 下拉距離 + 禁止 PTR */
+  let tY = null, pulled = 0;
+  window.addEventListener("touchstart", function(e){
+    tY = e.touches[0].clientY; pulled = 0;
+  }, { passive:true });
+  window.addEventListener("touchmove", function(e){
+    if(tY===null) return;
+    const dy = e.touches[0].clientY - tY;
+    if(dy>0 && screen_.scrollTop<=0){
+      pulled = Math.max(pulled, dy);
+      M.pull.maxDistancePx = Math.round(M.pull.maxDistancePx ? Math.max(M.pull.maxDistancePx, pulled) : pulled);
+      if(!e.target.closest("#hud")) e.preventDefault();   /* 阻止下拉刷新 */
+    }
+  }, { passive:false });
+  window.addEventListener("touchend", function(){ tY=null; }, { passive:true });
+
+  /* 首次 Start 點擊 */
+  const cta = document.getElementById("cta");
+  cta.addEventListener("pointerdown", function once(){
+    M.firstStartClickMs = Math.round(performance.now());
+    M.firstStartClickISO = new Date().toISOString();
+    cta.removeEventListener("pointerdown", once);
+  });
+
+  /* 誤觸：點擊屏幕非互動區 */
+  screen_.addEventListener("pointerdown", function(e){
+    if(!e.target.closest("button,a,input,[data-hot]")) M.misTaps++;
+  });
+
+  /* FPS */
+  let frames=0, lastT=performance.now();
+  function loop(t){
+    frames++;
+    if(t-lastT>=1000){ M.fps = Math.round(frames*1000/(t-lastT)); frames=0; lastT=t; }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  /* CLS */
+  try{
+    new PerformanceObserver(function(list){
+      list.getEntries().forEach(function(en){ if(!en.hadRecentInput) M.cls = +(M.cls + en.value).toFixed(4); });
+    }).observe({ type:"layout-shift", buffered:true });
+  }catch(e){}
+
+  /* HUD 渲染 */
+  const hudBody = document.getElementById("hud-body");
+  const hudTitle = document.getElementById("hud-title");
+  function render(){
+    measure();
+    hudTitle.textContent = "P1 HUD · " + M.variant.frame + "/" + M.variant.ia + (M.variant.sim!=="none" ? "/" + M.variant.sim : "");
+    const L = [
+      ["viewport", M.viewport.w+"×"+M.viewport.h+"  dvh="+M.viewport.dvhPx+"  shellH="+M.viewport.shellH+"  dpr="+M.viewport.dpr],
+      ["safe", "t"+M.safe.top+" r"+M.safe.right+" b"+M.safe.bottom+" l"+M.safe.left],
+      ["scroll", "screenDiff="+M.scroll.screenDiff+"  docDiff="+M.scroll.docDiff+"  count="+M.scroll.count],
+      ["pull", "maxDist="+M.pull.maxDistancePx+"px  reload="+M.pull.reloadCount],
+      ["start", M.firstStartClickMs===null?"—":M.firstStartClickMs+"ms"],
+      ["misTaps", String(M.misTaps)],
+      ["<44px", String(M.smallInteractive.count)],
+      ["fps", M.fps===null?"—":String(M.fps)],
+      ["cls", String(M.cls)],
+      ["variant", M.variant.frame+"/"+M.variant.ia+"/"+M.variant.sim],
+      ["ua", M.ua.slice(0,64)+"…"],
+      ["time", M.ts]
+    ];
+    hudBody.textContent = L.map(function(r){ return r[0].padEnd(9," ") + " " + r[1]; }).join("\n");
+  }
+
+  if(hudOn){
+    render();
+    setInterval(render, 500);
+    document.getElementById("hud-copy").addEventListener("click", function(){
+      const s = JSON.stringify(M, null, 2);
+      const done = ()=>{ this.textContent="Copied"; setTimeout(()=>{ this.textContent="Copy JSON"; },1200); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(s).then(done.bind(this), done.bind(this));
+      }else{
+        const ta=document.createElement("textarea"); ta.value=s; document.body.appendChild(ta);
+        ta.select(); try{ document.execCommand("copy"); }catch(e){} ta.remove(); done.call(this);
+      }
+    });
+    document.getElementById("hud-fold").addEventListener("click", function(){
+      hudBody.style.display = hudBody.style.display==="none" ? "" : "none";
+      this.textContent = hudBody.style.display==="none" ? "+" : "–";
+    });
+  }
+
+  /* ?json=1：供 headless dump-dom 抽取 */
+  if(q.get("json")==="1"){
+    const pre = document.createElement("pre");
+    pre.id = "hudjson";
+    document.body.appendChild(pre);
+    setInterval(function(){ measure(); pre.textContent = JSON.stringify(M); }, 400);
+  }
+
+  /* loading：CTA 禁用示範 */
+  if(sim==="loading"){
+    cta.setAttribute("aria-disabled","true");
+    document.querySelectorAll(".status, .grid .tile, .hero").forEach(function(el){ el.classList.add("skl"); });
+  }
+
+  addEventListener("resize", measure);
+  addEventListener("load", function(){ measure(); setTimeout(measure, 600); });
+  measure();
+})();
+</script>
+</body>
+</html>
