@@ -1,3 +1,11 @@
+# [1.35.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.34.0...v1.35.0) (2026-11-03)
+
+
+### Features
+
+* **audio:** three-channel Music/SFX/Voice routing ([a46b674](https://github.com/MARCOTT402/PokeEngmon/commit/a46b6746e2f22d33bcf37aff0bd9e0ed91f7ee41))
+* **home:** add classic Pokedex top deco strip ([a53fa7c](https://github.com/MARCOTT402/PokeEngmon/commit/a53fa7c1f1fbb137557e424375f3c9219144d2f5))
+
 # [1.34.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.33.0...v1.34.0) (2026-11-03)
 
 
