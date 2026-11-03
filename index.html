@@ -103,11 +103,21 @@
           <!-- 右上角鑽石數字（獨立 pill，跟 bezel 頂部對齊） -->
           <span class="pd-topdiamond" id="topbar-diamonds">0</span>
           <div class="pd-stats pd-stats-l">
-            <!-- 鑽石 -->
+            <!-- 鑽石（高質量 diamond cut） -->
             <button class="pd-stat" id="btn-bezel-diamond" type="button" aria-label="Open Dragonite Draw">
               <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 3h12l3 6-9 12L3 9z" fill="#4aa3df" stroke="#0d2f4a" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="M6 3l6 6 6-6M6 3L3 9h18l-3-6M12 9v12" fill="none" stroke="#0d2f4a" stroke-width="1.4" stroke-linejoin="round"/>
+                <!-- 外框 -->
+                <path d="M4.5 5.5h15l3 4-10 11.5L1.5 9.5z" fill="#4aa3df" stroke="#0d2f4a" stroke-width="1.4" stroke-linejoin="round"/>
+                <!-- 頂部切面 -->
+                <path d="M4.5 5.5h15l-2 4H6.5z" fill="#bfe9ff"/>
+                <!-- 左側面 -->
+                <path d="M6.5 9.5 1.5 9.5 9.5 21" fill="#3a8bc4"/>
+                <!-- 右側面 -->
+                <path d="M17.5 9.5 22.5 9.5 14.5 21" fill="#2e7aa8"/>
+                <!-- 中間高光線 -->
+                <path d="M6.5 9.5 12 4 17.5 9.5" fill="none" stroke="#0d2f4a" stroke-width="0.8"/>
+                <!-- 頂部高光 -->
+                <path d="M7.5 6h9l-1.2 2H8.7z" fill="#ffffff" opacity="0.5"/>
               </svg>
               <span class="pd-num" id="pd-diamond-label" hidden></span>
             </button>
@@ -118,34 +128,43 @@
             </button>
           </div>
           <div class="pd-stats pd-stats-r">
-            <!-- Pokédex（Masterball icon + 去底） -->
+            <!-- Pokédex（Ultra Ball icon + 去底） -->
             <button class="pd-stat" id="btn-bezel-dex" type="button" aria-label="Pokédex">
               <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <!-- 去底 Masterball -->
                 <defs>
-                  <clipPath id="mb-clip">
-                    <circle cx="12" cy="12" r="10"/>
+                  <clipPath id="ub-clip">
+                    <circle cx="12" cy="12" r="10.5"/>
                   </clipPath>
+                  <radialGradient id="ub-top" cx="50%" cy="30%" r="70%">
+                    <stop offset="0%" stop-color="#c469e8"/>
+                    <stop offset="45%" stop-color="#7a1eaa"/>
+                    <stop offset="100%" stop-color="#3b0d55"/>
+                  </radialGradient>
+                  <radialGradient id="ub-bot" cx="50%" cy="70%" r="70%">
+                    <stop offset="0%" stop-color="#f0f0f0"/>
+                    <stop offset="100%" stop-color="#a8a8a8"/>
+                  </radialGradient>
                 </defs>
                 <!-- 外圈黑框 -->
-                <circle cx="12" cy="12" r="10" fill="none" stroke="#1a1a1a" stroke-width="1.6"/>
-                <!-- 下半紅色 -->
-                <rect x="2" y="12" width="20" height="10" fill="#ee1515"/>
-                <!-- 上半黑色（用 clip 限半圓） -->
-                <g clip-path="url(#mb-clip)">
-                  <rect x="2" y="2" width="20" height="10" fill="#1a1a1a"/>
-                  <!-- Masterball 頂部灰色條紋 -->
-                  <rect x="2" y="5" width="20" height="0.8" fill="#4a4a4a"/>
-                  <rect x="2" y="7" width="20" height="0.6" fill="#4a4a4a"/>
-                  <rect x="2" y="9" width="20" height="0.4" fill="#4a4a4a"/>
+                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#1a1a1a" stroke-width="1.6"/>
+                <!-- 上半紫色漸變 -->
+                <g clip-path="url(#ub-clip)">
+                  <rect x="1.5" y="1.5" width="21" height="10.5" fill="url(#ub-top)"/>
+                  <!-- 兩側粉紅 wedge -->
+                  <path d="M1.5 9 L6 3 L4.5 1.5 Z" fill="#e83a7a" opacity="0.85"/>
+                  <path d="M22.5 9 L18 3 L19.5 1.5 Z" fill="#e83a7a" opacity="0.85"/>
                 </g>
-                <!-- 中間橫線 -->
-                <rect x="2" y="11.3" width="20" height="1.4" fill="#1a1a1a"/>
-                <!-- 中心白圈（上黑下白） -->
-                <circle cx="12" cy="12" r="2.8" fill="#fff" stroke="#1a1a1a" stroke-width="1.4"/>
-                <rect x="2" y="12" width="20" height="2.8" fill="#1a1a1a" clip-path="url(#mb-clip)"/>
-                <!-- 圈內黑點 -->
-                <circle cx="12" cy="13.2" r="0.9" fill="#1a1a1a"/>
+                <!-- 中間粗黑橫線 -->
+                <rect x="1.5" y="11.3" width="21" height="1.4" fill="#1a1a1a"/>
+                <!-- 下半銀白漸變 -->
+                <g clip-path="url(#ub-clip)">
+                  <rect x="1.5" y="12.7" width="21" height="10.5" fill="url(#ub-bot)"/>
+                </g>
+                <!-- 中心圈（灰外圈 + 白球） -->
+                <circle cx="12" cy="12" r="2.5" fill="#5a5a5a" stroke="#1a1a1a" stroke-width="1.2"/>
+                <circle cx="12" cy="12" r="1.5" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.8"/>
+                <!-- 頂部白色 A 字 -->
+                <path d="M12 3.2 L10.2 6.8 L11.1 6.8 L11.6 5.8 L12.4 5.8 L12.9 6.8 L13.8 6.8 Z M11.4 5.2 L12.6 5.2 L12 6.6 Z" fill="#ffffff" opacity="0.95"/>
               </svg>
               <span class="pd-num" id="home-dex-progress">0/151</span>
             </button>
