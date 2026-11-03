@@ -1,3 +1,11 @@
+# [1.36.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.35.0...v1.36.0) (2026-11-03)
+
+
+### Features
+
+* **gacha:** drag-hand pull flow with gem affordance; stop town BGM during pull ([12dcc7c](https://github.com/MARCOTT402/PokeEngmon/commit/12dcc7c014a57362753a664476102b48bfe3d12c))
+* **home:** chin Poke Ball as Home button + frame flush top; quiz settings volume sliders; curve mode in home sheet; jingles on Music bus ([e93a437](https://github.com/MARCOTT402/PokeEngmon/commit/e93a4376678afc2b7e3cc6be7d04c589593dda77))
+
 # [1.35.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.34.0...v1.35.0) (2026-11-03)
 
 
