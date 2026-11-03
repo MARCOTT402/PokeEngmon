@@ -278,10 +278,15 @@ Phase 1 以手機為先，版面基準就用最大嘅 iPhone：
 
 ## Rule 31 — `_closeAllSheets()` 唔好立即設 `hidden=true`，要等 transform 動畫跑完
 
-Incident (Home sheet auto-close, v1.30 迭代, 2026-11-03): 第一次寫 `_closeAllSheets()` 時直接 `s.hidden = true`，結果所有 sheet 關閉時「閃一下就冇咗」—— transform `translateY(-100%)` 動畫被 `hidden` 立即中斷。
+Incident 1 (Home sheet close, v1.30): `_closeAllSheets()` 直接 `s.hidden = true`，結果所有 sheet 關閉時「閃一下就冇咗」—— transform `translateY(-100%)` 動畫被 `hidden` 立即中斷。
 
-- 正確做法：`_closeAllSheets()` 只 remove `ph-open` class（動畫自然播），`setTimeout(410ms)` 後先真設 `hidden = true`（transition 係 0.4s，留 10ms buffer）。
-- `_closeSheet(id)` 已經係咁做；`_closeAllSheets()` 必須跟同樣 pattern，確保兩條 close 路徑視覺一致。
-- Binder pattern：`binder(btnId, sheetId, openFn)` 必須實現 3 種狀態（§6.3），加 `_sheetSwitching` debounce flag 防快速連點。
-- 切換 view 時 `showView()` 最頂部 call `_closeAllSheets()`，但 **唔等動畫**（動畫同 view 切換平行跑）。
-- 完整規格見 `.trae/skills/webapp-mobile-dev/SKILL.md` Rule 6。
+Incident 2 (cross-button transition, v1.30): 點閃電 → 再點電池，新 sheet 直接彈出冇動畫。根因：`_closeAllSheets` timer (410ms) 同 binder timer (410ms) 同時 race，新 sheet 可能被舊 timer 設 `hidden=true`。
+
+正確做法：
+- `_closeAllSheets()` 只 remove `ph-open` class（動畫自然播），setTimeout **430ms 後**（比 binder 嘅 410ms 遲 20ms）先檢查隱藏。
+- 隱藏前加 guard：`if (document.querySelector(".ph-sheet.ph-open")) return;` —— 如果 binder 已經 call `_openSheet` 加咗新 `ph-open`，就唔設 hidden。
+- `_closeSheet(id)`（單獨關）嘅 setTimeout 仍然可以 410ms（因為單獨關冇 race）。
+- Binder pattern：`binder(btnId, sheetId, openFn)` 必須實現 3 種狀態（§6.3），加 `_sheetSwitching` debounce flag。
+- 切換 view 時 `showView()` 最頂部 call `_closeAllSheets()`，但 **唔等動畫**。
+
+完整規格見 `.trae/skills/webapp-mobile-dev/SKILL.md` Rule 6。
