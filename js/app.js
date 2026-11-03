@@ -3,7 +3,7 @@
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
 
-const APP_VERSION = "1.29.1";
+const APP_VERSION = "1.29.2";
 
 const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
@@ -34,7 +34,10 @@ const App = {
     /* 頂 dock 4 格更新 */
     document.getElementById("topbar-name").textContent = st.playerName;
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
-    document.getElementById("td-streak").textContent = "x" + calcStreak();
+    const streakEl = document.getElementById("home-streak-label");
+    if (streakEl) streakEl.textContent = "x" + calcStreak();
+    const dexProgEl = document.getElementById("home-dex-progress");
+    if (dexProgEl) dexProgEl.textContent = (st.entries || []).length + "/" + TOTAL_SPECIES;
     /* 登入 chip 狀態：任何情況下都同步返真實登入狀態（包括 localStorage restore） */
     if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) this._markLoggedIn();
 
@@ -1922,6 +1925,7 @@ const App = {
   _openSheet(id) {
     const sheet = document.getElementById(id);
     if (!sheet) return;
+    if (id === "sheet-setting") this._syncAudioSliders();
     const parent = document.querySelector("#view-home .ph-sheets");
     const backdrop = parent ? parent.querySelector(".ph-backdrop") : null;
     /* 先開 backdrop（如果未開） */
@@ -1955,25 +1959,31 @@ const App = {
     const btn = document.getElementById(btnId);
     if (btn) btn.onclick = () => { /* 子 onclick 會覆寫，但保留 default handler 如果子冇覆蓋 */ };
   },
-  _openStreakSheet() {
-    const cal = document.getElementById("streak-cal");
-    if (cal) {
-      const today = new Date();
-      const y = today.getFullYear(), m = today.getMonth();
-      const first = new Date(y, m, 1);
-      const days = new Date(y, m + 1, 0).getDate();
-      const hits = (window.Pet && Pet.streakDays) ? Pet.streakDays() : [];
-      let html = "";
-      for (let i = 0; i < first.getDay(); i++) html += `<div></div>`;
-      for (let d = 1; d <= days; d++) {
-        const hit = hits.includes(d);
-        const isToday = d === today.getDate();
-        const cls = hit ? "streak-hit" : (isToday ? "today" : "");
-        html += `<div class="${cls}">${d}</div>`;
-      }
-      cal.innerHTML = html;
+  /* Setting sheet 內嘅音量滑桿（同舊 openSettings 同一套 prefs） */
+  _syncAudioSliders() {
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    const bgm = document.getElementById("sheet-bgm");
+    const sfx = document.getElementById("sheet-sfx");
+    if (!bgm || !sfx) return;
+    bgm.value = Math.round(prefs.bgm * 100);
+    sfx.value = Math.round(prefs.sfx * 100);
+    document.getElementById("sheet-bgm-pct").textContent = bgm.value + "%";
+    document.getElementById("sheet-sfx-pct").textContent = sfx.value + "%";
+    bgm.oninput = () => this._applyAudioVol("bgm", +bgm.value);
+    sfx.oninput = () => this._applyAudioVol("sfx", +sfx.value);
+  },
+  _applyAudioVol(which, pct) {
+    const v = Math.max(0, Math.min(100, pct | 0)) / 100;
+    const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    if (which === "bgm") cur.bgm = v; else cur.sfx = v;
+    if (typeof saveAudioPrefs === "function") saveAudioPrefs(cur);
+    const audio = window.CaptureScene && CaptureScene.audio;
+    if (audio) {
+      if (which === "bgm") audio.setBgmScale(v);
+      else audio.setSfxScale(v);
     }
-    this._openSheet("sheet-streak");
+    const pctEl = document.getElementById(which === "bgm" ? "sheet-bgm-pct" : "sheet-sfx-pct");
+    if (pctEl) pctEl.textContent = Math.round(v * 100) + "%";
   },
 
   /* ---------- Modal / Toast ---------- */
@@ -2034,37 +2044,28 @@ const App = {
     /* 按鈕（Home P1 dock + sheet 系統） */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
 
-    /* 頂 dock 4 格 → top-down sheets */
-    this._bindSheetBtn("td-dex", "sheet-dex");
+    /* 頂 dock 4 格 */
     document.getElementById("td-dex").onclick = () => {
-      if (typeof Pokedex !== "undefined" && Pokedex.ensureMiniDexGrid) {
-        Pokedex.ensureMiniDexGrid("dex-mini-wrap", 12);
-        const st = loadState(); const got = (st.entries||[]).length;
-        const total = POKEMON_DEX.length;
-        document.getElementById("home-dex-progress").textContent = got + "/" + total;
-        document.getElementById("home-dex-progress2").textContent = got + "/" + total;
-        document.getElementById("home-dex-progress3").textContent = got + "/" + total;
-      }
-      this._openSheet("sheet-dex");
+      if (typeof Pokedex !== "undefined") Pokedex.open();
     };
-    this._bindSheetBtn("td-streak", "sheet-streak");
-    document.getElementById("td-streak").onclick = () => this._openStreakSheet();
-    this._bindSheetBtn("td-diamond", "sheet-diamond");
+    document.getElementById("td-streak").onclick = () => {
+      if (typeof Calendar !== "undefined") Calendar.open();
+    };
     document.getElementById("td-diamond").onclick = () => this._openSheet("sheet-diamond");
-    this._bindSheetBtn("td-energy", "sheet-energy");
     document.getElementById("td-energy").onclick = () => {
       const st = loadState(); const e = st.energy ?? 3;
-      document.getElementById("energy-fill").style.width = (e/5*100) + "%";
-      document.getElementById("energy-text").textContent = e + " / 5";
+      const fill = document.getElementById("energy-fill");
+      const text = document.getElementById("energy-text");
+      if (fill) fill.style.width = (e/5*100) + "%";
+      if (text) text.textContent = e + " / 5";
       this._openSheet("sheet-energy");
     };
 
-    /* 底部 dock 5 格 */
-    document.getElementById("btn-bd-dashboard").onclick = () => this._openSheet("sheet-setting");
+    /* 底部 dock 4 格：答題 / Quests / Battle / Setting */
     document.getElementById("btn-bd-quiz").onclick = () => this.openSetup();
     document.getElementById("btn-bd-quests").onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
     document.getElementById("btn-bd-battle").onclick = () => this._openSheet("sheet-battle");
-    document.getElementById("btn-bd-gacha").onclick = () => this._openSheet("sheet-diamond");
+    document.getElementById("btn-bd-setting").onclick = () => this._openSheet("sheet-setting");
 
     /* Battle sheet 內容按鈕 */
     document.getElementById("btn-home-battle").onclick = () => {
@@ -2080,20 +2081,13 @@ const App = {
     /* Setting sheet 內容按鈕 */
     document.getElementById("btn-name-edit").onclick = () => { this._closeSheet("sheet-setting"); this.openRename(); };
     document.getElementById("btn-login").onclick = () => { this._closeSheet("sheet-setting"); this.openLoginHub(); };
-    document.getElementById("btn-dex-enter").onclick = () => {
-      this._closeSheet("sheet-setting");
-      if (typeof Pokedex !== "undefined") Pokedex.open();
-    };
-    document.getElementById("btn-home-calendar").onclick = () => { this._closeSheet("sheet-setting"); Calendar.open(); };
-    document.getElementById("btn-top-leaderboard").onclick = () => { this._closeSheet("sheet-setting"); Leaderboard.open(); };
-    document.getElementById("btn-home-friends").onclick = () => {
-      this._closeSheet("sheet-setting");
-      if (typeof Friends !== "undefined") Friends.open();
-    };
+    document.getElementById("btn-import-sheet").onclick = () => { this._closeSheet("sheet-setting"); this.openImport(); };
+    document.getElementById("btn-myq-sheet").onclick = () => { this._closeSheet("sheet-setting"); this.openMyQuestions(); };
     document.getElementById("btn-disclaimer").onclick = () => { this._closeSheet("sheet-setting"); this.openDisclaimer(); };
 
     /* TodayStrip 按鈕 */
-    document.getElementById("btn-home-quests").onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
+    const todayQuestsBtn = document.getElementById("btn-home-quests");
+    if (todayQuestsBtn) todayQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
 
     /* Quest badge 更新 */
     if (typeof Quests !== "undefined" && Quests.refreshBadge) Quests.refreshBadge();
@@ -2108,7 +2102,8 @@ const App = {
     if (topFriendsBtn) topFriendsBtn.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
     const topQuestsBtn = document.getElementById("btn-top-quests");
     if (topQuestsBtn) topQuestsBtn.onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
-    document.getElementById("btn-home-pokedex").onclick = () => Pokedex.open();
+    const homePokedexBtn = document.getElementById("btn-home-pokedex");
+    if (homePokedexBtn) homePokedexBtn.onclick = () => Pokedex.open();
     const topDiamondBtn = document.getElementById("btn-top-diamond");
     if (topDiamondBtn) topDiamondBtn.onclick = () => Gacha.open("rare");
     const settingsBtn = document.getElementById("btn-settings");

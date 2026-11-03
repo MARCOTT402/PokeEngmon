@@ -251,3 +251,11 @@ Incident (同上，同一輪): 由原型搬去正式碼時，部分 `<svg>` 漏�
 - 實心圖示必須明寫 `fill`（例如火焰 `fill="#ff7a00"`），並補 `stroke` 描邊以配合手繪風。
 - 同一組（頂 dock / 底 dock）圖示用同一 stroke-width 與 viewBox 尺寸，否則視覺重量不一致。
 - 驗收：截圖後逐格數目對數（5 格要見到 5 個圖示），唔係只看「有冇紅屏」。
+
+## Rule 29 — 唔好對「按鈕本身」寫 textContent；圖鑑總數用 `TOTAL_SPECIES`
+
+Incident (v1.29 home dock 改版, 2026-11-03): `renderHome()` 寫 `document.getElementById("td-streak").textContent = "x" + calcStreak();`。`td-streak` 按鈕內同時有 `<svg>` 火焰圖示同 `<span id="home-streak-label">`，一行 textContent 就把整個 SVG 清掉，圖示變文字。同一輪亦寫了 `POKEMON_DEX.length` —— 呢個全域根本唔存在，dock 顯示 `0/undefined`。
+
+- 更新 dock 數值時只寫**內部 label span**（`home-streak-label`、`home-dex-progress`、`topbar-diamonds`），永遠唔郁按鈕本身。
+- 圖鑑總數（Gen 1-5，649）係 `js/data.js` 的 `TOTAL_SPECIES`；單一世代 151 只係 `SPECIES` 篩選結果。
+- 新寫任何 `getElementById(...).textContent =` 前，先確認該元素**只含文字**；含 SVG 或子元素就要改寫目標 span。

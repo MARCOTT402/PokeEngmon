@@ -82,7 +82,7 @@
       #loading-screen.ld-out { animation-duration: .01s; }
     }
   </style>
-  <link rel="stylesheet" href="css/style.css?v=1.29.1">
+  <link rel="stylesheet" href="css/style.css?v=1.29.2">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -168,11 +168,8 @@
             START QUIZ <span>(10 questions)</span>
           </button>
 
-          <!-- 底部 dock 5 格 -->
+          <!-- 底部 dock 4 格：答題 / Quests / Battle / Setting -->
           <nav class="ph-bottomdock" aria-label="Bottom dock">
-            <button class="ph-bd" data-bd="dashboard" type="button" id="btn-bd-dashboard" aria-label="Dashboard">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="9" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="10.5" width="7" height="10" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-            </button>
             <button class="ph-bd" data-bd="quiz" type="button" id="btn-bd-quiz" aria-label="Quiz">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.4 9.2a2.6 2.6 0 1 1 3.7 2.4c-.75.4-1.3.95-1.3 1.8v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.2" fill="currentColor"/></svg>
             </button>
@@ -183,18 +180,13 @@
             <button class="ph-bd" data-bd="battle" type="button" id="btn-bd-battle" aria-label="Battle">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button class="ph-bd" data-bd="gacha" type="button" id="btn-bd-gacha" aria-label="Gacha">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.8 11.5a7.2 7.2 0 0 1 14.4 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 11.5h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6.5 14.5h11v4.8a1.2 1.2 0 0 1-1.2 1.2h-8.6A1.2 1.2 0 0 1 6.5 19.3Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17.4" r="1.3" fill="currentColor"/></svg>
+            <button class="ph-bd" data-bd="setting" type="button" id="btn-bd-setting" aria-label="Settings">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.51 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.18a1.7 1.7 0 0 0 1-1.51V2.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.82V9a1.7 1.7 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             </button>
           </nav>
-        </div>
 
-        <!-- 下巴 34px 精靈球（裝飾，Grid 第三列） -->
-        <div class="pd-chin" aria-hidden="true"><span class="pd-ball pd-ball-sm"></span></div>
-      </div>
-
-      <!-- Sheet 容器（setting / battle） -->
-      <div class="ph-sheets">
+          <!-- Sheet 容器（setting / battle）：定位喺白色螢幕區內，由框內邊捲出 -->
+          <div class="ph-sheets">
         <!-- Setting sheet：bottom-up -->
         <div class="ph-backdrop" hidden aria-hidden="true"></div>
         <div class="ph-sheet ph-sheet-up" id="sheet-setting" hidden aria-hidden="true" aria-label="Settings">
@@ -218,23 +210,24 @@
               </button>
             </div>
             <div class="ph-ssec">
-              <div class="ph-ssec-t">Game</div>
-              <button class="ph-sitem" id="btn-dex-enter" type="button">
-                <span class="ph-sitem-t">Pokédex</span>
-                <span class="ph-sitem-v" id="home-dex-progress2">—</span>
+              <div class="ph-ssec-t">Audio</div>
+              <label class="ph-sitem ph-sitem-col" for="sheet-bgm">
+                <span class="ph-sitem-t">Music <b id="sheet-bgm-pct">100%</b></span>
+                <input id="sheet-bgm" type="range" min="0" max="100" step="1" value="100" aria-label="Music volume">
+              </label>
+              <label class="ph-sitem ph-sitem-col" for="sheet-sfx">
+                <span class="ph-sitem-t">Sound Effects <b id="sheet-sfx-pct">100%</b></span>
+                <input id="sheet-sfx" type="range" min="0" max="100" step="1" value="100" aria-label="Sound effects volume">
+              </label>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Questions</div>
+              <button class="ph-sitem" id="btn-import-sheet" type="button">
+                <span class="ph-sitem-t">Import CSV Questions</span>
                 <span class="ph-s-arrow">›</span>
               </button>
-              <button class="ph-sitem" id="btn-home-calendar" type="button">
-                <span class="ph-sitem-t">Practice Calendar</span>
-                <span class="ph-s-arrow">›</span>
-              </button>
-              <button class="ph-sitem" id="btn-top-leaderboard" type="button">
-                <span class="ph-sitem-t">Leaderboard</span>
-                <span class="ph-s-arrow">›</span>
-              </button>
-              <button class="ph-sitem" id="btn-home-friends" type="button">
-                <span class="ph-sitem-t">Friends</span>
-                <span class="ph-sitem-v" id="home-friends-badge2">—</span>
+              <button class="ph-sitem" id="btn-myq-sheet" type="button">
+                <span class="ph-sitem-t">View my questions</span>
                 <span class="ph-s-arrow">›</span>
               </button>
             </div>
@@ -262,7 +255,7 @@
           </div>
           <div class="ph-sheet-body">
             <button class="ph-sitem" id="btn-home-battle" type="button">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5"/></svg>
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <span class="ph-sitem-t">Battle Menu</span>
               <span class="ph-s-arrow">›</span>
             </button>
@@ -279,17 +272,6 @@
           </div>
         </div>
 
-        <!-- Dex sheet：top-down -->
-        <div class="ph-sheet ph-sheet-down ph-sheet-sm" id="sheet-dex" hidden aria-hidden="true" aria-label="Pokédex">
-          <div class="ph-sheet-head">
-            <span class="ph-sheet-t">Pokédex <span id="home-dex-progress3">—</span></span>
-            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
-          </div>
-          <div class="ph-sheet-body compact" id="dex-mini-wrap">
-            <!-- JS 填充 -->
-          </div>
-        </div>
-
         <!-- Energy sheet：top-down -->
         <div class="ph-sheet ph-sheet-down ph-sheet-sm" id="sheet-energy" hidden aria-hidden="true" aria-label="Energy">
           <div class="ph-sheet-head">
@@ -301,17 +283,6 @@
               <div class="ph-energy-bar"><i id="energy-fill"></i></div>
               <span class="ph-energy-n" id="energy-text">3 / 5</span>
             </div>
-          </div>
-        </div>
-
-        <!-- Streak sheet：top-down -->
-        <div class="ph-sheet ph-sheet-down ph-sheet-sm" id="sheet-streak" hidden aria-hidden="true" aria-label="Streak">
-          <div class="ph-sheet-head">
-            <span class="ph-sheet-t">Day Streak</span>
-            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
-          </div>
-          <div class="ph-sheet-body compact">
-            <div class="ph-streak-month" id="streak-cal">—</div>
           </div>
         </div>
 
@@ -334,6 +305,11 @@
             </div>
           </div>
         </div>
+          </div>
+        </div>
+
+        <!-- 下巴 34px 精靈球（裝飾，Grid 第三列） -->
+        <div class="pd-chin" aria-hidden="true"><span class="pd-ball pd-ball-sm"></span></div>
       </div>
 
       <!-- Gym challenge 佔位（保留 id，renderHome 會寫內容） -->
@@ -936,40 +912,40 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase/supabase-config.js?v=1.29.1"></script>
-  <script src="js/supabase-auth.js?v=1.29.1"></script>
-  <script src="js/sm2.js?v=1.29.1"></script>
-  <script src="js/sync.js?v=1.29.1"></script>
-  <script src="js/gens-data.js?v=1.29.1"></script>
-  <script src="js/data.js?v=1.29.1"></script>
-  <script src="js/qimg-db.js?v=1.29.1"></script>
-  <script src="js/pokemon.js?v=1.29.1"></script>
-  <script src="js/dex-sort.js?v=1.29.1"></script>
-  <script src="js/battle/rng.js?v=1.29.1"></script>
-  <script src="js/battle/energy.js?v=1.29.1"></script>
-  <script src="js/battle/realtime.js?v=1.29.1"></script>
-  <script src="js/battle/pvp.js?v=1.29.1"></script>
-  <script src="js/battle/engine.js?v=1.29.1"></script>
-  <script src="js/battle/state.js?v=1.29.1"></script>
-  <script src="js/battle/moveanim.js?v=1.29.1"></script>
-  <script src="js/battle/sprites.js?v=1.29.1"></script>
-  <script src="js/battle/battle.js?v=1.29.1"></script>
-  <script src="js/genpack.js?v=1.29.1"></script>
-  <script src="js/storage.js?v=1.29.1"></script>
-  <script src="js/pet.js?v=1.29.1"></script>
-  <script src="js/explain.js?v=1.29.1"></script>
-  <script src="js/quiz.js?v=1.29.1"></script>
-  <script src="js/gacha.js?v=1.29.1"></script>
-  <script src="js/pokedex.js?v=1.29.1"></script>
-  <script src="js/gym.js?v=1.29.1"></script>
-  <script src="js/leaderboard.js?v=1.29.1"></script>
-  <script src="js/friends.js?v=1.29.1"></script>
-  <script src="js/quests.js?v=1.29.1"></script>
-  <script src="js/calendar.js?v=1.29.1"></script>
-  <script src="js/evolve-scene.js?v=1.29.1"></script>
-  <script src="js/app.js?v=1.29.1"></script>
-  <script src="vendor/gsap/gsap.min.js?v=1.29.1"></script>
-  <script type="module" src="js/capture.js?v=1.29.1"></script>
+  <script src="supabase/supabase-config.js?v=1.29.2"></script>
+  <script src="js/supabase-auth.js?v=1.29.2"></script>
+  <script src="js/sm2.js?v=1.29.2"></script>
+  <script src="js/sync.js?v=1.29.2"></script>
+  <script src="js/gens-data.js?v=1.29.2"></script>
+  <script src="js/data.js?v=1.29.2"></script>
+  <script src="js/qimg-db.js?v=1.29.2"></script>
+  <script src="js/pokemon.js?v=1.29.2"></script>
+  <script src="js/dex-sort.js?v=1.29.2"></script>
+  <script src="js/battle/rng.js?v=1.29.2"></script>
+  <script src="js/battle/energy.js?v=1.29.2"></script>
+  <script src="js/battle/realtime.js?v=1.29.2"></script>
+  <script src="js/battle/pvp.js?v=1.29.2"></script>
+  <script src="js/battle/engine.js?v=1.29.2"></script>
+  <script src="js/battle/state.js?v=1.29.2"></script>
+  <script src="js/battle/moveanim.js?v=1.29.2"></script>
+  <script src="js/battle/sprites.js?v=1.29.2"></script>
+  <script src="js/battle/battle.js?v=1.29.2"></script>
+  <script src="js/genpack.js?v=1.29.2"></script>
+  <script src="js/storage.js?v=1.29.2"></script>
+  <script src="js/pet.js?v=1.29.2"></script>
+  <script src="js/explain.js?v=1.29.2"></script>
+  <script src="js/quiz.js?v=1.29.2"></script>
+  <script src="js/gacha.js?v=1.29.2"></script>
+  <script src="js/pokedex.js?v=1.29.2"></script>
+  <script src="js/gym.js?v=1.29.2"></script>
+  <script src="js/leaderboard.js?v=1.29.2"></script>
+  <script src="js/friends.js?v=1.29.2"></script>
+  <script src="js/quests.js?v=1.29.2"></script>
+  <script src="js/calendar.js?v=1.29.2"></script>
+  <script src="js/evolve-scene.js?v=1.29.2"></script>
+  <script src="js/app.js?v=1.29.2"></script>
+  <script src="vendor/gsap/gsap.min.js?v=1.29.2"></script>
+  <script type="module" src="js/capture.js?v=1.29.2"></script>
 </body>
 </html>
 
