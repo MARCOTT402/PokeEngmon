@@ -331,5 +331,6 @@ Incident (2026-11-03 Calendar): 加左右掃轉月 + 拖曳箭咀展合 sheet，
 - 一定要做 **axis lock**（例如 6px 後判斷橫向定縱向）：縱向就即刻放手指手，交返俾 sheet 捲動，否則會搶走 scroll。
 - 掃完要 suppress click，而且 flag 要**跨 re-render 保存**（掛喺 DOM element 上，例如 `grid._swipeSuppress`）；因為轉月後 `render()` 會重建 listener，local flag 會失效，synthetic click 就會誤觸日期格。
 - height 由 auto ↔ 100% 係唔可以 transition 嘅：先量目標高度 → 設返起點 px → 下一 frame animate 去目標 px → 完成後才改回 `auto` / `100%`，否則會直接跳。
+- **拖曳方向要跟 panel 嘅 anchor**：`.ph-sheet-down` 係 `top: 0`、由頂部向下展開，所以 **向下拖 = 展開、向上拖 = 收起**（height 增加時 handle 會向下行）。照抄「向上展開」會同手指方向相反 — 2026-11-03 實際做錯過一次要改返。Bottom-anchored sheet 才係向上拖展開。
 - Headless 驗證手勢要用 CDP `Input.dispatchTouchEvent`；用 JS 合成 `PointerEvent` 會令 `setPointerCapture` 拋 `NotFoundError`，驗唔到真實行為。
 

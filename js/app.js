@@ -2379,7 +2379,7 @@ const App = {
         toggle();
       };
 
-      /* 上下拖曳箭咀：向上展開、向下收起，放手磁吸到最近狀態 */
+      /* 上下拖曳箭咀：向下展開、向上收起（跟 sheet 由頂部拉落嘅方向），放手磁吸到最近狀態 */
       let drag = null;
       if (el._dragAC) el._dragAC.abort();
       const ac = new AbortController();
@@ -2402,7 +2402,7 @@ const App = {
 
       el.addEventListener("pointermove", (e) => {
         if (!drag || e.pointerId !== drag.id) return;
-        const dy = drag.startY - e.clientY; /* 向上為正 */
+        const dy = e.clientY - drag.startY; /* 向下為正：sheet 由頂部向下展開，handle 跟手指拉落 */
         if (!drag.moved && Math.abs(dy) < 4) return;
         drag.moved = true;
         suppressClick = true;
@@ -2420,10 +2420,10 @@ const App = {
         if (!d.moved) { sheet.style.transition = ""; return; }
         setTimeout(() => { suppressClick = false; }, 350);
 
-        const dy = d.startY - e.clientY;
+        const dy = e.clientY - d.startY;
         const threshold = Math.max(52, d.maxH * 0.14);
-        if (!d.full && dy > threshold) { expand(); return; }
-        if (d.full && -dy > threshold) { collapse(); return; }
+        if (!d.full && dy > threshold) { expand(); return; }   /* 向下拉 → 展開 */
+        if (d.full && -dy > threshold) { collapse(); return; } /* 向上推 → 收起 */
 
         /* 未夠力 → 磁吸返原本狀態 */
         if (d.full) {

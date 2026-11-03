@@ -490,6 +490,99 @@ Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如�
 
 ---
 
+## Rule 7 — 手勢互動：左右掃分頁 + 箭咀拖曳展合
+
+**適用範圍（日後同類 UI 一律照做）：**
+- 任何有「左右分頁」嘅介面（日曆轉月、carousel、tab pager、step wizard）→ 一定要有左右掃。
+- 任何有「展開／收起箭咀」嘅面板（sheet、accordion、bottom panel）→ 箭咀除咗 tap，一定要可以拖曳。
+
+### 7.1 左右掃分頁（Swipe pager）
+
+Pattern（本專案參考實作：`js/calendar.js` 的 `_bindSwipe()`）：
+
+1. CSS：容器 `touch-action: pan-y;`（保留垂直捲動，橫向自己處理）+ `will-change: transform;`。
+2. 只綁 pointer events（`pointerdown/move/up/cancel`），唔好同時寫 touch + mouse 兩套。
+3. **Axis lock**：手指移動超過 6px 後判斷 `|dx| > |dy|`：
+   - 橫向 → `setPointerCapture`、跟手 `translateX(dx)`；
+   - 縱向 → 即刻放手（`activeId = null`），交返俾外層捲動，否則會搶走 scroll。
+4. 放手判斷（`W` = 容器寬）：
+   - `|dx| > min(W * 0.18, 56)`，或快速掃（`|velocity| > 0.45px/ms` 且方向一致）→ 轉頁；
+   - 否則磁吸回彈：`transition: transform .34s cubic-bezier(.22,1,.36,1); transform: translateX(0)`。
+5. 轉頁動畫：現頁 `.2s` 滑出 → `render()` 新頁 → 新頁由反方向 `translateX(±W)` 用 `.34s cubic-bezier(.22,1,.36,1)` 滑入。
+6. `render()` 會重建 DOM ⇒ 每次 render 都用 `AbortController` abort 舊 listener 再重綁，避免 handler 疊加。
+7. **Suppress click 要跨 re-render 保存**：flag 掛喺 DOM element（例：`grid._swipeSuppress = true`，350ms 後清）。若只存喺 closure，轉頁 render 後新 listener 冇 flag，synthetic click 會誤觸被掃過嘅 item。
+8. 轉頁時要清走當前展開內容（例如已展開嘅日期詳情），避免殘留上一頁資料。
+
+```js
+// 核心骨架
+const ac = new AbortController();
+let activeId = null, startX = 0, startY = 0, dx = 0, locked = false, horizontal = false;
+let suppressClick = !!container._swipeSuppress;
+
+container.addEventListener("pointerdown", (e) => {
+  activeId = e.pointerId; startX = e.clientX; startY = e.clientY; dx = 0; locked = false;
+  container.style.transition = "none";
+}, { signal: ac.signal });
+
+container.addEventListener("pointermove", (e) => {
+  if (e.pointerId !== activeId) return;
+  const mx = e.clientX - startX, my = e.clientY - startY;
+  if (!locked) {
+    if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+    locked = true; horizontal = Math.abs(mx) > Math.abs(my);
+    if (!horizontal) { activeId = null; return; }   // 交返俾垂直捲動
+    container.setPointerCapture(e.pointerId);
+  }
+  dx = mx;
+  container.style.transform = `translateX(${dx}px)`;
+}, { signal: ac.signal, passive: false });
+
+const end = (e) => {
+  if (e.pointerId !== activeId) return;
+  activeId = null;
+  if (locked && horizontal && Math.abs(dx) > 10) {
+    suppressClick = container._swipeSuppress = true;
+    setTimeout(() => { suppressClick = container._swipeSuppress = false; }, 350);
+    // |dx| 過門檻 → changePage()，否則磁吸回 0
+  }
+};
+container.addEventListener("pointerup", end, { signal: ac.signal });
+container.addEventListener("click", (e) => {
+  if (!suppressClick) return;
+  suppressClick = false; container._swipeSuppress = false;
+  e.stopPropagation(); e.preventDefault();
+}, { signal: ac.signal, capture: true });
+```
+
+### 7.2 箭咀 / Handle 拖曳展合（Drag to expand）
+
+Pattern（本專案參考實作：`js/app.js` 的 `expandArrow()`）：
+
+1. Tap 照舊 toggle；拖曳就即時改高度跟手指，放手磁吸到最近狀態。
+2. **方向必須跟 anchor，唔係死記「向上展開」：**
+   - `top: 0` 嘅面板（`.ph-sheet-down`，由頂部向下展開）→ **向下拖 = 展開、向上拖 = 收起**（height 增加時 handle 向下行；反之會同手指相反）。
+   - `bottom: 0` 嘅面板（`.ph-sheet-up`）→ 向上拖 = 展開、向下拖 = 收起。
+3. CSS：handle `touch-action: none;`，咁先收得齊 pointer events；`pointerdown` 時 `setPointerCapture`。
+4. 拖曳中：`sheet.style.transition = "none"`、`height = clamp(startH + dy, minH, fullH)`；compact 時 `minH = startH`（唔可以再縮）；full 時預留下限（例如 90px）。
+5. 放手門檻：`max(52px, fullH * 0.14)`；夠力就切換狀態，唔夠力就磁吸返原本高度。
+6. **height auto / 100% 唔可以 transition**：
+   - 展開：量 full 高度 → 設返起點 px → `transition: height .34s cubic-bezier(.22,1,.36,1)` → animate 去 full px → 完成後改 `height: 100%`。
+   - 收起：先 render compact → 量 auto 高度 → 設返拖曳中 px → animate 去 compact px → 完成後改回 `height: ""`（auto）。
+7. 每個 height 動畫要有 **token**（例：`sheet._settleSeq`）；新動畫或重新開 sheet 時 `++`，舊動畫嘅 timer / `transitionend` 見到 token 唔同就唔好再改 style，否則會「補刀」跳位。
+8. 拖曳超過 4px 就設 `suppressClick`，並喺 350ms 後清；否則放手時嗰個 click 會再 toggle 一次。
+9. 收起／展開後記得換箭咀方向 icon（compact 向下、full 向上），同埋開 sheet 時重置 height / transition / icon。
+
+### 7.3 驗收清單（每次加呢類手勢都要跑）
+
+- 橫掃過門檻 → 轉頁；細掃 → 磁吸回彈、頁碼不變。
+- 垂直手勢仍然可以捲動頁面（唔會被手勢搶走）。
+- 掃完之後 tap 清單／日期仍然正常（唔會被 suppress 誤殺）。
+- 轉頁後上一頁嘅展開內容已清空。
+- 箭咀：tap 切換正常；拖過門檻雙向切換正常；拖唔夠 → 回彈原位；快速連續操作唔會跳位。
+- Headless 用 CDP `Input.dispatchTouchEvent` 驗（真 touch），唔好用 JS 合成 `PointerEvent`（`setPointerCapture` 會拋錯）。
+
+---
+
 ## 本專案對應位置
 
 - 模擬器：`tools/device-preview.html`、`tools/preview-iphone.mjs`
