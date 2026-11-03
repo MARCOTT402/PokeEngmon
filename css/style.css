@@ -3857,11 +3857,11 @@ body.capture-mode { overflow: hidden; background: #07110d; }
    移植自 prototype/home-p1.html；唔碰正式碼邏輯只換 Home 版面
    ================================================================ */
 
-/* ---- 1. Shell：safe-area 五列 Grid ---- */
+/* ---- 1. Shell：safe-area 用 padding 吸收，Grid 三列（48 / 1fr / 34） ---- */
 .ph-shell-parent {
   position: fixed; inset: 0;
   height: 100dvh;
-  max-width: 430px; margin: 0 auto;
+  max-width: 440px; margin: 0 auto;
   padding: 0;
 }
 .ph-shell-parent #app { padding: 0; }
@@ -3875,7 +3875,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pd-shell {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   height: 100dvh;
-  max-width: 430px; margin: 0 auto;
+  max-width: 440px; margin: 0 auto;
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
   display: grid;
   grid-template-rows: 48px 1fr 34px;
@@ -3920,11 +3920,14 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 4. 下巴 34px ---- */
 .pd-chin {
+  position: relative;
   background: linear-gradient(180deg, #d42f28, #b5231d);
   display: flex; align-items: center; justify-content: center;
   padding: 0;
 }
 .pd-ball.pd-ball-sm { width: 20px; height: 20px; opacity: .9; }
+/* 下巴內嘅精靈球要跟 flex 置中，唔可以食到 .pd-ball 嘅 absolute 定位 */
+.pd-chin .pd-ball-sm { position: relative; top: auto; right: auto; margin: 0; }
 
 /* ---- 5. 頂 dock ---- */
 .ph-topdock {

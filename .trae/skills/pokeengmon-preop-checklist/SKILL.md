@@ -259,3 +259,18 @@ Incident (v1.29 home dock 改版, 2026-11-03): `renderHome()` 寫 `document.getE
 - 更新 dock 數值時只寫**內部 label span**（`home-streak-label`、`home-dex-progress`、`topbar-diamonds`），永遠唔郁按鈕本身。
 - 圖鑑總數（Gen 1-5，649）係 `js/data.js` 的 `TOTAL_SPECIES`；單一世代 151 只係 `SPECIES` 篩選結果。
 - 新寫任何 `getElementById(...).textContent =` 前，先確認該元素**只含文字**；含 SVG 或子元素就要改寫目標 span。
+
+## Rule 30 — 手機尺寸基準與本地預覽（iPhone 17 Pro Max）
+
+Phase 1 以手機為先，版面基準就用最大嘅 iPhone：
+
+| 機型 | CSS 尺寸 | DPR | 安全區 top/bottom |
+|---|---|---|---|
+| iPhone 17 Pro Max | 440 × 956 | 3 | 62 / 34 |
+| iPhone 16 Pro | 402 × 874 | 3 | 62 / 34 |
+| iPhone 15 | 393 × 852 | 3 | 59 / 34 |
+| iPhone SE | 375 × 667 | 2 | 0 / 0 |
+
+- `.pd-shell` / `.ph-shell-parent` 嘅 `max-width` **必須 ≥ 440**，否則 440 闊機左右會露底色。
+- 本地預覽：`npm run preview:iphone`（預設 440×956@3x + safe-area 模擬）；其他機 `--device iphone-15`；截圖 `--headless --click "#btn-entry-yes" --shot out.png`。Chrome 桌面 DevTools 嘅 iPhone 預設**唔會**注入 `env(safe-area-inset-*)`，一定要用呢個 CDP script 或 `Emulation.setSafeAreaInsetsOverride`。
+- `.pd-ball` 基類係 `position:absolute; right:18px; top:10px`。任何新容器（下巴、卡角、裝飾）要用佢，必須畀容器 `position:relative` 並重置 `top/right:auto`，否則粒球會飛去 `.pd-shell` 嘅 padding 區（實測飛到 y=10，即狀態欄位置）。

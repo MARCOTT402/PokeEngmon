@@ -9,6 +9,8 @@
   },
   "scripts": {
     "sync-version": "python tools/sync_app_version.py",
+    "preview:iphone": "node tools/preview-iphone.mjs",
+    "preview:iphone15": "node tools/preview-iphone.mjs --device iphone-15",
     "release": "semantic-release"
   },
   "devDependencies": {
