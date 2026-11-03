@@ -2042,7 +2042,7 @@ const App = {
     sheet.classList.remove("ph-sheet-full");
     const arrow = sheet.querySelector(".ph-sheet-expand");
     if (arrow) arrow.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    /* 如果係 Streak sheet，重置 content 為 compact */
+    /* 如果係 Streak sheet，重置 content 為 compact（只顯示 streak） */
     if (id === "sheet-calendar") {
       const container = document.getElementById("sheet-calendar-content");
       if (container) {
@@ -2321,13 +2321,12 @@ const App = {
       };
     };
 
-    /* Streak sheet：compact = 大 streak 數字；full = Calendar.render */
+    /* Streak sheet：accordion expand — 保留 streak 頂部 + 展開 calendar 下面 */
     expandArrow("btn-calendar-expand", "sheet-calendar",
-      /* renderCompact — 重新顯示 streak 大數字 */
+      /* renderCompact — 只顯示 streak 大數字 */
       () => {
         const container = document.getElementById("sheet-calendar-content");
         if (!container) return;
-        const st = loadState();
         const streak = calcStreak();
         container.innerHTML = `
           <div style="padding:12px; text-align:center;">
@@ -2335,9 +2334,18 @@ const App = {
             <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
           </div>`;
       },
-      /* renderFull — Calendar 內容直接入 sheet */
+      /* renderFull — 保留 streak + calendar 下面（accordion） */
       () => {
-        if (typeof Calendar !== "undefined") Calendar.render("#sheet-calendar-content");
+        const container = document.getElementById("sheet-calendar-content");
+        if (!container) return;
+        const streak = calcStreak();
+        container.innerHTML = `
+          <div style="padding:12px; text-align:center;">
+            <div style="font-size:36px; font-weight:900; color:#ee1515;">🔥 ${streak}</div>
+            <div style="font-size:12px; color:#7d786c; margin-top:4px;">Day streak</div>
+          </div>
+          <div class="cal-wrap"></div>`;
+        if (typeof Calendar !== "undefined") Calendar.render("#sheet-calendar-content .cal-wrap");
       }
     );
 
