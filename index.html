@@ -118,14 +118,34 @@
             </button>
           </div>
           <div class="pd-stats pd-stats-r">
-            <!-- Pokédex（Pokéball icon + 去底） -->
+            <!-- Pokédex（Masterball icon + 去底） -->
             <button class="pd-stat" id="btn-bezel-dex" type="button" aria-label="Pokédex">
               <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <!-- 去底 Pokéball -->
-                <path d="M22 12A10 10 0 0 1 12 2a10 10 0 0 1-10 10 10 10 0 0 1 20 0z M2 12h20 M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" 
-                      fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
-                <path d="M22 12A10 10 0 0 0 12 2a10 10 0 0 0-10 10h20z" 
-                      fill="#ee1515" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+                <!-- 去底 Masterball -->
+                <defs>
+                  <clipPath id="mb-clip">
+                    <circle cx="12" cy="12" r="10"/>
+                  </clipPath>
+                </defs>
+                <!-- 外圈黑框 -->
+                <circle cx="12" cy="12" r="10" fill="none" stroke="#1a1a1a" stroke-width="1.6"/>
+                <!-- 下半紅色 -->
+                <rect x="2" y="12" width="20" height="10" fill="#ee1515"/>
+                <!-- 上半黑色（用 clip 限半圓） -->
+                <g clip-path="url(#mb-clip)">
+                  <rect x="2" y="2" width="20" height="10" fill="#1a1a1a"/>
+                  <!-- Masterball 頂部灰色條紋 -->
+                  <rect x="2" y="5" width="20" height="0.8" fill="#4a4a4a"/>
+                  <rect x="2" y="7" width="20" height="0.6" fill="#4a4a4a"/>
+                  <rect x="2" y="9" width="20" height="0.4" fill="#4a4a4a"/>
+                </g>
+                <!-- 中間橫線 -->
+                <rect x="2" y="11.3" width="20" height="1.4" fill="#1a1a1a"/>
+                <!-- 中心白圈（上黑下白） -->
+                <circle cx="12" cy="12" r="2.8" fill="#fff" stroke="#1a1a1a" stroke-width="1.4"/>
+                <rect x="2" y="12" width="20" height="2.8" fill="#1a1a1a" clip-path="url(#mb-clip)"/>
+                <!-- 圈內黑點 -->
+                <circle cx="12" cy="13.2" r="0.9" fill="#1a1a1a"/>
               </svg>
               <span class="pd-num" id="home-dex-progress">0/151</span>
             </button>

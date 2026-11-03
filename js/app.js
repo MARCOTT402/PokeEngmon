@@ -133,11 +133,18 @@ const App = {
       dexProgEl.textContent = collected + "/" + denominator;
     }
 
-    /* Energy：單一數值（戰鬥可用能量）— st.energy 係 object { points, ... } */
+    /* Energy：單一數值（戰鬥可用能量 points）— 必須先 Energy.ensure() normalize */
     const energyEl = document.getElementById("td-energy-val");
     if (energyEl) {
-      const e = st.energy;
-      const points = (e && typeof e === "object") ? (e.points ?? 0) : (typeof e === "number" ? e : 0);
+      let points = 0;
+      if (typeof Energy !== "undefined" && Energy.ensure) {
+        const e = Energy.ensure(st);
+        points = Number(e?.points) || 0;
+      } else {
+        /* fallback：直接讀 st.energy（正常情況唔會行到） */
+        const e = st.energy;
+        points = (e && typeof e === "object") ? (Number(e.points) || 0) : (typeof e === "number" ? e : 0);
+      }
       energyEl.textContent = points;
     }
 
@@ -2213,8 +2220,10 @@ const App = {
       if (container) {
         const st = loadState();
         const quests = (typeof Quests !== "undefined" && Quests.getTodayCount) ? Quests.getTodayCount() : null;
-        const e = st.energy;
-        const energy = (e && typeof e === "object") ? (e.points ?? 0) : (typeof e === "number" ? e : 0);
+        let energy = 0;
+        if (typeof Energy !== "undefined" && Energy.ensure) {
+          energy = Number(Energy.ensure(st)?.points) || 0;
+        }
         container.innerHTML = `
           <div style="padding:12px; text-align:center;">
             <div style="font-size:32px; font-weight:900; color:#16a34a;">⚡ ${energy}</div>
