@@ -2046,7 +2046,7 @@ const App = {
   _openSheet(id) {
     const sheet = document.getElementById(id);
     if (!sheet) return;
-    if (id === "sheet-setting") this._syncAudioSliders();
+    if (id === "sheet-setting") { this._syncAudioSliders(); this._syncCurveMode(); }
     this._unmountSheetView(sheet); /* 上次 full 模式搬咗舊 view 入嚟 → 搬返原位 */
     /* 永遠重置 full 模式 + height style + arrow 方向（確保每次開都由 compact 開始） */
     sheet.classList.remove("ph-sheet-full");
@@ -2233,6 +2233,24 @@ const App = {
     }
     const pctEl = document.getElementById(`sheet-${which}-pct`);
     if (pctEl) pctEl.textContent = Math.round(v * 100) + "%";
+  },
+  /* Home sheet：遺忘曲線模式（同舊 settings modal 共用同一套 storage 與 Sync） */
+  _syncCurveMode() {
+    const grid = document.getElementById("sheet-curve-grid");
+    if (!grid) return;
+    const cur = (typeof getCurveMode === "function") ? getCurveMode() : "standard";
+    grid.querySelectorAll('input[name="curveModeSheet"]').forEach(r => {
+      const isCur = r.value === cur;
+      r.checked = isCur;
+      r.closest(".curve-mode-opt").classList.toggle("active", isCur);
+      r.onchange = () => {
+        if (typeof setCurveMode === "function") setCurveMode(r.value);
+        grid.querySelectorAll(".curve-mode-opt").forEach(l => l.classList.remove("active"));
+        r.closest(".curve-mode-opt").classList.add("active");
+        try { if (window.Sync && Sync.pushState) Sync.pushState(); } catch (e) {}
+        this.toast(`Curve mode: ${r.value}`);
+      };
+    });
   },
 
   /* ---------- Modal / Toast ---------- */
@@ -2658,9 +2676,6 @@ const App = {
       this.renderHome();
       this.showView("view-home");
     };
-    document.getElementById("btn-do-pull").onclick = () => Gacha.pull();
-    /* 先切 view（會中斷抽獎流程並結算），再 render 主頁，避免顯示舊鑽石/舊拍檔 */
-    document.getElementById("btn-gacha-home").onclick = () => Gacha._goHome();
     if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
     else {
       document.getElementById("btn-dex-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
@@ -2669,6 +2684,14 @@ const App = {
     document.getElementById("friends-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("friends-back-bottom").onclick = () => { this.renderHome(); this.showView("view-home"); };
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
+    /* 下巴精靈球 = Home 鍵：任何畫面一撳返主頁；順手收埋對戰 BGM、恢復城鎮音樂 */
+    document.getElementById("btn-pd-home").onclick = () => {
+      try {
+        const audio = window.CaptureScene && CaptureScene.audio;
+        if (audio) { audio.stopBGM(300); audio.startTownBGM(); }
+      } catch (e) {}
+      this.renderHome(); this.showView("view-home");
+    };
     document.getElementById("btn-review-back").onclick = () => {
       /* 由結算入嚟 → 返結算；由日曆入嚟 → 返主頁 */
       if (this._reviewFrom === "calendar") { this.showView("view-home"); }

@@ -360,6 +360,31 @@
               </label>
             </div>
             <div class="ph-ssec">
+              <div class="ph-ssec-t">Forgetting Curve</div>
+              <div class="curve-mode-grid" id="sheet-curve-grid">
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="standard">
+                  <span class="cm-label">📘 Standard</span>
+                  <small class="cm-desc">Balanced review for most learners</small>
+                </label>
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="junior">
+                  <span class="cm-label">🧒 Junior</span>
+                  <small class="cm-desc">Gentle curve with extra attempts & hints</small>
+                </label>
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="teen">
+                  <span class="cm-label">🎓 Teen</span>
+                  <small class="cm-desc">Steadier pace for secondary learners</small>
+                </label>
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="adult">
+                  <span class="cm-label">🧑 Adult</span>
+                  <small class="cm-desc">Longer intervals for faster recall</small>
+                </label>
+              </div>
+            </div>
+            <div class="ph-ssec">
               <div class="ph-ssec-t">Questions</div>
               <button class="ph-sitem" id="btn-import-sheet" type="button">
                 <span class="ph-sitem-t">Import CSV Questions</span>
@@ -412,16 +437,29 @@
         </div>
 
         <!-- Gacha sheet：top-down，由白色螢幕內上邊向下捲出 -->
-        <div class="ph-sheet ph-sheet-down" id="sheet-gacha" hidden aria-hidden="true" aria-label="Dragonite Draw">
+        <div class="ph-sheet ph-sheet-down" id="sheet-gacha" hidden aria-hidden="true" aria-label="Lucky Draw">
           <div class="ph-sheet-head">
-            <span class="ph-sheet-t" id="gacha-title">Rare Pull</span>
+            <span class="ph-sheet-t" id="gacha-title">
+              <svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <radialGradient id="gem-blue-gt" cx="40%" cy="35%" r="70%">
+                    <stop offset="0%" stop-color="#e6f6ff"/>
+                    <stop offset="25%" stop-color="#5ec8f5"/>
+                    <stop offset="60%" stop-color="#1e7fbf"/>
+                    <stop offset="100%" stop-color="#0a3d6b"/>
+                  </radialGradient>
+                </defs>
+                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/>
+                <circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/>
+                <ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/>
+                <ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/>
+                <ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/>
+              </svg>
+              <span>Lucky Draw</span>
+            </span>
             <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
           </div>
           <section id="view-gacha" class="gacha-view">
-            <div class="gacha-topbar">
-              <span class="chip chip-diamond">💎 <b id="gacha-diamonds">0</b></span>
-              <span class="chip gacha-cost">Cost: 💎3</span>
-            </div>
             <div class="gacha-info">
               <div class="gacha-odds-row">
                 <span class="rarity-chip" style="background:#e3f2fd;color:#42a5f5">Rare 80%</span>
@@ -432,6 +470,7 @@
             </div>
             <div class="gacha-stage" id="gacha-stage">
               <div class="gacha-prompt" id="gacha-prompt"></div>
+              <span class="chip gacha-cost" id="gacha-cost">Cost: <svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/><circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/><ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/><ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/></svg> ×3</span>
               <div class="gacha-machine dragonite-art" id="gacha-machine">
                 <img class="dm-art" src="assets/gacha/dragonite.png" alt="Dragonite" draggable="false">
                 <div class="dm-belly" id="dm-belly">
@@ -448,19 +487,13 @@
               </div>
               <div class="gacha-dropzone" id="gacha-dropzone"></div>
             </div>
-            <div class="gacha-controls">
-              <button id="btn-do-pull" class="btn-big btn-primary">💎 ×3 TO GO!</button>
-            </div>
-            <div class="gacha-sheet-bar">
-              <button id="btn-gacha-home" class="btn-big btn-secondary">‹ Back to Home</button>
-            </div>
           </section>
         </div>
           </div>
         </div>
 
-        <!-- 下巴 34px 精靈球（裝飾，Grid 第三列） -->
-        <div class="pd-chin" aria-hidden="true"><span class="pd-ball pd-ball-sm"></span></div>
+        <!-- 下巴：放大精靈球做 Home 鍵（Grid 第四列） -->
+        <div class="pd-chin"><button class="pd-ball pd-ball-sm" id="btn-pd-home" type="button" aria-label="Home"></button></div>
       </div>
 
       <!-- Gym challenge 佔位（保留 id，renderHome 會寫內容） -->

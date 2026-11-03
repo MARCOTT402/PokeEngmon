@@ -52,7 +52,7 @@ const Quests = (() => {
     const st = loadState();
     st.diamonds = Math.max(0, balance);
     if (typeof saveState === "function") saveState();
-    ["topbar-diamonds", "gacha-diamonds", "topbar-diamonds-bm"].forEach(id => {
+    ["topbar-diamonds", "topbar-diamonds-bm"].forEach(id => {
       const node = el(id);
       if (node) node.textContent = String(st.diamonds);
     });

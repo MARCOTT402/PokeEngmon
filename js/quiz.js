@@ -1420,14 +1420,61 @@ const Quiz = {
 
   /* ---------- 設定 / 退出 ---------- */
   openSettings() {
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
+    const bgmPct = Math.round(prefs.bgm * 100);
+    const sfxPct = Math.round(prefs.sfx * 100);
+    const voicePct = Math.round((prefs.voice == null ? 1 : prefs.voice) * 100);
     App.showModal(`
       <div class="confirm-box">
         <p><b>Quiz Settings</b><br><small>Leaving now will lose this set's progress.</small></p>
+        <div class="settings-audio">
+          <label class="settings-vol">
+            <span class="settings-vol-label">Music <b id="quiz-bgm-pct">${bgmPct}%</b></span>
+            <input id="quiz-bgm" type="range" min="0" max="100" step="1" value="${bgmPct}" aria-label="Music volume">
+          </label>
+          <label class="settings-vol">
+            <span class="settings-vol-label">Sound Effects <b id="quiz-sfx-pct">${sfxPct}%</b></span>
+            <input id="quiz-sfx" type="range" min="0" max="100" step="1" value="${sfxPct}" aria-label="Sound effects volume">
+          </label>
+          <label class="settings-vol">
+            <span class="settings-vol-label">Voice <b id="quiz-voice-pct">${voicePct}%</b></span>
+            <input id="quiz-voice" type="range" min="0" max="100" step="1" value="${voicePct}" aria-label="Voice volume">
+          </label>
+        </div>
         <div class="confirm-row">
           <button id="quiz-settings-quit" class="btn-big btn-danger">Quit this set</button>
           <button id="quiz-settings-close" class="btn-big btn-plain">Keep going</button>
         </div>
       </div>`, true);
+    /* 音量調整：同 Home sheet 一齊寫落 pokeengmon_audio_v1，即時生效 */
+    const applyAudio = (which, pct) => {
+      const v = Math.max(0, Math.min(100, pct | 0)) / 100;
+      const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
+      cur[which] = v;
+      if (typeof saveAudioPrefs === "function") saveAudioPrefs(cur);
+      const audio = window.CaptureScene && CaptureScene.audio;
+      if (audio) {
+        if (which === "bgm") audio.setBgmScale(v);
+        else if (which === "sfx") audio.setSfxScale(v);
+        else if (which === "voice" && audio.setVoiceScale) audio.setVoiceScale(v);
+      }
+      const pctEl = document.getElementById(`quiz-${which}-pct`);
+      if (pctEl) pctEl.textContent = `${Math.round(v * 100)}%`;
+    };
+    const bgmEl = document.getElementById("quiz-bgm");
+    const sfxEl = document.getElementById("quiz-sfx");
+    const voiceEl = document.getElementById("quiz-voice");
+    bgmEl.oninput = () => applyAudio("bgm", +bgmEl.value);
+    voiceEl.oninput = () => applyAudio("voice", +voiceEl.value);
+    sfxEl.oninput = () => {
+      applyAudio("sfx", +sfxEl.value);
+      if (this._sfxPreviewTimer) clearTimeout(this._sfxPreviewTimer);
+      this._sfxPreviewTimer = setTimeout(() => {
+        this._sfxPreviewTimer = null;
+        const audio = window.CaptureScene && CaptureScene.audio;
+        if (audio && audio.previewSfx) audio.previewSfx("assets/battle/sfx/select.wav", 0.5);
+      }, 180);
+    };
     document.getElementById("quiz-settings-quit").onclick = () => {
       App.closeModal();
       this.quit();

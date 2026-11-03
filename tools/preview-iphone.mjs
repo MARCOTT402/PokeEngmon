@@ -24,6 +24,8 @@ const device = arg("device", "iphone-17-pro-max");
 const URL = arg("url", `http://localhost:8080/tools/device-preview.html?device=${device}`);
 const SHOT = arg("shot", "");
 const CLICK = arg("click", "");
+const JS = arg("js", "");           // click 之後喺 iframe 內執行嘅自訂 JS（doc = iframe document）
+const JSWAIT = Number(arg("jswait", "1400"));
 const PORT = Number(arg("port", 9230));
 
 const CHROME_CANDIDATES = [
@@ -114,6 +116,23 @@ async function main() {
       returnByValue: true
     });
     await sleep(1200);
+  }
+
+  if (JS) {
+    const r = await send("Runtime.evaluate", {
+      expression: `(() => {
+        const doc = document.getElementById('app')?.contentDocument;
+        if (!doc) return 'no-iframe';
+        return (function(doc){ ${JS} })(doc);
+      })()`,
+      returnByValue: true
+    });
+    if (r && r.exceptionDetails) {
+      console.log("[preview] js EXCEPTION →", JSON.stringify(r.exceptionDetails).slice(0, 500));
+    } else {
+      console.log("[preview] js →", JSON.stringify(r && r.result ? r.result.value : r));
+    }
+    await sleep(JSWAIT);
   }
 
   if (SHOT) {
