@@ -1,6 +1,6 @@
 /* ============================================================
    PokeEngmon - 扭蛋抽獎系統（v102 快龍拉手版）
-   流程：💎 ×3 TO GO! → 拉動快龍隻手 ≥72% → 肚仔艙門打開
+   流程：拉動快龍隻手 ≥72%（即扣 3 寶石）→ 肚仔艙門打開
      → 跌出精靈球（稀有度決定球種）→ 金色背景 A 滾入
      → 搖 2 下懸念 → 按稀有度爆發 → 開球光柱 → 全屏檢視卡
    經濟結算沿用 v99/v101 server 權威（gacha_pull RPC），
@@ -15,6 +15,8 @@ const GACHA_BALL = {
 };
 const GACHA_MAX_PULL = 150;     // 手臂最大下拉距離（px）
 const GACHA_THRESHOLD = 0.72;   // 拉過 72% 即觸發，唔使放手
+/* status bar 同款藍寶石 icon（dynamic 注入用，例如檢視卡按鈕） */
+const GACHA_GEM_SVG = `<svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/><circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/><ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/><ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/></svg>`;
 
 const Gacha = {
   mode: "rare",        // 淨返稀有抽（normal pull 已移除）
@@ -36,10 +38,11 @@ const Gacha = {
     this._townStopped = false;   /* 開場會即刻再停，避免 abort 先恢復再停嘅閃爍 */
     this.abort();      // 清走上次殘留；未結算就補結算，唔會「食咗鑽但冇派寵」
     App.openGachaSheet();
-    document.getElementById("gacha-title").textContent = "💎 Rare Pull";
     this._bindArm();
+    this._bindStageFit();
     this._resetStage();
     this._refreshControls();
+    requestAnimationFrame(() => this._fitStage());
     /* 扭蛋係全屏演出：入場即收城鎮 BGM，避免同音效疊聲 */
     const audio = this._audio();
     if (audio) {
@@ -88,9 +91,10 @@ const Gacha = {
     this._timers = [];
   },
 
+  /* 頁面內唔再重複顯示餘額（status bar 已有）：結算後直接更新 bezel 數字 */
   _updateDiamondDisplay() {
     const st = loadState();
-    const el = document.getElementById("gacha-diamonds");
+    const el = document.getElementById("topbar-diamonds");
     if (el) el.textContent = st.diamonds;
   },
 
@@ -100,16 +104,13 @@ const Gacha = {
   },
 
   _refreshControls() {
-    const btn = document.getElementById("btn-do-pull");
-    if (!btn) return;
-    const st = loadState();
     this._updateDiamondDisplay();
-    if (this._canPull()) {
-      btn.disabled = false;
-      btn.textContent = `💎 ×${GAME_CONFIG.RARE_PULL_COST} TO GO!`;
-    } else {
-      btn.disabled = true;
-      btn.textContent = `Need 💎${GAME_CONFIG.RARE_PULL_COST} (you have ${st.diamonds})`;
+    const afford = this._canPull();
+    const m = this._machine();
+    if (m) m.classList.toggle("cant-afford", !afford);
+    /* idle 待機提示：夠鑽就教拉手杆，唔夠就提住去賺 */
+    if (this.phase === "idle") {
+      this._prompt(afford ? "⇣ DRAG DRAGONITE'S HAND ⇣" : "Not enough gems — earn more in quizzes!");
     }
   },
 
@@ -173,15 +174,14 @@ const Gacha = {
     return s.rarity;
   },
 
-  /* ---------- 抽獎主流程 ----------
-     v101：RPC 延遲解耦 + 經濟結算提早落地 ——
-     點掣即刻進入拉手階段，server 抽獎背景進行；
-     波球跌出前先結算（扣鑽 + 派寵），之後所有演出純視覺，
-     中途離開只會跳過動畫，唔會出現「扣咗鑽但冇寵物」。 */
-  pull() {
-    if (this.busy || !this._canPull()) return;
+  /* ---------- 扣鑽 + 開獎 ----------
+     v102 無按鈕版：拉動手杆過閾值 → _triggerPull 先調 _beginPull，
+     即刻扣 3 寶石 + server 抽獎背景進行；波球跌出前先結算，
+     之後所有演出純視覺，中途離開只會跳過動畫。 */
+  _beginPull() {
+    if (this.busy || !this._canPull()) return false;
     this.busy = true;
-    Pokedex.unlockAudio();   // 喺用戶點擊時解鎖音效（手機自動播放限制）
+    Pokedex.unlockAudio();   // 喺用戶手勢內解鎖音效（手機自動播放限制）
     const audio = this._audio();
     if (audio) {
       audio.ensure();
@@ -204,12 +204,8 @@ const Gacha = {
       settlement: null
     };
 
-    this._resetStage();
     this._refreshControls();
-    const btn = document.getElementById("btn-do-pull");
-    if (btn) btn.disabled = true;
-
-    this._startHandPhase();
+    return true;
   },
 
   /* 經濟結算：扣鑽 + 派寵一次過落地，同演出完全解耦。
@@ -339,15 +335,40 @@ const Gacha = {
   },
 
   /* ============================================================
-     v102 演出層：拉手 → 肚開 → 跌球 → 背景 A → 檢視卡
+     v102 演出層：拉手杆（即扣 3 寶石）→ 肚開 → 跌球 → 背景 A → 檢視卡
      ============================================================ */
 
-  _startHandPhase() {
-    this.phase = "hand";
-    document.getElementById("view-gacha").classList.add("playing");
-    this._prompt("⇣ DRAG DRAGONITE'S HAND ⇣");
-    const audio = this._audio();
-    if (audio) audio.ready();
+  /* 快龍 window 自適應：等 stage 填滿淨低空間後，按比例縮放機器，顯示全隻快龍 */
+  _bindStageFit() {
+    if (this._fitBound) return;
+    this._fitBound = true;
+    const stage = document.getElementById("gacha-stage");
+    if (!stage) return;
+    if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(() => this._fitStage());
+      this._ro.observe(stage);
+    } else {
+      window.addEventListener("resize", () => this._fitStage());
+    }
+    const img = stage.querySelector(".dm-art");
+    if (img && !img.complete) img.addEventListener("load", () => this._fitStage());
+  },
+
+  _fitStage() {
+    const stage = document.getElementById("gacha-stage");
+    const m = this._machine();
+    if (!stage || !m) return;
+    const img = m.querySelector(".dm-art");
+    const ar = (img && img.naturalWidth && img.naturalHeight)
+      ? img.naturalWidth / img.naturalHeight : (640 / 829);
+    const prompt = document.getElementById("gacha-prompt");
+    const cs = getComputedStyle(stage);
+    const availH = stage.clientHeight - (prompt ? prompt.offsetHeight : 0)
+      - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    /* 右側預留 ~30px 俾伸出機身嘅機械手臂 */
+    const availW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 30;
+    if (availH < 120 || availW < 120) return;   // sheet 未開好／太細：保持 CSS 預設
+    m.style.width = Math.round(Math.min(availW, availH * ar)) + "px";
   },
 
   /* 手臂拖拽監聽（open() 綁一次，handler 內檢查 phase） */
@@ -361,11 +382,12 @@ const Gacha = {
     arm.addEventListener("pointerup", e => this._onArmUp(e));
     arm.addEventListener("pointercancel", e => this._onArmUp(e));
     arm.addEventListener("keydown", e => {
-      if (this.phase !== "hand") return;
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this._autoPull(); }
+      if (this.phase !== "idle") return;
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this._tryAutoPull(); }
     });
     arm.addEventListener("click", () => {
-      if (this.phase === "hand" && !this._dragging && !this._triggered && this._curP < 0.05) this._autoPull();
+      if (this.phase !== "idle" || this._dragging || this._triggered || this._curP >= 0.05) return;
+      this._tryAutoPull();
     });
   },
 
@@ -378,16 +400,25 @@ const Gacha = {
     const arm = this._arm();
     if (arm) arm.setAttribute("aria-valuenow", Math.round(p * 100));
     const pr = document.getElementById("gacha-prompt");
-    if (pr && this.phase === "hand") pr.classList.toggle("almost", p > 0.5);
+    if (pr && this.phase === "idle") pr.classList.toggle("almost", p > 0.5);
   },
 
   _onArmDown(e) {
-    if (this.phase !== "hand" || this._dragging) return;
+    if (this.phase !== "idle" || this._dragging || this.busy) return;
+    if (!this._canPull()) {
+      this._prompt("Not enough gems — earn more in quizzes!");
+      this._haptic(30);
+      return;
+    }
     this._dragging = true;
     this._triggered = false;
     this._startY = e.clientY;
     try { this._arm().setPointerCapture(e.pointerId); } catch (_) { /* unsupported */ }
     this._machine().classList.add("dragging");
+    this._prompt("");
+    Pokedex.unlockAudio();   // 抓住手杆嗰刻解鎖音效
+    const audio = this._audio();
+    if (audio) audio.ensure();
     e.preventDefault();
   },
 
@@ -402,7 +433,7 @@ const Gacha = {
       this._lastCreak = now;
       audio.pullCreak(p);
     }
-    if (p >= GACHA_THRESHOLD) this._triggerPull();
+    if (p >= GACHA_THRESHOLD && this._canPull()) this._triggerPull();
   },
 
   _onArmUp() {
@@ -410,7 +441,7 @@ const Gacha = {
     this._dragging = false;
     this._machine().classList.remove("dragging");
     if (this._triggered) return;
-    /* 未達標放手 → 彈簧回彈 */
+    /* 未達標放手 → 彈簧回彈（未扣鑽），並還原待機提示 */
     const audio = this._audio();
     if (audio) audio.pullSnap();
     const g = this._gsap();
@@ -420,6 +451,19 @@ const Gacha = {
     } else {
       this._setPull(0);
     }
+    this._refreshControls();
+  },
+
+  /* 單擊 / 鍵盤：檢查鑽石後自動拉到底（同拉手杆一樣會扣 3 寶石） */
+  _tryAutoPull() {
+    if (this.busy) return;
+    if (!this._canPull()) {
+      this._prompt("Not enough gems — earn more in quizzes!");
+      this._haptic(30);
+      return;
+    }
+    this._prompt("");
+    this._autoPull();
   },
 
   /* 無障礙 / 單擊：自動拉到底觸發 */
@@ -436,14 +480,26 @@ const Gacha = {
     }
   },
 
-  /* 拉過閾值：手臂回彈 → 180ms 艙門開 → 等結算 → 600ms 跌球 */
+  /* 拉過閾值：扣 3 寶石開獎 → 手臂回彈 → 180ms 艙門開 → 等結算 → 600ms 跌球 */
   async _triggerPull() {
     if (this._triggered) return;
+    /* 扣鑽 + 起 flow（server RPC 背景進行）；唔夠鑽就回彈唔扣 */
+    if (!this._beginPull()) {
+      this._refreshControls();
+      const g0 = this._gsap();
+      if (g0 && !this._rm()) {
+        const proxy0 = { p: this._curP };
+        g0.to(proxy0, { p: 0, duration: .5, ease: "elastic.out(1,.45)", onUpdate: () => this._setPull(proxy0.p) });
+      } else {
+        this._setPull(0);
+      }
+      return;
+    }
     const flow = this._flow;
-    if (!flow) return;
     this._triggered = true;
     this._dragging = false;
     this.phase = "opening";
+    document.getElementById("view-gacha").classList.add("playing");
     const fid = flow.id;
     const machine = this._machine();
     machine.classList.remove("dragging");
@@ -748,10 +804,10 @@ const Gacha = {
     const cost = GAME_CONFIG.RARE_PULL_COST;
     if (st.diamonds >= cost) {
       btn.disabled = false;
-      btn.textContent = `💎 ×${cost} TO GO!`;
+      btn.innerHTML = `${GACHA_GEM_SVG} ×${cost} TO GO!`;
     } else {
       btn.disabled = true;
-      btn.textContent = `Need 💎${cost} (you have ${st.diamonds})`;
+      btn.innerHTML = `Need ${GACHA_GEM_SVG} ×${cost} (you have ${st.diamonds})`;
     }
   },
 
@@ -816,7 +872,7 @@ const Gacha = {
     App.renderHome();
   },
 
-  /* 檢視卡「💎 ×3 TO GO!」：執場後即刻再抽 */
+  /* 檢視卡「×3 TO GO!」：執場後即刻再抽（手杆自動拉到底，同樣扣 3 寶石） */
   _pullAgain() {
     if (this.busy || !this._canPull()) return;
     this._cleanupScene();
@@ -824,7 +880,8 @@ const Gacha = {
     this._pendingEvolve = null;
     if (evo) App.showEvolveModal(evo);
     App.maybeShowGenUnlock();
-    this.pull();
+    this._setPull(1);
+    this._triggerPull();
   },
 
   /* 檢視卡「Back to Home」 */
