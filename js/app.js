@@ -1667,9 +1667,10 @@ const App = {
     const saveNote = loggedIn
       ? `<p class="settings-sub">✅ Cloud sync is on — your progress follows your account.</p>`
       : `<p class="settings-sub">Your progress is saved in this browser only. Sign in (🔐) to back up to the cloud.</p>`;
-    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
     const bgmPct = Math.round(prefs.bgm * 100);
     const sfxPct = Math.round(prefs.sfx * 100);
+    const voicePct = Math.round((prefs.voice == null ? 1 : prefs.voice) * 100);
     const curMode = (typeof getCurveMode === "function") ? getCurveMode() : "standard";
     const modeOpts = [
       { v: "standard", label: "📘 Standard", desc: "Balanced review for most learners" },
@@ -1696,6 +1697,10 @@ const App = {
             <span class="settings-vol-label">Sound Effects <b id="set-sfx-pct">${sfxPct}%</b></span>
             <input id="set-sfx" type="range" min="0" max="100" step="1" value="${sfxPct}" aria-label="Sound effects volume">
           </label>
+          <label class="settings-vol">
+            <span class="settings-vol-label">Voice <b id="set-voice-pct">${voicePct}%</b></span>
+            <input id="set-voice" type="range" min="0" max="100" step="1" value="${voicePct}" aria-label="Voice volume">
+          </label>
         </div>
         <div class="curve-mode-section">
           <p class="settings-sub" style="text-align:left;margin:0">📈 Forgetting Curve Mode</p>
@@ -1712,28 +1717,31 @@ const App = {
     if (this._sfxPreviewTimer) { clearTimeout(this._sfxPreviewTimer); this._sfxPreviewTimer = null; }
     const applyAudio = (which, pct) => {
       const v = Math.max(0, Math.min(100, pct | 0)) / 100;
-      const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
-      if (which === "bgm") cur.bgm = v; else cur.sfx = v;
+      const cur = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
+      cur[which] = v;
       if (typeof saveAudioPrefs === "function") saveAudioPrefs(cur);
       const audio = window.CaptureScene && CaptureScene.audio;
       if (audio) {
         if (which === "bgm") audio.setBgmScale(v);
-        else audio.setSfxScale(v);
+        else if (which === "sfx") audio.setSfxScale(v);
+        else if (which === "voice" && audio.setVoiceScale) audio.setVoiceScale(v);
       }
-      const pctEl = document.getElementById(which === "bgm" ? "set-bgm-pct" : "set-sfx-pct");
+      const pctEl = document.getElementById(`set-${which}-pct`);
       if (pctEl) pctEl.textContent = `${Math.round(v * 100)}%`;
     };
     const bgmEl = document.getElementById("set-bgm");
     const sfxEl = document.getElementById("set-sfx");
+    const voiceEl = document.getElementById("set-voice");
     bgmEl.oninput = () => applyAudio("bgm", +bgmEl.value);
+    voiceEl.oninput = () => applyAudio("voice", +voiceEl.value);
     sfxEl.oninput = () => {
       applyAudio("sfx", +sfxEl.value);
-      /* debounce：停拖 ~180ms 先播 obtained-pokemon 作 reference */
+      /* debounce：停拖 ~180ms 先播一段短音效作 reference */
       if (this._sfxPreviewTimer) clearTimeout(this._sfxPreviewTimer);
       this._sfxPreviewTimer = setTimeout(() => {
         this._sfxPreviewTimer = null;
         const audio = window.CaptureScene && CaptureScene.audio;
-        if (audio && audio.previewSfx) audio.previewSfx("assets/bgm/obtained-pokemon.mp3", 0.4);
+        if (audio && audio.previewSfx) audio.previewSfx("assets/battle/sfx/select.wav", 0.5);
       }, 180);
     };
     document.getElementById("btn-add-sentence").onclick = () => this.openAddSentence();
@@ -2733,26 +2741,34 @@ const App = {
       }
     });
 
+    /* capture 階段先記住原始 target 屬於邊個區域：handler 可能喺 click 期間 re-render，
+       令 bubble 階段嘅 e.target 變咗 detached node，closest() 就會誤判「點咗 sheet 外面」。 */
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      e.__peHit = {
+        backdrop: !!(t && t.closest && t.closest("#view-home .ph-backdrop")),
+        sheet: (t && t.closest && t.closest("#view-home .ph-sheet")) || null,
+        closeBtn: !!(t && t.closest && t.closest("#view-home .ph-sheet-x"))
+      };
+    }, true);
+
     /* Home P1 sheet：backdrop 點擊關閉 + X 按鈕關閉 + 任何非 sheet 區域點擊先捲回 */
     document.addEventListener("click", (e) => {
       const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
       if (!anyOpen) return;
+      const hit = e.__peHit || {};
 
-      const bd = e.target.closest("#view-home .ph-backdrop");
-      if (bd) { App._closeAllSheets(); return; }
+      if (hit.backdrop) { App._closeAllSheets(); return; }
 
-      const xBtn = e.target.closest("#view-home .ph-sheet-x");
-      if (xBtn) {
-        const sheet = xBtn.closest(".ph-sheet");
-        if (sheet) App._closeSheet(sheet.id);
+      if (hit.closeBtn) {
+        if (hit.sheet) App._closeSheet(hit.sheet.id);
         return;
       }
 
       /* 點擊咗 sheet 內嘅 element → 唔處理（由各 handler 自行關閉） */
-      const insideSheet = e.target.closest("#view-home .ph-sheet");
-      if (insideSheet) return;
+      if (hit.sheet) return;
 
-      /* 點擊咗任何其他地方 → 先捲回當前 sheet，再讓原 click 冒泡執行 */
+      /* 點擊咗任何其他地方 → 關閉 sheet，再讓原 click 冒泡執行 */
       App._closeAllSheets();
     });
 

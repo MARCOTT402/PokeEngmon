@@ -7,7 +7,7 @@ const STORAGE_KEY = "pokeengmon_state_v1";
 const AUDIO_PREFS_KEY = "pokeengmon_audio_v1";
 
 function defaultAudioPrefs() {
-  return { bgm: 1, sfx: 1 };   /* 1 = 100% of designed volumes */
+  return { bgm: 1, sfx: 1, voice: 1 };   /* 1 = 100% of designed volumes */
 }
 
 function _clamp01(n) {
@@ -21,7 +21,11 @@ function loadAudioPrefs() {
     const raw = localStorage.getItem(AUDIO_PREFS_KEY);
     if (!raw) return defaultAudioPrefs();
     const o = JSON.parse(raw) || {};
-    return { bgm: _clamp01(o.bgm == null ? 1 : o.bgm), sfx: _clamp01(o.sfx == null ? 1 : o.sfx) };
+    return {
+      bgm: _clamp01(o.bgm == null ? 1 : o.bgm),
+      sfx: _clamp01(o.sfx == null ? 1 : o.sfx),
+      voice: _clamp01(o.voice == null ? 1 : o.voice)
+    };
   } catch (e) {
     return defaultAudioPrefs();
   }
@@ -30,7 +34,8 @@ function loadAudioPrefs() {
 function saveAudioPrefs(prefs) {
   const p = {
     bgm: _clamp01(prefs && prefs.bgm),
-    sfx: _clamp01(prefs && prefs.sfx)
+    sfx: _clamp01(prefs && prefs.sfx),
+    voice: _clamp01(prefs && prefs.voice)
   };
   try { localStorage.setItem(AUDIO_PREFS_KEY, JSON.stringify(p)); } catch (e) {}
   return p;

@@ -68,11 +68,12 @@ class CaptureAudio {
     this.master = null;   /* alias → sfxBus（合成音效） */
     this.sfxBus = null;
     this.bgmBus = null;
-    this.wordBus = null;  /* 圖片單字題語音：固定 1.0，唔受 Settings BGM／SFX 影響 */
+    this.wordBus = null;  /* 圖片單字題語音：跟 Settings Voice 音量（wordBus） */
     this._noise = null;
-    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1 };
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : { bgm: 1, sfx: 1, voice: 1 };
     this._bgmScale = prefs.bgm;
     this._sfxScale = prefs.sfx;
+    this._voiceScale = (prefs.voice == null) ? 1 : prefs.voice;
   }
 
   ensure() {
@@ -86,7 +87,7 @@ class CaptureAudio {
         this.wordBus = this.ctx.createGain();
         this.sfxBus.gain.value = this._sfxScale;
         this.bgmBus.gain.value = this._bgmScale;
-        this.wordBus.gain.value = 1.0;
+        this.wordBus.gain.value = this._voiceScale;
         this.sfxBus.connect(this.ctx.destination);
         this.bgmBus.connect(this.ctx.destination);
         this.wordBus.connect(this.ctx.destination);
@@ -113,69 +114,9 @@ class CaptureAudio {
     this._sfxScale = Math.max(0, Math.min(1, Number(s) || 0));
     if (this.sfxBus) this.sfxBus.gain.value = this._sfxScale;
   }
-
-  /* 對戰對話逐字彈出嘅 tick 聲（FRLG 風）：高頻短促方波，行 sfxBus 受 SFX 音量控制 */
-  textBlip() {
-    this.ensure();
-    if (!this.ctx) return;
-    this._tone(1318, { type: "square", dur: 0.025, gain: 0.04 });
-  }
-
-  /* 精靈球打開：短促 pop + 上揚閃光音（對戰拋球落地用） */
-  ballOpen() {
-    this.ensure();
-    if (!this.ctx) return;
-    this._tone(660, { type: "square", dur: 0.06, gain: 0.09 });
-    this._tone(1320, { type: "square", dur: 0.1, gain: 0.06, delay: 0.05, slideTo: 1980 });
-  }
-
-  /* 收回精靈：紅色光束向下 sweep（對戰換寵用） */
-  recallBeam() {
-    this.ensure();
-    if (!this.ctx) return;
-    this._tone(1560, { type: "sawtooth", dur: 0.28, gain: 0.06, slideTo: 220 });
-  }
-
-  /* 招式命中音效（按屬性變化，配合對戰特效） */
-  moveHit(type) {
-    this.ensure();
-    if (!this.ctx) return;
-    switch (type) {
-      case "fire":
-        this._noiseHit({ freq: 620, q: 0.4, gain: 0.16, dur: 0.5, type: "lowpass" });
-        this._tone(200, { type: "sawtooth", dur: 0.42, gain: 0.05, slideTo: 520 });
-        break;
-      case "water":
-        this._noiseHit({ freq: 1500, q: 0.6, gain: 0.15, dur: 0.45, type: "highpass" });
-        this._noiseSweep(600, 2400, 0.4, 0.08);
-        break;
-      case "electric":
-        this._tone(1900, { type: "square", dur: 0.16, gain: 0.1, slideTo: 520 });
-        this._noiseHit({ freq: 2600, q: 1.4, gain: 0.12, dur: 0.22, type: "highpass" });
-        break;
-      case "ice":
-        this._tone(2500, { type: "triangle", dur: 0.2, gain: 0.09, slideTo: 1300 });
-        this._noiseHit({ freq: 3200, q: 1.7, gain: 0.1, dur: 0.28, type: "highpass" });
-        break;
-      case "grass":
-      case "bug":
-        this.rustle(1.3);
-        this._tone(520, { type: "triangle", dur: 0.28, gain: 0.06, slideTo: 900 });
-        break;
-      case "psychic":
-      case "ghost":
-        this._tone(700, { type: "sine", dur: 0.5, gain: 0.1, slideTo: 1900 });
-        break;
-      case "fighting":
-      case "rock":
-      case "ground":
-      case "steel":
-        this._tone(160, { type: "square", dur: 0.22, gain: 0.14, slideTo: 60 });
-        this._noiseHit({ freq: 800, q: 0.7, gain: 0.16, dur: 0.26, type: "lowpass" });
-        break;
-      default:
-        this.impact();
-    }
+  setVoiceScale(s) {
+    this._voiceScale = Math.max(0, Math.min(1, Number(s) || 0));
+    if (this.wordBus) this.wordBus.gain.value = this._voiceScale;
   }
 
   _makeNoise(seconds) {
@@ -284,9 +225,15 @@ class CaptureAudio {
     this._noiseHit({ freq: 4200, q: 2, gain: 0.05, dur: 0.05, type: "highpass" });
   }
 
-  /* 答錯提交：播 assets/audio/wrong-answer.mp3（每次錯都播一次） */
+  /* 答錯提交：播 assets/audio/wrong-answer.mp3（經 sfxBus，iOS 都食得到音量） */
   wrong() {
     try {
+      this.ensure();
+      if (this.ctx) {
+        this.playOnce("assets/audio/wrong-answer.mp3", 0.7);
+        return;
+      }
+      /* Web Audio 不可用時先用 <audio> 頂住 */
       if (!this._wrongEl) {
         this._wrongEl = new Audio("./assets/audio/wrong-answer.mp3");
         this._wrongEl.preload = "auto";
@@ -297,36 +244,6 @@ class CaptureAudio {
       const p = this._wrongEl.play();
       if (p && p.catch) p.catch(() => {});
     } catch (e) { /* audio unavailable */ }
-  }
-
-  /* Metallic coin ping — pitch climbs per tap (gacha coin insert) */
-  coin(step) {
-    this.ensure();
-    if (!this.ctx) return;
-    const base = 1320 * Math.pow(1.22, step - 1);
-    this._tone(base, { type: "square", dur: 0.09, gain: 0.055 });
-    this._tone(base * 2.01, { type: "sine", dur: 0.34, gain: 0.13, at: 0.005 });
-    this._tone(base * 2.98, { type: "sine", dur: 0.22, gain: 0.07, at: 0.01 });
-    this._noiseHit({ freq: 6800, q: 3, gain: 0.05, dur: 0.05, type: "highpass" });
-  }
-
-  /* Coin swallowed by the slot: low thunk + metallic tick */
-  coinInsert() {
-    this.ensure();
-    if (!this.ctx) return;
-    this._tone(220, { type: "sine", dur: 0.16, gain: 0.2, slideTo: 70 });
-    this._tone(1560, { type: "sine", dur: 0.3, gain: 0.1, at: 0.03 });
-    this._noiseHit({ freq: 3200, q: 1.6, gain: 0.1, dur: 0.08, at: 0.02 });
-  }
-
-  /* Machine rumble loop (one shot, ~1s of low juddering) */
-  rumble() {
-    this.ensure();
-    if (!this.ctx) return;
-    for (let i = 0; i < 6; i++) {
-      this._tone(70 + Math.random() * 30, { type: "sine", dur: 0.14, gain: 0.15, at: i * 0.16, slideTo: 45 });
-      this._noiseHit({ freq: 300, q: 0.8, gain: 0.09, dur: 0.12, at: i * 0.16, type: "lowpass" });
-    }
   }
 
   /* Heavy metal ball landing */
@@ -912,7 +829,7 @@ class CaptureAudio {
           u.lang = (enVoice && enVoice.lang) || "en-US";
           u.rate = 0.85;
           u.pitch = 1;
-          u.volume = 1;
+          u.volume = (this._voiceScale == null) ? 1 : Math.max(0, Math.min(1, this._voiceScale));
           synth.cancel();
           synth.speak(u);
         } catch (e) { /* 講嘢失敗就靜默，由 caller 決定點提示 */ }
