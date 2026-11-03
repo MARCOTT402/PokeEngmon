@@ -1,3 +1,11 @@
+# [1.39.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.38.1...v1.39.0) (2026-11-03)
+
+
+### Features
+
+* **pet:** continuous linear HP decay (100 HP per 25h), feed anytime, 2x home sprite ([e6ae1da](https://github.com/MARCOTT402/PokeEngmon/commit/e6ae1da1c0fefba8e5e4140d556ea8d4f6857051))
+* **ui:** settle page Lucky Draw button cleanup; docs: preop checklist rules ([666b02c](https://github.com/MARCOTT402/PokeEngmon/commit/666b02c37a8f6f8117522515b0fe958f02340e5d))
+
 ## [1.38.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.38.0...v1.38.1) (2026-11-03)
 
 
