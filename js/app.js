@@ -2167,19 +2167,32 @@ const App = {
     /* 按鈕（Home P1 dock + sheet 系統） */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
 
-    /* 上框 4 格：全部捲入 top-down sheets（捲到 dockbar 高度，唔 overlap） */
-    const binder = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+    /* 上框 4 格：全部捲入 top-down sheets
+     * 重要 pattern：如果已經有 sheet 開住，先捲回（等動畫 280ms），再開新 sheet
+     * 用 debounce 避免捲動未完成又被打開 */
+    let _sheetSwitching = false;
+    const binder = (id, openFn) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.onclick = () => {
+        if (_sheetSwitching) return; /* 捲動中，忽略重複點擊 */
+        const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+        if (anyOpen) {
+          _sheetSwitching = true;
+          App._closeAllSheets();
+          setTimeout(() => { _sheetSwitching = false; openFn(); }, 290);
+        } else {
+          openFn();
+        }
+      };
+    };
     binder("btn-bezel-diamond", () => {
       if (!document.getElementById("view-home").classList.contains("active")) this.showView("view-home");
       this._openSheet("sheet-gacha");
-      /* 同步 gacha 鑽石顯示 */
-      if (typeof Gacha !== "undefined") {
-        Gacha.open("rare");
-      }
+      if (typeof Gacha !== "undefined") Gacha.open("rare");
     });
     binder("btn-bezel-streak", () => {
       this._openSheet("sheet-calendar");
-      /* 預覽：只顯示連續天數 + 最近 7 日練習記錄 */
       const container = document.getElementById("sheet-calendar-content");
       if (container) {
         const st = loadState();
@@ -2194,7 +2207,6 @@ const App = {
     });
     binder("btn-bezel-dex", () => {
       this._openSheet("sheet-pokedex");
-      /* 預覽：進度 + 最近收集 */
       const container = document.getElementById("sheet-pokedex-content");
       if (container) {
         const st = loadState();
@@ -2215,11 +2227,9 @@ const App = {
     });
     binder("btn-bezel-energy", () => {
       this._openSheet("sheet-quests");
-      /* 預覽：今日任務數 */
       const container = document.getElementById("sheet-quests-content");
       if (container) {
         const st = loadState();
-        const quests = (typeof Quests !== "undefined" && Quests.getTodayCount) ? Quests.getTodayCount() : null;
         let energy = 0;
         if (typeof Energy !== "undefined" && Energy.ensure) {
           energy = Number(Energy.ensure(st)?.points) || 0;
@@ -2228,7 +2238,6 @@ const App = {
           <div style="padding:12px; text-align:center;">
             <div style="font-size:32px; font-weight:900; color:#16a34a;">⚡ ${energy}</div>
             <div style="font-size:12px; color:#7d786c; margin-top:4px;">Battle energy available</div>
-            ${quests ? `<div style="font-size:11px; color:#b0a99a; margin-top:10px;">${quests.done}/${quests.total} quests today</div>` : ""}
           </div>`;
       }
     });
@@ -2239,11 +2248,26 @@ const App = {
     binder("btn-quests-full", () => { this._closeSheet("sheet-quests"); if (typeof Quests !== "undefined") Quests.open(); });
 
     /* 舊 energy sheet 按鈕（保留但唔綁定） */
-    /* 底部 dock 4 格：答題 / Quests / Battle / Setting */
-    document.getElementById("btn-bd-quiz").onclick = () => this.openSetup();
-    document.getElementById("btn-bd-quests").onclick = () => { if (typeof Quests !== "undefined") Quests.open(); };
-    document.getElementById("btn-bd-battle").onclick = () => this._openSheet("sheet-battle");
-    document.getElementById("btn-bd-setting").onclick = () => this._openSheet("sheet-setting");
+    /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」 */
+    const dockBinder = (id, fn) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.onclick = () => {
+        if (_sheetSwitching) return;
+        const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+        if (anyOpen) {
+          _sheetSwitching = true;
+          App._closeAllSheets();
+          setTimeout(() => { _sheetSwitching = false; fn(); }, 290);
+        } else {
+          fn();
+        }
+      };
+    };
+    dockBinder("btn-bd-quiz", () => this.openSetup());
+    dockBinder("btn-bd-quests", () => { if (typeof Quests !== "undefined") Quests.open(); });
+    dockBinder("btn-bd-battle", () => this._openSheet("sheet-battle"));
+    dockBinder("btn-bd-setting", () => this._openSheet("sheet-setting"));
 
     /* Battle sheet 內容按鈕 */
     document.getElementById("btn-home-battle").onclick = () => {
@@ -2404,15 +2428,27 @@ const App = {
       }
     });
 
-    /* Home P1 sheet：backdrop 點擊關閉 + X 按鈕關閉 */
+    /* Home P1 sheet：backdrop 點擊關閉 + X 按鈕關閉 + 任何非 sheet 區域點擊先捲回 */
     document.addEventListener("click", (e) => {
+      const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+      if (!anyOpen) return;
+
       const bd = e.target.closest("#view-home .ph-backdrop");
       if (bd) { App._closeAllSheets(); return; }
+
       const xBtn = e.target.closest("#view-home .ph-sheet-x");
       if (xBtn) {
         const sheet = xBtn.closest(".ph-sheet");
         if (sheet) App._closeSheet(sheet.id);
+        return;
       }
+
+      /* 點擊咗 sheet 內嘅 element → 唔處理（由各 handler 自行關閉） */
+      const insideSheet = e.target.closest("#view-home .ph-sheet");
+      if (insideSheet) return;
+
+      /* 點擊咗任何其他地方 → 先捲回當前 sheet，再讓原 click 冒泡執行 */
+      App._closeAllSheets();
     });
 
     /* Ctrl+P / Cmd+P：播放圖片題音頻（要先 preventDefault，唔好開列印對話框）*/
