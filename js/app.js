@@ -34,8 +34,6 @@ const App = {
     /* 頂 dock 4 格更新 */
     document.getElementById("topbar-name").textContent = st.playerName;
     document.getElementById("topbar-diamonds").textContent = st.diamonds;
-    const bezelDiamonds = document.getElementById("bezel-diamond-count");
-    if (bezelDiamonds) bezelDiamonds.textContent = st.diamonds;
     const streakEl = document.getElementById("home-streak-label");
     if (streakEl) streakEl.textContent = "x" + calcStreak();
     const dexProgEl = document.getElementById("home-dex-progress");
@@ -2057,25 +2055,19 @@ const App = {
     /* 按鈕（Home P1 dock + sheet 系統） */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
 
-    /* 頂 dock 4 格 */
-    document.getElementById("td-dex").onclick = () => {
-      if (typeof Pokedex !== "undefined") Pokedex.open();
-    };
-    document.getElementById("td-streak").onclick = () => {
-      if (typeof Calendar !== "undefined") Calendar.open();
-    };
-    document.getElementById("td-diamond").onclick = () => Gacha.open("rare");
-    /* 上框鑽石入口（藍寶石 icon + 數量）→ 同一抽獎 sheet */
-    const bezelDiamondBtn = document.getElementById("btn-bezel-diamond");
-    if (bezelDiamondBtn) bezelDiamondBtn.onclick = () => Gacha.open("rare");
-    document.getElementById("td-energy").onclick = () => {
+    /* 上框數據列 4 格（左：鑽石 / 天數；右：圖鑑 / 能量） */
+    const binder = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+    binder("btn-bezel-diamond", () => Gacha.open("rare"));
+    binder("btn-bezel-streak", () => { if (typeof Calendar !== "undefined") Calendar.open(); });
+    binder("btn-bezel-dex", () => { if (typeof Pokedex !== "undefined") Pokedex.open(); });
+    binder("btn-bezel-energy", () => {
       const st = loadState(); const e = st.energy ?? 3;
       const fill = document.getElementById("energy-fill");
       const text = document.getElementById("energy-text");
       if (fill) fill.style.width = (e/5*100) + "%";
       if (text) text.textContent = e + " / 5";
       this._openSheet("sheet-energy");
-    };
+    });
 
     /* 底部 dock 4 格：答題 / Quests / Battle / Setting */
     document.getElementById("btn-bd-quiz").onclick = () => this.openSetup();
