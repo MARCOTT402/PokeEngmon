@@ -1,3 +1,15 @@
+# [1.34.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.33.0...v1.34.0) (2026-11-03)
+
+
+### Bug Fixes
+
+* **home:** show full red frame top with rounded corners ([9e630a0](https://github.com/MARCOTT402/PokeEngmon/commit/9e630a0c04e5a2029c3e6b63265630649c8ab581))
+
+
+### Features
+
+* **audio:** add Voice volume slider for word TTS ([aa604c0](https://github.com/MARCOTT402/PokeEngmon/commit/aa604c0509e63492924d15e4599fef192128dc08))
+
 # [1.33.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.32.1...v1.33.0) (2026-11-03)
 
 
