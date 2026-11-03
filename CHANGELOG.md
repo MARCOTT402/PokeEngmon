@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.36.0...v1.37.0) (2026-11-03)
+
+
+### Features
+
+* **ui:** contain pages in display window, single Home via chin Poke Ball ([ed76ee1](https://github.com/MARCOTT402/PokeEngmon/commit/ed76ee1ade15a4a848713bf527abfcbe678594b3))
+
 # [1.36.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.35.0...v1.36.0) (2026-11-03)
 
 
