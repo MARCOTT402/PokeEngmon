@@ -1,3 +1,10 @@
+## [1.31.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.31.1...v1.31.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* **home:** show day records inline in Streak-sheet calendar ([d25f4f4](https://github.com/MARCOTT402/PokeEngmon/commit/d25f4f4a966d838e3695f1a405f8d4300862d3f9))
+
 ## [1.31.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.31.0...v1.31.1) (2026-11-03)
 
 
