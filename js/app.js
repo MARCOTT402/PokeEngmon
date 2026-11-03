@@ -2061,9 +2061,14 @@ const App = {
   },
   _closeAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet");
-    sheets.forEach(s => { s.classList.remove("ph-open"); s.hidden = true; });
+    sheets.forEach(s => { s.classList.remove("ph-open"); });
     const backdrop = document.querySelector("#view-home .ph-backdrop");
-    if (backdrop) { backdrop.classList.remove("ph-open"); backdrop.hidden = true; }
+    if (backdrop) { backdrop.classList.remove("ph-open"); }
+    /* 等動畫完（280ms）再真隱藏 */
+    setTimeout(() => {
+      sheets.forEach(s => { if (!s.classList.contains("ph-open")) s.hidden = true; });
+      if (backdrop && !backdrop.classList.contains("ph-open")) backdrop.hidden = true;
+    }, 290);
   },
   _checkCloseAllSheets() {
     const sheets = document.querySelectorAll("#view-home .ph-sheet:not([hidden])");
