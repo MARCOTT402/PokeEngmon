@@ -424,4 +424,121 @@ Incident (2026-11-04)：答題／捕捉／對戰由全頁 view 改成 display-wi
 - 新 view 加入 display-window selector 群組時，必定同時覆寫 `height:auto`（原本有 `100dvh` 的話），並將內部 `position:fixed` 圖層改 `position:absolute; inset:0`（父 overlay 已係 fixed/relative）。
 - 呢三類玩法（答題／捕捉／對戰）要 call `App._setFrameLock(true)`，用 `disabled` + `pointer-events:none` 鎖住紅框 4 個 stat 同下巴 `btn-pd-home`；離開呢三個 view 記得解鎖。
 - 驗證：用 `getBoundingClientRect` 對比 overlay 同 `.pd-screen2` 四邊（差值 0）；模擬器要試 440×956 同 375×667 兩個尺寸。
+- **唔可以 fade-out 呢類 overlay**：佢哋後面就係仍然 active 嘅主頁 shell，任何 `opacity` transition／`is-fading` 都會喺切頁時露出主頁（用戶見到「主頁閃一下」）。要麼即時切換，要麼先鋪一層不透明黑幕再淡出。新 overlay 亦要 `animation: none`，避免 fade-in 期間見到主頁。
+
+## Rule 46 — 全域 popup（modal／toast）要貼 display window 頂部，z-index 要高過 view overlay
+
+Incident (2026-11-04)：toast 原本 `bottom:30px`，正正疊住下巴 Home 鍵；modal 置中又會被 quiz／捕捉／對戰 overlay（z-index 120）蓋住，因為 `.modal-backdrop` 舊 z-index 只有 50。
+
+- `.modal-backdrop`：`align-items:flex-start`、`padding-top: calc(var(--frame-screen-top) + 14px)`、`z-index: 1400`，`.modal-card` 用 `max-height: calc(100dvh - --frame-screen-top - --frame-screen-bottom - 28px)` 確保唔會落到 Home 鍵。
+- `.toast`：`top: calc(var(--frame-screen-top) + 12px)`、`bottom:auto`、`z-index: 1500`（要高過 modal 先睇得清）。
+- 新增任何 body 級 popup 時，z-index 必須大過 120（display-window view overlay），否則喺答題／捕捉／對戰入面會完全睇唔到。
+
+## Rule 47 — position:fixed overlays 必須：bezel/chin z-index 高過佢哋；exit 動畫跟 Settings sheet 一樣
+
+Incident (2026-11-04)：新增 display-window overlays（Friends / Leaderboard / Battle Menu）後出現連串 z-index 同 binder 邏輯 bug：
+
+**Bug 1 — bezel/chin 被攔截點擊**
+- Friends/Leaderboard/Battle Menu 用 `position:fixed` 疊喺 `position:relative` 嘅 `.pd-bezel` 同 `.pd-chin` 上面（fixed stacking context 更高）→ 用戶撳頂部 Pokedex/Streak/Settings 按鈕冇反應。
+- **必做：** 紅框兩個固定欄位必須有 `z-index: 100`：`.pd-bezel { position: relative; z-index: 100; }` 同 `.pd-chin { position: relative; z-index: 100; }`。
+- 所有 position:fixed 嘅 view overlay（包括之後新增嘅）都設 `z-index: 120`，確保高過 bezel/chin（bezel/chin 要可撳 → overlay 之間 sheet 要蓋住 overlay → sheet z-index 再高）。
+- Stacking 次序：bezel/chin (100) < display-window overlays (120) < sheets (z-index: 121+)。
+
+**Bug 2 — binder/dockBinder 只檢查 sheet，冇檢查 fixed overlay**
+- 開住 Friends view → curSheet = null → binder 走 `else → openFn()` → sheet 被開出嚟但顯示喺 Friends 後面（Friends 係 fixed，sheet 係 absolute）→ 用戶以為冇反應。
+- **必做：** `binder` 同 `dockBinder` 加前置檢查 `#view-friends.active, #view-leaderboard.active, #view-battle-menu.active`；有 fixed overlay active 時先 `showView("view-home")` 再 open。
+
+**Bug 3 — token self-cancel（同 Rule 51 詳細規格）**
+- binder 入面 `token = bump → showView("view-home") → showView 內部又 bump → token mismatch → timer cancel → openFn() 冇 run`。
+
+**Bug 4 — exit 動畫唔跟 Settings sheet**
+- 初次加嘅 exit 動畫係 `translateY(18px) + opacity fade`，但 Settings sheet close 係 `translateY(-100%)` + 純 transform（冇 opacity）。
+- **必做：** 所有 display-window overlay 嘅 exit 動畫必須跟 Settings sheet close 規格：
+  ```css
+  transition: transform .4s cubic-bezier(.25,1,.5,1);
+  .fixed-overlay-exit { transform: translateX(-50%) translateY(-100%); pointer-events: none; }
+  ```
+  方向：向上滑出（translateY(-100%)），同 `.ph-sheet-down` close 一樣。
+- `showView("view-home")` 時如果目前有 fixed overlay active，要先加 `fixed-overlay-exit` class → 延遲 400ms → 切 active（先播動畫，再換頁）。
+
+**Bug 5 — closure 內部 `_sheetSwitching` 變數引用**
+- 改 binder 嘅 `let _sheetSwitching` closure var → `App._sheetSwitching` 時漏咗 `dockBinder`（另一個 closure），dockbar 全部 function 即刻 ReferenceError 壞掉。
+- **必做：** 改 closure-level 變數名稱時，grep 全部 closure 引用位置（`let _xxx;` 出現咗幾多個 closure 就改幾多個）；或者一開始就掛 App object 上（`App._sheetSwitching`），唔用 closure var。
+
+## Rule 48 — Email sign up / sign in 後必須觸發 Learning Curve Mode 設定
+
+Incident (2026-11-04)：新增 Email/Password auth 後，新用戶 sign up / Google 首次登入都冇設定 Learning Curve Mode。
+
+- 新帳戶（`migrateAnonymous` 回 `true`）sign up / sign in 後，走 import 流程之後必須彈出 `_showCurveSetupForm()` 讓用戶揀 Junior/Standard/Teen/Adult。
+- Curve mode 寫入：`setCurveMode(mode)` + `saveState()` + `Sync.pushState()`（pushState 會 patch `user_account.curve_mode`）。
+- `_needsCurveSetup` flag 存喺 `loadState()` 回傳 object，`_postLogin` 完畢後檢查 → `setTimeout(() => _showCurveSetupForm(), 800)`（等 toast 顯示完）。
+- signOut / 關閉 OAuth 合併流程後要重置 `_needsCurveSetup = false` + saveState。
+
+## Rule 49 — Duolingo 風格按鈕動畫：pressed 彈出 + hover lift + vibration
+
+Incident (2026-11-04)：用戶要求所有按鈕加 Duolingo 風格互動。
+
+**CSS 規格：**
+```css
+.btn-big:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+.btn-big:active { transform: scale(.92); box-shadow: 0 1px 2px rgba(0,0,0,.2); transition-duration: 60ms; }
+@keyframes btn-pop { 0%{scale(.92);} 50%{scale(1.04);} 100%{scale(1);} }
+.btn-big.pressed { animation: btn-pop 280ms cubic-bezier(.25,1,.5,1); }
+@media (prefers-reduced-motion: reduce) { .pressed { animation: none; } }
+```
+
+**JS 委派：** 現有 document click SFX 委派入面加 `.pressed` class + `navigator.vibrate(12)`。用 `void btn.offsetWidth` 強制 reflow 防抖動。覆蓋範圍：`.btn-big, .btn-google, .pd-menu-btn, .icon-btn, .btn-nav, .chip-btn, .icon-link`。
+
+## Rule 50 — Supabase Auth：Email provider + Manual Linking + Automatic Linking
+
+Incident (2026-11-04)：由純 Google OAuth 變成 Email/Password +（未整 Apple）。新增三個 auth flow + 兩個 Supabase Dashboard 設定：
+
+**Dashboard 必設（代碼無法替代）：**
+1. Email Provider → Enable，**關閉 Confirm Email**（暫時）—— sign up 即拿 session
+2. Authentication → Settings → Security → Enable **Manual Linking**（Email 帳戶可以連 Google identity）
+
+**Auth Functions 規格（`js/supabase-auth.js`）：**
+| Function | GoTrue Endpoint | Purpose |
+|----------|-----------------|---------|
+| `signUpWithEmail(email, password)` | `POST /auth/v1/signup` | 註冊 |
+| `signInWithEmail(email, password)` | `POST /auth/v1/token?grant_type=password` | 登入 |
+| `sendPasswordReset(email)` | `POST /auth/v1/recover` | 忘記密碼 |
+| `linkGoogle()` | `/auth/v1/user/identities/authorize?provider=google`（需 Bearer token） | 已登入狀態下連接 provider |
+| `getIdentities()` | `GET /auth/v1/user`（回 `identities[]`） | 顯示已連接 identities |
+
+**Automatic Linking：** 同一 email 嘅 identities（Email + Google）Supabase 會自動 link 到同一個 `auth.users.id`。關閉 Confirm Email 令呢個行為更可靠。
+
+## Rule 51 — Login Gate：未登入必須彈，sign out / OAuth cancel 後要自動再彈
+
+Incident (2026-11-04)：新增強制登入邏輯後發現三個場景漏咗彈 Login Gate：
+
+1. App 啟動時已冇 session → 要彈 Login Gate（isGate=true）
+2. Sign out 後 → 500ms 後自動彈（等 toast 顯示完）
+3. OAuth sign in cancel（user 拒絕合併 prompt 後 signOut）→ 同樣要彈
+
+**實作規格：**
+- `openLoginHub(isGate = false)`：`isGate = true` 時 Modal click outside 唔關閉，顯示 4 個入口（Continue with Google / Create Account / Sign In with Email + Password）。
+- `Account Hub`（已登入）顯示 trainer name + identities list + Link 未連接 provider + Sign Out。
+- **唔需要處理本地匿名用戶進度遺失**（product decision）。
+
+## Rule 52 — binder / dockBinder token cancel pattern：先 showView，再 bump 自己 token
+
+Incident (2026-11-04, 同 Rule 47 Bug 3)：binder 入面同時做 `showView("view-home")` 同 `setTimeout(openFn, 410)` 會引發 token self-cancel。
+
+**標準 pattern（binder 同 dockBinder 都要用）：**
+```js
+if (hasFixedOverlay || curSheet) {
+  if (hasFixedOverlay) this.showView("view-home");  // ← 先 call（佢會 bump _sheetSwitchToken）
+  const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);  // ← 再 bump
+  App._sheetSwitching = true;
+  this._closeAllSheets();
+  setTimeout(() => {
+    if (App._sheetSwitchToken !== token) return;  // 外部切 view bump 咗 → cancel
+    App._sheetSwitching = false;
+    openFn();
+  }, 410);
+}
+```
+
+**改 closure var 時必須同時改兩個 closure**（`binder` = 頂部 bezel，`dockBinder` = 底部 dockbar），佢哋係獨立 closure，漏改一個就 ReferenceError 全壞。
 
