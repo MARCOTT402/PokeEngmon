@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================================
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================================
    PokeEngmon - 主流程
    路由 / 主畫面 / 題型選擇 + CSV 匯入 / 結算獎勵 / 錯題回顧 / 進化 / Modal
    ============================================================ */
@@ -1827,6 +1827,7 @@ const App = {
           await Sync.pull();
           console.log("[OAuth] ✅ Local progress imported to new Google account");
           st._googleMigrated = true;
+          st._needsCurveSetup = true;  /* 新帳戶 → 彈 curve setup */
           saveState();
         } else if (isNewAccount === false) {
           /* 舊帳戶：從雲端拉下來；本地有進度先問用戶（呢個窗而家一定撳得到） */
@@ -1866,6 +1867,14 @@ const App = {
       this.toast(signedEmail
         ? `✅ Signed in as ${signedEmail}`
         : "✅ Signed in! Your progress is cloud-synced.");
+
+      /* 新帳戶 → 彈 Learning Curve Mode 設定 */
+      if (st._needsCurveSetup) {
+        st._needsCurveSetup = false;
+        saveState();
+        /* 等 toast 顯示完先彈 curve setup modal */
+        setTimeout(() => { this._showCurveSetupForm(); }, 800);
+      }
     } catch (e) { console.warn("[OAuth] post-login failed:", e.message); }
   },
 
@@ -2287,6 +2296,45 @@ const App = {
         this.closeModal();
         this._showSignInForm();
       };
+    };
+  },
+
+  /* ---------- 首次登入 Learning Curve Mode 設定 ---------- */
+  _showCurveSetupForm() {
+    const modeOpts = [
+      { v: "junior", label: "🧒 Junior", desc: "Gentle curve with extra attempts & hints" },
+      { v: "standard", label: "📘 Standard", desc: "Balanced review for most learners" },
+      { v: "teen", label: "🎓 Teen", desc: "Steadier pace for secondary learners" },
+      { v: "adult", label: "🧑 Adult", desc: "Longer intervals for faster recall" }
+    ];
+    const modeHtml = modeOpts.map(o => `
+      <label class="curve-mode-opt">
+        <input type="radio" name="curveModeSetup" value="${o.v}" ${o.v === "standard" ? "checked" : ""}>
+        <span class="cm-label">${o.label}</span>
+        <small class="cm-desc">${o.desc}</small>
+      </label>`).join("");
+
+    this.showModal(`
+      <div class="login-hub curve-setup-hub">
+        <div class="lh-ball" aria-hidden="true"></div>
+        <h3>📈 Pick Your Learning Curve</h3>
+        <p class="lh-sub">This controls how aggressively we schedule reviews. You can change it anytime in Settings.</p>
+        <div class="curve-mode-grid">${modeHtml}</div>
+        <div class="lh-actions">
+          <button id="lh-curve-continue" class="btn-big btn-primary">Start Playing →</button>
+        </div>
+      </div>`, false);  /* 呢個 modal 可以關，但最好俾用戶揀完先關 */
+
+    document.getElementById("lh-curve-continue").onclick = async () => {
+      const sel = document.querySelector('input[name="curveModeSetup"]:checked');
+      const mode = sel ? sel.value : "standard";
+      /* 寫入本地 state + SM2 */
+      if (typeof setCurveMode === "function") setCurveMode(mode);
+      saveState();
+      /* 寫入 DB（pushState 會自動 patch user_account.curve_mode） */
+      try { await Sync.pushState(); } catch (e) { console.warn("Curve mode DB patch failed:", e); }
+      this.closeModal();
+      this.toast(`📈 Curve mode: ${mode}`);
     };
   },
 
