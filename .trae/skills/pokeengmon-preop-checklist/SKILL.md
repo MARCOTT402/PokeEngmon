@@ -613,4 +613,23 @@ Incident (2026-11-04)：連續跑 `tools/preview-iphone.mjs --headless` 時，�
 - 每次 run 用遞增 `--port`（9230/9231/…）；run 前 `Get-NetTCPConnection -LocalPort <port>`，有 OwningProcess 就 `Stop-Process -Id <pid> -Force`。
 - 工具完成後 Chrome 有時唔退出：截圖檔存在就代表 JS 已跑完，可以 kill 該 pid 收工。
 
+## Rule 60 — 掛喺 body 嘅 overlay 必須 `stopPropagation`，否則 sheet 外部點擊 handler 會誤關
+
+Incident (2026-11-04)：`#gacha-multi` 係 `document.body.appendChild` 嘅 fixed overlay。點 10 連結果卡想睇詳情時，click 冒泡到 `document`，命中 `#sheet-gacha` 嘅「點外面關閉」handler → `Gacha.abort()` → `_resetStage()` 收埋 overlay，畫面直接彈返 home。Debug 見到 AFTER: `phase:"idle"`, `sheetOpen:false`。
+
+- 任何掛 body 嘅 overlay／modal root，建立時即加：
+  `["pointerdown","pointerup","click","touchstart"].forEach(t => el.addEventListener(t, e => e.stopPropagation()))`
+- 內部按鈕（開啟詳情／撳卡）嘅 listener 要綁喺子元素，先執行再被 root 截停冒泡。
+- 驗收時必須真正 `cell.click()` 一次並截圖，唔好只驗「overlay 出到」。單靠 DOM 存在唔會發現呢類關閉 bug。
+
+## Rule 61 — 戰鬥 EXP：battle pokemon 必須帶 `uid`，分配只計「存活 + participated」；Level Sync 只降唔升
+
+Incident (2026-11-04)：結算畫面顯示「獲得 EXP」但實際冇加。根因係 `Battle.makeBattlePokemon` 回傳物件冇 `uid`，`grantKOExp` 記落 `pendingExp` 嘅 uid 全部係 `undefined`，`applyRewards` 用 `gainByUid[e.uid]` 查唔到 → gain 永遠 0。
+
+- `makeBattlePokemon` 回傳必須包含 `uid: entry.uid`（同 `expLevel`）。
+- `grantKOExp` 收 EXP 名單用 `team.filter(p => p.participated && p.hp > 0)`；fainted 唔派 EXP（Gen 5 規則）。
+- Inferno Level Sync 用 `Math.min(e.level, levelSyncLevel)` **只降唔升**：本身低過 sync 值嘅寵唔應該被升。
+- 以弱勝強加成用 `expLevel`（sync 前真實等級），唔好用 `level`，否則被壓低等級嘅寵會被誤加乘。
+- 改 EXP 相關流程後，跑 `node tools/_test_battle.js`（應 97 PASS）。
+
 

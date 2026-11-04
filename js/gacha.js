@@ -406,7 +406,7 @@ const Gacha = {
     if (!this._canMultiPull()) {
       /* 唔夠 30 鑽：唔會進入 charged，等玩家知要儲幾多 */
       this._cancelCharge();
-      this._prompt(`Need ${GACHA_GEM_SVG} ×${GAME_CONFIG.MULTI_PULL_COST} for 10×`);
+      this._prompt(`Need ${GAME_CONFIG.MULTI_PULL_COST} gems for 10×`);
       this._haptic(40);
       return;
     }
@@ -916,11 +916,16 @@ const Gacha = {
           <button class="btn-big btn-primary gm-again" type="button"></button>
           <button class="btn-big btn-plain gm-done" type="button">DONE</button>
         </div>
-        <div class="gm-detail hidden">
-          <div class="gi-card gm-detail-card"></div>
-        </div>
+      </div>
+      <div class="gm-detail hidden">
+        <div class="gi-card gm-detail-card"></div>
       </div>`;
     document.body.appendChild(el);
+    /* 結算 overlay 掛喺 body（唔喺 sheet 入面）：click 必須阻止冒泡，
+       否則 sheet 嘅「點外面關閉」handler 會誤關成個抽獎頁 */
+    ["pointerdown", "pointerup", "click", "touchstart"].forEach(t => {
+      el.addEventListener(t, e => e.stopPropagation());
+    });
     el.querySelector(".gm-close").addEventListener("click", () => this._closeMulti());
     el.querySelector(".gm-done").addEventListener("click", () => this._closeMulti());
     el.querySelector(".gm-again").addEventListener("click", () => this._multiAgain());
