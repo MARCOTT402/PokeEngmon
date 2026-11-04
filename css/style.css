@@ -1873,7 +1873,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   transform: translateX(-50%) translateY(-12px);
   max-width: min(420px, calc(100vw - 24px)); text-align: center;
   background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 999px;
-  font-weight: 700; opacity: 0; pointer-events: none; transition: all .3s; z-index: 1500;
+  font-weight: 700; opacity: 0; pointer-events: none; transition: all .3s; z-index: 3000;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 

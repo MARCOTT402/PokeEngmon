@@ -431,8 +431,10 @@ Incident (2026-11-04)：答題／捕捉／對戰由全頁 view 改成 display-wi
 Incident (2026-11-04)：toast 原本 `bottom:30px`，正正疊住下巴 Home 鍵；modal 置中又會被 quiz／捕捉／對戰 overlay（z-index 120）蓋住，因為 `.modal-backdrop` 舊 z-index 只有 50。
 
 - `.modal-backdrop`：`align-items:flex-start`、`padding-top: calc(var(--frame-screen-top) + 14px)`、`z-index: 1400`，`.modal-card` 用 `max-height: calc(100dvh - --frame-screen-top - --frame-screen-bottom - 28px)` 確保唔會落到 Home 鍵。
-- `.toast`：`top: calc(var(--frame-screen-top) + 12px)`、`bottom:auto`、`z-index: 1500`（要高過 modal 先睇得清）。
+- `.toast`：`top: calc(var(--frame-screen-top) + 12px)`、`bottom:auto`、`z-index: 3000`（v1.45.3 起，要高過晒所有 app 內 modal 先睇得清）。
 - 新增任何 body 級 popup 時，z-index 必須大過 120（display-window view overlay），否則喺答題／捕捉／對戰入面會完全睇唔到。
+- **Z-order 全景（2026-11-04 定案）：** toast(3000) > inferno-unlock(2300) / tier-select(2200) / pvp-match(2100) / team-select(2000) > display-window overlays(120) > bezel/chin(100)；entry-gate(9000) / update-modal / qd-fly(9999) 蓋過一切係刻意嘅。
+- **教訓（v1.45.3 Battle「Confirm 冇反應」）：** toast 曾卡喺 1500，被 team-select-modal(2000) 完全蓋住 —— 揀隊數量唔夠撳 Confirm 時「Pick exactly N Pokémon」有彈但用戶完全睇唔到，等於冇反應。新增任何 fixed modal（z-index 已 >1500）時，必須同時檢查**所有** toast / 全域 popup 嘅 z-index 仲高唔高過佢；「撳掣冇反應」類報告，要先查「回饋係咪彈咗但被蓋住」先好查 handler。
 
 ## Rule 47 — position:fixed overlays 必須：bezel/chin z-index 高過佢哋；exit 動畫跟 Settings sheet 一樣
 
