@@ -2954,13 +2954,12 @@ const App = {
       }
     );
 
-    /* 舊 energy sheet 按鈕（保留但唔綁定） */
-    /* 底部 dock 4 格：答題 / Quests / Battle / Setting — 同樣用「先捲回再執行」+ toggle */
+    /* 底部 dockbar 按鈕：同樣用「先捲回再執行」+ toggle + token cancel */
     const dockBinder = (id, sheetId, fn) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
-        if (_sheetSwitching) return;
+        if (App._sheetSwitching) return;
         const curSheet = document.querySelector("#view-home .ph-sheet.ph-open");
         const isToggle = curSheet && curSheet.id === sheetId;
         if (isToggle) {
@@ -2968,9 +2967,14 @@ const App = {
           return;
         }
         if (curSheet) {
-          _sheetSwitching = true;
+          const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);
+          App._sheetSwitching = true;
           this._closeAllSheets();
-          setTimeout(() => { _sheetSwitching = false; fn(); }, 410);
+          setTimeout(() => {
+            if (App._sheetSwitchToken !== token) return;
+            App._sheetSwitching = false;
+            fn();
+          }, 410);
         } else {
           fn();
         }
