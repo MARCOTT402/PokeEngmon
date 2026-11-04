@@ -1,3 +1,10 @@
+## [1.45.4](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.3...v1.45.4) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** add 2.5px black border to display-window overlays (match Settings sheet), fix exit distance to calc(100dvh - frame-screen-top) ([a168996](https://github.com/MARCOTT402/PokeEngmon/commit/a16899685a575d92943df06d828c1686dd04f41e))
+
 ## [1.45.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.2...v1.45.3) (2026-11-04)
 
 
