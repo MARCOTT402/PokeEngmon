@@ -1,3 +1,10 @@
+## [1.45.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.0...v1.45.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** align Friends/Leaderboard/Battle Menu exit animation with Settings sheet — same .4s cubic-bezier(.25,1,.5,1), translateY(-100%), remove opacity ([f9d9b2f](https://github.com/MARCOTT402/PokeEngmon/commit/f9d9b2f857993a79915902cd11e0db1089d3ad9f))
+
 # [1.45.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.5...v1.45.0) (2026-11-04)
 
 
