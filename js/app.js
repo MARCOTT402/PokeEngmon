@@ -2456,6 +2456,14 @@ const App = {
   _openSheet(id) {
     const sheet = document.getElementById(id);
     if (!sheet) return;
+    /* 結算／選題等 display-window overlay 會令 view-home 保持 active；
+       只信 active class 會 skip 咗切頁，sheet 就開喺 overlay（z-index 120）後面＝撳掣冇反應。
+       所以只要仲有其他 active view，就一定要真正切返 home。 */
+    const home = document.getElementById("view-home");
+    if (home && home.classList.contains("active") &&
+        document.querySelector(".view.active:not(#view-home)")) {
+      this.showView("view-home");
+    }
     if (id === "sheet-setting") { this._syncAudioSliders(); this._syncCurveMode(); }
     this._unmountSheetView(sheet); /* 上次 full 模式搬咗舊 view 入嚟 → 搬返原位 */
     /* 永遠重置 full 模式 + height style + arrow 方向（確保每次開都由 compact 開始） */

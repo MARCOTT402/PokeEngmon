@@ -456,9 +456,9 @@ Incident (2026-11-04)：新增 display-window overlays（Friends / Leaderboard /
 - **必做：** 所有 display-window overlay 嘅 exit 動畫必須跟 Settings sheet close 規格：
   ```css
   transition: transform .4s cubic-bezier(.25,1,.5,1);
-  .fixed-overlay-exit { transform: translateX(-50%) translateY(100%); pointer-events: none; }
+  .fixed-overlay-exit { transform: translateX(-50%) translateY(100dvh); pointer-events: none; }
   ```
-  方向：向下捲出（translateY(100%) 正值 = 向畫面下方移），同 `.ph-sheet-up`（Settings）close 一樣。
+  方向：向下捲到 viewport 絕對底（用 `100dvh` 而唔係 `100%`，確保即使元素高度唔滿 display window 都捲得夠遠），同 `.ph-sheet-up`（Settings）close 方向一致。
 - **注意：** translate 方向唔好憑直覺寫，先確認對齊嘅 sheet 係 top anchored（`.ph-sheet-down`，close = `-100%` 向上捲）定 bottom anchored（`.ph-sheet-up`，close = `+100%` 向下捲）。
 - `showView("view-home")` 時如果目前有 fixed overlay active，要先加 `fixed-overlay-exit` class → 延遲 400ms → 切 active（先播動畫，再換頁）。
 
@@ -542,4 +542,13 @@ if (hasFixedOverlay || curSheet) {
 ```
 
 **改 closure var 時必須同時改兩個 closure**（`binder` = 頂部 bezel，`dockBinder` = 底部 dockbar），佢哋係獨立 closure，漏改一個就 ReferenceError 全壞。
+
+## Rule 53 — 由結算／display-window overlay 開 home sheet：唔可以用 `view-home.active` 做判斷
+
+Incident (2026-11-04，用戶話「成日見到」)：捕捉結算頁撳 Lucky Draw 冇反應，唔會去精靈球捲出嚟嗰頁。
+
+- **Root cause：** 結算頁等 display-window overlay 會刻意保持 `#view-home` active（紅框要留喺後面）。`openGachaSheet()` 舊 code 係 `if (!view-home.active) showView("view-home")` → active 已 true，跳過切頁 → gacha sheet 開喺結算 overlay（z-index 120）後面，用戶完全睇唔到。
+- **必做：** `App._openSheet(id)` 已加 universal guard：`view-home.active` 但仲有 `.view.active:not(#view-home)` → 先 `showView("view-home")` 再開 sheet。任何新 `open*Sheet()` 都唔好再自己寫 `active` guard，直接 `showView("view-home")` 再 `_openSheet`（或交畀 `_openSheet` guard）。
+- **測試路徑：** `App.showView("view-settlement")` → click `#btn-pull-rare` → 斷言 `#view-settlement` 唔再 active、`#sheet-gacha` visible；同樣試 Streak／Dex／Energy sheet 由結算頁開。
+- 呢個 bug class 會影響所有「overlay 保持 home active」嘅頁：結算、選題（quiz-setup）、Battle Menu、Friends、Leaderboard。新增 page 時要當 `_openSheet` 係唯一入口。
 
