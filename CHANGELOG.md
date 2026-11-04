@@ -1,3 +1,10 @@
+# [1.40.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.39.0...v1.40.0) (2026-11-04)
+
+
+### Features
+
+* **auth:** add Email/Password sign up, sign in and account linking ([27228da](https://github.com/MARCOTT402/PokeEngmon/commit/27228dac2e4fe936853909c40b88eb7aafde05ec))
+
 # [1.39.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.38.1...v1.39.0) (2026-11-03)
 
 
