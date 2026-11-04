@@ -64,7 +64,8 @@ const Gym = {
       const m = this.nextAvailableMilestone(streak, this.getBadges());
       btn.hidden = !m;
       btn.dataset.milestone = m ? String(m) : "";
-      if (m) btn.textContent = `⚔ GYM CHALLENGE ×${m}`;
+      const tag = document.getElementById("gym-challenge-tag");
+      if (tag && m) tag.textContent = `⚔ GYM ×${m}`;
     }
     const row = document.getElementById("home-gym-badges");
     if (row) {
