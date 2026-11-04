@@ -1,3 +1,10 @@
+## [1.47.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.47.0...v1.47.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **gacha:** keep 10-pull result overlay open and drop SVG from cost hint ([0f3d9ee](https://github.com/MARCOTT402/PokeEngmon/commit/0f3d9eea5fcb0726b19de2691b4067dcde019b24))
+
 # [1.47.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.46.0...v1.47.0) (2026-11-04)
 
 
