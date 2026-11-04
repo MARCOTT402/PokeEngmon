@@ -1,3 +1,10 @@
+## [1.44.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.2...v1.44.3) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** bezel buttons blocked by Friends/Leaderboard/Battle Menu views — add z-index:100 to .pd-bezel and .pd-chin ([f322c4f](https://github.com/MARCOTT402/PokeEngmon/commit/f322c4fb33eb39f21ccff7dc4c4283b70c1697b1))
+
 ## [1.44.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.1...v1.44.2) (2026-11-04)
 
 
