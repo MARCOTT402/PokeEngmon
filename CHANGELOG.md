@@ -1,3 +1,10 @@
+## [1.45.7](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.6...v1.45.7) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** exit animation use scaleY(0) from bottom — never use translateY on position:fixed overlays (they exit the display window) ([1aba85a](https://github.com/MARCOTT402/PokeEngmon/commit/1aba85aaa3d6c465fa2f156e0562ae19adcf2a52))
+
 ## [1.45.6](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.5...v1.45.6) (2026-11-04)
 
 
