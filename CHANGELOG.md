@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.40.0...v1.41.0) (2026-11-04)
+
+
+### Features
+
+* **auth:** add Login Gate to enforce sign-in before play ([4adc721](https://github.com/MARCOTT402/PokeEngmon/commit/4adc72168ed8760a8eaf422a211f049109f23e77))
+
 # [1.40.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.39.0...v1.40.0) (2026-11-04)
 
 
