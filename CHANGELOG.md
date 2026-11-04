@@ -1,3 +1,10 @@
+## [1.44.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.1...v1.44.2) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** dockbar buttons broken — dockBinder still referenced removed _sheetSwitching closure var ([5dcde35](https://github.com/MARCOTT402/PokeEngmon/commit/5dcde35fe46cf49648874a7d8d76f9db21e199c1))
+
 ## [1.44.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.0...v1.44.1) (2026-11-04)
 
 
