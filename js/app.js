@@ -1764,12 +1764,22 @@ const App = {
 
   /* ---------- Login Hub（Poké Ball 風格） ---------- */
   _markLoggedIn() {
-    const btn = document.getElementById("btn-login");
-    if (!btn) return;
-    btn.textContent = "✅";
-    btn.title = "Connected — tap to manage";
+    const v = document.getElementById("login-state");
+    if (!v) return;
+    const user = window.SupabaseAuth?.currentUser();
+    const email = user?.email || "";
+    v.textContent = email ? "Connected" : "Connected";
+    v.title = email || "Connected — tap to manage";
     /* 登入後先開始好友背景輪詢（帶來新邀請／請求數） */
     if (window.Friends && Friends.startPolling) Friends.startPolling();
+  },
+
+  /* 還原登入狀態文字（sign out 後用） */
+  _markLoggedOut() {
+    const v = document.getElementById("login-state");
+    if (!v) return;
+    v.textContent = "Sign in";
+    v.title = "";
   },
 
   /* OAuth redirect 返嚟之後嘅雲端合併。一定要等首屏 render 完、loading 淡出後才跑：
@@ -1910,43 +1920,10 @@ const App = {
     const deviceId = ensureDeviceId();
 
     if (user) {
-      /* 已登入狀態：同步係全自動，唔需要 Sync Now 按鈕 */
-      this.showModal(`
-        <div class="login-hub logged-in">
-          <div class="lh-ball" aria-hidden="true"></div>
-          <h3>✅ Connected Trainer</h3>
-          <p class="lh-email">${escapeHTML(user.email || user.user_metadata?.name || "Trainer")}</p>
-          <p class="lh-sub">Your progress is safely synced to the cloud.</p>
-          <div class="lh-actions">
-            <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
-          </div>
-          <p class="lh-note">Wrong account? Sign out, then use “Continue with Google” and pick a different account.</p>
-        </div>`, false);
-
-      document.getElementById("lh-signout").onclick = async () => {
-        try {
-          await SupabaseAuth.signOut();
-          if (window.Friends && Friends.stopPolling) Friends.stopPolling();
-          /* 登出後清除本地遊戲進度，防止再登入另一個帳戶時將舊進度複製過去（cheat） */
-          clearGameProgress();
-          /* clearGameProgress 會建立新 state 物件，要重新 load */
-          const fresh = loadState();
-          fresh._googleMigrated = false;
-          saveState();
-          /* 登出後清除 auth 狀態 */
-          try { await Sync.pull(); } catch (e) {}
-          const btn = document.getElementById("btn-login");
-          if (btn) { btn.textContent = "🔐"; btn.title = "Sign in"; }
-          this.closeModal();
-          this.renderHome();
-          this.toast("Signed out — local progress cleared");
-        } catch (e) {
-          console.error("[SignOut] failed:", e);
-          this.toast("Sign out failed: " + e.message);
-        }
-      };
+      /* 已登入 → Account Hub：顯示已連接嘅 identities，俾用戶管理 */
+      this._showAccountHub();
     } else {
-      /* 未登入狀態 */
+      /* 未登入 → Tab 結構：Social / Create / Sign In */
       this.showModal(`
         <div class="login-hub">
           <div class="lh-ball" aria-hidden="true"></div>
@@ -1960,10 +1937,14 @@ const App = {
             </button>
           </div>
 
-          <div class="lh-divider"><span>Device saved anonymously</span></div>
-          <p class="lh-device">Local ID: <code>${escapeHTML(deviceId.slice(0, 8))}</code></p>
+          <div class="lh-divider"><span>or Email</span></div>
 
-          <p class="lh-note">Playing without login is fine — your progress stays on this device. Sign in anytime to cloud-sync: your Pokémon & learning progress carry over, and diamonds become a fresh 20💎 welcome bonus.</p>
+          <div class="lh-actions">
+            <button id="lh-create" class="btn-big btn-primary">Create Account</button>
+            <button id="lh-signin" class="btn-big btn-plain">Sign In</button>
+          </div>
+
+          <p class="lh-note">By signing up, your progress saves to the cloud and syncs across devices. Your trainer data, Pokémon, and diamonds carry over.</p>
         </div>`, false);
 
       document.getElementById("lh-google").onclick = async () => {
@@ -1971,7 +1952,316 @@ const App = {
         try { await SupabaseAuth.signInWithGoogle(); }
         catch (e) { console.warn("Google sign-in failed:", e); }
       };
+      document.getElementById("lh-create").onclick = () => { this.closeModal(); this._showSignUpForm(); };
+      document.getElementById("lh-signin").onclick = () => { this.closeModal(); this._showSignInForm(); };
     }
+  },
+
+  /* ---------- 已登入狀態 Account Hub ---------- */
+  async _showAccountHub() {
+    const user = SupabaseAuth.currentUser();
+    const identities = await SupabaseAuth.getIdentities();
+    const emailIdent = identities.find(i => i.provider === "email");
+    const googleIdent = identities.find(i => i.provider === "google");
+    const hasGoogle = !!googleIdent;
+    const hasEmail = !!emailIdent;
+    const trainerName = loadState().playerName || "The PokéEngmon Trainer";
+
+    this.showModal(`
+      <div class="login-hub logged-in">
+        <div class="lh-ball" aria-hidden="true"></div>
+        <h3>✅ Connected Trainer</h3>
+        <p class="lh-email">${escapeHTML(trainerName)}</p>
+        <p class="lh-sub" style="margin-bottom:12px">Your progress is safely synced to the cloud.</p>
+
+        <div class="lh-linked">
+          <div class="lh-linked-title">Connected Accounts</div>
+          <div class="lh-linked-row ${hasEmail ? "on" : "off"}">
+            <span class="lh-linked-provider">✉️ Email</span>
+            <span class="lh-linked-val">${escapeHTML(emailIdent?.identity_data?.email || user.email || "—")}</span>
+          </div>
+          <div class="lh-linked-row ${hasGoogle ? "on" : "off"}">
+            <span class="lh-linked-provider">
+              <svg width="14" height="14" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.12 24.5c0-1.56-.15-3.06-.41-4.5H24v8.51h11.84C34.77 33.61 29.2 37.5 24 37.5c-7.43 0-13.5-6.07-13.5-13.5s6.07-13.5 13.5-13.5c3.44 0 6.59 1.29 8.98 3.41l6.18-6.18C35.52 4.99 30.02 2.5 24 2.5 11.57 2.5 1.5 12.57 1.5 25s10.07 22.5 22.5 22.5c11.05 0 20.1-7.92 22.12-18.5z"/></svg>
+              Google
+            </span>
+            <span class="lh-linked-val">${hasGoogle ? "Connected" : "—"}</span>
+          </div>
+        </div>
+
+        ${!hasGoogle ? `
+          <div class="lh-actions" style="margin-top:14px">
+            <button id="lh-link-google" class="btn-big btn-google">Link Google Account</button>
+          </div>
+        ` : ""}
+
+        <div class="lh-actions" style="margin-top:14px">
+          <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
+        </div>
+        <p class="lh-note">Linking Google lets you sign in with either your email or Google account.</p>
+      </div>`, false);
+
+    if (!hasGoogle) {
+      document.getElementById("lh-link-google").onclick = async () => {
+        const btn = document.getElementById("lh-link-google");
+        btn.disabled = true; btn.textContent = "Redirecting...";
+        const res = await SupabaseAuth.linkGoogle();
+        if (res && !res.ok) {
+          btn.disabled = false; btn.textContent = "Link Google Account";
+          if (res.error === "manual_linking_disabled") {
+            this.toast("Please enable Manual Linking in Supabase Dashboard (Auth → Settings → Security)");
+          } else {
+            this.toast("Failed to link Google: " + (res.error || "unknown"));
+          }
+        }
+      };
+    }
+
+    document.getElementById("lh-signout").onclick = async () => {
+      try {
+        await SupabaseAuth.signOut();
+        if (window.Friends && Friends.stopPolling) Friends.stopPolling();
+        clearGameProgress();
+        const fresh = loadState();
+        fresh._googleMigrated = false;
+        saveState();
+        try { await Sync.pull(); } catch (e) {}
+        this._markLoggedOut();
+        this.closeModal();
+        this.renderHome();
+        this.toast("Signed out — local progress cleared");
+      } catch (e) {
+        console.error("[SignOut] failed:", e);
+        this.toast("Sign out failed: " + e.message);
+      }
+    };
+  },
+
+  /* ---------- Sign Up Form ---------- */
+  _showSignUpForm() {
+    this.showModal(`
+      <div class="login-hub">
+        <div class="lh-ball" aria-hidden="true"></div>
+        <h3>Create Account</h3>
+        <p class="lh-sub">Save your progress to the cloud. Never lose a Pokémon again.</p>
+        <form id="lh-signup-form" class="lh-form" autocomplete="off">
+          <input id="su-email" type="email" class="lh-input" placeholder="Email address" required>
+          <input id="su-nick" type="text" class="lh-input" placeholder="Trainer Name" maxlength="24" required>
+          <input id="su-pass" type="password" class="lh-input" placeholder="Password (8+ characters)" minlength="8" required>
+          <input id="su-pass2" type="password" class="lh-input" placeholder="Confirm password" minlength="8" required>
+          <div id="lh-signup-error" class="lh-error" hidden></div>
+          <button id="lh-signup-btn" type="submit" class="btn-big btn-primary">Create Account</button>
+        </form>
+        <p class="lh-alt">Already have an account? <a id="lh-to-signin" href="#">Sign in</a></p>
+      </div>`, false);
+
+    const errBox = document.getElementById("lh-signup-error");
+    const form = document.getElementById("lh-signup-form");
+
+    document.getElementById("lh-to-signin").onclick = (e) => {
+      e.preventDefault();
+      this.closeModal();
+      this._showSignInForm();
+    };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("su-email").value.trim();
+      const nick = document.getElementById("su-nick").value.trim();
+      const pass = document.getElementById("su-pass").value;
+      const pass2 = document.getElementById("su-pass2").value;
+
+      /* 前端基本校验 */
+      if (!email || !nick || !pass || !pass2) {
+        errBox.textContent = "Please fill in all fields.";
+        errBox.hidden = false; return;
+      }
+      if (pass.length < 8) {
+        errBox.textContent = "Password must be at least 8 characters.";
+        errBox.hidden = false; return;
+      }
+      if (pass !== pass2) {
+        errBox.textContent = "Passwords do not match.";
+        errBox.hidden = false; return;
+      }
+      if (!email.includes("@")) {
+        errBox.textContent = "Please enter a valid email address.";
+        errBox.hidden = false; return;
+      }
+
+      const btn = document.getElementById("lh-signup-btn");
+      btn.disabled = true; btn.textContent = "Creating...";
+      errBox.hidden = true;
+
+      const res = await SupabaseAuth.signUpWithEmail(email, pass);
+      btn.disabled = false; btn.textContent = "Create Account";
+
+      if (!res.ok) {
+        errBox.textContent = res.error || "Sign up failed.";
+        errBox.hidden = false;
+        return;
+      }
+
+      if (res.needConfirm) {
+        /* Supabase 開咗 Confirm Email → 顯示 email sent 提示 */
+        this.showModal(`
+          <div class="login-hub">
+            <div class="lh-ball" aria-hidden="true"></div>
+            <h3>Check Your Email</h3>
+            <p class="lh-sub">We sent a confirmation link to <strong>${escapeHTML(email)}</strong>. Please click the link to activate your account, then sign in.</p>
+            <div class="lh-actions">
+              <button id="lh-back-to-signin" class="btn-big btn-primary">Back to Sign In</button>
+            </div>
+          </div>`, false);
+        document.getElementById("lh-back-to-signin").onclick = () => {
+          this.closeModal();
+          this._showSignInForm();
+        };
+        return;
+      }
+
+      /* 成功！走 _postLogin 流程 import 本地進度 */
+      /* 注意：唔好再 closeModal()，因為 modal 已經被 Sign Up → Check Email 嘅 modal 蓋過
+         但呢個分支（needConfirm=false）並冇彈 Check Email modal，所以要先 close */
+      /* 寫入暱稱 → 改 playerName 然後走 importState */
+      const st = loadState();
+      if (nick) {
+        st.playerName = nick;
+        st.nameCustomized = true;
+        saveState();
+      }
+      await SupabaseAuth.ensureFreshSession();
+      /* _postLogin 可能需要 modal 顯示確認窗，所以唔好先 closeModal */
+      try { await this._postLogin(loadState()); } catch (err) {}
+      /* 更新 UI + 關閉 modal（_postLogin 內部唔會關 modal） */
+      this._markLoggedIn();
+      this.closeModal();
+      this.renderHome();
+      this.toast(`✅ Welcome, ${escapeHTML(nick)}! Your progress is saved.`);
+    };
+  },
+
+  /* ---------- Sign In Form ---------- */
+  _showSignInForm() {
+    this.showModal(`
+      <div class="login-hub">
+        <div class="lh-ball" aria-hidden="true"></div>
+        <h3>Sign In</h3>
+        <p class="lh-sub">Welcome back! Sign in to sync your progress.</p>
+        <form id="lh-signin-form" class="lh-form" autocomplete="off">
+          <input id="si-email" type="email" class="lh-input" placeholder="Email address" required>
+          <input id="si-pass" type="password" class="lh-input" placeholder="Password" required>
+          <div id="lh-signin-error" class="lh-error" hidden></div>
+          <button id="lh-signin-btn" type="submit" class="btn-big btn-primary">Sign In</button>
+        </form>
+        <p class="lh-alt">
+          <a id="lh-to-forgot" href="#">Forgot password?</a>
+          ·
+          <a id="lh-to-create" href="#">Create account</a>
+        </p>
+      </div>`, false);
+
+    const errBox = document.getElementById("lh-signin-error");
+    const form = document.getElementById("lh-signin-form");
+
+    document.getElementById("lh-to-create").onclick = (e) => {
+      e.preventDefault();
+      this.closeModal();
+      this._showSignUpForm();
+    };
+    document.getElementById("lh-to-forgot").onclick = (e) => {
+      e.preventDefault();
+      this.closeModal();
+      this._showForgotPasswordForm();
+    };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("si-email").value.trim();
+      const pass = document.getElementById("si-pass").value;
+
+      if (!email || !pass) {
+        errBox.textContent = "Please enter your email and password.";
+        errBox.hidden = false; return;
+      }
+
+      const btn = document.getElementById("lh-signin-btn");
+      btn.disabled = true; btn.textContent = "Signing in...";
+      errBox.hidden = true;
+
+      const res = await SupabaseAuth.signInWithEmail(email, pass);
+      btn.disabled = false; btn.textContent = "Sign In";
+
+      if (!res.ok) {
+        /* Supabase 通常回「Invalid login credentials」— 要俾清楚提示 */
+        errBox.textContent = res.error || "Invalid email or password.";
+        errBox.hidden = false;
+        return;
+      }
+
+      /* 成功！走 _postLogin 合併 */
+      this.closeModal();
+      try { await this._postLogin(loadState()); } catch (err) {}
+      this._markLoggedIn();
+      this.closeModal();
+      this.renderHome();
+      this.toast(`✅ Signed in as ${escapeHTML(email)}`);
+    };
+  },
+
+  /* ---------- Forgot Password Form ---------- */
+  _showForgotPasswordForm() {
+    this.showModal(`
+      <div class="login-hub">
+        <div class="lh-ball" aria-hidden="true"></div>
+        <h3>Reset Password</h3>
+        <p class="lh-sub">Enter your email and we'll send you a link to reset your password.</p>
+        <form id="lh-forgot-form" class="lh-form" autocomplete="off">
+          <input id="fp-email" type="email" class="lh-input" placeholder="Email address" required>
+          <div id="lh-forgot-error" class="lh-error" hidden></div>
+          <button id="lh-forgot-btn" type="submit" class="btn-big btn-primary">Send Reset Link</button>
+        </form>
+        <p class="lh-alt"><a id="lh-forgot-back" href="#">← Back to Sign In</a></p>
+      </div>`, false);
+
+    const errBox = document.getElementById("lh-forgot-error");
+    const form = document.getElementById("lh-forgot-form");
+
+    document.getElementById("lh-forgot-back").onclick = (e) => {
+      e.preventDefault();
+      this.closeModal();
+      this._showSignInForm();
+    };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("fp-email").value.trim();
+      if (!email || !email.includes("@")) {
+        errBox.textContent = "Please enter a valid email address.";
+        errBox.hidden = false; return;
+      }
+      const btn = document.getElementById("lh-forgot-btn");
+      btn.disabled = true; btn.textContent = "Sending...";
+      errBox.hidden = true;
+
+      const res = await SupabaseAuth.sendPasswordReset(email);
+      btn.disabled = false; btn.textContent = "Send Reset Link";
+
+      /* Supabase 為咗防 user enumeration，有冇呢個 email 都回 200 → 直接顯示 sent */
+      this.showModal(`
+        <div class="login-hub">
+          <div class="lh-ball" aria-hidden="true"></div>
+          <h3>Check Your Email</h3>
+          <p class="lh-sub">If an account exists for <strong>${escapeHTML(email)}</strong>, we've sent a reset link. Click it in the email to create a new password.</p>
+          <div class="lh-actions">
+            <button id="lh-forgot-done" class="btn-big btn-primary">Done</button>
+          </div>
+        </div>`, false);
+      document.getElementById("lh-forgot-done").onclick = () => {
+        this.closeModal();
+        this._showSignInForm();
+      };
+    };
   },
 
   /* ---------- 改訓練員名 ---------- */

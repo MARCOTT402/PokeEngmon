@@ -143,10 +143,168 @@ const SupabaseAuth = {
     localStorage.removeItem("pokeengmon_auth_session");
     const redirectUrl = this._cleanURL();
     const url = `${this.URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&response_type=token&scope=email+profile&prompt=select_account`;
-    /* redirect 去 Supabase OAuth → 完成後 Supabase redirect 返嚟帶 hash fragment */
     window.location.href = url;
-    /* 下面嘅代碼永遠唔會執行（redirect 會中斷），但留住俾 await 語義 */
     return new Promise(() => {});
+  },
+
+  /* ---------- Email/Password Sign Up ----------
+     data.nickname 會存入 auth.users.user_metadata.nickname
+     但真正顯示暱稱用 user_account.trainer_name（由 importState 寫入） */
+  async signUpWithEmail(email, password) {
+    const url = `${this.URL}/auth/v1/signup`;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        /* GoTrue error msg 有時喺 msg / 有時喺 error_description */
+        const msg = d.error_description || d.msg || d.error || "Sign up failed";
+        throw new Error(msg);
+      }
+      /* 如果 Supabase 冇開 Confirm Email → 直接回 session */
+      if (d.access_token) {
+        const claims = this._decodeJWT(d.access_token) || {};
+        const session = {
+          access_token: d.access_token,
+          refresh_token: d.refresh_token,
+          expires_at: this._now() + (d.expires_in || 3600),
+          user: { id: claims.sub || d.user?.id, email: d.user?.email || claims.email }
+        };
+        this.saveSession(session);
+        return { ok: true, needConfirm: false };
+      }
+      /* 開咗 Confirm Email → 回 user object，冇 session */
+      return { ok: true, needConfirm: true, user: d.user };
+    } catch (e) {
+      console.warn("[Auth] signUpWithEmail failed:", e.message);
+      return { ok: false, error: e.message };
+    }
+  },
+
+  /* ---------- Email/Password Sign In ---------- */
+  async signInWithEmail(email, password) {
+    const url = `${this.URL}/auth/v1/token?grant_type=password`;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        const msg = d.error_description || d.msg || d.error || "Sign in failed";
+        throw new Error(msg);
+      }
+      const claims = this._decodeJWT(d.access_token) || {};
+      const session = {
+        access_token: d.access_token,
+        refresh_token: d.refresh_token,
+        expires_at: this._now() + (d.expires_in || 3600),
+        user: { id: claims.sub || null, email: claims.email || null }
+      };
+      this.saveSession(session);
+      /* 登入後補 _hydrateUser 拎 user_metadata 等額外資料 */
+      this._hydrateUser().catch(() => {});
+      return { ok: true };
+    } catch (e) {
+      console.warn("[Auth] signInWithEmail failed:", e.message);
+      return { ok: false, error: e.message };
+    }
+  },
+
+  /* ---------- Forgot Password（發 reset email） ----------
+     回傳 { ok: true } 或 { ok: false, error }（為咗防 user enumeration，
+     Supabase 會喺有冇呢個 email 都回 200，所以基本唔會有 ok: false） */
+  async sendPasswordReset(email) {
+    const redirectUrl = this._cleanURL();
+    const url = `${this.URL}/auth/v1/recover`;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, redirect_to: redirectUrl })
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        const msg = d.error_description || d.msg || d.error || "Failed to send reset email";
+        throw new Error(msg);
+      }
+      return { ok: true };
+    } catch (e) {
+      console.warn("[Auth] sendPasswordReset failed:", e.message);
+      return { ok: false, error: e.message };
+    }
+  },
+
+  /* ---------- 已登入帳戶連接 Google identity（Manual Linking） ----------
+     條件：Supabase Dashboard 要開 Enable Manual Linking。
+     如果 Manual Linking 未開，endpoint 回 404，呢個函式會 return { error: "manual_linking_disabled" }
+     俾 UI 顯示友好提示。 */
+  async linkGoogle() {
+    const token = this._session?.access_token;
+    if (!token) { console.warn("[Auth] linkGoogle: not logged in"); return { ok: false, error: "not_logged_in" }; }
+    const redirectUrl = this._cleanURL();
+    const url = `${this.URL}/auth/v1/user/identities/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&scope=email+profile&prompt=select_account`;
+    try {
+      const r = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY },
+        redirect: "follow"
+      });
+      if (r.status === 404) {
+        return { ok: false, error: "manual_linking_disabled" };
+      }
+      if (r.ok && r.url && r.url.startsWith("https://accounts.google.com")) {
+        window.location.href = r.url;
+        return new Promise(() => {});
+      }
+      throw new Error("Unexpected response");
+    } catch (e) {
+      console.warn("[Auth] linkGoogle failed:", e.message);
+      return { ok: false, error: e.message };
+    }
+  },
+
+  /* ---------- 已登入帳戶連接 Apple identity（Manual Linking） ---------- */
+  async linkApple() {
+    const token = this._session?.access_token;
+    if (!token) { console.warn("[Auth] linkApple: not logged in"); return; }
+    const redirectUrl = this._cleanURL();
+    const url = `${this.URL}/auth/v1/user/identities/authorize?provider=apple&redirect_to=${encodeURIComponent(redirectUrl)}&scope=email+name`;
+    try {
+      const r = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY },
+        redirect: "follow"
+      });
+      const appleUrl = r.url;
+      if (appleUrl && appleUrl.includes("appleid.apple.com")) {
+        window.location.href = appleUrl;
+      } else {
+        throw new Error("Unexpected redirect URL");
+      }
+    } catch (e) {
+      console.warn("[Auth] linkApple failed:", e.message);
+      window.location.href = url;
+    }
+    return new Promise(() => {});
+  },
+
+  /* ---------- 取回已連接嘅 identities（俾 Account Hub 顯示） ----------
+     回傳 identities array： [{ provider: "email", id: "...", identity_data: {...} }, ...]
+     注意：要 authenticated 狀態先有資料 */
+  async getIdentities() {
+    const token = this._session?.access_token;
+    if (!token) return [];
+    try {
+      const r = await fetch(`${this.URL}/auth/v1/user`, {
+        headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY }
+      });
+      if (!r.ok) return [];
+      const u = await r.json();
+      return u.identities || [];
+    } catch (e) { return []; }
   },
 
   /* ---------- 從 URL hash fragment 解析 session ---------- */
