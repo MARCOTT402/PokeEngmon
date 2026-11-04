@@ -1914,7 +1914,8 @@ const App = {
     });
   },
 
-  openLoginHub() {
+  /* isGate=true 時代表首次進入 App 嘅強制登入 gate，唔俾 click outside 關閉 */
+  openLoginHub(isGate) {
     const st = loadState();
     const user = window.SupabaseAuth ? SupabaseAuth.currentUser() : null;
     const deviceId = ensureDeviceId();
@@ -1923,7 +1924,7 @@ const App = {
       /* 已登入 → Account Hub：顯示已連接嘅 identities，俾用戶管理 */
       this._showAccountHub();
     } else {
-      /* 未登入 → Tab 結構：Social / Create / Sign In */
+      /* 未登入 → Tab 結構：Social / Create / Sign In；isGate 模式唔俾關 modal */
       this.showModal(`
         <div class="login-hub">
           <div class="lh-ball" aria-hidden="true"></div>
@@ -1945,15 +1946,24 @@ const App = {
           </div>
 
           <p class="lh-note">By signing up, your progress saves to the cloud and syncs across devices. Your trainer data, Pokémon, and diamonds carry over.</p>
-        </div>`, false);
+        </div>`, !!isGate);  /* isGate=true → noClose=true → 唔俾 click outside 關閉 */
 
       document.getElementById("lh-google").onclick = async () => {
         this.closeModal();
         try { await SupabaseAuth.signInWithGoogle(); }
         catch (e) { console.warn("Google sign-in failed:", e); }
       };
-      document.getElementById("lh-create").onclick = () => { this.closeModal(); this._showSignUpForm(); };
-      document.getElementById("lh-signin").onclick = () => { this.closeModal(); this._showSignInForm(); };
+      document.getElementById("lh-create").onclick = () => {
+        /* 如果係 gate 模式，sign up form 都應該唔俾關 */
+        const signUpEl = document.getElementById("lh-signup-form");
+        if (signUpEl) signUpEl._isGate = isGate;
+        this.closeModal();
+        this._showSignUpForm(isGate);
+      };
+      document.getElementById("lh-signin").onclick = () => {
+        this.closeModal();
+        this._showSignInForm(isGate);
+      };
     }
   },
 
@@ -2038,7 +2048,7 @@ const App = {
   },
 
   /* ---------- Sign Up Form ---------- */
-  _showSignUpForm() {
+  _showSignUpForm(isGate) {
     this.showModal(`
       <div class="login-hub">
         <div class="lh-ball" aria-hidden="true"></div>
@@ -2053,7 +2063,7 @@ const App = {
           <button id="lh-signup-btn" type="submit" class="btn-big btn-primary">Create Account</button>
         </form>
         <p class="lh-alt">Already have an account? <a id="lh-to-signin" href="#">Sign in</a></p>
-      </div>`, false);
+      </div>`, !!isGate);
 
     const errBox = document.getElementById("lh-signup-error");
     const form = document.getElementById("lh-signup-form");
@@ -2061,7 +2071,7 @@ const App = {
     document.getElementById("lh-to-signin").onclick = (e) => {
       e.preventDefault();
       this.closeModal();
-      this._showSignInForm();
+      this._showSignInForm(isGate);
     };
 
     form.onsubmit = async (e) => {
@@ -2142,7 +2152,7 @@ const App = {
   },
 
   /* ---------- Sign In Form ---------- */
-  _showSignInForm() {
+  _showSignInForm(isGate) {
     this.showModal(`
       <div class="login-hub">
         <div class="lh-ball" aria-hidden="true"></div>
@@ -2159,7 +2169,7 @@ const App = {
           ·
           <a id="lh-to-create" href="#">Create account</a>
         </p>
-      </div>`, false);
+      </div>`, !!isGate);
 
     const errBox = document.getElementById("lh-signin-error");
     const form = document.getElementById("lh-signin-form");
@@ -2167,12 +2177,12 @@ const App = {
     document.getElementById("lh-to-create").onclick = (e) => {
       e.preventDefault();
       this.closeModal();
-      this._showSignUpForm();
+      this._showSignUpForm(isGate);
     };
     document.getElementById("lh-to-forgot").onclick = (e) => {
       e.preventDefault();
       this.closeModal();
-      this._showForgotPasswordForm();
+      this._showForgotPasswordForm(isGate);
     };
 
     form.onsubmit = async (e) => {
@@ -2210,7 +2220,7 @@ const App = {
   },
 
   /* ---------- Forgot Password Form ---------- */
-  _showForgotPasswordForm() {
+  _showForgotPasswordForm(isGate) {
     this.showModal(`
       <div class="login-hub">
         <div class="lh-ball" aria-hidden="true"></div>
@@ -2222,7 +2232,7 @@ const App = {
           <button id="lh-forgot-btn" type="submit" class="btn-big btn-primary">Send Reset Link</button>
         </form>
         <p class="lh-alt"><a id="lh-forgot-back" href="#">← Back to Sign In</a></p>
-      </div>`, false);
+      </div>`, !!isGate);
 
     const errBox = document.getElementById("lh-forgot-error");
     const form = document.getElementById("lh-forgot-form");
@@ -2230,7 +2240,7 @@ const App = {
     document.getElementById("lh-forgot-back").onclick = (e) => {
       e.preventDefault();
       this.closeModal();
-      this._showSignInForm();
+      this._showSignInForm(isGate);
     };
 
     form.onsubmit = async (e) => {
@@ -3177,6 +3187,13 @@ const App = {
     if (this._needPostLogin) {
       this._needPostLogin = false;
       setTimeout(() => { this._postLogin(st); }, 600);
+    }
+
+    /* Login Gate：未登入 → 自動彈 Login Hub modal 擋住畫面 */
+    const loggedIn = window.SupabaseAuth && SupabaseAuth.isLoggedIn();
+    if (!loggedIn) {
+      /* 等 loading 淡出後先彈 modal，避免 modal 被 loading overlay 遮住 */
+      setTimeout(() => { this.openLoginHub(true); }, 500);
     }
 
     /* 全部 UI 掣短 click SFX（委派一次；跟 Settings SFX %） */
