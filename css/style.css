@@ -4460,6 +4460,36 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   cursor: pointer;
 }
 
+/* ---- 7b. Gym Challenge 入口（街機硬閃圖字） ---- */
+.ph-gym {
+  flex: none;
+  position: relative; width: 100%; height: 42px;
+  padding: 0; border: 2.5px solid #1b1b22; border-radius: 12px;
+  background: repeating-linear-gradient(-45deg, #d42f28 0 12px, #1b1b22 12px 24px);
+  box-shadow: 0 3px 0 #1b1b22;
+  cursor: pointer; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .12s cubic-bezier(.25,1,.5,1), box-shadow .12s cubic-bezier(.25,1,.5,1);
+}
+.ph-gym[hidden] { display: none !important; }
+.ph-gym:active { transform: translateY(2px); box-shadow: 0 1px 0 #1b1b22; }
+.ph-gym-inner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 16px; border-radius: 7px;
+  background: rgba(27,27,34,.86);
+  animation: ph-gym-blink 1s steps(2, jump-none) infinite;
+}
+.ph-gym-txt {
+  font-family: "DotGothic16", monospace; font-size: 1.1rem;
+  letter-spacing: .16em; color: #ffe259; text-shadow: 2px 2px 0 #1b1b22;
+}
+.ph-gym-tag {
+  font-family: "DotGothic16", monospace; font-size: .72rem;
+  letter-spacing: .08em; color: #ffe259;
+}
+@keyframes ph-gym-blink { 50% { opacity: .18; } }
+@media (prefers-reduced-motion: reduce) { .ph-gym-inner { animation: none; } }
+
 /* ---- 8. 彈性空白 ---- */
 .ph-spacer { flex: 1 1 auto; min-height: 4px; }
 

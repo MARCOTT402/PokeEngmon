@@ -244,6 +244,15 @@
             </button>
           </div>
 
+          <!-- Gym Challenge 入口：閃動圖字，夠條件先出現（Gym.refreshHomeUI 控制） -->
+          <button id="btn-gym-challenge" class="ph-gym" type="button" hidden>
+            <span class="ph-gym-inner">
+              <span class="ph-gym-tag" id="gym-challenge-tag">⚔ GYM</span>
+              <span class="ph-gym-txt">CHALLENGE</span>
+              <span class="ph-gym-tag">⚔</span>
+            </span>
+          </button>
+
           <!-- 彈性空白（大機多出空間） -->
           <div class="ph-spacer" aria-hidden="true"></div>
 
@@ -551,7 +560,6 @@
         <canvas id="home-streak-bolt" width="22" height="28" aria-hidden="true"></canvas>
       </div>
       <div id="home-gym-badges" hidden></div>
-      <button id="btn-gym-challenge" type="button" hidden></button>
       <button id="btn-home-pokedex" type="button" hidden></button>
       <button id="btn-home-battle" type="button" hidden></button>
       <button id="btn-home-quests-old" type="button" hidden></button>
