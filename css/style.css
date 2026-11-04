@@ -2276,24 +2276,23 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   top: var(--frame-screen-top);
   bottom: var(--frame-screen-bottom);
   left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 428px; /* 殼 440 - 螢幕區左右 2×6px margin */
+  width: 100%; max-width: 428px;
   min-height: 0;
   margin: 0;
   padding: 12px 12px 10px;
   background: #fffdf7;
   box-sizing: border-box;
-  /* 貼合白螢幕區 16px 圓角，四角都唔好起角穿出去 */
   border-radius: 14px;
-  border: 2.5px solid #1b1b22;  /* 同 Settings sheet 一樣嘅黑邊框 */
+  border: 2.5px solid #1b1b22;
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 120;
-
-  /* 離開動畫：跟 Settings sheet close 一樣 */
+  /* exit 動畫：由底部向上壓縮（唔用 translateY 移動，避免穿過 display window 邊界）*/
+  transform-origin: bottom center;
   transition: transform .4s cubic-bezier(.25,1,.5,1);
 }
 #view-friends.fixed-overlay-exit, #view-leaderboard.fixed-overlay-exit, #view-battle-menu.fixed-overlay-exit {
-  transform: translateX(-50%) translateY(100%);  /* 捲到 display window 底，同 Settings sheet translateY(100%) 行為一致 */
+  transform: translateX(-50%) scaleY(0);  /* 由底部向上壓縮至零，視覺效果同 Settings sheet close 一致 */
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
