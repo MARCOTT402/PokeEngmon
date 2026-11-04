@@ -2293,8 +2293,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: transform .4s cubic-bezier(.25,1,.5,1);
 }
 #view-friends.fixed-overlay-exit, #view-leaderboard.fixed-overlay-exit, #view-battle-menu.fixed-overlay-exit {
-  /* 精確捲到 viewport 底：100dvh - 元素頂部偏移（frame-screen-top）*/
-  transform: translateX(-50%) translateY(calc(100dvh - var(--frame-screen-top)));
+  transform: translateX(-50%) translateY(100%);  /* 捲到 display window 底，同 Settings sheet translateY(100%) 行為一致 */
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {

@@ -454,14 +454,14 @@ Incident (2026-11-04)：新增 display-window overlays（Friends / Leaderboard /
 **Bug 4 — exit 動畫唔跟 Settings sheet 方向（搞反上/下）**
 - 初次加嘅 exit 動畫係 `translateY(18px) + opacity fade`，之後又搞反方向寫咗 `translateY(-100%)`（向上），但 Settings sheet 係 bottom anchored（`.ph-sheet-up`），close 時係 `translateY(100%)` 向下捲出。
 - **必做：** 所有 display-window overlay 必須有 `border: 2.5px solid #1b1b22; border-radius: 14px;`（同 `.ph-sheet` 一樣嘅黑邊框 + 圓角），否則會「唔係 exactly in display window」。
-- **必做：** 所有 display-window overlay 嘅 exit 動畫必須精確捲到 viewport 底：
+- **必做：** 所有 display-window overlay 嘅 exit 動畫必須精確捲到 display window 底（元素頂部 = screen2 底）：
   ```css
   transition: transform .4s cubic-bezier(.25,1,.5,1);
-  .fixed-overlay-exit { transform: translateX(-50%) translateY(calc(100dvh - var(--frame-screen-top))); pointer-events: none; }
+  .fixed-overlay-exit { transform: translateX(-50%) translateY(100%); pointer-events: none; }
   ```
-  - 唔好寫 `translateY(100%)`（元素高度唔一定等 display window 高度）
-  - 唔好寫 `translateY(100dvh)`（會捲到 viewport 外太多）
-  - 正確：`calc(100dvh - var(--frame-screen-top))` = 精確位移到 viewport 底部以下
+  - **必須用 `translateY(100%)`（元素自身高度）**，同 Settings sheet 用嘅單位一致
+  - 元素有 `top: frame-screen-top; bottom: frame-screen-bottom` → height = display window 高度 → translateY(100%) = display window 高度 → 剛好捲到紅框底
+  - **唔好用 `100dvh` 或 `calc()`**：會捲到 viewport 底（太遠），同 Settings sheet 行為唔同
 - **注意：** translate 方向唔好憑直覺寫，先確認對齊嘅 sheet 係 top anchored（`.ph-sheet-down`，close = `-100%` 向上捲）定 bottom anchored（`.ph-sheet-up`，close = `+100%` 向下捲）。
 - `showView("view-home")` 時如果目前有 fixed overlay active，要先加 `fixed-overlay-exit` class → 延遲 400ms → 切 active（先播動畫，再換頁）。
 
