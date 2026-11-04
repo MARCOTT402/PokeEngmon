@@ -1,3 +1,17 @@
+# [1.46.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.7...v1.46.0) (2026-11-04)
+
+
+### Bug Fixes
+
+* **battle:** level sync only lowers, and fainted mons no longer split EXP ([22a8584](https://github.com/MARCOTT402/PokeEngmon/commit/22a858450c6a993cf82b2151d87137c43b568653))
+
+
+### Features
+
+* **auth:** add Continue with Google entry to Sign In modal ([a43a019](https://github.com/MARCOTT402/PokeEngmon/commit/a43a0195b09e853254687ba1fadb05fe4dad13b5))
+* **gacha:** hold-to-charge 10-pull on the draw arm ([97bb51c](https://github.com/MARCOTT402/PokeEngmon/commit/97bb51c52e8a56b108f51ee2c4082cf5fe6f72b7))
+* **ui:** curve mode selection — green thick border + app-like press reactions ([3ff0a9c](https://github.com/MARCOTT402/PokeEngmon/commit/3ff0a9c850e8bee104949abc3db7f5e6b159c98c)), closes [#22c55e](https://github.com/MARCOTT402/PokeEngmon/issues/22c55e)
+
 ## [1.45.7](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.6...v1.45.7) (2026-11-04)
 
 
