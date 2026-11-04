@@ -1310,12 +1310,7 @@ const App = {
   /* ---------- 完成一組 → 捕捉場景 → 結算 ---------- */
   async onQuizFinished(data) {
     this.lastCapture = null;
-
-    const quizView = document.getElementById("view-quiz");
-    quizView.classList.add("is-fading");
-    await new Promise(r => setTimeout(r, 320));
-    quizView.classList.remove("is-fading");
-
+    /* 唔可以 fade 走 quiz：quiz 係 display-window overlay，淡出期間會露出後面主頁 */
     await this._captureThenSettle(data);
   },
 
@@ -2613,7 +2608,9 @@ const App = {
   },
   /* Gacha：由白色螢幕內上邊向下捲出 */
   openGachaSheet() {
-    if (!document.getElementById("view-home").classList.contains("active")) this.showView("view-home");
+    /* 一定要真正切返 view-home：結算等 display-window overlay 會令 view-home 保持 active，
+       只靠 active 判斷會跳過切頁，gacha sheet 就會開喺結算 overlay（z-index 120）後面＝撳 Lucky Draw 冇反應 */
+    this.showView("view-home");
     this._openSheet("sheet-gacha");
   },
   closeGachaSheet() {

@@ -451,14 +451,15 @@ Incident (2026-11-04)：新增 display-window overlays（Friends / Leaderboard /
 **Bug 3 — token self-cancel（同 Rule 51 詳細規格）**
 - binder 入面 `token = bump → showView("view-home") → showView 內部又 bump → token mismatch → timer cancel → openFn() 冇 run`。
 
-**Bug 4 — exit 動畫唔跟 Settings sheet**
-- 初次加嘅 exit 動畫係 `translateY(18px) + opacity fade`，但 Settings sheet close 係 `translateY(-100%)` + 純 transform（冇 opacity）。
+**Bug 4 — exit 動畫唔跟 Settings sheet 方向（搞反上/下）**
+- 初次加嘅 exit 動畫係 `translateY(18px) + opacity fade`，之後又搞反方向寫咗 `translateY(-100%)`（向上），但 Settings sheet 係 bottom anchored（`.ph-sheet-up`），close 時係 `translateY(100%)` 向下捲出。
 - **必做：** 所有 display-window overlay 嘅 exit 動畫必須跟 Settings sheet close 規格：
   ```css
   transition: transform .4s cubic-bezier(.25,1,.5,1);
-  .fixed-overlay-exit { transform: translateX(-50%) translateY(-100%); pointer-events: none; }
+  .fixed-overlay-exit { transform: translateX(-50%) translateY(100%); pointer-events: none; }
   ```
-  方向：向上滑出（translateY(-100%)），同 `.ph-sheet-down` close 一樣。
+  方向：向下捲出（translateY(100%) 正值 = 向畫面下方移），同 `.ph-sheet-up`（Settings）close 一樣。
+- **注意：** translate 方向唔好憑直覺寫，先確認對齊嘅 sheet 係 top anchored（`.ph-sheet-down`，close = `-100%` 向上捲）定 bottom anchored（`.ph-sheet-up`，close = `+100%` 向下捲）。
 - `showView("view-home")` 時如果目前有 fixed overlay active，要先加 `fixed-overlay-exit` class → 延遲 400ms → 切 active（先播動畫，再換頁）。
 
 **Bug 5 — closure 內部 `_sheetSwitching` 變數引用**
