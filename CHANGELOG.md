@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.5...v1.45.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** downward slide exit animation for Friends/Leaderboard/Battle Menu returning to Home ([d1779e1](https://github.com/MARCOTT402/PokeEngmon/commit/d1779e1aed9a56b72c3a60a52853ce426f193af4))
+
 ## [1.44.5](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.4...v1.44.5) (2026-11-04)
 
 
