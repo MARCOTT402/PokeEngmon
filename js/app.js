@@ -27,17 +27,42 @@ const App = {
     }
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
-    /* 選題 / 結算 / Leaderboard / Friends / Battle Menu 係 display window 內嘅 overlay：紅框（view-home shell）要留喺後面 */
-    if (id === "view-quiz-setup" || id === "view-settlement" || id === "view-leaderboard" || id === "view-friends" || id === "view-battle-menu") {
+    /* 選題 / 結算 / Leaderboard / Friends / Battle Menu / 答題 / 捕捉 / 對戰
+       係 display window 內嘅 overlay：紅框（view-home shell）要留喺後面 */
+    if (id === "view-quiz-setup" || id === "view-settlement" || id === "view-leaderboard" ||
+        id === "view-friends" || id === "view-battle-menu" ||
+        id === "view-quiz" || id === "view-capture" || id === "view-battle") {
       document.getElementById("view-home").classList.add("active");
     }
+    /* 答題 / 捕捉 / 對戰期間鎖住紅框功能鍵（防誤觸） */
+    this._setFrameLock(id === "view-quiz" || id === "view-capture" || id === "view-battle");
     document.body.classList.toggle("capture-mode", id === "view-capture");
+    /* 捕捉 canvas 尺寸跟隨白螢幕區（唔再等 window resize） */
+    if (id === "view-capture") {
+      requestAnimationFrame(() => {
+        try { if (window.CaptureScene && CaptureScene._resize) CaptureScene._resize(); } catch (e) {}
+      });
+    }
     /* Daily Quests dashboard 喺桌面用闊版面（≥768px 兩欄） */
     const appEl = document.getElementById("app");
     if (appEl) appEl.classList.toggle("app-wide", id === "view-quests");
     /* 離開任務板就停倒數 timer */
     if (id !== "view-quests" && typeof Quests !== "undefined" && Quests.stopTimer) Quests.stopTimer();
     window.scrollTo(0, 0);
+  },
+
+  /* 紅框功能鍵（上框 4 個 stat + 下巴 Home 球）：答題 / 捕捉 / 對戰時全部停用，防誤觸 */
+  _setFrameLock(locked) {
+    const shell = document.getElementById("pd-shell");
+    if (!shell) return;
+    shell.classList.toggle("frame-locked", locked);
+    ["btn-bezel-streak", "btn-bezel-diamond", "btn-bezel-dex", "btn-bezel-energy", "btn-pd-home"]
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = locked;
+        el.setAttribute("aria-disabled", locked ? "true" : "false");
+      });
   },
 
   /* 計算累加到 unlockedGen 嘅物種總數（Gen1=151, Gen1+2=251 …） */
@@ -2691,27 +2716,35 @@ const App = {
       if (!el) return;
       el.onclick = () => {
         if (App._sheetSwitching) return; /* 捲動中，忽略重複點擊 */
+
+        /* 先 close 任何 position:fixed overlay views（Friends / Leaderboard / Battle Menu）
+           呢啲 view 嘅 stacking context 高過 sheet，會蓋住開出嚟嘅 sheet */
+        const fixedOverlays = document.querySelectorAll(
+          "#view-friends.active, #view-leaderboard.active, #view-battle-menu.active"
+        );
+        const hasFixedOverlay = fixedOverlays.length > 0;
+
         const curSheet = document.querySelector("#view-home .ph-sheet.ph-open");
         const isToggle = curSheet && curSheet.id === sheetId;
-        if (isToggle) {
-          /* 同一個 sheet 開住 → toggle 關閉 */
+        if (isToggle && !hasFixedOverlay) {
+          /* 同一個 sheet 開住 + 冇 fixed overlay → toggle 關閉 */
           this._closeSheet(sheetId);
           return;
         }
-        if (curSheet) {
-          /* 另一個 sheet 開住 → 先捲回（等動畫 400ms），再開新
-             用 token cancel：如果 showView() 在此期間被 call（切 view），
-             _sheetSwitchToken 會 bump → timer fire 時 token mismatch → 取消 open */
+        if (curSheet || hasFixedOverlay) {
+          /* 另一個 sheet 開住 OR 有 fixed overlay → 先 close 哂，再開新
+             token cancel：如果 showView() 在此期間被 call → bump token → timer cancel */
           const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);
           App._sheetSwitching = true;
+          if (hasFixedOverlay) this.showView("view-home");
           this._closeAllSheets();
           setTimeout(() => {
-            if (App._sheetSwitchToken !== token) return; /* 已被切 view cancel */
+            if (App._sheetSwitchToken !== token) return;
             App._sheetSwitching = false;
             openFn();
           }, 410);
         } else {
-          /* 冇 sheet 開住 → 直接開 */
+          /* 冇 sheet 冇 overlay → 直接開 */
           openFn();
         }
       };
@@ -2954,21 +2987,29 @@ const App = {
       }
     );
 
-    /* 底部 dockbar 按鈕：同樣用「先捲回再執行」+ toggle + token cancel */
+    /* 底部 dockbar 按鈕：同樣用「先捲回再執行」+ toggle + token cancel + fixed overlay 處理 */
     const dockBinder = (id, sheetId, fn) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
         if (App._sheetSwitching) return;
+
+        /* 檢查 fixed overlay views */
+        const fixedOverlays = document.querySelectorAll(
+          "#view-friends.active, #view-leaderboard.active, #view-battle-menu.active"
+        );
+        const hasFixedOverlay = fixedOverlays.length > 0;
+
         const curSheet = document.querySelector("#view-home .ph-sheet.ph-open");
         const isToggle = curSheet && curSheet.id === sheetId;
-        if (isToggle) {
+        if (isToggle && !hasFixedOverlay) {
           this._closeSheet(sheetId);
           return;
         }
-        if (curSheet) {
+        if (curSheet || hasFixedOverlay) {
           const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);
           App._sheetSwitching = true;
+          if (hasFixedOverlay) this.showView("view-home");
           this._closeAllSheets();
           setTimeout(() => {
             if (App._sheetSwitchToken !== token) return;
