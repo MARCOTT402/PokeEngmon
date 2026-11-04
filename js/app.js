@@ -3260,7 +3260,7 @@ const App = {
       setTimeout(() => { this.openLoginHub(true); }, 500);
     }
 
-    /* 全部 UI 掣短 click SFX（委派一次；跟 Settings SFX %） */
+    /* 全部 UI 掣短 click SFX + pressed 彈出動畫 + vibration（委派一次；跟 Settings SFX %） */
     if (!this._uiTapBound) {
       this._uiTapBound = true;
       document.addEventListener("click", (e) => {
@@ -3268,8 +3268,21 @@ const App = {
           "button, [role=button], .chip-btn, .pd-menu-btn, .icon-btn, .entry-gate-btn, .footer-link, .guide-link, .reset-link, .move-choice"
         );
         if (!btn || btn.disabled || btn.getAttribute("aria-disabled") === "true") return;
+        /* 1. UI tap SFX */
         if (window.CaptureScene && CaptureScene.audio && CaptureScene.audio.uiTap) {
           CaptureScene.audio.uiTap();
+        }
+        /* 2. pressed 彈出動畫（防抖動：remove 再 add 重啟 animation） */
+        btn.classList.remove("pressed");
+        void btn.offsetWidth;  /* force reflow */
+        btn.classList.add("pressed");
+        setTimeout(() => btn.classList.remove("pressed"), 300);
+        /* 3. Vibration（touch 設備先得；防止 Settings vibrate 關閉時都震） */
+        if (navigator.vibrate && typeof App._vibrationEnabled === "boolean" && App._vibrationEnabled) {
+          navigator.vibrate(12);
+        } else if (navigator.vibrate && !("vibration" in window)) {
+          /* 舊版只係 vibrate 存在但冇開關 → 輕微震 */
+          navigator.vibrate(12);
         }
       }, true);
     }
