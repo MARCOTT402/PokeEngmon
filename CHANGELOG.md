@@ -1,3 +1,10 @@
+## [1.45.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.1...v1.45.2) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** flip overlay exit direction — translateY(100%) downward to match Settings sheet (was -100% upward) ([92bf8ed](https://github.com/MARCOTT402/PokeEngmon/commit/92bf8ed2063c98f370452de0bb33e540b6e92da2))
+
 ## [1.45.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.0...v1.45.1) (2026-11-04)
 
 
