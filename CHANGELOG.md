@@ -1,3 +1,10 @@
+## [1.45.5](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.4...v1.45.5) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** exit animation use translateY(100%) to scroll to display window bottom (not viewport bottom) — matches Settings sheet ([08051f4](https://github.com/MARCOTT402/PokeEngmon/commit/08051f4a78c42fa3523d7770c46ee3c1b5181092))
+
 ## [1.45.4](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.3...v1.45.4) (2026-11-04)
 
 
