@@ -777,9 +777,10 @@ const BattleUI = (() => {
   function launchBattle() {
     if (mode === "pvp") { launchPvpBattle(); return; }
     mySide = "p1"; foeSide = "p2";
-    /* Inferno Level Sync：只改開戰用嘅副本，玩家真實等級唔受影響 */
+    /* Inferno Level Sync：只降唔升（玩家 Pokemon 本身低過 target 就保持不變）；
+       sync 前真實等級存入 expLevel，供 grantKOExp 以弱勝強加成計算用 */
     const myTeam = levelSyncLevel
-      ? teamEntries.map(e => Object.assign({}, e, { level: levelSyncLevel }))
+      ? teamEntries.map(e => ({ ...e, level: Math.min(e.level, levelSyncLevel), expLevel: e.level }))
       : teamEntries;
     state = BattleState.create(myTeam, foeTeamEntries, { seed: (Math.random() * 0xFFFFFFFF) >>> 0 });
     afterLaunch();

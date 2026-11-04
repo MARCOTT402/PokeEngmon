@@ -195,6 +195,7 @@ const Battle = (() => {
       dexId,
       name,
       level: entry.level,
+      expLevel: entry.expLevel != null ? entry.expLevel : entry.level,   /* Inferno Level Sync 後，戰鬥用 level 但 EXP 計算用 sync 前真實等級 */
       types: speciesTypes(dexId),
       stats,
       maxHp: stats.hp,

@@ -22,10 +22,13 @@ const BattleState = (() => {
     const bucket = state[side];
     if (!bucket || !victim) return;
     const yield_ = Math.max(1, Math.ceil((baseExpOf(victim.dexId) * victim.level) / 7));
-    const parts = bucket.team.filter(p => p.participated);
+    /* 只有「出過場而家未暈」嘅隊友先分到 EXP（Gen 5 規則：fainted 唔派 EXP） */
+    const parts = bucket.team.filter(p => p.participated && p.hp > 0);
     if (!parts.length) return;
     parts.forEach(earner => {
-      const mult = Math.min(3, 1 + Math.max(0, victim.level - earner.level) / 50);
+      /*以弱勝強：earner 等級用 expLevel（sync 前真實等級），避免 Inferno Level Sync 壓低後被當成「弱隊友」額外加成 */
+      const realLv = earner.expLevel != null ? earner.expLevel : earner.level;
+      const mult = Math.min(3, 1 + Math.max(0, victim.level - realLv) / 50);
       bucket.pendingExp.push({ uid: earner.uid, gain: Math.max(1, Math.ceil((yield_ / parts.length) * mult)) });
     });
   }
