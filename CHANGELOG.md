@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.43.0...v1.44.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** Duolingo-style button press animation + hover lift + vibration ([4cd7cfe](https://github.com/MARCOTT402/PokeEngmon/commit/4cd7cfe1bf390e697fd84f52a9f18ff184747697))
+
 # [1.43.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.42.1...v1.43.0) (2026-11-04)
 
 
