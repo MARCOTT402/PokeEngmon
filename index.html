@@ -482,7 +482,62 @@
         </div>
 
         <!-- 下巴：放大精靈球做 Home 鍵（Grid 第四列） -->
-        <div class="pd-chin"><button class="pd-ball pd-ball-sm" id="btn-pd-home" type="button" aria-label="Home"></button></div>
+        <div class="pd-chin">
+          <button class="pd-home-ball" id="btn-pd-home" type="button" aria-label="Home">
+            <svg class="pd-home-ball-art" viewBox="40 40 420 420" aria-hidden="true" focusable="false">
+              <defs>
+                <clipPath id="pdHomeBallClip"><circle cx="250" cy="250" r="210" /></clipPath>
+                <radialGradient id="pdHomeRedGrad" cx="45%" cy="25%" r="70%">
+                  <stop offset="0%" stop-color="#FF3E3E"/>
+                  <stop offset="55%" stop-color="#DD0000"/>
+                  <stop offset="85%" stop-color="#990000"/>
+                  <stop offset="100%" stop-color="#550000"/>
+                </radialGradient>
+                <radialGradient id="pdHomeWhiteGrad" cx="45%" cy="55%" r="70%">
+                  <stop offset="0%" stop-color="#FFFFFF"/>
+                  <stop offset="55%" stop-color="#F1F5F9"/>
+                  <stop offset="85%" stop-color="#CBD5E1"/>
+                  <stop offset="100%" stop-color="#94A3B8"/>
+                </radialGradient>
+                <linearGradient id="pdHomeBezelGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2D3748"/>
+                  <stop offset="100%" stop-color="#1A202C"/>
+                </linearGradient>
+                <radialGradient id="pdHomeCoreGrad" cx="42%" cy="28%" r="58%">
+                  <stop offset="0%" stop-color="#FFFFFF"/>
+                  <stop offset="25%" stop-color="#F8FAFC"/>
+                  <stop offset="70%" stop-color="#CBD5E1"/>
+                  <stop offset="100%" stop-color="#516173"/>
+                </radialGradient>
+                <filter id="pdHomeGlossBlur" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="12"/>
+                </filter>
+              </defs>
+
+              <!-- 球體外圈底色 -->
+              <circle cx="250" cy="250" r="210" fill="#0A0C10" />
+
+              <!-- 紅白半球（圓形遮罩裁切） -->
+              <g clip-path="url(#pdHomeBallClip)">
+                <path d="M 30 250 A 210 210 0 0 0 470 250 Z" fill="url(#pdHomeWhiteGrad)" />
+                <path d="M 30 250 A 210 210 0 0 1 470 250 Z" fill="url(#pdHomeRedGrad)" />
+                <ellipse cx="250" cy="85" rx="110" ry="35" fill="#ffffff" opacity="0.15" filter="url(#pdHomeGlossBlur)" />
+              </g>
+
+              <!-- 水平黑色分割腰帶 -->
+              <path d="M 38 244 L 196 244 A 54 54 0 0 1 304 244 L 462 244 L 462 256 L 304 256 A 54 54 0 0 1 196 256 L 38 256 Z" fill="#0A0C10" />
+
+              <!-- 中央按鈕總成 -->
+              <circle cx="250" cy="250" r="52" fill="#0B1017" />
+              <circle cx="250" cy="250" r="43" fill="url(#pdHomeBezelGrad)" />
+              <circle cx="250" cy="250" r="32" fill="#05070B" />
+              <circle cx="250" cy="250" r="26" fill="#000000" opacity="0.35" transform="translate(1, 2)" />
+              <circle cx="250" cy="250" r="26" fill="url(#pdHomeCoreGrad)" />
+              <circle cx="250" cy="250" r="25.5" fill="none" stroke="#ffffff" stroke-width="0.7" stroke-opacity="0.8" />
+              <circle cx="258" cy="242" r="2.5" fill="#FFFFFF" opacity="0.5" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Gym challenge 佔位（保留 id，renderHome 會寫內容） -->

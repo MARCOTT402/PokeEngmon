@@ -13,10 +13,33 @@ const App = {
 
   /* ---------- 路由 ---------- */
   showView(id) {
+    /* 如果目前有 fixed overlay view（Friends/Leaderboard/Battle Menu），
+       且目標係 view-home，先加 exit 動畫 class，延遲 400ms 再切 active */
+    const fixedExitTargets = ["view-home"]; /* 邊啲 target 觸發 fixed overlay exit */
+    const fixedOverlayActive = document.querySelector(
+      "#view-friends.active, #view-leaderboard.active, #view-battle-menu.active"
+    );
+    const needsFixedExit = fixedOverlayActive && fixedExitTargets.includes(id);
+
     /* 切頁前關閉所有 home sheets + reset sheet switching state
        （binder 嘅 close→open timer 可能喺切 view 後仍然 fire → bump token cancel 之） */
     App._sheetSwitching = false;
     App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1;  /* cancel pending open timers */
+
+    if (needsFixedExit) {
+      fixedOverlayActive.classList.add("fixed-overlay-exit");
+      /* 等 400ms 動畫跑完先真正切 view */
+      setTimeout(() => {
+        fixedOverlayActive.classList.remove("fixed-overlay-exit");
+        this._doShowView(id);
+      }, 400);
+      return; /* 即時 return，延遲執行 */
+    }
+    this._doShowView(id);
+  },
+
+  /* 真正嘅切 view 邏輯（由 showView 或 exit animation timeout 後 call）*/
+  _doShowView(id) {
     if (document.getElementById("view-home").classList.contains("active")) {
       this._closeAllSheets();
     }

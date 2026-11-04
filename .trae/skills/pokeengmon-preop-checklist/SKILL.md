@@ -417,3 +417,11 @@ Incident (2026-11-04)：刪結算頁「Back to Home」掣時發現 Gym 模式嘅
 
 - 結算頁而家唯一出口係下巴精靈球；任何「結算後先做」嘅邏輯（gym conclude、之後新增嘅模式）都要掛喺 `btn-pd-home` handler 開頭。
 
+## Rule 45 — 將全頁 view 收入 display window：height:auto + 內部 fixed 轉 absolute
+
+Incident (2026-11-04)：答題／捕捉／對戰由全頁 view 改成 display-window overlay 後，`#view-capture` 自帶 `height:100dvh`、`.battle-party` 自帶 `position:fixed; inset:0`，會撐出白螢幕區並蓋住紅框。
+
+- 新 view 加入 display-window selector 群組時，必定同時覆寫 `height:auto`（原本有 `100dvh` 的話），並將內部 `position:fixed` 圖層改 `position:absolute; inset:0`（父 overlay 已係 fixed/relative）。
+- 呢三類玩法（答題／捕捉／對戰）要 call `App._setFrameLock(true)`，用 `disabled` + `pointer-events:none` 鎖住紅框 4 個 stat 同下巴 `btn-pd-home`；離開呢三個 view 記得解鎖。
+- 驗證：用 `getBoundingClientRect` 對比 overlay 同 `.pd-screen2` 四邊（差值 0）；模擬器要試 440×956 同 375×667 兩個尺寸。
+

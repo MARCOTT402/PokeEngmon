@@ -2286,6 +2286,20 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 120;
+
+  /* 離開動畫：向下滑出（binder 由 Friends/Leaderboard/Battle Menu 返 Home 時觸發）*/
+  transition: transform .4s cubic-bezier(.25,1,.5,1), opacity .3s ease;
+}
+#view-friends.fixed-overlay-exit, #view-leaderboard.fixed-overlay-exit, #view-battle-menu.fixed-overlay-exit {
+  transform: translateX(-50%) translateY(18px);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  #view-friends.fixed-overlay-exit, #view-leaderboard.fixed-overlay-exit, #view-battle-menu.fixed-overlay-exit {
+    transition: none !important;
+    opacity: 0 !important;
+  }
 }
 /* 答題：內容喺螢幕區內滾動 */
 #view-quiz.active { gap: 10px; }
@@ -4111,14 +4125,14 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 答題 / 捕捉 / 對戰：紅框功能鍵全部停用（防誤觸） */
 .pd-shell.frame-locked .pd-stat,
-.pd-shell.frame-locked .pd-chin .pd-ball-sm {
+.pd-shell.frame-locked #btn-pd-home {
   pointer-events: none;
   opacity: .38;
   filter: saturate(.5);
   cursor: default;
 }
 .pd-shell.frame-locked .pd-stat:active,
-.pd-shell.frame-locked .pd-chin .pd-ball-sm:active { transform: none; }
+.pd-shell.frame-locked #btn-pd-home:active { transform: none; }
 .pd-num {
   font-size: 13px; font-weight: 900; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
