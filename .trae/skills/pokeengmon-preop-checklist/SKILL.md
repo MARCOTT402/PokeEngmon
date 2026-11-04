@@ -567,3 +567,14 @@ Incident (2026-11-04)：Settings 改 Learning Curve Mode 後關 app 再開變返
 - **診斷呢類「改咗但重開變返」嘅投訴：** 先查 grant，再查 client catch 係咪有 silent fallback 扮成功（sync.js 嘅 legacy-schema fallback 會吞咗 permission error）。
 - 已修：migration `grant_authenticated_update_curve_mode` + 補返落 `supabase-migrate-20261030-curve-mode.sql`。
 
+## Rule 55 — 每個 auth 入口頁都要有 Google 選項；唔可以只喺 Login Hub 提供
+
+Incident (2026-11-04)：Login Hub 有 `Continue with Google`，但 `_showSignInForm()` 只有 Email/Password 表單。第一次玩嘅用戶想「登入」直覺會撳 Sign In，入到去完全搵唔到 Google，要退出再返 Hub 先見到 —— 提問者一開始只睇 Hub 一頁就斷定「文字冇問題」，係被用戶指出盲點（第一手用戶心智 ≠ 設計者視角）。
+
+- 任何「可以開始使用」嘅 auth 頁（Login Hub、Sign In、Sign Up、Account Hub）都必須列出所有 available providers，唔可以假設用戶會行到特定一頁。
+- 覆核方法：逐頁問「新用戶入到呢頁，佢想用嘅 provider 喺唔喺度？」而唔係只看主入口。
+- Sign In 頁現已加 `#si-google`（`btn-google` + `or Email` divider，同 Hub 一樣 layout）；新加 auth 頁要照抄同一結構，`signInWithGoogle()` 對新帳戶會自動建帳（`migrateAnonymous` 回 true → 觸發 Curve 設定，見 Rule 48）。
+- 文案維持業界標準 `Continue with Google`（Google/GitHub/X 皆用此寫法），唔好改成長句或雙行；可發現性問題用「每個入口都提供」解決，唔係改按鈕文字。
+- 驗證：`node tools/preview-iphone.mjs --headless --click "#btn-entry-yes" --js "doc.querySelector('#lh-signin').click()" --shot out.png`，確認 Sign In 頁見到 Google 掣 + 表單冇被裁切。
+
+
