@@ -1,3 +1,10 @@
+## [1.45.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.2...v1.45.3) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** overlay exit uses 100dvh to ensure scrolls to viewport bottom (was 100% element height) ([9316814](https://github.com/MARCOTT402/PokeEngmon/commit/931681468bc355dd51309659917b5709a0d21278))
+
 ## [1.45.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.1...v1.45.2) (2026-11-04)
 
 
