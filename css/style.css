@@ -767,14 +767,32 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .quiz-btn-side { min-height: 60px; flex: 0 0 31%; font-size: 1.05rem; padding: 0 6px; }
 .quiz-btn-grow { flex: 1; }
 
-.progressbar { height: 14px; border-radius: 999px; background: #edf0f6; overflow: visible; position: relative; }
+.progressbar {
+  height: 14px; border-radius: 999px; background: #edf0f6;
+  overflow: visible; position: relative;
+  flex: none;  /* flex column 子項預設會收縮，會被壓成 0 高（Rule 42） */
+  /* 左右留 14px 俾跑手：0% / 100% 時唔會被 display window 邊裁掉 */
+  margin: 0 14px;
+}
 .progressbar i { display: block; height: 100%; width: 0; background: var(--yellow); border-radius: 999px; transition: width .3s; }
-.bar-star {
+/* 進度跑手：4 幀 sprite sheet（3x），44×30 CSS px，每幀 44px */
+.bar-runner {
   position: absolute; top: 50%; left: 0;
-  transform: translate(-50%, -50%);
-  font-size: 2.1rem; line-height: 1; color: #f7c734;
-  text-shadow: 0 1px 2px rgba(0,0,0,.25);
-  transition: left .3s; pointer-events: none;
+  width: 44px; height: 30px;
+  margin: -15px 0 0 -22px;
+  background: url("../assets/quiz/progress-runner.png") 0 0 / 176px 30px no-repeat;
+  /* 白色光暈 + 陰影：黃色跑手疊在黃色進度條上仍然睇得清 */
+  filter: drop-shadow(0 0 1.5px #fffdf7) drop-shadow(0 2px 2px rgba(0,0,0,.35));
+  transition: left .3s;
+  pointer-events: none;
+  animation: bar-runner-run .32s steps(4) infinite;
+}
+@keyframes bar-runner-run {
+  from { background-position: 0 0; }
+  to { background-position: -176px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-runner { animation: none; }
 }
 
 .quiz-topic {
@@ -876,6 +894,37 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 @keyframes shake-x { 0%,100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
 .quiz-feedback { min-height: 44px; text-align: center; font-size: 1.3rem; font-weight: 800; }
+
+/* ===== App 自帶虛擬鍵盤：只在觸控裝置顯示；桌面唔渲染（用實體鍵盤） ===== */
+.quiz-keyboard {
+  position: sticky;
+  bottom: -10px;
+  flex: none;                 /* 內容超高時唔好被 flex 壓扁 */
+  margin-top: auto;           /* 內容不足時貼住 display window 底部 */
+  display: flex; flex-direction: column; gap: 5px;
+  margin-right: -6px; margin-left: -6px; margin-bottom: -10px;
+  padding: 8px 6px 12px;
+  background: #eef2f9;
+  border-top: 2px solid #d5dae3;
+  border-radius: 14px 14px 0 0;
+  z-index: 5;
+}
+.quiz-keyboard[hidden] { display: none; }
+.qk-row { display: flex; gap: 5px; justify-content: center; }
+.qk-key {
+  flex: 1; min-width: 0; height: 42px;
+  border: 2px solid #c3cbda; border-radius: 9px;
+  background: #fff; color: #1e3f8c;
+  font-family: inherit; font-size: 1rem; font-weight: 800;
+  line-height: 1; cursor: pointer; user-select: none;
+  touch-action: manipulation;
+  transition: transform .12s cubic-bezier(.25, 1, .5, 1), background .12s ease;
+}
+.qk-key:active { transform: scale(.94); background: #dbe6fb; }
+.qk-key.qk-wide { flex: 1.8; font-size: .82rem; }
+@media (prefers-reduced-motion: reduce) {
+  .qk-key:active { transform: none; }
+}
 .quiz-feedback.good { color: #2e7d32; animation: pop .3s; }
 .quiz-feedback.bad { color: #c62828; }
 
@@ -2740,6 +2789,15 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   .hero-sprite.clickable:hover {
     transform: scale(1.08);
   }
+
+  /* 全站按鍵 hover 微放大：上面清單以外嘅 <button> 都套用。
+     用獨立 scale 屬性（同 transform 分開），唔會覆寫置中／translate 按鈕嘅 transform。 */
+  :where(button):hover:not(:disabled):not([aria-disabled="true"]) { scale: 1.03; }
+  :where(button) { transition: scale .12s cubic-bezier(.25, 1, .5, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button):hover { scale: none !important; }
 }
 
 /* 尊重系統減少動態設定 */

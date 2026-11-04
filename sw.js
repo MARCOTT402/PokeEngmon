@@ -105,6 +105,7 @@ const ASSETS = [
   "./assets/bgm/evolution.mp3",
   "./assets/bgm/evolution-fanfare.mp3",
   "./assets/gacha/dragonite.png",
+  "./assets/quiz/progress-runner.png",
   ...TYPE_ICONS.map(t => `./assets/types/${t}.png`),
   "./assets/items/poke-ball.png",
   ...TRAINERS.map(t => `./assets/trainers/${t}.png`),

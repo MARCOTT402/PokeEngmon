@@ -88,6 +88,17 @@ const App = {
       });
   },
 
+  /* 已解鎖物種數：ownership 聯集（唔以 entry 數計，避免進化形態灌水） */
+  _unlockedSpeciesCount(st) {
+    if (typeof collectedCount === "function") return collectedCount();
+    const set = new Set();
+    (st.entries || []).forEach(e => {
+      if (typeof ensureEntryPokemonData === "function" && !Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);
+      (e.ownedSpecies || []).forEach(id => set.add(id));
+    });
+    return set.size;
+  },
+
   /* 計算累加到 unlockedGen 嘅物種總數（Gen1=151, Gen1+2=251 …） */
   _unlockedGenTotal(gen) {
     if (typeof GENS === "undefined") return 151;
@@ -181,12 +192,13 @@ const App = {
     const streakEl = document.getElementById("home-streak-label");
     if (streakEl) streakEl.textContent = "x" + calcStreak();
 
-    /* Pokédex：分子 = 已收集 entry 數；分母 = 累加到 unlockedGen 嘅物種總數 */
+    /* Pokédex：分子 = 已解鎖物種數（ownedSpecies 聯集，唔重複計進化形態）；
+       分母 = 累加到 unlockedGen 嘅物種總數 */
     const dexProgEl = document.getElementById("home-dex-progress");
     if (dexProgEl) {
-      const collected = (st.entries || []).length;
+      const unlocked = App._unlockedSpeciesCount(st);
       const denominator = App._unlockedGenTotal(st.unlockedGen || 1);
-      dexProgEl.textContent = collected + "/" + denominator;
+      dexProgEl.textContent = unlocked + "/" + denominator;
     }
 
     /* Energy：單一數值（戰鬥可用能量 points）— 必須先 Energy.ensure() normalize */
@@ -2454,6 +2466,7 @@ const App = {
         <h4>Data &amp; Image Credits</h4>
         <p>Pokémon base stats, moves, evolution data, sprites, and type icons are provided by <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>.</p>
         <p>Pokémon cries are provided by the Pokémon Showdown community.</p>
+        <p>The quiz progress runner mascot is a custom, non-commercial fan illustration supplied for this project (Pikachu-inspired). Pokémon-related rights remain with © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
         <p>Battle UI frames, HP boxes, battle backgrounds, trainer sprites, Poké Ball graphics, and move attack-effect sprites are original assets from Pokémon FireRed/LeafGreen (© Nintendo / Creatures Inc. / GAME FREAK inc.), ripped from <a href="https://www.spriters-resource.com/game_boy_advance/pokemonfireredleafgreen/" target="_blank" rel="noopener">The Spriters Resource</a> (rippers: redblueyellow, desgardes, Superjustinbros, Spherical Ice, EternalLight, wormintheworks) and the pret/pokefirered decompilation project.</p>
         <p>Per-move battle animations (frame data + spritesheets), in-battle Pokémon sprite animations, the battle dialogue window, the party (switch Pokémon) screen UI, the "emerald" dialogue font and battle sound effects are adapted from the open-source assets of the Pokémon fan games <a href="https://www.pokerogue.net/" target="_blank" rel="noopener">PokeRogue</a> and Pokémon Reborn (<a href="https://github.com/pagefaultgames/pokerogue-assets" target="_blank" rel="noopener">pokerogue-assets</a>, beta branch). All Pokémon-related artwork remains © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
 

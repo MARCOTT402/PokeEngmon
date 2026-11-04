@@ -101,8 +101,8 @@ const Quiz = {
     document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
     const pct = this.total ? (this.seenQids.size / this.total) * 100 : 0;
     document.getElementById("quiz-bar").style.width = `${pct}%`;
-    const star = document.getElementById("quiz-bar-star");
-    if (star) star.style.left = `${pct}%`;
+    const runner = document.getElementById("quiz-bar-runner");
+    if (runner) runner.style.left = `${pct}%`;
   },
 
   /* ---------- 渲染 ---------- */
@@ -173,6 +173,8 @@ const Quiz = {
 
     /* 小學生低 EF → 精靈球捕捉模式 */
     this._setupCatchMode(q);
+    /* 觸控裝置固定顯示 App 鍵盤（捕捉模式除外；桌面隱藏） */
+    this._syncKeyboard();
 
     this._focusCurrent();
   },
@@ -275,6 +277,11 @@ const Quiz = {
     input.autocorrect = "off";
     input.spellcheck = false;
     input.dataset.i = String(i);
+    /* 觸控裝置：抑制系統鍵盤，改用 App 自帶鍵盤（桌面保持實體鍵盤輸入） */
+    if (this._isTouchDevice()) {
+      input.inputMode = "none";
+      input.enterKeyHint = "done";
+    }
 
     span.appendChild(text);
     span.appendChild(ghost);
@@ -299,6 +306,82 @@ const Quiz = {
     span.addEventListener("click", () => this._focusCurrent());
 
     return span;
+  },
+
+  /* ============ App 自帶虛擬鍵盤（觸控裝置專用） ============
+     規則：觸控裝置（手機／平板）固定顯示；桌面（實體鍵盤）完全隱藏。 */
+  _isTouchDevice() {
+    try { return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches); }
+    catch (e) { return false; }
+  },
+
+  _buildKeyboard() {
+    const host = document.getElementById("quiz-keyboard");
+    if (!host || host.dataset.built) return;
+    host.dataset.built = "1";
+    const rows = [
+      ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+      ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+      ["z", "x", "c", "v", "b", "n", "m", "'", "-"],
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+    ];
+    rows.forEach(row => {
+      const r = document.createElement("div");
+      r.className = "qk-row";
+      row.forEach(ch => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "qk-key";
+        b.dataset.ch = ch;
+        b.textContent = ch;
+        r.appendChild(b);
+      });
+      if (row === rows[2]) {
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "qk-key qk-wide";
+        back.dataset.kb = "back";
+        back.textContent = "⌫";
+        back.setAttribute("aria-label", "Delete");
+        r.appendChild(back);
+      }
+      host.appendChild(r);
+    });
+
+    /* pointerdown preventDefault：保留輸入格焦點，亦阻止系統鍵盤彈出 */
+    host.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".qk-key")) e.preventDefault();
+    });
+    host.addEventListener("click", (e) => {
+      const key = e.target.closest(".qk-key");
+      if (!key || this.answered) return;
+      if (key.dataset.kb === "back") this._kbBackspace();
+      else this._kbInsert(key.dataset.ch || "");
+      this._focusCurrent();
+    });
+  },
+
+  /* 只喺觸控裝置顯示；捕捉模式（精靈球）唔需要鍵盤 */
+  _syncKeyboard() {
+    const host = document.getElementById("quiz-keyboard");
+    if (!host) return;
+    if (!this._isTouchDevice() || this._isCatchMode()) { host.hidden = true; return; }
+    this._buildKeyboard();
+    host.hidden = false;
+  },
+
+  _kbInsert(ch) {
+    const c = this.cells[this.currentCell];
+    if (!c || !c.input || c.input.disabled || !ch) return;
+    c.input.value = (c.input.value || "") + ch;
+    c.input.dispatchEvent(new Event("input", { bubbles: true }));
+  },
+
+  _kbBackspace() {
+    const c = this.cells[this.currentCell];
+    if (!c || !c.input || c.input.disabled) return;
+    c.input.value = (c.input.value || "").slice(0, -1);
+    c.input.dispatchEvent(new Event("input", { bubbles: true }));
   },
 
   _focusCurrent() {

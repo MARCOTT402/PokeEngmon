@@ -577,4 +577,40 @@ Incident (2026-11-04)：Login Hub 有 `Continue with Google`，但 `_showSignInF
 - 文案維持業界標準 `Continue with Google`（Google/GitHub/X 皆用此寫法），唔好改成長句或雙行；可發現性問題用「每個入口都提供」解決，唔係改按鈕文字。
 - 驗證：`node tools/preview-iphone.mjs --headless --click "#btn-entry-yes" --js "doc.querySelector('#lh-signin').click()" --shot out.png`，確認 Sign In 頁見到 Google 掣 + 表單冇被裁切。
 
+## Rule 56 — 換進度條星星做動畫跑手：sprite sheet 化 + `flex: none` + 光暈 + 邊界淨空
+
+Incident (2026-11-04 Quiz progress mascot)：用戶提供 500×354 / 4 幀 / 80ms 嘅 GIF，要求換掉答題頁進度條嘅 ★。
+
+- **唔好直接放大 GIF**：畫布四邊大量透明位、1-bit alpha 邊緣粗糙、`prefers-reduced-motion` 停唔到動畫。做法：Pillow 逐幀 `convert("RGBA")` → 用**全部幀 union bbox** 一次裁切（保留幀間彈跳位移，唔好逐幀自己裁，否則跑動會抖）→ LANCZOS 縮到 3×（實測 132×90/幀）→ 橫向拼成 528×90 PNG（32 KB），CSS `background-size: 176px 30px` + `steps(4)` 播 0.32s，配 `@media (prefers-reduced-motion: reduce) { animation: none }`。
+- **flex column 內嘅進度條一定要 `flex: none`**：實測 `#view-quiz` `scrollHeight 721 > clientHeight 710` 時，14px 高嘅 `.progressbar` 被 flex-shrink 壓成 **0px**（整條進度條消失、跑手浮喺半空）。同 Rule 42 同一類問題，但唔限於「滾動清單」——任何有明確高度、又想永遠睇得見嘅 flex 子項都要 `flex: none`。
+- 黃色跑手疊黃色進度條：`filter: drop-shadow(0 0 1.5px #fffdf7) drop-shadow(0 2px 2px rgba(0,0,0,.35))`，否則下半身同 `var(--yellow)` 融合。
+- 邊界淨空：跑手 44×30、半寬 22px；`.progressbar` 用 `margin: 0 14px`（14 + view padding 12 = 26 ≥ 22）。實測 440×956 同 375×667，0% / 100% 都仍有 3.5px 淨空，冇被 display window 裁邊。
+- 換走文字 glyph：跑手要 `aria-hidden="true"`；新 asset 要入 `sw.js ASSETS`，並且按 Rule 12 更新免責聲明／版權。
+- 驗收：連續採樣 `getComputedStyle(runner).backgroundPosition` 要見到 `0 → -44 → -88 → -132` 循環（證明四幀真係播）；位置用 `getBoundingClientRect` 對 `#view-quiz` 內邊，唔好只靠肉眼睇截圖。
+
+Skill: Rule 56 added
+
+## Rule 57 — 10 連抽：`chain_rarity` 有 normal、保底查詢要排除；MCP 唔可以偽造 `auth.uid()`
+
+Incident (2026-11-04 Lucky Draw 10×)：寫 `gacha_pull_lucky` 保底時，fallback「任何未持有的 rare/epic/legend」漏咗 filter，用 `pg_temp` 冒煙測試抽到 `{rarity:"normal", chain:"paras"}`；client `GACHA_BALL['normal']` 唔存在，會喺演出層 crash。
+
+- `chain_rarity` 有 **normal / rare / epic / legend** 四種；`GACHA_BALL` 只識 rare/epic/legend。任何「保底／派球」查詢必須 `and cr.rarity in ('rare','epic','legend')`。
+- 冒煙測試用 `pg_temp.test_x(p_uid)` 包 transaction，最後 `rollback`；**唔好用** `set local role authenticated` + `set_config('request.jwt.claims', ...)` 偽造 `auth.uid()`，MCP 執行環境唔生效（會回 `not authenticated`）。
+- 10 連經濟：9 次 `gacha_pull` + 第 10 次 `gacha_pull_lucky`，順序 await；`pendingExp` 只傳第一抽；任何一次 RPC 回 null → 唔本地假派（Rule 5 / v140），已落地嘅抽數保留。
+- 本地 fallback 的保底 `_pickLuckyChainLocal` 同樣只揀 epic/legend，並排除已持有 chain。
+
+## Rule 58 — `_prompt()` 用 textContent：唔可以傳含 SVG 嘅字串
+
+Incident (2026-11-04)：10 連「寶石不足」提示原本寫 `_prompt(\`Need ${GACHA_GEM_SVG} ×30\`)`，但 `_prompt` 係 `el.textContent = text`（Rule 29 同類陷阱），會將整段 `<svg …>` 原碼顯示出嚟。
+
+- `_prompt()` 只放純文字；需要 gem icon 嘅位置（成本 chip、按鈕）用 `innerHTML` 自己砌。
+- 新增任何「文字 + icon」提示前，先確認該容器係 textContent 定 innerHTML。
+
+## Rule 59 — preview 工具卡死：先 kill 殘留 CDP Chrome，再換 `--port`
+
+Incident (2026-11-04)：連續跑 `tools/preview-iphone.mjs --headless` 時，舊 Chrome 仍佔住 9230，新 run 連到舊 page 後卡死（120s timeout），但截圖其實已寫出。
+
+- 每次 run 用遞增 `--port`（9230/9231/…）；run 前 `Get-NetTCPConnection -LocalPort <port>`，有 OwningProcess 就 `Stop-Process -Id <pid> -Force`。
+- 工具完成後 Chrome 有時唔退出：截圖檔存在就代表 JS 已跑完，可以 kill 該 pid 收工。
+
 

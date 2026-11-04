@@ -583,7 +583,7 @@
         </div>
         <button id="btn-quiz-settings" class="quiz-gear-btn" aria-label="Quiz settings" title="Quiz settings">⚙</button>
       </div>
-      <div class="progressbar"><i id="quiz-bar"></i><span class="bar-star" id="quiz-bar-star">★</span></div>
+      <div class="progressbar"><i id="quiz-bar"></i><span class="bar-runner" id="quiz-bar-runner" aria-hidden="true"></span></div>
       <div class="quiz-image-box" id="quiz-image-box">
         <img id="quiz-image" class="quiz-image" alt="Question image">
       </div>
@@ -618,6 +618,8 @@
         <button id="btn-quiz-check" class="btn-big btn-primary">Submit ✔</button>
       </div>
       <div class="quiz-feedback" id="quiz-feedback"></div>
+      <!-- App 自帶虛擬鍵盤：觸控裝置先顯示（桌面用實體鍵盤） -->
+      <div id="quiz-keyboard" class="quiz-keyboard" aria-label="On-screen keyboard" hidden></div>
     </section>
 
     <!-- ============ 結算 ============ -->
