@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.46.0...v1.47.0) (2026-11-04)
+
+
+### Features
+
+* **quiz:** replace progress star with animated runner sprite sheet ([f8587ed](https://github.com/MARCOTT402/PokeEngmon/commit/f8587ed7d7618e01ef35fafbe5f6058ab9a7a431))
+
 # [1.46.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.7...v1.46.0) (2026-11-04)
 
 
