@@ -276,13 +276,16 @@ const Pokedex = {
     const gMeta = (typeof GENS !== "undefined") ? GENS.find(g => g.gen === gen) : null;
     const region = gMeta ? gMeta.name : "";
     document.getElementById("dex-progress").innerHTML =
-      `Gen ${this._genRoman(gen)}${region ? " · " + region : ""} — Collected <b>${locked ? 0 : ownedInGen}</b> / ${total}`;
+      `Gen ${this._genRoman(gen)}${region ? " · " + region : ""} — Unlocked <b>${locked ? 0 : ownedInGen}</b> / ${total}`;
 
-    /* 主頁進度：顯示最高已解鎖世代嘅進度 */
+    /* 主頁進度：已解鎖物種數 / 已開放地區物種總數（同 status bar 定義一致） */
     const [hlo, hhi] = genRange(unlocked);
     let ownedHome = 0;
-    for (let id = hlo; id <= hhi; id++) if (owned.has(id)) ownedHome++;
-    document.getElementById("home-dex-progress").textContent = `${ownedHome}/${hhi - hlo + 1}`;
+    for (let id = 1; id <= hhi; id++) if (owned.has(id)) ownedHome++;
+    const totalHome = (typeof App !== "undefined" && App._unlockedGenTotal)
+      ? App._unlockedGenTotal(unlocked)
+      : (hhi - hlo + 1);
+    document.getElementById("home-dex-progress").textContent = `${ownedHome}/${totalHome}`;
 
     /* 鎖定橫幅 */
     const banner = document.getElementById("gen-lock-banner");
