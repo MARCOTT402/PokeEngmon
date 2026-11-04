@@ -1,3 +1,10 @@
+## [1.44.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.0...v1.44.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** sheet switching race condition — reset _sheetSwitching on view change, use token to cancel pending open timers ([b9f68c7](https://github.com/MARCOTT402/PokeEngmon/commit/b9f68c7281f7fe2e661d999a48bc1bdd677a1aaf))
+
 # [1.44.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.43.0...v1.44.0) (2026-11-04)
 
 
