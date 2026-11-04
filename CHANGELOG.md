@@ -1,3 +1,10 @@
+## [1.42.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.42.0...v1.42.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **auth:** auto-open Login Gate after sign out ([8ad76a2](https://github.com/MARCOTT402/PokeEngmon/commit/8ad76a2ac325e4ac69a3246d18711a2a32a48a2e))
+
 # [1.42.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.41.0...v1.42.0) (2026-11-04)
 
 
