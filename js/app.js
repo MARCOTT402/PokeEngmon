@@ -9,10 +9,14 @@ const App = {
   lastRecord: null,   // 今次做完嘅一組（結算 / 錯題回顧用）
   pendingEvolve: null,
   selectedTopics: new Set(),   // 題型選擇
+  _sheetSwitching: false,       /* 上框 sheet 切換中（close→open timer 期間 block 重複 click） */
 
   /* ---------- 路由 ---------- */
   showView(id) {
-    /* 切頁前關閉所有 home sheets */
+    /* 切頁前關閉所有 home sheets + reset sheet switching state
+       （binder 嘅 close→open timer 可能喺切 view 後仍然 fire → bump token cancel 之） */
+    App._sheetSwitching = false;
+    App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1;  /* cancel pending open timers */
     if (document.getElementById("view-home").classList.contains("active")) {
       this._closeAllSheets();
     }
@@ -2679,7 +2683,6 @@ const App = {
     /* 上框 4 格：全部捲入 top-down sheets
      * 行為：同一按鈕再點一次 → 關閉（toggle）；唔同按鈕 → 先捲回再開新
      * toggleOpenMap: buttonId → sheetId */
-    let _sheetSwitching = false;
     const _toggleOpenMap = {}; /* btnId → sheetId 嘅映射 */
 
     const binder = (id, sheetId, openFn) => {
@@ -2687,7 +2690,7 @@ const App = {
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
-        if (_sheetSwitching) return; /* 捲動中，忽略重複點擊 */
+        if (App._sheetSwitching) return; /* 捲動中，忽略重複點擊 */
         const curSheet = document.querySelector("#view-home .ph-sheet.ph-open");
         const isToggle = curSheet && curSheet.id === sheetId;
         if (isToggle) {
@@ -2696,10 +2699,17 @@ const App = {
           return;
         }
         if (curSheet) {
-          /* 另一個 sheet 開住 → 先捲回（等動畫 400ms），再開新 */
-          _sheetSwitching = true;
+          /* 另一個 sheet 開住 → 先捲回（等動畫 400ms），再開新
+             用 token cancel：如果 showView() 在此期間被 call（切 view），
+             _sheetSwitchToken 會 bump → timer fire 時 token mismatch → 取消 open */
+          const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);
+          App._sheetSwitching = true;
           this._closeAllSheets();
-          setTimeout(() => { _sheetSwitching = false; openFn(); }, 410);
+          setTimeout(() => {
+            if (App._sheetSwitchToken !== token) return; /* 已被切 view cancel */
+            App._sheetSwitching = false;
+            openFn();
+          }, 410);
         } else {
           /* 冇 sheet 開住 → 直接開 */
           openFn();
