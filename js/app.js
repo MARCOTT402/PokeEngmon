@@ -2733,13 +2733,13 @@ const App = {
         }
         if (curSheet || hasFixedOverlay) {
           /* 另一個 sheet 開住 OR 有 fixed overlay → 先 close 哂，再開新
-             token cancel：如果 showView() 在此期間被 call → bump token → timer cancel */
+             先 showView（佢會 bump token），再 bump 自己嘅 token → 避免 showView 嘅 bump 誤 cancel 自己 */
+          if (hasFixedOverlay) this.showView("view-home");
           const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);
           App._sheetSwitching = true;
-          if (hasFixedOverlay) this.showView("view-home");
           this._closeAllSheets();
           setTimeout(() => {
-            if (App._sheetSwitchToken !== token) return;
+            if (App._sheetSwitchToken !== token) return; /* 真係有外部切 view → cancel */
             App._sheetSwitching = false;
             openFn();
           }, 410);
@@ -3007,9 +3007,9 @@ const App = {
           return;
         }
         if (curSheet || hasFixedOverlay) {
+          if (hasFixedOverlay) this.showView("view-home");
           const token = (App._sheetSwitchToken = (App._sheetSwitchToken || 0) + 1);
           App._sheetSwitching = true;
-          if (hasFixedOverlay) this.showView("view-home");
           this._closeAllSheets();
           setTimeout(() => {
             if (App._sheetSwitchToken !== token) return;
