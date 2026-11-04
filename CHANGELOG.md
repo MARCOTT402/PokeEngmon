@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.42.1...v1.43.0) (2026-11-04)
+
+
+### Features
+
+* **auth:** show Learning Curve Mode setup after first-time sign up ([a1b6441](https://github.com/MARCOTT402/PokeEngmon/commit/a1b644109c310fabb1bc3ad31280e20bfb83c20d))
+
 ## [1.42.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.42.0...v1.42.1) (2026-11-04)
 
 
