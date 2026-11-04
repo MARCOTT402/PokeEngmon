@@ -1,3 +1,10 @@
+## [1.44.4](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.3...v1.44.4) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** bezel/dockbar buttons from Friends/Leaderboard/Battle Menu — detect position:fixed overlays, showView('view-home') first before opening sheet/view ([acbe595](https://github.com/MARCOTT402/PokeEngmon/commit/acbe59597ec9951e5c899c55da7ca1e6c5c32645))
+
 ## [1.44.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.2...v1.44.3) (2026-11-04)
 
 
