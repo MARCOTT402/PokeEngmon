@@ -1,3 +1,10 @@
+## [1.44.5](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.4...v1.44.5) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** sheet cancelled after showView — bump token AFTER showView so self-cancel avoided ([dca993b](https://github.com/MARCOTT402/PokeEngmon/commit/dca993b10c7116d13707c69bd354478bdfc326d4))
+
 ## [1.44.4](https://github.com/MARCOTT402/PokeEngmon/compare/v1.44.3...v1.44.4) (2026-11-04)
 
 
