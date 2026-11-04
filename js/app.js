@@ -1841,6 +1841,8 @@ const App = {
               saveState();
               this.renderHome();
               this.toast("Sign-in cancelled — your local progress is kept.");
+              /* 取消 OAuth sign in 後 → 自動彈 Login Gate */
+              setTimeout(() => { this.openLoginHub(true); }, 500);
               return;
             }
           }
@@ -2040,6 +2042,8 @@ const App = {
         this.closeModal();
         this.renderHome();
         this.toast("Signed out — local progress cleared");
+        /* Sign out 後 → 自動彈 Login Gate（500ms 等 toast 顯示） */
+        setTimeout(() => { this.openLoginHub(true); }, 500);
       } catch (e) {
         console.error("[SignOut] failed:", e);
         this.toast("Sign out failed: " + e.message);
