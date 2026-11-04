@@ -1,3 +1,16 @@
+# [1.48.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.47.1...v1.48.0) (2026-11-04)
+
+
+### Bug Fixes
+
+* **home:** update Gym Challenge tag through new button markup ([07993f2](https://github.com/MARCOTT402/PokeEngmon/commit/07993f244e182b4fb8397275dafb6cd8c3f1e384))
+* **pokedex:** use unlocked counts for dex progress displays ([db36f9a](https://github.com/MARCOTT402/PokeEngmon/commit/db36f9a952bfc27e281dfba0dc1812ac598879e3))
+
+
+### Features
+
+* **home:** arcade-style Gym Challenge entry button ([f749230](https://github.com/MARCOTT402/PokeEngmon/commit/f7492303fec20a97362589c57ef59a8a94ba8e0d))
+
 ## [1.47.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.47.0...v1.47.1) (2026-11-04)
 
 
