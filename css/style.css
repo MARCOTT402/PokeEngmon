@@ -1558,7 +1558,9 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   position: absolute; top: 8px; right: 10px; width: 30px; height: 30px;
   border: none; border-radius: 50%; background: rgba(0, 0, 0, .08);
   color: #5a3d00; font-size: 15px; font-weight: 900; cursor: pointer;
+  transition: transform .12s ease;
 }
+.gm-close:active { transform: scale(.9); }
 .gm-title {
   text-align: center; font-size: clamp(18px, 5vw, 24px);
   font-weight: 900; letter-spacing: .12em; color: #6b4a00;
@@ -1584,7 +1586,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   justify-content: flex-start; gap: 1px; aspect-ratio: .78; padding: 5px 2px 4px;
   border-radius: 11px; border: 2px solid #d8c79b;
   background: linear-gradient(180deg, #fff, #fdf3d9);
-  cursor: pointer; overflow: hidden;
+  cursor: pointer; overflow: hidden; font-family: inherit;
   transition: transform .15s ease, box-shadow .15s ease;
 }
 .gm-cell:active { transform: scale(.95); }

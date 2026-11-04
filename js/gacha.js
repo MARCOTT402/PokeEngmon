@@ -15,6 +15,8 @@ const GACHA_BALL = {
 };
 const GACHA_MAX_PULL = 150;     // 手臂最大下拉距離（px）
 const GACHA_THRESHOLD = 0.72;   // 拉過 72% 即觸發，唔使放手
+const GACHA_CHARGE_MS = 3000;      // 按住手杆幾耐先充滿 10 連
+const GACHA_MULTI_THRESHOLD = 0.35; // 充滿後只需拉 35% 即發動
 /* status bar 同款藍寶石 icon（dynamic 注入用，例如檢視卡按鈕） */
 const GACHA_GEM_SVG = `<svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/><circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/><ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/><ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/></svg>`;
 
@@ -31,7 +33,13 @@ const Gacha = {
   _sceneB: null,       // lazy 金色背景 A overlay（掛 body）
   _inspect: null,      // lazy 檢視卡 overlay（掛 body）
   _pendingEvolve: null,
+  _pendingEvolves: [],  // 10 連可能一次過進化多隻
   _townStopped: false,
+  /* 10 連充能狀態 */
+  _charging: false, _charged: false, _chargeTimer: null, _chargeStart: 0,
+  _holdStart: 0, _holdMs: 0, _suppressClick: false,
+  /* 10 連結算 overlay */
+  _multi: null, _multiResults: null, _multiMeta: null,
 
   open(mode) {
     this.mode = mode;
@@ -41,6 +49,7 @@ const Gacha = {
     this._bindArm();
     this._bindStageFit();
     this._resetStage();
+    this._setCostChip(false);
     this._refreshControls();
     requestAnimationFrame(() => this._fitStage());
     /* 扭蛋係全屏演出：入場即收城鎮 BGM，避免同音效疊聲 */
@@ -61,7 +70,8 @@ const Gacha = {
 
     if (flow && !flow.settled) {
       /* 未結算 → 背景補做，避免中途離開導致扣鑽但冇寵物 */
-      this._settleResult(flow).then(() => {
+      const pending = flow.multi ? this._settleMulti(flow) : this._settleResult(flow);
+      pending.then(() => {
         this._refreshControls();
         App.renderHome();
       }).catch(() => {});
@@ -71,9 +81,12 @@ const Gacha = {
     this._refreshControls();
     this._restoreTownBGM();
     /* 任何離開路徑（包括下巴 Home 掣）都要補返進化揭示 */
+    const evolves = (this._pendingEvolves || []).slice();
+    this._pendingEvolves = [];
     const evo = this._pendingEvolve;
     this._pendingEvolve = null;
-    if (evo) App.showEvolveModal(evo);
+    if (evo) evolves.unshift(evo);
+    this._flushEvolves(evolves);
   },
   /* 離開扭蛋（任何路徑）都要還原城鎮 BGM */
   _restoreTownBGM() {
@@ -107,14 +120,24 @@ const Gacha = {
     return st.diamonds >= GAME_CONFIG.RARE_PULL_COST;
   },
 
+  _canMultiPull() {
+    const st = loadState();
+    return st.diamonds >= GAME_CONFIG.MULTI_PULL_COST;
+  },
+
   _refreshControls() {
     this._updateDiamondDisplay();
     const afford = this._canPull();
+    const affordMulti = this._canMultiPull();
     const m = this._machine();
     if (m) m.classList.toggle("cant-afford", !afford);
     /* idle 待機提示：夠鑽就教拉手杆，唔夠就提住去賺 */
-    if (this.phase === "idle") {
-      this._prompt(afford ? "⇣ DRAG DRAGONITE'S HAND ⇣" : "Not enough gems — earn more in quizzes!");
+    if (this.phase === "idle" && !this._charging && !this._charged) {
+      if (affordMulti) {
+        this._prompt("⇣ DRAG FOR 1 PULL ・ HOLD 3s FOR 10×");
+      } else {
+        this._prompt(afford ? "⇣ DRAG DRAGONITE'S HAND ⇣" : "Not enough gems — earn more in quizzes!");
+      }
     }
   },
 
@@ -339,6 +362,717 @@ const Gacha = {
   },
 
   /* ============================================================
+     10 連抽：按住手杆 3 秒充能 → 拉落 → 10 連
+     ============================================================ */
+
+  _setCostChip(multi) {
+    const el = document.getElementById("gacha-cost");
+    if (!el) return;
+    el.classList.toggle("multi", !!multi);
+    const cost = multi ? GAME_CONFIG.MULTI_PULL_COST : GAME_CONFIG.RARE_PULL_COST;
+    el.innerHTML = `Cost: ${GACHA_GEM_SVG} ×${cost}` +
+      (multi ? `<span class="gc-10x">10×</span>` : "");
+  },
+
+  _startCharge() {
+    if (this.phase !== "idle" || this._charging || this._charged) return;
+    this._charging = true;
+    this._chargeStart = performance.now();
+    const m = this._machine();
+    if (m) m.classList.add("charging");
+    this._setCostChip(true);
+    this._prompt("CHARGING 10×… 0%");
+    Pokedex.unlockAudio();
+    const audio = this._audio();
+    if (audio) audio.ensure();
+    this._chargeTimer = this._setT(() => this._chargeComplete(), GACHA_CHARGE_MS);
+    this._chargeTicker();
+  },
+
+  _chargeTicker() {
+    if (!this._charging) return;
+    const p = Math.min(1, (performance.now() - this._chargeStart) / GACHA_CHARGE_MS);
+    const audio = this._audio();
+    if (audio && p < 1) audio.chargeTick(p);
+    if (this.phase === "idle" && this._charging) {
+      this._prompt(`CHARGING 10×… ${Math.round(p * 100)}%`);
+    }
+    if (this._charging) this._setT(() => this._chargeTicker(), 260);
+  },
+
+  _chargeComplete() {
+    this._chargeTimer = null;
+    if (!this._charging) return;
+    if (!this._canMultiPull()) {
+      /* 唔夠 30 鑽：唔會進入 charged，等玩家知要儲幾多 */
+      this._cancelCharge();
+      this._prompt(`Need ${GACHA_GEM_SVG} ×${GAME_CONFIG.MULTI_PULL_COST} for 10×`);
+      this._haptic(40);
+      return;
+    }
+    this._charging = false;
+    this._charged = true;
+    const m = this._machine();
+    if (m) {
+      m.classList.remove("charging");
+      m.classList.add("charged");
+    }
+    this._setCostChip(true);
+    this._refreshControls();
+    this._prompt("READY! PULL DOWN FOR 10×");
+    const pr = document.getElementById("gacha-prompt");
+    if (pr) pr.classList.add("almost");
+    const audio = this._audio();
+    if (audio) audio.chargeReady();
+    this._haptic([20, 30, 20]);
+  },
+
+  _cancelCharge() {
+    if (this._chargeTimer) {
+      clearTimeout(this._chargeTimer);
+      this._chargeTimer = null;
+    }
+    const was = this._charging || this._charged;
+    this._charging = false;
+    this._charged = false;
+    const m = this._machine();
+    if (m) m.classList.remove("charging", "charged");
+    if (was) {
+      this._setCostChip(false);
+      this._prompt("");
+    }
+  },
+
+  _beginMultiPull() {
+    if (this.busy || !this._canMultiPull()) return false;
+    this.busy = true;
+    Pokedex.unlockAudio();
+    const audio = this._audio();
+    if (audio) {
+      audio.ensure();
+      audio.stopTownBGM(500);
+      this._townStopped = true;
+    }
+    const authed = !!(window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser());
+    const st = loadState();
+    this._clearTimers();
+    this._flow = {
+      id: ++this._flowId,
+      multi: true,
+      authed,
+      gen: st.unlockedGen || 1,
+      pendingExp: st.pendingExp || 0,
+      settled: false,
+      settling: null,
+      settlement: null
+    };
+    this._refreshControls();
+    return true;
+  },
+
+  /* 10 連經濟結算：9 次普通 + 最後 1 次保底，同演出解耦。
+     server 權威優先；匿名／離線才走本地 fallback。 */
+  async _settleMulti(flow) {
+    if (!flow) return null;
+    if (flow.settled) return flow.settlement;
+    if (flow.settling) return flow.settling;
+
+    flow.settling = (async () => {
+      const count = GAME_CONFIG.MULTI_PULL_COUNT;
+      const results = [];
+      let pending = flow.pendingExp || 0;
+      let balance = null;
+
+      if (flow.authed) {
+        for (let i = 0; i < count; i++) {
+          if (flow.id === this._flowId) this._prompt(`OPENING ${i + 1}/${count}…`);
+          const isLast = i === count - 1;
+          let r = null;
+          try {
+            r = isLast
+              ? await SupabaseAuth.gachaPullLucky(flow.gen)
+              : await SupabaseAuth.gachaPull(i === 0 ? pending : 0, flow.gen);
+          } catch (e) {
+            r = null;
+          }
+          if (!r || !r.entry) {
+            /* v140：已登入但 RPC 失敗 → 唔本地假派；已落地嘅抽數保留 */
+            if (flow.id === this._flowId) this._prompt("");
+            flow.settled = true;
+            flow.settlement = null;
+            return null;
+          }
+          pending = 0;
+          balance = r.balance;
+          const s = this._applyServerPull(r, i === 0);
+          if (s) results.push(s);
+        }
+      } else {
+        /* 本地 fallback：先確認第 10 抽有保底鏈，避免扣完鑽才失敗 */
+        const lucky = this._pickLuckyChainLocal(flow.gen);
+        if (!lucky.key) {
+          flow.settled = true;
+          flow.settlement = null;
+          return null;
+        }
+        const st0 = loadState();
+        st0.diamonds = Math.max(0, st0.diamonds - GAME_CONFIG.MULTI_PULL_COST);
+        saveState();
+        balance = st0.diamonds;
+        for (let i = 0; i < count; i++) {
+          if (flow.id === this._flowId) this._prompt(`OPENING ${i + 1}/${count}…`);
+          let rarity, chainKey;
+          if (i === count - 1) {
+            rarity = lucky.rarity;
+            chainKey = lucky.key;
+          } else {
+            rarity = this.rollRarity(this.mode);
+            chainKey = this.pickChain(rarity);
+            if (!chainKey) {
+              rarity = "rare";
+              chainKey = this.pickChain("rare");
+            }
+          }
+          if (!chainKey) {
+            flow.settled = true;
+            flow.settlement = null;
+            return null;
+          }
+          const s = this._applyLocalPull(chainKey, rarity, i === 0);
+          if (s) results.push(s);
+        }
+      }
+
+      if (flow.id === this._flowId) this._prompt("");
+      const evolves = results.map(s => s.firstExpEvolve).filter(Boolean);
+      const newlyUnlockedGen = results.reduce(
+        (mx, s) => (s.newlyUnlockedGen && s.newlyUnlockedGen > mx ? s.newlyUnlockedGen : mx), null);
+      flow.settled = true;
+      flow.settlement = { results, evolves, newlyUnlockedGen, balance };
+      this._updateDiamondDisplay();
+      return flow.settlement;
+    })();
+
+    try {
+      return await flow.settling;
+    } finally {
+      flow.settling = null;
+    }
+  },
+
+  /* server 單抽結果落地（沿用單抽 server path 的規則） */
+  _applyServerPull(r, applyPending) {
+    const st = loadState();
+    st.diamonds = r.balance;
+    saveState();
+    const rarity = r.rarity;
+    const chainKey = r.entry.chain_key;
+    const hadEntries = st.entries.length > 0;
+    const genBefore = st.unlockedGen || 1;
+    const entry = adoptServerEntry(r.entry);
+    const genAfter = loadState().unlockedGen || 1;
+    const newlyUnlockedGen = genAfter > genBefore ? genAfter : null;
+    const isDupe = !!r.is_dupe;
+    const candyGain = isDupe ? 1 : 0;
+    let firstExpEvolve = null;
+
+    if (applyPending && st.pendingExp > 0) {
+      if (!hadEntries && !isDupe) {
+        st.pendingExp = 0;
+        saveState();
+        if (entry.stage > 1) firstExpEvolve = SPECIES[entryCurrentSpecies(entry)[0]];
+      } else {
+        const pending = st.pendingExp;
+        const res = addEntryExp(entry, pending);
+        st.pendingExp = 0;
+        (res.learned || []).forEach(m => {
+          if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+        });
+        saveState();
+        firstExpEvolve = res.evolvedTo;
+        if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+          SupabaseAuth.addEntryExp(entry.uid, pending);
+          if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+            Sync.patchEntry(entry.uid, { branch: entry.branch });
+          }
+        }
+      }
+    }
+
+    const preview = EVOLUTION_CHAINS.find(c => c.key === chainKey);
+    if (preview) Pokedex.prepareCry(preview.stages[0][0]);
+    return { rarity, chainKey, entry, isDupe, candyGain, firstExpEvolve, newlyUnlockedGen };
+  },
+
+  /* 本地單抽結果落地（匿名／離線） */
+  _applyLocalPull(chainKey, rarity, applyPending) {
+    const got = obtainPokemon(chainKey, this.mode);
+    if (!got) return null;
+    const entry = got.entry;
+    const isDupe = got.isDupe;
+    const candyGain = got.candyGain || 0;
+    const newlyUnlockedGen = got.newlyUnlockedGen || null;
+    let firstExpEvolve = null;
+    const st = loadState();
+
+    if (applyPending && st.pendingExp > 0) {
+      const pending = st.pendingExp;
+      const res = addEntryExp(entry, pending);
+      st.pendingExp = 0;
+      (res.learned || []).forEach(m => {
+        if (entry.moves.length < 4 && !entry.moves.includes(m.move)) entry.moves.push(m.move);
+      });
+      saveState();
+      firstExpEvolve = res.evolvedTo;
+      if (window.SupabaseAuth && SupabaseAuth.isEnabled() && SupabaseAuth.currentUser()) {
+        SupabaseAuth.addEntryExp(entry.uid, pending);
+        if (res.evolvedTo && entry.branch != null && window.Sync && Sync.isEnabled()) {
+          Sync.patchEntry(entry.uid, { branch: entry.branch });
+        }
+      }
+    }
+    return { rarity, chainKey, entry, isDupe, candyGain, firstExpEvolve, newlyUnlockedGen };
+  },
+
+  /* 本地保底：50/50 legend / epic，優先「未持有」，排除 normal */
+  _pickLuckyChainLocal(gen) {
+    const st = loadState();
+    const owned = new Set((st.entries || []).map(e => e.chainKey));
+    const order = Math.random() < 0.5 ? ["legend", "epic"] : ["epic", "legend"];
+    for (const rar of order) {
+      const pool = pullablePool(gen, rar) || [];
+      if (!pool.length) continue;
+      const fresh = pool.filter(k => !owned.has(k));
+      const list = fresh.length ? fresh : pool;
+      return { rarity: rar, key: list[Math.floor(Math.random() * list.length)] };
+    }
+    return { rarity: "rare", key: this.pickChain("rare") };
+  },
+
+  /* 拉過閾值：扣 30 寶石 → 手臂回彈 → 開艙 → 等結算 → 10 球跌出 */
+  async _triggerMultiPull() {
+    if (this._triggered) return;
+    if (!this._beginMultiPull()) {
+      this._refreshControls();
+      const g0 = this._gsap();
+      if (g0 && !this._rm()) {
+        const proxy0 = { p: this._curP };
+        g0.to(proxy0, { p: 0, duration: .5, ease: "elastic.out(1,.45)", onUpdate: () => this._setPull(proxy0.p) });
+      } else {
+        this._setPull(0);
+      }
+      return;
+    }
+    const flow = this._flow;
+    this._triggered = true;
+    this._dragging = false;
+    this._holdMs = 0;
+    this._suppressClick = true;
+    this._charging = false;
+    this._charged = false;
+    this.phase = "opening";
+    this._setCostChip(true);
+    document.getElementById("view-gacha").classList.add("playing");
+    const fid = flow.id;
+    const machine = this._machine();
+    machine.classList.remove("dragging", "charging", "charged");
+    this._prompt("");
+    const audio = this._audio();
+    if (audio) audio.pullSnap();
+    this._haptic([20, 40, 20]);
+
+    const g = this._gsap();
+    if (g && !this._rm()) {
+      const proxy = { p: this._curP };
+      g.to(proxy, { p: 0, duration: .3, ease: "power3.out", onUpdate: () => this._setPull(proxy.p) });
+    } else {
+      this._setPull(0);
+    }
+
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      machine.classList.add("belly-open");
+      if (audio) audio.bellyOpen();
+      this._haptic([30, 40, 30]);
+    }, 180);
+
+    let s = null;
+    try {
+      s = await this._settleMulti(flow);
+    } catch (err) {
+      console.error("[Gacha] 10× settlement failed", err);
+    }
+    if (!s) {
+      if (fid === this._flowId) {
+        this.busy = false;
+        this._flow = null;
+        this._resetStage();
+        this._setCostChip(false);
+        this._refreshControls();
+        this._prompt("Something went wrong — try again.");
+      }
+      return;
+    }
+    if (fid !== this._flowId) return;
+
+    this._setT(() => { if (fid === this._flowId) this._dropBalls(flow, s.results); }, 600);
+  },
+
+  /* 10 球跌出：由肚仔彈到 5×2 tray */
+  _dropBalls(flow, results) {
+    this.phase = "drop";
+    const fid = flow.id;
+    const dz = document.getElementById("gacha-dropzone");
+    const belly = document.getElementById("dm-belly");
+    if (!dz || !belly || !results.length) return;
+
+    const bRect = belly.getBoundingClientRect();
+    const dzRect = dz.getBoundingClientRect();
+    const size = 34, gap = 8, cols = 5;
+    const rows = Math.ceil(results.length / cols);
+    const gridW = cols * size + (cols - 1) * gap;
+    const gridH = rows * size + (rows - 1) * gap;
+    const baseX = (dzRect.width - gridW) / 2;
+    const baseY = dzRect.height - gridH - 12;
+    const sx = bRect.left - dzRect.left + bRect.width / 2 - size / 2;
+    const sy = bRect.top - dzRect.top + bRect.height * .28;
+    const g = this._gsap();
+
+    results.forEach((s, i) => {
+      const cfg = GACHA_BALL[this._visualRarity(s)] || GACHA_BALL.rare;
+      const ball = document.createElement("div");
+      ball.className = `eject-ball mini pokeball ${cfg.cls}`;
+      ball.innerHTML = this._ballHTML();
+      ball.style.left = sx + "px";
+      ball.style.top = sy + "px";
+      ball.style.width = size + "px";
+      ball.style.height = size + "px";
+      dz.appendChild(ball);
+      const col = i % cols, row = Math.floor(i / cols);
+      const tx = baseX + col * (size + gap) - sx;
+      const ty = baseY + row * (size + gap) - sy;
+      if (g && !this._rm()) {
+        g.to(ball, {
+          x: tx, y: ty, opacity: 1, rotation: 360,
+          duration: .5, delay: i * .05, ease: "bounce.out"
+        });
+      } else {
+        ball.style.transform = `translate(${tx}px, ${ty}px)`;
+        ball.style.opacity = "1";
+      }
+    });
+
+    const audio = this._audio();
+    this._setT(() => { if (audio) audio.ballLand(); }, 450);
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      this._openSceneBMulti(flow, results);
+    }, 900 + results.length * 50);
+  },
+
+  /* 背景 A 10 連版：5×2 精靈球 */
+  _openSceneBMulti(flow, results) {
+    this.phase = "sceneB";
+    const fid = flow.id;
+    const sc = this._ensureSceneB();
+    const wrap = sc.querySelector(".gsb-ball-wrap");
+    const particles = sc.querySelector(".gsb-particles");
+    const prompt = sc.querySelector(".gsb-prompt");
+
+    sc.classList.remove("hidden");
+    requestAnimationFrame(() => sc.classList.add("show"));
+
+    particles.innerHTML = "";
+    if (!this._rm()) {
+      for (let i = 0; i < 24; i++) {
+        const sp = document.createElement("span");
+        sp.style.left = (Math.random() * 100) + "%";
+        sp.style.animationDuration = (5 + Math.random() * 7) + "s";
+        sp.style.animationDelay = (-Math.random() * 8) + "s";
+        sp.style.transform = "scale(" + (0.5 + Math.random()) + ")";
+        particles.appendChild(sp);
+      }
+    }
+
+    prompt.textContent = "10 POKÉMON INCOMING…";
+    wrap.classList.remove("roll-in");
+    wrap.style.transform = "";
+    wrap.innerHTML = `<div class="gsb-multi">` + results.map(s => {
+      const cfg = GACHA_BALL[this._visualRarity(s)] || GACHA_BALL.rare;
+      return `<div class="pokeball ${cfg.cls}">${this._ballHTML()}</div>`;
+    }).join("") + `</div>`;
+
+    const audio = this._audio();
+    if (audio) audio.ballRoll();
+
+    const balls = wrap.querySelectorAll(".pokeball");
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      this._sceneBTimelineMulti(flow, results, balls);
+    }, this._rm() ? 300 : 750);
+  },
+
+  /* 逐粒揭示：rare → epic → legend */
+  _sceneBTimelineMulti(flow, results, balls) {
+    const fid = flow.id;
+    const sc = this._sceneB;
+    const rings = sc.querySelector(".gsb-rings");
+    const flash = sc.querySelector(".gsb-flash");
+    const prompt = sc.querySelector(".gsb-prompt");
+    const audio = this._audio();
+    const rank = { rare: 0, epic: 1, legend: 2 };
+    const order = results
+      .map((s, i) => ({ s, i, r: rank[this._visualRarity(s)] || 0 }))
+      .sort((a, b) => a.r - b.r);
+    const k = this._rm() ? .35 : 1;
+
+    const pop = (item) => {
+      const b = balls[item.i];
+      if (!b || !document.body.contains(b)) return;
+      b.classList.remove("wob"); void b.offsetWidth;
+      b.classList.add("wob");
+      if (audio) audio.wobble(1);
+      this._setT(() => {
+        if (!document.body.contains(b)) return;
+        b.classList.add("open", "revealed");
+        if (audio) audio.ballLand();
+        const rarity = this._visualRarity(item.s);
+        if (rarity === "epic" || rarity === "legend") {
+          flash.classList.remove("on", "big"); void flash.offsetWidth;
+          flash.classList.add("on");
+          if (rarity === "legend") flash.classList.add("big");
+          const g = this._gsap();
+          if (g && !this._rm()) {
+            g.fromTo(sc, { x: rarity === "legend" ? -8 : -4 },
+              { x: 0, duration: .45, ease: "elastic.out(1.2,.3)",
+                onComplete: () => { sc.style.transform = ""; } });
+          }
+          if (rarity === "legend" && audio) audio.upgradeSting(2);
+          this._haptic(rarity === "legend" ? [30, 50, 50] : [16]);
+        }
+        const n = rarity === "legend" ? 3 : 1;
+        for (let j = 0; j < n; j++) {
+          const r = document.createElement("i");
+          r.className = "gsb-ring";
+          r.style.borderColor = rarity === "legend" ? "#ffe28a" : "#d8a4ff";
+          r.style.animationDelay = (j * .1) + "s";
+          rings.appendChild(r);
+          this._setT(() => r.remove(), 1200);
+        }
+      }, 260 * k);
+    };
+
+    prompt.textContent = "REVEALING…";
+    order.forEach((item, idx) => {
+      this._setT(() => {
+        if (fid !== this._flowId) return;
+        pop(item);
+      }, (400 + idx * 240) * k);
+    });
+
+    this._setT(() => {
+      if (fid !== this._flowId) return;
+      prompt.textContent = "";
+      this._revealMultiResults(flow, results);
+    }, (400 + order.length * 240 + 900) * k);
+  },
+
+  _revealMultiResults(flow, results) {
+    this.phase = "inspect";
+    this._flow = null;
+    const sc = this._sceneB;
+    if (sc) sc.classList.remove("show");
+    const meta = flow.settlement || {};
+    this._pendingEvolves = (meta.evolves || []).slice();
+    if (meta.newlyUnlockedGen) App._pendingGenUnlock = meta.newlyUnlockedGen;
+
+    this._setT(() => {
+      if (sc) sc.classList.add("hidden");
+      this._fillMultiResults(results, meta);
+      const el = this._ensureMulti();
+      el.classList.remove("hidden");
+      requestAnimationFrame(() => el.classList.add("show"));
+    }, 450);
+
+    this.busy = false;
+    this._refreshControls();
+    App.renderHome();
+  },
+
+  /* 10 連結算 overlay（lazy 建立，fixed 掛 body） */
+  _ensureMulti() {
+    if (this._multi) return this._multi;
+    const el = document.createElement("div");
+    el.id = "gacha-multi";
+    el.className = "hidden";
+    el.innerHTML = `
+      <div class="gm-card">
+        <button class="gm-close" type="button" aria-label="Close">✕</button>
+        <div class="gm-title">LUCKY <span>10×</span></div>
+        <div class="gm-summary"></div>
+        <div class="gm-warn hidden"></div>
+        <div class="gm-grid"></div>
+        <div class="gm-actions">
+          <button class="btn-big btn-primary gm-again" type="button"></button>
+          <button class="btn-big btn-plain gm-done" type="button">DONE</button>
+        </div>
+        <div class="gm-detail hidden">
+          <div class="gi-card gm-detail-card"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    el.querySelector(".gm-close").addEventListener("click", () => this._closeMulti());
+    el.querySelector(".gm-done").addEventListener("click", () => this._closeMulti());
+    el.querySelector(".gm-again").addEventListener("click", () => this._multiAgain());
+    const det = el.querySelector(".gm-detail");
+    det.addEventListener("click", e => {
+      if (e.target === det) det.classList.add("hidden");
+    });
+    this._multi = el;
+    return el;
+  },
+
+  _fillMultiResults(results, meta) {
+    const el = this._ensureMulti();
+    this._multiResults = results;
+    this._multiMeta = meta || {};
+
+    const counts = { legend: 0, epic: 0, rare: 0 };
+    let newCount = 0;
+    results.forEach(s => {
+      counts[s.rarity] = (counts[s.rarity] || 0) + 1;
+      if (!s.isDupe) newCount++;
+    });
+    const summary = [];
+    if (counts.legend) summary.push(`<span class="gm-stat legend">★ LEGEND ×${counts.legend}</span>`);
+    if (counts.epic) summary.push(`<span class="gm-stat epic">★ EPIC ×${counts.epic}</span>`);
+    if (counts.rare) summary.push(`<span class="gm-stat rare">RARE ×${counts.rare}</span>`);
+    summary.push(`<span class="gm-stat new">${newCount} NEW</span>`);
+    el.querySelector(".gm-summary").innerHTML = summary.join("");
+    el.querySelector(".gm-warn").classList.add("hidden");
+
+    const grid = el.querySelector(".gm-grid");
+    grid.innerHTML = results.map((s, i) => {
+      const cur = entryCurrentSpecies(s.entry);
+      const dex = cur[0];
+      const stars = s.rarity === "legend" ? "★★★" : s.rarity === "epic" ? "★★" : "★";
+      return `<button class="gm-cell" type="button" data-rarity="${s.rarity}" data-idx="${i}">
+        <span class="gm-badge ${s.isDupe ? "dupe" : "new"}">${s.isDupe ? "DUPE" : "NEW"}</span>
+        <img src="${artworkURL(dex)}" alt="${cur[1]}" onerror="this.onerror=null;this.src='${spriteURL(dex)}'">
+        <span class="gm-name">${cur[1]}</span>
+        <span class="gm-meta">Lv.${s.entry.level} ${stars}</span>
+      </button>`;
+    }).join("");
+    grid.onclick = (e) => {
+      const cell = e.target.closest(".gm-cell");
+      if (cell && this._multiResults) this._showMultiDetail(+cell.dataset.idx);
+    };
+
+    el.querySelector(".gm-detail").classList.add("hidden");
+    this._refreshMultiAgainButton();
+  },
+
+  _showMultiDetail(idx) {
+    const s = this._multiResults && this._multiResults[idx];
+    if (!s) return;
+    const el = this._multi;
+    const det = el.querySelector(".gm-detail");
+    const card = det.querySelector(".gm-detail-card");
+    const rarity = this._visualRarity(s);
+    const cfg = GACHA_BALL[rarity] || GACHA_BALL.rare;
+    const entry = s.entry;
+    const cur = entryCurrentSpecies(entry);
+    const dex = cur[0];
+    const dexEntry = dexOf(dex);
+    const types = (dexEntry && dexEntry.types) || [];
+    const stats = statsForEntry(entry);
+    const stars = rarity === "legend" ? "★★★" : rarity === "epic" ? "★★" : "★";
+
+    card.innerHTML = `
+      <span class="gi-rarity">${cfg.label}</span>
+      <img class="gi-art" alt="${cur[1]}" src="${artworkURL(dex)}" onerror="this.onerror=null;this.src='${spriteURL(dex)}'">
+      <div class="gi-name">${cur[1]}</div>
+      <div class="gi-meta">No.${String(dex).padStart(3, "0")} ・ Lv.${entry.level} ・ ${stars}</div>
+      <div class="gi-types">${types.map(t =>
+        `<span class="gi-type" style="background:${typeColor(t)}"><img src="${typeIconURL(t)}" alt="" onerror="this.remove()">${typeLabel(t).toUpperCase()}</span>`
+      ).join("")}</div>
+      <div class="gi-stats">${stats
+        ? STAT_KEYS.map(k2 => `<div class="gi-stat"><b>${stats[k2]}</b><span>${STAT_LABELS[k2]}</span></div>`).join("")
+        : ""}</div>
+      <div class="gi-note ${s.isDupe ? "" : "new"}">${s.isDupe
+        ? `Already have it! ⚡ EV point +1${s.candyGain ? " ・ 🍬 Candy +1" : ""}`
+        : "NEW! Registered to your Pokédex."}</div>`;
+    const chip = card.querySelector(".gi-rarity");
+    if (chip) {
+      if (rarity === "epic") chip.style.background = "#b26be0";
+      else if (rarity === "legend") {
+        chip.style.background = "linear-gradient(180deg,#ffd970,#e09a12)";
+        chip.style.color = "#5a3a00";
+      }
+    }
+    det.classList.remove("hidden");
+    try { Pokedex.playCry(dex); } catch (e) { /* audio unavailable */ }
+  },
+
+  _refreshMultiAgainButton() {
+    if (!this._multi) return;
+    const btn = this._multi.querySelector(".gm-again");
+    const st = loadState();
+    const cost = GAME_CONFIG.MULTI_PULL_COST;
+    if (st.diamonds >= cost) {
+      btn.disabled = false;
+      btn.innerHTML = `${GACHA_GEM_SVG} ×${cost} ・ 10× AGAIN`;
+    } else {
+      btn.disabled = true;
+      btn.innerHTML = `Need ${GACHA_GEM_SVG} ×${cost} (you have ${st.diamonds})`;
+    }
+  },
+
+  _multiAgain() {
+    if (this.busy || !this._canMultiPull()) {
+      this._refreshMultiAgainButton();
+      return;
+    }
+    const evolves = (this._pendingEvolves || []).slice();
+    this._pendingEvolves = [];
+    const evo = this._pendingEvolve;
+    this._pendingEvolve = null;
+    if (evo) evolves.unshift(evo);
+    this._cleanupScene();
+    this._flushEvolves(evolves);
+    App.maybeShowGenUnlock();
+    this._setPull(1);
+    this._triggerMultiPull();
+  },
+
+  _closeMulti() {
+    const evolves = (this._pendingEvolves || []).slice();
+    this._pendingEvolves = [];
+    const evo = this._pendingEvolve;
+    this._pendingEvolve = null;
+    if (evo) evolves.unshift(evo);
+    this._cleanupScene();
+    this._setCostChip(false);
+    this._prompt("");
+    this.phase = "idle";
+    this._refreshControls();
+    this._flushEvolves(evolves);
+    App.maybeShowGenUnlock();
+    App.renderHome();
+  },
+
+  /* 一次過揭示所有待播進化（逐個彈窗，上一個撳完先到下一個） */
+  _flushEvolves(list) {
+    const q = (list || []).filter(Boolean);
+    if (!q.length) return;
+    const show = (i) => {
+      if (i >= q.length) return;
+      App.showEvolveModal(q[i], () => show(i + 1));
+    };
+    show(0);
+  },
+
+  /* ============================================================
      v102 演出層：拉手杆（即扣 3 寶石）→ 肚開 → 跌球 → 背景 A → 檢視卡
      ============================================================ */
 
@@ -387,9 +1121,36 @@ const Gacha = {
     arm.addEventListener("pointercancel", e => this._onArmUp(e));
     arm.addEventListener("keydown", e => {
       if (this.phase !== "idle") return;
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this._tryAutoPull(); }
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      if (e.repeat || this._dragging) return;
+      /* 鍵盤長按 3 秒 = 10 連；短按放手 = 單抽 */
+      this._dragging = true;
+      this._triggered = false;
+      this._holdStart = performance.now();
+      this._suppressClick = false;
+      Pokedex.unlockAudio();
+      const audio = this._audio();
+      if (audio) audio.ensure();
+      this._startCharge();
+    });
+    arm.addEventListener("keyup", e => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      if (this.phase !== "idle") return;
+      e.preventDefault();
+      const holdMs = performance.now() - (this._holdStart || 0);
+      this._dragging = false;
+      if (this._charged) {
+        this._triggerMultiPull();
+      } else {
+        this._cancelCharge();
+        if (holdMs < 600 && !this.busy) this._tryAutoPull();
+        else this._refreshControls();
+      }
     });
     arm.addEventListener("click", () => {
+      /* 長按放手會產生 click：吞咗佢，避免變成單抽 */
+      if (this._suppressClick) { this._suppressClick = false; return; }
       if (this.phase !== "idle" || this._dragging || this._triggered || this._curP >= 0.05) return;
       this._tryAutoPull();
     });
@@ -409,7 +1170,7 @@ const Gacha = {
 
   _onArmDown(e) {
     if (this.phase !== "idle" || this._dragging || this.busy) return;
-    if (!this._canPull()) {
+    if (!this._canPull() && !this._canMultiPull()) {
       this._prompt("Not enough gems — earn more in quizzes!");
       this._haptic(30);
       return;
@@ -417,12 +1178,16 @@ const Gacha = {
     this._dragging = true;
     this._triggered = false;
     this._startY = e.clientY;
+    this._suppressClick = false;
+    this._holdStart = performance.now();
     try { this._arm().setPointerCapture(e.pointerId); } catch (_) { /* unsupported */ }
     this._machine().classList.add("dragging");
     this._prompt("");
     Pokedex.unlockAudio();   // 抓住手杆嗰刻解鎖音效
     const audio = this._audio();
     if (audio) audio.ensure();
+    /* 按住即開始充能；3 秒內拉落 = 單抽，3 秒後拉落 = 10 連 */
+    this._startCharge();
     e.preventDefault();
   },
 
@@ -430,6 +1195,8 @@ const Gacha = {
     if (!this._dragging || this._triggered) return;
     const dy = Math.min(Math.max(e.clientY - this._startY, 0), GACHA_MAX_PULL);
     const p = dy / GACHA_MAX_PULL;
+    /* 未充滿就真拖拽 = 單抽：即刻取消充能 */
+    if (!this._charged && p > 0.10) this._cancelCharge();
     this._setPull(p);
     const now = performance.now();
     const audio = this._audio();
@@ -437,14 +1204,22 @@ const Gacha = {
       this._lastCreak = now;
       audio.pullCreak(p);
     }
+    if (this._charged) {
+      if (p >= GACHA_MULTI_THRESHOLD && this._canMultiPull()) this._triggerMultiPull();
+      return;
+    }
     if (p >= GACHA_THRESHOLD && this._canPull()) this._triggerPull();
   },
 
   _onArmUp() {
     if (!this._dragging) return;
     this._dragging = false;
+    this._holdMs = performance.now() - (this._holdStart || 0);
+    this._suppressClick = this._holdMs > 600;
     this._machine().classList.remove("dragging");
     if (this._triggered) return;
+    /* 未拉落就放手 → 取消充能 + 未有 10 連 */
+    this._cancelCharge();
     /* 未達標放手 → 彈簧回彈（未扣鑽），並還原待機提示 */
     const audio = this._audio();
     if (audio) audio.pullSnap();
@@ -460,7 +1235,7 @@ const Gacha = {
 
   /* 單擊 / 鍵盤：檢查鑽石後自動拉到底（同拉手杆一樣會扣 3 寶石） */
   _tryAutoPull() {
-    if (this.busy) return;
+    if (this.busy || this._charging || this._charged) return;
     if (!this._canPull()) {
       this._prompt("Not enough gems — earn more in quizzes!");
       this._haptic(30);
@@ -917,14 +1692,22 @@ const Gacha = {
     const dz = document.getElementById("gacha-dropzone");
     if (dz) dz.innerHTML = "";
     document.getElementById("view-gacha").classList.remove("playing");
+    this._cancelCharge();
+    if (this._multi) {
+      this._multi.classList.remove("show");
+      this._multi.classList.add("hidden");
+    }
     this._dragging = false;
     this._triggered = false;
+    this._suppressClick = false;
+    this._holdMs = 0;
     this._curP = 0;
     this._setPull(0);
   },
 
   _resetStage() {
     this._cleanupScene();
+    this._setCostChip(false);
     this._prompt("");
     this.phase = "idle";
   }
