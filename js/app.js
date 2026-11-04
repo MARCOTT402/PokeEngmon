@@ -2051,6 +2051,7 @@ const App = {
   _showSignUpForm(isGate) {
     this.showModal(`
       <div class="login-hub">
+        <button id="lh-back" class="lh-back" aria-label="Back">←</button>
         <div class="lh-ball" aria-hidden="true"></div>
         <h3>Create Account</h3>
         <p class="lh-sub">Save your progress to the cloud. Never lose a Pokémon again.</p>
@@ -2064,6 +2065,9 @@ const App = {
         </form>
         <p class="lh-alt">Already have an account? <a id="lh-to-signin" href="#">Sign in</a></p>
       </div>`, !!isGate);
+
+    /* Back button → 返去 Login Hub（保留 isGate 模式） */
+    document.getElementById("lh-back").onclick = () => { this.closeModal(); this.openLoginHub(isGate); };
 
     const errBox = document.getElementById("lh-signup-error");
     const form = document.getElementById("lh-signup-form");
@@ -2155,6 +2159,7 @@ const App = {
   _showSignInForm(isGate) {
     this.showModal(`
       <div class="login-hub">
+        <button id="lh-back" class="lh-back" aria-label="Back">←</button>
         <div class="lh-ball" aria-hidden="true"></div>
         <h3>Sign In</h3>
         <p class="lh-sub">Welcome back! Sign in to sync your progress.</p>
@@ -2170,6 +2175,9 @@ const App = {
           <a id="lh-to-create" href="#">Create account</a>
         </p>
       </div>`, !!isGate);
+
+    /* Back button → 返去 Login Hub（保留 isGate 模式） */
+    document.getElementById("lh-back").onclick = () => { this.closeModal(); this.openLoginHub(isGate); };
 
     const errBox = document.getElementById("lh-signin-error");
     const form = document.getElementById("lh-signin-form");
@@ -2223,6 +2231,7 @@ const App = {
   _showForgotPasswordForm(isGate) {
     this.showModal(`
       <div class="login-hub">
+        <button id="lh-back" class="lh-back" aria-label="Back">←</button>
         <div class="lh-ball" aria-hidden="true"></div>
         <h3>Reset Password</h3>
         <p class="lh-sub">Enter your email and we'll send you a link to reset your password.</p>
@@ -2233,6 +2242,9 @@ const App = {
         </form>
         <p class="lh-alt"><a id="lh-forgot-back" href="#">← Back to Sign In</a></p>
       </div>`, !!isGate);
+
+    /* Back button → 返去 Login Hub（保留 isGate 模式） */
+    document.getElementById("lh-back").onclick = () => { this.closeModal(); this.openLoginHub(isGate); };
 
     const errBox = document.getElementById("lh-forgot-error");
     const form = document.getElementById("lh-forgot-form");
