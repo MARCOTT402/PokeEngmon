@@ -2355,7 +2355,7 @@ const App = {
       { v: "adult", label: "🧑 Adult", desc: "Longer intervals for faster recall" }
     ];
     const modeHtml = modeOpts.map(o => `
-      <label class="curve-mode-opt">
+      <label class="curve-mode-opt${o.v === "standard" ? " active" : ""}">
         <input type="radio" name="curveModeSetup" value="${o.v}" ${o.v === "standard" ? "checked" : ""}>
         <span class="cm-label">${o.label}</span>
         <small class="cm-desc">${o.desc}</small>
@@ -2371,6 +2371,14 @@ const App = {
           <button id="lh-curve-continue" class="btn-big btn-primary">Start Playing →</button>
         </div>
       </div>`, false);  /* 呢個 modal 可以關，但最好俾用戶揀完先關 */
+
+    /* Setup form 嘅 active 切換（之前漏咗！） */
+    document.querySelectorAll('input[name="curveModeSetup"]').forEach(r => {
+      r.onchange = () => {
+        document.querySelectorAll(".curve-mode-opt").forEach(l => l.classList.remove("active"));
+        r.closest(".curve-mode-opt").classList.add("active");
+      };
+    });
 
     document.getElementById("lh-curve-continue").onclick = async () => {
       const sel = document.querySelector('input[name="curveModeSetup"]:checked');
@@ -3348,7 +3356,7 @@ const App = {
       this._uiTapBound = true;
       document.addEventListener("click", (e) => {
         const btn = e.target.closest(
-          "button, [role=button], .chip-btn, .pd-menu-btn, .icon-btn, .entry-gate-btn, .footer-link, .guide-link, .reset-link, .move-choice"
+          "button, [role=button], .chip-btn, .pd-menu-btn, .icon-btn, .entry-gate-btn, .footer-link, .guide-link, .reset-link, .move-choice, .curve-mode-opt"
         );
         if (!btn || btn.disabled || btn.getAttribute("aria-disabled") === "true") return;
         /* 1. UI tap SFX */

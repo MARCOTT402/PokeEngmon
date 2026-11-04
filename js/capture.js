@@ -332,6 +332,22 @@ class CaptureAudio {
     this._noiseHit({ freq: 300 + p * 500, q: 3, gain: 0.03, dur: 0.05, type: "bandpass" });
   }
 
+  /* 10 連充能：每次 tick 一短音，音高隨進度上升 */
+  chargeTick(p) {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(380 + p * 520, { type: "triangle", dur: 0.06, gain: 0.055 });
+  }
+
+  /* 充能完成：三連升調，提示可以拉落 */
+  chargeReady() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(660, { type: "triangle", dur: 0.1, gain: 0.1 });
+    this._tone(880, { type: "triangle", dur: 0.1, gain: 0.1, at: 0.1 });
+    this._tone(1320, { type: "triangle", dur: 0.16, gain: 0.12, at: 0.2 });
+  }
+
   /* 放手回彈 / 觸發瞬間嘅彈簧聲 */
   pullSnap() {
     this.ensure();

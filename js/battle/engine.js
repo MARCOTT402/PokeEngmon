@@ -191,6 +191,7 @@ const Battle = (() => {
       return { slug, name: m.name, pp: m.pp || 1, maxPp: m.pp || 1 };
     });
     return {
+      uid: entry.uid,
       dexId,
       name,
       level: entry.level,

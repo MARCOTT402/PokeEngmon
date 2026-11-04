@@ -558,3 +558,12 @@ Incident (2026-11-04，用戶話「成日見到」)：捕捉結算頁撳 Lucky D
 - **測試路徑：** `App.showView("view-settlement")` → click `#btn-pull-rare` → 斷言 `#view-settlement` 唔再 active、`#sheet-gacha` visible；同樣試 Streak／Dex／Energy sheet 由結算頁開。
 - 呢個 bug class 會影響所有「overlay 保持 home active」嘅頁：結算、選題（quiz-setup）、Battle Menu、Friends、Leaderboard。新增 page 時要當 `_openSheet` 係唯一入口。
 
+## Rule 54 — 新增可寫 column 必須同一份 migration 加 column-level grant
+
+Incident (2026-11-04)：Settings 改 Learning Curve Mode 後關 app 再開變返舊值。根因：`user_account.curve_mode` column 早已存在（migration 20261030），但 `authenticated` role 嘅 UPDATE 係 column-level grant，淨係開咗 trainer_name / name_customized / items_* / updated_at 等 8 欄，**冇 `curve_mode`** → `Sync.pushState()` 嘅 PATCH 被 PostgREST 拒絕（permission denied），落入 fallback（只推 trainer_name）「靜靜雞成功」→ DB 永遠係舊值 → 下次開 app `Sync.pull()` 用 DB 舊值覆蓋 local。
+
+- **加任何 client 會直寫嘅新 column 時，同一份 migration 必須加：** `grant update (<col>) on public.user_account to authenticated;`（其他表同理）。
+- **驗證（唔好信 client 測試）：** 用 SQL 查 `information_schema.role_column_grants where table_name='<t>' and privilege_type='UPDATE' and grantee='authenticated'`，確認新欄喺入面。
+- **診斷呢類「改咗但重開變返」嘅投訴：** 先查 grant，再查 client catch 係咪有 silent fallback 扮成功（sync.js 嘅 legacy-schema fallback 會吞咗 permission error）。
+- 已修：migration `grant_authenticated_update_curve_mode` + 補返落 `supabase-migrate-20261030-curve-mode.sql`。
+

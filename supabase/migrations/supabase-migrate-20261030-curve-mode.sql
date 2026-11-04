@@ -13,4 +13,8 @@ alter table user_account
   add constraint user_account_curve_mode_check
   check (curve_mode in ('standard', 'junior', 'teen', 'adult'));
 
+/* client 用 column-level grant：冇 grant 嘅話 PATCH 會 permission denied，
+   curve_mode 永遠寫唔入 DB（pull 時又還原返舊值）*/
+grant update (curve_mode) on public.user_account to authenticated;
+
 notify pgrst, 'reload schema';

@@ -613,6 +613,14 @@ const SupabaseAuth = {
     return this._rpc("gacha_pull", { init_exp: initExp || 0, p_gen: gen || 1 });
   },
 
+  /* ---------- RPC：10 連保底（第 10 抽） ----------
+     50/50 legend / epic，優先派「未持有」鏈；server 同樣原子扣 3 鑽。
+     回傳格式同 gacha_pull；失敗 return null（由呼叫方處理 partial 結果） */
+  async gachaPullLucky(gen) {
+    if (!this.currentUser()) return null;
+    return this._rpc("gacha_pull_lucky", { p_gen: gen || 1 });
+  },
+
   /* ---------- RPC：捕捉成功拎寵（只限 normal 稀有度） ----------
      回傳 {entry, is_dupe}；失敗 return null */
   async obtainCapture(chainKey, dexId) {

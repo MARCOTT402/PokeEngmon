@@ -8,6 +8,8 @@ const GAME_CONFIG = {
   SET_SIZE: 10,                 // 每組題數
   EXP_BASE: 12,                 // 未有拍檔時嘅基礎經驗
   RARE_PULL_COST: 3,            // 稀有抽所需鑽石
+  MULTI_PULL_COUNT: 10,         // 10 連抽次數
+  MULTI_PULL_COST: 30,          // 10 連總價（10 × 3，原價）
   PERFECT_DIAMOND: 3,           // 全對（10/10）鑽石
   GREAT_DIAMOND: 2,             // 8–9 題對鑽石
   GOOD_DIAMOND: 1,              // 7 題對鑽石

@@ -69,7 +69,8 @@ body {
 .icon-btn:hover:not(:active):not(:disabled),
 .btn-nav:hover:not(:active):not(:disabled),
 .chip-btn:hover:not(:active):not(:disabled),
-.icon-link:hover:not(:active):not(:disabled) {
+.icon-link:hover:not(:active):not(:disabled),
+.curve-mode-opt:hover:not(:active) {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(0,0,0,.15);
 }
@@ -78,7 +79,8 @@ body {
 .btn-big:active, .btn-google:active,
 .pd-menu-btn:active, .icon-btn:active,
 .btn-nav:active, .chip-btn:active,
-.icon-link:active {
+.icon-link:active,
+.curve-mode-opt:active {
   transform: scale(.92) !important;
   box-shadow: 0 1px 2px rgba(0,0,0,.2) !important;
   transition-duration: 60ms !important;
@@ -93,7 +95,8 @@ body {
 .btn-big.pressed, .btn-google.pressed,
 .pd-menu-btn.pressed, .icon-btn.pressed,
 .btn-nav.pressed, .chip-btn.pressed,
-.icon-link.pressed {
+.icon-link.pressed,
+.curve-mode-opt.pressed {
   animation: btn-pop 280ms cubic-bezier(.25,1,.5,1);
 }
 
@@ -102,15 +105,18 @@ body {
   .btn-big:hover, .btn-google:hover,
   .pd-menu-btn:hover, .icon-btn:hover,
   .btn-nav:hover, .chip-btn:hover,
-  .icon-link:hover { transform: none !important; }
+  .icon-link:hover,
+  .curve-mode-opt:hover { transform: none !important; }
   .btn-big:active, .btn-google:active,
   .pd-menu-btn:active, .icon-btn:active,
   .btn-nav:active, .chip-btn:active,
-  .icon-link:active { transform: none !important; }
+  .icon-link:active,
+  .curve-mode-opt:active { transform: none !important; }
   .btn-big.pressed, .btn-google.pressed,
   .pd-menu-btn.pressed, .icon-btn.pressed,
   .btn-nav.pressed, .chip-btn.pressed,
-  .icon-link.pressed { animation: none !important; }
+  .icon-link.pressed,
+  .curve-mode-opt.pressed { animation: none !important; }
 }
 
 /* ==================== 原有樣式保留 ==================== */
@@ -199,10 +205,12 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   display: flex; flex-direction: column; gap: 2px;
   padding: 10px 12px; border: 2px solid #d8deea; border-radius: 12px;
   background: #fff; cursor: pointer; transition: all .15s ease;
+  position: relative;
 }
 .curve-mode-opt:hover { border-color: #b8c4dc; }
 .curve-mode-opt.active {
-  border-color: var(--blue, #3b6ef2); background: #eef3ff;
+  border: 3px solid #22c55e; background: #f0fdf4;
+  box-shadow: 0 0 0 1px #bbf7d0;
 }
 .curve-mode-opt input[type="radio"] { display: none; }
 .cm-label { font-size: .9rem; font-weight: 800; color: var(--ink); }
@@ -1322,6 +1330,57 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 /* 拉手接近觸發時提示 pill 發光 */
 .gacha-prompt.almost { background: #4a3208; box-shadow: 0 0 22px rgba(255, 205, 80, .8); }
 
+/* ============================================================
+   10 連充能：hold 手杆 3 秒 → 再拉落
+   ============================================================ */
+.dm-charge {
+  position: absolute; inset: -13% -15%; width: 130%; height: 120%;
+  pointer-events: none; opacity: 0; transition: opacity .18s ease;
+}
+.dm-charge circle { fill: none; stroke-width: 8; }
+.dmc-track { stroke: rgba(255, 255, 255, .26); }
+.dmc-bar {
+  stroke: #ffd54f; stroke-dasharray: 276.5; stroke-dashoffset: 276.5;
+  filter: drop-shadow(0 0 5px rgba(255, 210, 90, .9));
+}
+.gacha-machine.charging .dm-charge { opacity: 1; }
+.gacha-machine.charging .dmc-bar { animation: dm-charge-fill 3s linear forwards; }
+.gacha-machine.charged .dmc-bar { animation: none; stroke-dashoffset: 0; }
+@keyframes dm-charge-fill { from { stroke-dashoffset: 276.5; } to { stroke-dashoffset: 0; } }
+.gacha-machine.charging .dm-art { animation: dm-charge-shake .2s linear infinite; }
+@keyframes dm-charge-shake {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-1.5px, 1px); }
+  50% { transform: translate(1.5px, -1px); }
+  75% { transform: translate(-1px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+.gacha-machine.charged .dm-hand { animation: none; box-shadow: 0 0 26px 10px rgba(255, 200, 60, .85); }
+.gacha-machine.charged .dm-art { filter: drop-shadow(0 0 16px rgba(255, 210, 90, .9)); }
+.dm-10x {
+  position: absolute; left: 62%; bottom: 24%; z-index: 6; pointer-events: none;
+  font-size: clamp(9px, 2.6vw, 12px); font-weight: 900; letter-spacing: .04em;
+  color: #5a3d00; background: linear-gradient(180deg, #ffe9a8, #ffc93c);
+  border: 1.5px solid #8a5a00; border-radius: 999px; padding: 2px 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35); opacity: .78; transition: opacity .2s, box-shadow .2s;
+}
+.gacha-machine.charged .dm-10x { opacity: 1; box-shadow: 0 0 14px rgba(255, 210, 90, .95); }
+.gacha-cost.multi {
+  border-color: #ffb300; background: rgba(255, 233, 168, .96); color: #6b4700;
+  box-shadow: 0 0 16px rgba(255, 200, 60, .8);
+}
+.gacha-cost .gc-10x {
+  margin-left: 4px; padding: 1px 5px; border-radius: 999px;
+  background: #ff8a1f; color: #fff; font-size: .78em; letter-spacing: .04em;
+}
+/* 10 連跌球 tray（大小由 JS 設定，停用單抽嘅 CSS 動畫） */
+.eject-ball.mini, .eject-ball.mini.pokeball { width: 34px; height: 34px; animation: none; opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gacha-machine.charging .dm-art { animation: none; }
+  .gacha-machine.charging .dmc-bar { animation: none; stroke-dashoffset: 138; }
+}
+
 #gacha-scene-b {
   position: fixed; inset: 0; height: 100dvh; z-index: 640; overflow: hidden;
   background: radial-gradient(120% 80% at 50% 112%, #f2c34e 0%, #b9821f 34%, #5c3c0c 68%, #170e03 100%);
@@ -1475,6 +1534,96 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 @media (max-height: 700px) {
   .gi-art { width: min(160px, 42vw); }
   .gi-card { max-height: calc(100dvh - 24px); overflow-y: auto; }
+}
+
+/* ============================================================
+   10 連結算頁（5×2 卡片格，掛 body）
+   ============================================================ */
+#gacha-multi {
+  position: fixed; inset: 0; height: 100dvh; z-index: 670;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 10px calc(12px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto; overscroll-behavior: contain;
+  background: radial-gradient(110% 80% at 50% 0%, rgba(255, 244, 205, .97) 0%, rgba(246, 205, 96, .97) 45%, rgba(122, 78, 16, .98) 100%);
+  opacity: 0; transition: opacity .35s ease;
+}
+#gacha-multi.show { opacity: 1; }
+#gacha-multi.hidden { display: none; }
+.gm-card {
+  position: relative; width: min(430px, 96vw); background: #fffaf0;
+  border: 3px solid #e2bd63; border-radius: 24px; padding: 16px 14px 14px;
+  box-shadow: 0 20px 60px rgba(60, 30, 0, .45);
+}
+.gm-close {
+  position: absolute; top: 8px; right: 10px; width: 30px; height: 30px;
+  border: none; border-radius: 50%; background: rgba(0, 0, 0, .08);
+  color: #5a3d00; font-size: 15px; font-weight: 900; cursor: pointer;
+}
+.gm-title {
+  text-align: center; font-size: clamp(18px, 5vw, 24px);
+  font-weight: 900; letter-spacing: .12em; color: #6b4a00;
+}
+.gm-title span {
+  background: linear-gradient(180deg, #ffe38a, #d99400);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.gm-summary { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+.gm-stat {
+  font-size: 10.5px; font-weight: 900; letter-spacing: .04em;
+  padding: 3px 7px; border-radius: 999px;
+  background: #fff; border: 1.5px solid #e6d3a3; color: #6b5316;
+}
+.gm-stat.legend { background: #fff3c4; border-color: #e0a800; color: #7a5200; }
+.gm-stat.epic { background: #f6e9ff; border-color: #b26be0; color: #6e2f9c; }
+.gm-stat.rare { background: #eaf4ff; border-color: #7fb8ff; color: #24608f; }
+.gm-stat.new { background: #ffe9e2; border-color: #ff8a5c; color: #b6371a; }
+.gm-warn { margin-top: 6px; text-align: center; font-size: 11px; font-weight: 800; color: #a3320f; }
+.gm-grid { margin-top: 10px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.gm-cell {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; gap: 1px; aspect-ratio: .78; padding: 5px 2px 4px;
+  border-radius: 11px; border: 2px solid #d8c79b;
+  background: linear-gradient(180deg, #fff, #fdf3d9);
+  cursor: pointer; overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.gm-cell:active { transform: scale(.95); }
+.gm-cell[data-rarity="rare"] { border-color: #6fb4f5; background: linear-gradient(180deg, #f3faff, #dcf0ff); }
+.gm-cell[data-rarity="epic"] { border-color: #b26be0; background: linear-gradient(180deg, #fbf4ff, #f0dcff); box-shadow: 0 0 10px rgba(178, 107, 224, .35); }
+.gm-cell[data-rarity="legend"] { border-color: #e09a12; background: linear-gradient(180deg, #fff9e3, #ffe8a6); box-shadow: 0 0 14px rgba(255, 200, 60, .7); }
+.gm-cell img { width: 100%; height: 62%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .18)); }
+.gm-name { font-size: clamp(7.5px, 2.2vw, 10px); font-weight: 900; color: #4a3510; line-height: 1.1; text-align: center; }
+.gm-meta { font-size: clamp(6.5px, 1.9vw, 8.5px); font-weight: 800; letter-spacing: .06em; color: #9a7a33; }
+.gm-badge { position: absolute; top: 2px; left: 2px; z-index: 3; font-size: 7.5px; font-weight: 900; letter-spacing: .04em; padding: 1px 4px; border-radius: 999px; }
+.gm-badge.new { background: #ff6b3d; color: #fff; box-shadow: 0 0 6px rgba(255, 107, 61, .7); }
+.gm-badge.dupe { background: rgba(90, 70, 20, .18); color: #6b5316; }
+.gm-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.gm-actions .btn-big { width: 100%; }
+/* 點卡詳情（重用 .gi-card 內容樣式） */
+.gm-detail {
+  position: fixed; inset: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: center; padding: 14px;
+  background: rgba(30, 18, 0, .72); backdrop-filter: blur(4px);
+}
+.gm-detail.hidden { display: none; }
+.gm-detail-card {
+  width: min(340px, 92vw); max-height: calc(100dvh - 28px);
+  overflow-y: auto; text-align: center;
+}
+/* 背景 A：10 連球陣 */
+.gsb-multi {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(6px, 2vw, 14px); place-items: center;
+}
+.gsb-multi .pokeball { width: clamp(32px, 8.5vw, 58px); height: clamp(32px, 8.5vw, 58px); }
+.gsb-multi .pokeball.revealed { box-shadow: 0 0 24px 8px rgba(255, 230, 140, .9); }
+@media (max-height: 700px) {
+  .gm-card { padding: 10px 9px 9px; border-radius: 18px; }
+  .gm-title { font-size: 17px; }
+  .gm-grid { gap: 4px; }
+  .gm-cell { padding: 3px 1px; }
+  .gm-actions { margin-top: 8px; gap: 6px; }
+  .gm-actions .btn-big { padding: 9px 0; font-size: .9rem; }
 }
 
 
