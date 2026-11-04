@@ -2269,7 +2269,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ============ 選題 / 結算 / Leaderboard / Battle Menu：限 display window（紅框保留可見） ============ */
 /* overlay 蓋住螢幕區；view-home 嘅 shell 留喺後面（見 App.showView） */
-#view-quiz-setup.active, #view-settlement.active, #view-leaderboard.active, #view-friends.active, #view-battle-menu.active {
+#view-quiz-setup.active, #view-settlement.active, #view-leaderboard.active, #view-friends.active, #view-battle-menu.active,
+#view-quiz.active, #view-capture.active, #view-battle.active {
   position: fixed;
   top: var(--frame-screen-top);
   bottom: var(--frame-screen-bottom);
@@ -2285,6 +2286,16 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   overflow-y: auto;
   overscroll-behavior: contain;
   z-index: 120;
+}
+/* 答題：內容喺螢幕區內滾動 */
+#view-quiz.active { gap: 10px; }
+/* 對戰：整個舞台＋文字框收喺白螢幕區內 */
+#view-battle.active {
+  padding: 0; background: #285068; overflow: hidden;
+}
+/* 捕捉：3D canvas 跟白螢幕區大小，紅框保持可見 */
+#view-capture.active {
+  padding: 0; height: auto; background: #07110d; overflow: hidden;
 }
 /* 選題頁：Start 浮起喺 display window 底（精靈球 Home 鍵上方），清單用盡全高自己滾動 */
 #view-quiz-setup.active { overflow: hidden; }
@@ -3378,7 +3389,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
    幾何全抄 PokeRogue party-ui-handler（320×240 design，由 frame 等比縮放）：
    partyBg 冚底部 75%；主格 (9,91.5) 110×49；後備格 x=143、top=44+28i 175×24；
    訊息框 (1,209) 262×30；CANCEL 掣中心 (291,224) 52×16；options 右下角 94×45 */
-.battle-party { position: fixed; inset: 0; z-index: 30; }
+.battle-party { position: absolute; inset: 0; z-index: 30; }
 .party-frame {
   position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 520px; aspect-ratio: 320 / 240;
@@ -4051,7 +4062,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 2. 上框 48px ---- */
 .pd-bezel {
-  position: relative; background: linear-gradient(180deg, #f0524a 0%, #e03a32 60%, #d42f28 100%);
+  position: relative; z-index: 100;  /* 確保高過所有 position:fixed 嘅 view overlays（friends / leaderboard / battle menu） */
+  background: linear-gradient(180deg, #f0524a 0%, #e03a32 60%, #d42f28 100%);
   border-bottom: 2.5px solid #8a1712;
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 0 8px;
@@ -4096,6 +4108,17 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: transform .12s cubic-bezier(.25, 1, .5, 1);
 }
 .pd-stat:active { transform: scale(.94); }
+
+/* 答題 / 捕捉 / 對戰：紅框功能鍵全部停用（防誤觸） */
+.pd-shell.frame-locked .pd-stat,
+.pd-shell.frame-locked .pd-chin .pd-ball-sm {
+  pointer-events: none;
+  opacity: .38;
+  filter: saturate(.5);
+  cursor: default;
+}
+.pd-shell.frame-locked .pd-stat:active,
+.pd-shell.frame-locked .pd-chin .pd-ball-sm:active { transform: none; }
 .pd-num {
   font-size: 13px; font-weight: 900; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
@@ -4124,21 +4147,23 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 4. 下巴 46px：放大精靈球做 Home 鍵 ---- */
 .pd-chin {
-  position: relative;
+  position: relative; z-index: 100;  /* 確保高過所有 position:fixed 嘅 view overlays */
   background: linear-gradient(180deg, #d42f28, #b5231d);
   display: flex; align-items: center; justify-content: center;
   padding: 0;
 }
-/* 下巴 Home 鍵：40px（原 20px ×2），按壓回彈效果；重置 .pd-ball 基類嘅 absolute 定位 */
-.pd-chin .pd-ball-sm {
-  position: relative; top: auto; right: auto; margin: 0;
-  width: 40px; height: 40px; padding: 0; opacity: 1;
-  cursor: pointer; border-width: 3px;
+/* 下巴 Home 鍵：40px 3D 精靈球（x1 造型）+ 3px 黑色外邊，外尺寸與原本一致 */
+.pd-chin .pd-home-ball {
+  position: relative; margin: 0; padding: 0; flex: none;
+  width: 40px; height: 40px; box-sizing: border-box;
+  border: 3px solid #111; border-radius: 50%; overflow: hidden;
+  background: none; opacity: 1; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition: transform .08s ease, filter .12s ease;
 }
-.pd-chin .pd-ball-sm::after { width: 16px; height: 16px; margin: -8px 0 0 -8px; border-width: 2.5px; }
-.pd-chin .pd-ball-sm:hover { filter: brightness(1.08); }
-.pd-chin .pd-ball-sm:active { transform: scale(.9); filter: brightness(.95); }
+.pd-chin .pd-home-ball-art { display: block; width: 100%; height: 100%; }
+.pd-chin .pd-home-ball:hover { filter: brightness(1.08); }
+.pd-chin .pd-home-ball:active { transform: scale(.9); filter: brightness(.95); }
 
 /* ---- 5. 頂 dock ---- */
 .ph-topdock {
