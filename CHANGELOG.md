@@ -1,3 +1,10 @@
+## [1.45.6](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.5...v1.45.6) (2026-11-04)
+
+
+### Bug Fixes
+
+* **ui:** raise toast z-index to 3000 to stay above all modal overlays (was 1500, got hidden behind team-select) ([943b600](https://github.com/MARCOTT402/PokeEngmon/commit/943b600f2e0d8e9f4bb51d23ee1f632508efad0d))
+
 ## [1.45.5](https://github.com/MARCOTT402/PokeEngmon/compare/v1.45.4...v1.45.5) (2026-11-04)
 
 
