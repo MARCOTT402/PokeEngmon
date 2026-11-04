@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.41.0...v1.42.0) (2026-11-04)
+
+
+### Features
+
+* **auth:** add back button to sign in / sign up / forgot password forms ([e2c38ca](https://github.com/MARCOTT402/PokeEngmon/commit/e2c38ca263b602fa4b27c7f8e577747bd5bc6837))
+
 # [1.41.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.40.0...v1.41.0) (2026-11-04)
 
 
