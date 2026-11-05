@@ -184,6 +184,8 @@ window.Sync = (() => {
         if (acct.battle_days && typeof acct.battle_days === "object") st.battleDays = acct.battle_days;
         if (acct.battle_ai_total != null) st.battleAiTotal = acct.battle_ai_total | 0;
         if (acct.battle_pvp_total != null) st.battlePvpTotal = acct.battle_pvp_total | 0;
+        if (acct.trainer_avatar && /^[a-z0-9-]{1,32}$/.test(acct.trainer_avatar)) st.trainerAvatar = acct.trainer_avatar;
+        else if (!acct.trainer_avatar && st.trainerAvatar && "trainer_avatar" in acct) setTimeout(() => pushAvatar(st.trainerAvatar), 0);
         if (acct.trainer_name && acct.trainer_name !== st.playerName) {
           st.playerName = acct.trainer_name;
           st.nameCustomized = true;
@@ -483,18 +485,7 @@ window.Sync = (() => {
   }
 
   /* ---------- 寵物狀態 / 背包（B 方案：前端結算，雲端只做備份）---------- */
-  function petPayload(p) {
-    if (!p) return null;
-    return {
-      pet_health: Math.max(0, Math.min(100, Number(p.health) || 0)),
-      pet_streak: Number(p.streak) || 0,
-      pet_last_fed_day: p.lastFedDay || null,
-      pet_settled_day: p.settledDay || null,
-      pet_decay_day: p.decayDay || null,
-      pet_updated_at: p.updatedAt || new Date().toISOString()
-    };
-  }
-
+  /* 舊 petPayload（pet_streak／pet_last_fed_day／pet_settled_day／pet_decay_day）已刪：migration 20261105i 拎走咗呢幾欄 */
   /* 狀態系統第一期：飽肚值／HP／狀態改由 care RPC 寫（client 冇 update 權），呢個 push 停用 */
   async function pushPet() { return false; }
 
@@ -504,6 +495,7 @@ window.Sync = (() => {
     if (!ref.isAuth || !fields) return false;
     const body = {};
     if (Array.isArray(fields.my_team)) body.my_team = fields.my_team.slice(0, 6).map(String);
+    if (typeof fields.trainer_avatar === "string" && /^[a-z0-9-]{1,32}$/.test(fields.trainer_avatar)) body.trainer_avatar = fields.trainer_avatar;
     if (fields.bag_prefs && typeof fields.bag_prefs === "object") body.bag_prefs = fields.bag_prefs;
     if (!Object.keys(body).length) return false;
     try {
@@ -511,6 +503,9 @@ window.Sync = (() => {
       return true;
     } catch (e) { console.warn("[Sync] patchAccount failed:", e.message); return false; }
   }
+
+  /* 第 14 項：Trainer Avatar（user_account.trainer_avatar，column grant + check） */
+  async function pushAvatar(id) { return patchAccount({ trainer_avatar: id }); }
 
   async function pushItems(items) {
     const ref = _accountRef();
@@ -541,6 +536,7 @@ window.Sync = (() => {
     clearQueue,
     pull,
     pushState,
+    pushAvatar,
     patchEntry,
     pushActive,
     syncClock,

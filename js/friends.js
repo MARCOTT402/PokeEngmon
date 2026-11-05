@@ -433,6 +433,16 @@ const Friends = (() => {
 
     const av = el("friends-avatar");
     if (!av) return;
+    /* 第 14 項：Trainer Avatar（原作角色全身像），撳一下揀 */
+    if (window.Avatars) {
+      av.innerHTML = Avatars.img(Avatars.mine()) + '<span class="friends-avatar-edit">EDIT</span>';
+      av.classList.add("is-trainer");
+      av.setAttribute("role", "button");
+      av.setAttribute("aria-label", "Change trainer avatar");
+      av.removeAttribute("aria-hidden");
+      av.onclick = () => Avatars.openPicker(() => renderIdentity());
+      return;
+    }
     let dex = 0;
     try {
       const entry = (typeof getActiveEntry === "function") ? getActiveEntry() : null;

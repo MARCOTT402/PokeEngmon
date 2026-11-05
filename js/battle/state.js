@@ -124,6 +124,41 @@ const BattleState = (() => {
     state.weather = { name, turns: 5 };
     log(state, WEATHER_LOG[name]);
   }
+  /* ---------- Mega 特性表 ---------- */
+  const WEATHER_ABILITY = { drought: "sun", drizzle: "rain", "sand-stream": "sandstorm", "snow-warning": "hail" };
+  const ATE_ABILITY = { aerilate: "flying", pixilate: "fairy", refrigerate: "ice", dragonize: "dragon" };
+  const MOLD_BREAKERS = new Set(["mold-breaker", "teravolt", "turboblaze"]);
+  /* 被 Mold Breaker 無視嘅（防守方）特性 */
+  const BREAKABLE = new Set(["levitate", "volt-absorb", "water-absorb", "flash-fire", "lightning-rod", "sturdy", "battle-armor",
+    "shell-armor", "thick-fat", "multiscale", "filter", "insomnia", "vital-spirit", "limber", "immunity", "own-tempo",
+    "hyper-cutter", "keen-eye", "inner-focus", "contrary", "magic-bounce", "sand-veil", "snow-cloak", "unaware"]);
+  const UNTRACEABLE = new Set(["trace", "multitype", "illusion", "stance-change", "zen-mode", "imposter"]);
+  const INTIMIDATE_IMMUNE = new Set(["hyper-cutter", "inner-focus", "own-tempo", "oblivious", "scrappy"]);
+  function grounded(p) { return !p.types.includes("flying") && p.ability !== "levitate"; }
+  /* 特性帶天氣（Gen 6+：5 回合）；已經係同一天氣就冇嘢發生 */
+  function abilityWeather(state, p, msgs) {
+    const w = WEATHER_ABILITY[p.ability];
+    if (!w || (state.weather && state.weather.name === w)) return;
+    state.weather = { name: w, turns: 5 };
+    msgs.push(WEATHER_LOG[w]);
+  }
+  /* 傷害招有冇附加效果（Sheer Force 用） */
+  function hasSecondary(move) {
+    const m = move.meta || {};
+    return !!(move.power && move.damage_class !== "status" && ((m.ailment_chance || 0) > 0 || (m.flinch_chance || 0) > 0 || (m.stat_chance || 0) > 0));
+  }
+  /* Prankster：變化招優先度 +1（UI 排先後用；PvP 兩邊一樣計） */
+  function priorityOf(state, side, move) {
+    if (!move) return 0;
+    const p = active(state, side);
+    return (move.priority || 0) + (p && p.ability === "prankster" && move.damage_class === "status" ? 1 : 0);
+  }
+  /* Shadow Tag：對面有呢個特性，自己（唔係幽靈）唔換得 */
+  function trappedBy(state, side) {
+    const p = active(state, side), foeP = active(state, otherSide(side));
+    return !!(p && foeP && foeP.hp > 0 && foeP.ability === "shadow-tag" && p.ability !== "shadow-tag" && !p.types.includes("ghost")) ? foeP : null;
+  }
+
   const FIELD_MOVES = {
     "sunny-day": (st) => setWeather(st, "sun"),
     "rain-dance": (st) => setWeather(st, "rain"),
@@ -343,13 +378,18 @@ const BattleState = (() => {
   };
   /* 出招 + 出招後攜帶樹果判斷（目標先，出招者後：混亂打自己、反動、PP 用完） */
   function executeMove(state, side, moveIdx) {
-    executeMoveCore(state, side, moveIdx);
+    const actor = active(state, side), target = active(state, otherSide(side));
+    const saved = target.ability;
+    const broke = actor.hp > 0 && MOLD_BREAKERS.has(actor.ability) && BREAKABLE.has(saved);
+    if (broke) target.ability = null;
+    try { executeMoveCore(state, side, moveIdx); }
+    finally { if (broke) target.ability = saved; }
     checkHeld(state, active(state, otherSide(side)));
     checkHeld(state, active(state, side));
   }
   function executeMoveCore(state, side, moveIdx) {
     const actor = active(state, side);
-    const target = active(state, otherSide(side));
+    let target = active(state, otherSide(side));
     /* 目標已暈（例如被入場釘子打死）：招落空，唔重複計傷 */
     if (actor.hp <= 0 || target.hp <= 0) return;
     let moveObj = actor.moves[moveIdx];
@@ -386,7 +426,15 @@ const BattleState = (() => {
     }
 
     /* flinch */
-    if (actor.volatile.flinch) { actor.volatile.flinch = false; log(state, `${actor.name} flinched!`); return; }
+    if (actor.volatile.flinch) {
+      actor.volatile.flinch = false;
+      log(state, `${actor.name} flinched!`);
+      if (actor.ability === "steadfast" && (actor.statStages.spe || 0) < 6) {
+        actor.statStages.spe = (actor.statStages.spe || 0) + 1;
+        log(state, `${actor.name}'s Steadfast raised its Speed!`);
+      }
+      return;
+    }
 
     log(state, `${actor.name} used ${move.name}!`);
     /* Micle：今招命中 ×1.2（用一次就冇） */
@@ -405,6 +453,19 @@ const BattleState = (() => {
       const wType = { sun: "fire", rain: "water", sandstorm: "rock", hail: "ice" }[state.weather.name];
       if (wType) effMove = Object.assign({}, move, { type: wType, power: 100 });
     }
+    /* Aerilate／Pixilate／Refrigerate／Dragonize：一般招變屬性 + 威力 ×1.2 */
+    let ate = false;
+    if (ATE_ABILITY[actor.ability] && effMove.type === "normal" && effMove.power && effMove.damage_class !== "status") {
+      effMove = Object.assign({}, effMove, { type: ATE_ABILITY[actor.ability] });
+      ate = true;
+    }
+    /* Magic Bounce：對手向自己用嘅變化招反彈返去 */
+    if (move.damage_class === "status" && target.ability === "magic-bounce" &&
+        ["selected-pokemon", "all-opponents", "random-opponent"].includes(move.target)) {
+      log(state, `${target.name} bounced the ${move.name} back!`);
+      target = actor;
+    }
+    const sheer = actor.ability === "sheer-force" && hasSecondary(effMove);
 
     /* 特性免疫（Levitate / Volt Absorb / Water Absorb / Flash Fire / Lightning Rod）：
        成招無效，唔進 hit loop */
@@ -428,36 +489,51 @@ const BattleState = (() => {
     }
 
     /* status 類招式（damage_class = status）：無傷害，只出效果 */
-    const hitCount = (effMove.damage_class === "status") ? 1 : Battle.rollHitCount(effMove.meta && effMove.meta.min_hits, effMove.meta && effMove.meta.max_hits);
+    let hitCount = (effMove.damage_class === "status") ? 1
+      : (actor.ability === "skill-link" && effMove.meta && effMove.meta.max_hits) ? effMove.meta.max_hits
+      : Battle.rollHitCount(effMove.meta && effMove.meta.min_hits, effMove.meta && effMove.meta.max_hits);
+    /* Parental Bond：單段傷害招打兩次，第二下 1/4 威力（只驗一次命中） */
+    const bond = actor.ability === "parental-bond" && hitCount === 1 && effMove.power && effMove.damage_class !== "status" && target !== actor;
+    if (bond) hitCount = 2;
 
     /* 天氣必中（Gen 5）：Blizzard 雹天必中、Thunder 雨天必中 */
     const wName = state.weather && state.weather.name;
-    const neverMiss = (moveObj.slug === "blizzard" && wName === "hail") || (moveObj.slug === "thunder" && wName === "rain");
+    const neverMiss = (moveObj.slug === "blizzard" && wName === "hail") || (moveObj.slug === "thunder" && wName === "rain") ||
+      actor.ability === "no-guard" || target.ability === "no-guard";
+    /* Mega Sol：自己出招當日照 */
+    const moveWeather = actor.ability === "mega-sol" ? "sun" : wName;
+    const terrainBoost = !!(state.terrain && state.terrain.name === "electric" && effMove.type === "electric" && grounded(actor));
+    let bondHits = 0;
 
     for (let hit = 0; hit < hitCount; hit++) {
       const accMove = (micle && effMove.accuracy != null) ? Object.assign({}, effMove, { accuracy: effMove.accuracy * 1.2 }) : effMove;
-      if (!neverMiss && !hitCheckFor(state, accMove, actor, target)) {
+      if (!(bond && hit > 0) && !neverMiss && !hitCheckFor(state, accMove, actor, target)) {
         log(state, `${actor.name}'s attack missed!`);
         continue;
       }
       /* crit：Battle Armor 一律免疫（RNG 照樣消耗，PvP 兩邊序列先一致） */
       /* Lansat：會心等級 +2 */
       let crit = BattleRng.next() < Battle.critChance(((effMove.meta && effMove.meta.crit_rate) || 0) + (actor.volatile.critBoost || 0));
-      if (target.ability === "battle-armor") crit = false;
+      if (target.ability === "battle-armor" || target.ability === "shell-armor") crit = false;
       if (effMove.power && effMove.damage_class !== "status") {
+        const hitMove = (bond && hit > 0) ? Object.assign({}, effMove, { power: Math.max(1, Math.floor(effMove.power / 4)) }) : effMove;
         /* 受壁嗰邊：reflect 擋物理、lightScreen 擋特殊（crit 會喺 engine 無視） */
         const defSide = state[foeSideKey].side;
-        let { damage, effectiveness } = Battle.computeDamage(actor, target, effMove, {
+        const infil = actor.ability === "infiltrator";   /* Infiltrator：無視光牆／反射壁 */
+        let { damage, effectiveness } = Battle.computeDamage(actor, target, hitMove, {
           crit,
-          weather: wName,
+          weather: moveWeather,
           slug: moveObj.slug,
-          reflect: defSide.reflect > 0,
-          lightScreen: defSide.lightScreen > 0
+          reflect: !infil && defSide.reflect > 0,
+          lightScreen: !infil && defSide.lightScreen > 0,
+          sheerForce: sheer, ate, terrainBoost
         });
         /* 屬性免疫（0 倍）：成招落空，後續效果一律唔出 */
         if (effectiveness === 0) { log(state, `It doesn't affect ${target.name}...`); break; }
         /* 抗性樹果：扣血前減半 */
         damage = resistBerry(state, target, effMove, damage, effectiveness);
+        const hpBefore = target.hp;
+        if (bond) bondHits++;
         /* Sturdy：滿 HP 食致命傷留 1 HP（Gen 5 規則） */
         if (target.ability === "sturdy" && target.hp === target.maxHp && damage >= target.hp) {
           target.hp = 1;
@@ -480,6 +556,11 @@ const BattleState = (() => {
           }
         }
         afterHitBerry(state, actor, target, effMove, effectiveness);
+        /* Innards Out：俾人打暈 → 攻方受返佢最後剩低嘅 HP */
+        if (target.hp <= 0 && target.ability === "innards-out" && actor.hp > 0) {
+          actor.hp = Math.max(0, actor.hp - hpBefore);
+          log(state, `${actor.name} was hurt by ${target.name}'s Innards Out!`);
+        }
         if (actor.hp <= 0 && target.hp > 0) break;
       }
       /* healing */
@@ -491,19 +572,21 @@ const BattleState = (() => {
       /* ailment（特性免疫：Insomnia/Limber/Immunity 等）
          PokeAPI 慣例：status 類招式 ailment_chance 記 0 = 必中附加（Spore/Thunder Wave 等），
          直接當 100% 處理；傷害招先至用 chance（thunderbolt 10% 等，全部 >0，已驗證） */
-      if (move.meta && move.meta.ailment && move.meta.ailment !== "none") {
+      if (!sheer && move.meta && move.meta.ailment && move.meta.ailment !== "none") {
         const chance = (move.meta.ailment_chance == null || move.meta.ailment_chance === 0) ? 100 : move.meta.ailment_chance;
         if (BattleRng.next() * 100 < chance) {
           const ail = AILMENT_ALIAS[move.meta.ailment] || move.meta.ailment;
           if ((STATUS_IMMUNE[target.ability] || []).includes(ail)) {
             log(state, `${target.name} is unaffected due to its ${abilityLabel(target.ability)}!`);
+          } else if (ail === "sleep" && state.terrain && state.terrain.name === "electric" && grounded(target)) {
+            log(state, `${target.name} is protected by the Electric Terrain!`);
           } else if (applyStatus(target, move.meta.ailment)) {
             log(state, `${target.name} is ${statusLabel(move.meta.ailment)}!`);
           }
         }
       }
       /* stat changes（PokeAPI stat 名 → 引擎 key；Hyper Cutter 擋攻擊下降） */
-      (move.stat_changes || []).forEach(sc => {
+      (sheer ? [] : (move.stat_changes || [])).forEach(sc => {
         const tgt = sc.change < 0 ? target : actor;
         const key = STAT_ALIAS[sc.stat] || sc.stat;
         if (sc.change < 0 && key === "atk" && tgt.ability === "hyper-cutter") {
@@ -515,17 +598,19 @@ const BattleState = (() => {
           log(state, `${tgt.name}'s Keen Eye prevents accuracy loss!`);
           return;
         }
-        tgt.statStages[key] = Math.max(-6, Math.min(6, (tgt.statStages[key] || 0) + sc.change));
-        log(state, `${tgt.name}'s ${statLabel(sc.stat)} ${sc.change > 0 ? "rose" : "fell"}!`);
+        /* Contrary：升降倒轉 */
+        const ch = tgt.ability === "contrary" ? -sc.change : sc.change;
+        tgt.statStages[key] = Math.max(-6, Math.min(6, (tgt.statStages[key] || 0) + ch));
+        log(state, `${tgt.name}'s ${statLabel(sc.stat)} ${ch > 0 ? "rose" : "fell"}!`);
       });
       /* flinch */
-      if (move.meta && move.meta.flinch_chance && BattleRng.next() * 100 < move.meta.flinch_chance) {
-        target.volatile.flinch = true;
+      if (!sheer && move.meta && move.meta.flinch_chance && BattleRng.next() * 100 < move.meta.flinch_chance) {
+        if (target.ability !== "inner-focus") target.volatile.flinch = true;
       }
       if (target.hp <= 0) {
         log(state, `${target.name} fainted!`);
         /* 擊倒 → 攻方邊派 EXP（面對過呢隻敵寵嘅寵均分） */
-        grantKOExp(state, side, target);
+        if (target !== actor) grantKOExp(state, side, target);
         /* Moxie：擊倒對手後攻擊 +1 */
         if (actor.ability === "moxie" && (actor.statStages.atk || 0) < 6) {
           actor.statStages.atk = (actor.statStages.atk || 0) + 1;
@@ -534,6 +619,7 @@ const BattleState = (() => {
         break;
       }
     }
+    if (bondHits === 2) log(state, "The Pokémon was hit 2 times!");
   }
 
   function hitCheckFor(state, move, attacker, defender) {
@@ -565,6 +651,12 @@ const BattleState = (() => {
       p.hp = Math.max(0, p.hp - dmg);
       log(state, `${p.name} is hurt by poison!`);
     }
+    /* Bad Dreams：對面有呢個特性，自己瞓緊覺 → 扣 1/8 */
+    const foeNow = active(state, otherSide(side));
+    if (p.hp > 0 && p.status === "sleep" && foeNow && foeNow.hp > 0 && foeNow.ability === "bad-dreams") {
+      p.hp = Math.max(0, p.hp - Math.max(1, Math.floor(p.maxHp / 8)));
+      log(state, `${p.name} is tormented by ${foeNow.name}'s Bad Dreams!`);
+    }
     /* Speed Boost：每回合完速度 +1（頂 +6） */
     if (p.hp > 0 && p.ability === "speed-boost" && (p.statStages.spe || 0) < 6) {
       p.statStages.spe += 1;
@@ -573,7 +665,7 @@ const BattleState = (() => {
     /* 天氣 chip damage（Gen 5）：沙暴 1/16（岩/地/鋼免疫）；雹 1/16（冰免疫） */
     if (p.hp > 0 && state.weather) {
       const w = state.weather.name;
-      const immune = (w === "sandstorm") ? p.types.some(t => t === "rock" || t === "ground" || t === "steel")
+      const immune = (w === "sandstorm") ? (p.types.some(t => t === "rock" || t === "ground" || t === "steel") || ["sand-force", "sand-veil", "sand-rush", "overcoat"].includes(p.ability))
         : (w === "hail") ? p.types.includes("ice") : true;
       if (!immune) {
         p.hp = Math.max(0, p.hp - Math.max(1, Math.floor(p.maxHp / 16)));
@@ -612,6 +704,10 @@ const BattleState = (() => {
     hail: "The hail stopped."
   };
   function endTurnField(state) {
+    if (state.terrain && --state.terrain.turns <= 0) {
+      log(state, "The electricity disappeared from the battlefield.");
+      state.terrain = null;
+    }
     if (!state.weather) return;
     if (--state.weather.turns <= 0) {
       log(state, WEATHER_END_LOG[state.weather.name]);
@@ -662,14 +758,31 @@ const BattleState = (() => {
     /* 帶住育成狀態上場：攜帶解狀態樹果即刻食（跟原作） */
     if (p && p.hp > 0) checkHeld(state, p, msgs);
     if (!p || p.hp <= 0 || !foeP || foeP.hp <= 0) return msgs;
+    /* Trace：複製對手特性（先做，之後抄返嚟嘅上場特性照樣觸發） */
+    if (p.ability === "trace" && foeP.ability && !UNTRACEABLE.has(foeP.ability)) {
+      p.ability = foeP.ability;
+      msgs.push(`${p.name} traced ${foeP.name}'s ${abilityLabel(foeP.ability)}!`);
+    }
     if (p.ability === "intimidate") {
-      if (foeP.ability === "hyper-cutter") {
-        msgs.push(`${foeP.name}'s Hyper Cutter prevents Attack loss!`);
+      if (INTIMIDATE_IMMUNE.has(foeP.ability)) {
+        msgs.push(`${foeP.name}'s ${abilityLabel(foeP.ability)} prevents Attack loss!`);
+      } else if (foeP.ability === "contrary") {
+        if ((foeP.statStages.atk || 0) < 6) {
+          foeP.statStages.atk = (foeP.statStages.atk || 0) + 1;
+          msgs.push(`${p.name}'s Intimidate raised ${foeP.name}'s Attack! (Contrary)`);
+        }
       } else if ((foeP.statStages.atk || 0) > -6) {
         foeP.statStages.atk = (foeP.statStages.atk || 0) - 1;
         msgs.push(`${p.name}'s Intimidate cut ${foeP.name}'s Attack!`);
       }
     }
+    abilityWeather(state, p, msgs);
+    if (p.ability === "electric-surge" && !(state.terrain && state.terrain.name === "electric")) {
+      state.terrain = { name: "electric", turns: 5 };
+      msgs.push("An electric current ran across the battlefield!");
+    }
+    if (MOLD_BREAKERS.has(p.ability)) msgs.push(`${p.name} breaks the mold!`);
+    if (p.ability === "shadow-tag") msgs.push(`${p.name}'s Shadow Tag keeps ${foeP.name} from switching out!`);
     return msgs;
   }
 
@@ -841,7 +954,7 @@ const BattleState = (() => {
     executeMove, endTurnResidual, endTurnField, switchTo, onSwitchIn,
     applyEntryHazards, hasUsable, checkFinished, statusLabel, useItem, ITEMS,
     HELD, checkHeld, custapCheck, berryLabel,
-    megaOf, canMega, megaEvolve
+    megaOf, canMega, megaEvolve, priorityOf, trappedBy
   };
 })();
 

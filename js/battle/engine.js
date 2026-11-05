@@ -78,6 +78,38 @@ const Battle = (() => {
     return BattleRng.next() < acc;
   }
 
+  /* ---------- 招式分類（Mega 特性用；資料冇 flag，跟原作手列） ---------- */
+  const BITE_MOVES = new Set(["bite", "crunch", "fire-fang", "ice-fang", "thunder-fang", "poison-fang", "hyper-fang",
+    "psychic-fangs", "jaw-lock", "fishious-rend"]);
+  const PULSE_MOVES = new Set(["water-pulse", "aura-sphere", "dark-pulse", "dragon-pulse", "origin-pulse", "terrain-pulse"]);
+  const SLICE_MOVES = new Set(["cut", "slash", "night-slash", "leaf-blade", "psycho-cut", "x-scissor", "air-slash", "air-cutter",
+    "razor-leaf", "sacred-sword", "secret-sword", "fury-cutter", "cross-poison", "aerial-ace", "razor-shell", "solar-blade",
+    "behemoth-blade", "stone-axe", "ceaseless-edge", "kowtow-cleave", "bitter-blade", "aqua-cutter", "psyblade", "tachyon-cutter",
+    "mighty-cleave", "population-bomb"]);
+  /* 物理招預設係接觸招；以下係唔接觸嘅物理招 */
+  const NONCONTACT_PHYSICAL = new Set(["earthquake", "magnitude", "bulldoze", "rock-slide", "rock-throw", "stone-edge", "rock-blast",
+    "rock-tomb", "smack-down", "bullet-seed", "icicle-spear", "icicle-crash", "pin-missile", "seed-bomb", "bone-club", "bonemerang",
+    "bone-rush", "egg-bomb", "explosion", "self-destruct", "poison-sting", "razor-leaf", "twineedle", "spike-cannon", "barrage",
+    "sand-tomb", "fling", "gunk-shot", "psycho-cut", "ice-shard", "sky-attack", "sacred-fire", "fusion-bolt", "freeze-shock",
+    "stone-axe", "rock-wrecker", "drum-beating", "scale-shot", "pay-day", "beat-up", "present", "magnet-bomb", "spikes", "struggle"]);
+  function isContact(move, slug) {
+    return move.damage_class === "physical" && !NONCONTACT_PHYSICAL.has(slug || move.slug || "");
+  }
+  /* 攻方特性嘅威力倍率（Mega 特性：Tough Claws／Strong Jaw／Mega Launcher／Sharpness／Sand Force…） */
+  function abilityPowerMult(attacker, move, slug, weather, opts) {
+    const a = attacker.ability;
+    let m = 1;
+    if (a === "tough-claws" && isContact(move, slug)) m *= 1.3;
+    if (a === "strong-jaw" && BITE_MOVES.has(slug)) m *= 1.5;
+    if (a === "mega-launcher" && PULSE_MOVES.has(slug)) m *= 1.5;
+    if (a === "sharpness" && SLICE_MOVES.has(slug)) m *= 1.5;
+    if (a === "sand-force" && weather === "sandstorm" && ["rock", "ground", "steel"].includes(move.type)) m *= 1.3;
+    if (opts.sheerForce) m *= 1.3;
+    if (opts.ate) m *= 1.2;   /* Aerilate／Pixilate／Refrigerate／Dragonize（Gen 7+ ×1.2） */
+    if (opts.terrainBoost) m *= 1.3;   /* Electric Terrain：着地嘅電招 ×1.3 */
+    return m;
+  }
+
   /* 夾擊系特性（Overgrow/Blaze/Torrent/Swarm）：HP ≤ 1/3 時對應屬性招 ×1.5 */
   const PINCH_ABILITY = { overgrow: "grass", blaze: "fire", torrent: "water", swarm: "bug" };
 
@@ -102,6 +134,9 @@ const Battle = (() => {
     if (attacker.ability === "technician" && power > 0 && power <= 60) {
       power = Math.floor(power * 1.5);
     }
+    /* Mega 特性威力倍率 */
+    const pm = power > 0 ? abilityPowerMult(attacker, move, opts.slug || move.slug, weather, opts) : 1;
+    if (pm !== 1) power = Math.floor(power * pm);
 
     let base = Math.floor(((2 * level / 5 + 2) * power * atk / def) / 50) + 2;
 
@@ -111,7 +146,9 @@ const Battle = (() => {
     if (atkTypes.includes(move.type)) base = Math.floor(base * (attacker.ability === "adaptability" ? 2 : 1.5));
 
     /* 相剋（0 = 免疫，直接零傷，唔可以俾 min-1 clamp 夾返 1） */
-    const defTypes = (defender.types && defender.types.length) ? defender.types : speciesTypes(defender.dexId);
+    let defTypes = (defender.types && defender.types.length) ? defender.types : speciesTypes(defender.dexId);
+    /* Scrappy：一般／格鬥招打得中幽靈 */
+    if (attacker.ability === "scrappy" && (move.type === "normal" || move.type === "fighting")) defTypes = defTypes.filter(t => t !== "ghost");
     const mult = (typeof typeMultiplier === "function") ? typeMultiplier(move.type, defTypes) : 1;
     if (mult === 0) return { damage: 0, effectiveness: 0 };
     base = Math.floor(base * mult);
@@ -129,6 +166,9 @@ const Battle = (() => {
     if (defender.ability === "thick-fat" && (move.type === "fire" || move.type === "ice")) {
       base = Math.floor(base * 0.5);
     }
+    /* Multiscale：滿 HP 受傷減半；Filter：效果絕佳嘅傷害 ×0.75 */
+    if (defender.ability === "multiscale" && defender.hp >= defender.maxHp) base = Math.floor(base * 0.5);
+    if (defender.ability === "filter" && mult > 1) base = Math.floor(base * 0.75);
 
     /* 天氣倍率（Gen 5）：日照火×1.5／水×0.5；下雨水×1.5／火×0.5 */
     if (weather === "sun") {
@@ -241,7 +281,7 @@ const Battle = (() => {
 
   return {
     stageMult, accMult, critChance, rollHitCount,
-    effectiveStat, speciesTypes,
+    effectiveStat, speciesTypes, isContact,
     hitCheck, computeDamage, turnOrder, makeBattlePokemon
   };
 })();

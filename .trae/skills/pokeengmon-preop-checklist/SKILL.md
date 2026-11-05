@@ -767,3 +767,14 @@ Incident (2026-11-05，Quiz v2)：`.qb-cell` 入面係「顯示字 `.qb-text`＋
 - 驗收：打 12 個字母，用 canvas `measureText`（input 嘅 computed font＋letterSpacing×字數）對比 `.qb-text` 闊度，差距要 ≤ 1px；句子題同圖片題都要測。
 
 Skill: Rule 74 added
+
+## Rule 75 — 新 JS module：`const X` 要掛 `window.X`；`SupabaseAuth._rpc` 會食 error 同拆 array；防作弊資料唔好放 `battles`
+
+Incident (2026-11-05，第 13／14 項 + 狀態第二期)：(1) 新 `js/avatars.js` 用 `const Avatars = (() => …)()`，`battle.js`／`friends.js` 用 `window.Avatars ? …` 判斷 → 永遠 false，pre-battle 頁冇頭像（Rule 38 講過 preview 工具，今次係 app code 自己中）。(2) `get_trainer_cards` 本來回 jsonb array，`_rpc` 見到 array 只回 `data[0]` → 只得第一張卡。(3) `settleFriendV2` 用 `try/catch` 判斷「未跑 migration」，但 `_rpc` 出錯唔 throw、淨係回 `null`，fallback 永遠唔會行。(4) `battles` 有 table-level UPDATE 俾 authenticated，新加嘅欄位 client 都寫得。
+
+- 新 module 尾加 `if (typeof window !== "undefined") window.X = X;`，或者全部用 `typeof X !== "undefined"` 判斷；唔好兩種混用。
+- 新 RPC 回 **jsonb object**（要 list 就包 `{ cards: [...] }`）；client 經 `_rpc` 判斷失敗用 `res == null`，唔好靠 catch。
+- 防竄改／結算用嘅資料放獨立表（RLS on、`revoke all from anon, authenticated`），只經 security definer RPC 寫；加欄位之前先查 `information_schema.table_privileges`，有 table-level UPDATE 就唔好放落嗰張表。
+- DDL dry-run（`execute_sql` 包 `raise exception` rollback）會俾 auto mode 擋：寫好 migration 交用戶跑，跑完先用 RPC 呼叫驗證。
+
+Skill: Rule 75 added

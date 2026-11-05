@@ -34,6 +34,7 @@ const ASSETS = [
   "./js/gens-data.js",
   "./js/pokemon.js",
   "./js/mega-data.js",
+  "./js/avatars.js",
   "./js/dex-sort.js",
   "./js/genpack.js",
   "./js/storage.js",

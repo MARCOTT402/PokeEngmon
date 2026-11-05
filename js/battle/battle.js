@@ -970,13 +970,60 @@ const BattleUI = (() => {
       const p1T = pvpSide === "p1" ? myCare : foeTeamEntries;
       const p2T = pvpSide === "p1" ? foeTeamEntries : myCare;
       state = BattleState.create(p1T, p2T, { seed: Number(b.seed) >>> 0 });
-      afterLaunch();
+      /* 第 13 項：pre-battle 頁（雙方頭像、隊伍、戰績）；最多等 PRE_BATTLE_SECONDS，唔會拖到對手 action 超時 */
+      await showPreBattle(b);
+      if (pvpBattle && pvpBattle.id === b.id) afterLaunch();
     } catch (e) {
       console.warn("[PvP] launch error:", e);
       toast("Network error: " + (e && e.message ? e.message.slice(0, 60) : ""));
       pvpBattle = null;
       openMenu();
     }
+  }
+
+  /* ---------- Pre-battle 頁（第 13 項）：PvP 揀完隊、開戰之前 ---------- */
+  const PRE_BATTLE_SECONDS = 10;
+  async function showPreBattle(b) {
+    const me = SupabaseAuth && SupabaseAuth.currentUser ? SupabaseAuth.currentUser() : null;
+    const myUid = me && me.id, foeUid = pvpSide === "p1" ? b.p2_uid : b.p1_uid;
+    const cards = window.Avatars ? await raceTimeout(Avatars.fetchCards([myUid, foeUid]), 2500) || [] : [];
+    const card = uid => cards.find(c => c.uid === uid) || {};
+    const st = loadState();
+    const mine = card(myUid), theirs = card(foeUid);
+    const myAv = window.Avatars ? Avatars.mine() : null;
+    const foeAv = theirs.avatar || null;
+    const myRec = { w: mine.wins != null ? mine.wins : (st.pvpWins || 0), l: mine.losses != null ? mine.losses : (st.pvpLosses || 0) };
+    const teamHTML = side => state[side].team.map(p =>
+      `<div class="pb-mon"><img src="${spriteURL(p.dexId)}" alt="${escapeHTML(p.name)}"><span>Lv.${p.level}</span></div>`).join("");
+    const side = (who, av, name, rec, teamSide) => `
+      <div class="pb-side pb-${who}">
+        <div class="pb-avatar">${window.Avatars ? Avatars.img(av) : ""}</div>
+        <div class="pb-name">${escapeHTML(name)}</div>
+        <div class="pb-rec">PvP <b>${rec.w}W</b> – <b>${rec.l}L</b></div>
+        <div class="pb-team">${teamHTML(teamSide)}</div>
+      </div>`;
+    const h2h = (theirs.h2h_w != null) ? `<div class="pb-h2h">Head-to-head <b>${theirs.h2h_w}</b> – <b>${theirs.h2h_l}</b></div>` : "";
+    let box = document.getElementById("pre-battle");
+    if (!box) { box = document.createElement("div"); box.id = "pre-battle"; box.className = "pre-battle"; document.body.appendChild(box); }
+    box.innerHTML = `<div class="pb-card">
+        <div class="pb-kicker">${pvpIsFriend ? "FRIEND BATTLE" : "PVP BATTLE"} · ${state[mySide].team.length} vs ${state[foeSide].team.length}</div>
+        <div class="pb-row">
+          ${side("me", myAv, st.playerName || "You", myRec, mySide)}
+          <div class="pb-vs">VS</div>
+          ${side("foe", foeAv, theirs.name || pvpFoeName || "Opponent", { w: theirs.wins || 0, l: theirs.losses || 0 }, foeSide)}
+        </div>
+        ${h2h}
+        <button type="button" class="btn-big btn-primary pb-go" id="pb-go">Continue (${PRE_BATTLE_SECONDS})</button>
+      </div>`;
+    box.style.display = "flex";
+    sfx("select", .9);
+    await new Promise(res => {
+      let left = PRE_BATTLE_SECONDS;
+      const btn = document.getElementById("pb-go");
+      const done = () => { clearInterval(t); box.style.display = "none"; res(); };
+      const t = setInterval(() => { left -= 1; btn.textContent = `Continue (${left})`; if (left <= 0) done(); }, 1000);
+      btn.onclick = () => { sfx("select", .9); done(); };
+    });
   }
 
   function raceTimeout(promise, ms) {
@@ -1040,6 +1087,13 @@ const BattleUI = (() => {
 
   /* ---------- 戰鬥中三欄背包（背包第 4a 段）：BAG = 用道具；POKéMON／暈咗 = 換 Pokémon（中欄鎖定） ---------- */
   function openBattleBag(kind, forced) {
+    /* Shadow Tag（Mega Gengar）：唔係強制換、唔係 KO 後換 → 換唔到 */
+    const trap = kind === "switch" && !forced && !shiftPick && BattleState.trappedBy ? BattleState.trappedBy(state, mySide) : null;
+    if (trap) {
+      toast(`${myActive().name} can't escape — ${trap.name}'s Shadow Tag!`);
+      showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`);
+      return;
+    }
     if (typeof BagUI === "undefined" || !BagUI.openBattle) {
       if (kind === "bag") showBagMenu(); else showSwitchMenu(forced);
       return;
@@ -1063,7 +1117,10 @@ const BattleUI = (() => {
       },
       onUseItem: (id, idx) => chooseItem(id, idx),
       onSwitch: idx => chooseSwitch(idx),
-      onClose: () => { showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`); }
+      onClose: () => {
+        if (shiftPick) { endShift(null); return; }
+        showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`);
+      }
     });
   }
   /* 戰鬥 BAG 清單：用得嘅（藥／Revival／有戰鬥效果嘅樹果）+ 用唔到嘅樹果灰色（spec §10：全部列出、用唔到變灰） */
@@ -1680,6 +1737,8 @@ const BattleUI = (() => {
   function showMainMenu() {
     document.getElementById("battle-action-menu").style.display = "grid";
     document.getElementById("battle-move-menu").style.display = "none";
+    const yn = document.getElementById("battle-yesno");
+    if (yn) yn.style.display = "none";
     const bag = document.getElementById("battle-bag-menu");
     if (bag) bag.style.display = "none";
     const bottom = document.querySelector(".battle-bottom");
@@ -1865,7 +1924,50 @@ const BattleUI = (() => {
     resolveTurn(action);
   }
 
+  /* 第 16 項：KO 對手後問「要唔要換」— 揀咗就交返 idx 俾 offerShift（唔經 resolveTurn） */
+  let shiftPick = null;
+  function endShift(idx) {
+    const r = shiftPick; shiftPick = null;
+    closeParty(); hideActionMenus();
+    r(idx);
+  }
+  /* 戰鬥底部 YES／NO（用同一個 menubox） */
+  function askYesNo(q) {
+    return new Promise(resolve => {
+      narrate(q);
+      hideActionMenus();
+      const box = document.querySelector(".battle-menubox");
+      let yn = document.getElementById("battle-yesno");
+      if (!yn) {
+        yn = document.createElement("div");
+        yn.id = "battle-yesno"; yn.className = "battle-menu-grid battle-yesno";
+        yn.innerHTML = `<button type="button" class="battle-menu-btn" data-yn="1">YES</button><button type="button" class="battle-menu-btn" data-yn="0">NO</button>`;
+        box.appendChild(yn);
+      }
+      yn.style.display = "grid";
+      const bottom = document.querySelector(".battle-bottom");
+      bottom.classList.add("menu-open");
+      yn.onclick = e => {
+        const b = e.target.closest("[data-yn]"); if (!b) return;
+        e.stopPropagation();
+        sfx("select", .9);
+        yn.style.display = "none";
+        bottom.classList.remove("menu-open");
+        resolve(b.dataset.yn === "1");
+      };
+    });
+  }
+  function hasBench() {
+    return me().team.some((p, i) => i !== me().active && p.hp > 0);
+  }
+  /* AI 模式：原作 Shift 模式 — 對手出下一隻之前問，換寵唔使回合；返回 team idx 或 null */
+  async function offerShift(nextName) {
+    const yes = await askYesNo(`${foeTrainerName()} is about to use ${nextName}. Switch Pokémon?`);
+    if (!yes) return null;
+    return new Promise(res => { shiftPick = res; openBattleBag("switch", false); });
+  }
   function chooseSwitch(idx) {
+    if (shiftPick) { endShift(idx); return; }
     if (acting) return;
     acting = true;
     closeParty();
@@ -2017,8 +2119,11 @@ const BattleUI = (() => {
       if (act.kind === "move" && BattleState.custapCheck) custap[s] = BattleState.custapCheck(state, s);
     });
     const custMsgs = state.log.slice(custLog).map(l => l.msg);
-    const myAct = { kind: playerAction.kind, priority: myMove ? myMove.priority + (custap[mySide] ? 0.5 : 0) : 6, speed: Battle.effectiveStat(myActive(), "spe", false, wName), player: true, action: playerAction };
-    const foeAct = { kind: foeAction.kind, priority: foeMove ? foeMove.priority + (custap[foeSide] ? 0.5 : 0) : 6, speed: Battle.effectiveStat(foeActive(), "spe", false, wName), player: false, action: foeAction };
+    /* 速度用 Mega 之後嘅天氣（Mega Charizard Y 嘅 Drought 會即刻生效）；優先度計 Prankster */
+    const wNow = state.weather && state.weather.name;
+    const prio = (side, mv) => BattleState.priorityOf ? BattleState.priorityOf(state, side, mv) : mv.priority;
+    const myAct = { kind: playerAction.kind, priority: myMove ? prio(mySide, myMove) + (custap[mySide] ? 0.5 : 0) : 6, speed: Battle.effectiveStat(myActive(), "spe", false, wNow), player: true, action: playerAction };
+    const foeAct = { kind: foeAction.kind, priority: foeMove ? prio(foeSide, foeMove) + (custap[foeSide] ? 0.5 : 0) : 6, speed: Battle.effectiveStat(foeActive(), "spe", false, wNow), player: false, action: foeAction };
     /* PvP 同步關鍵：turnOrder 同速 tiebreak 食 RNG，
        兩邊客戶端必須用同一次序傳參（p1 行先），否則同一個 random 會出相反結果 */
     const firstAct = mySide === "p1" ? myAct : foeAct;
@@ -2126,7 +2231,20 @@ const BattleUI = (() => {
          佢嘅 switch 會做下一個 turn 嘅 action 傳返嚟 */
       if (mode !== "pvp" && foeActive().hp <= 0 && BattleState.hasUsable(foe().team)) {
         const nextIdx = foe().team.findIndex(p => p.hp > 0);
+        /* 第 16 項：原作 Shift — 對手出下一隻之前問玩家要唔要換（AI 戰冇 seed 同步，換寵唔使回合） */
+        if (myActive().hp > 0 && hasBench()) {
+          const pick = await offerShift(foe().team[nextIdx].name.toUpperCase());
+          if (pick != null && pick !== me().active) await animatedSwitch(mySide, pick);
+        }
         await animatedSwitch(foeSide, nextIdx);
+      }
+      /* PvP：對手換寵係佢下一回合 action（Rule 22），所以呢度只係問；揀咗換 = 我下一回合 action */
+      if (mode === "pvp" && foeActive().hp <= 0 && BattleState.hasUsable(foe().team) && myActive().hp > 0 && hasBench()) {
+        if (await askYesNo(`${foeTrainerName()} is sending in a new Pokémon. Switch Pokémon?`)) {
+          acting = false;
+          openBattleBag("switch", false);
+          return;
+        }
       }
       showMainMenu();
       acting = false;
@@ -2169,6 +2287,29 @@ const BattleUI = (() => {
     return { kind: "move", moveIdx: foe.moves.indexOf(best) };
   }
 
+  /* ---------- 狀態系統第二期：PvP 結果報告（server 對兩邊報告先計勝負） ---------- */
+  let pvpReport = null;
+  function reportPvpResult(battleId, winner) {
+    if (!window.SupabaseAuth || !SupabaseAuth.currentUser || !SupabaseAuth.currentUser()) return Promise.resolve(null);
+    const hp = side => state[side].team.map(p => Math.max(0, Math.min(1000, Math.round(p.hp / Math.max(1, p.maxHp) * 1000))));
+    return SupabaseAuth._rpc("report_battle_result", { p_battle: battleId, p_report: { winner, hp: { p1: hp("p1"), p2: hp("p2") } } })
+      .catch(() => null);
+  }
+  /* 好友局結算 v2：等對手報告（最多 ~12 秒），等唔到就 force（計贏唔派鑽）；未跑 migration → 舊 RPC */
+  async function settleFriendV2(battleId) {
+    if (!battleId || !SupabaseAuth._rpc) return undefined;
+    if (pvpReport) await pvpReport;
+    let res;
+    for (let i = 0; i < 8; i++) {
+      /* _rpc 出錯會回 null（唔 throw）：第一次就 null ＝ 未跑 migration／RPC 唔得 → 交返舊 RPC */
+      res = await SupabaseAuth._rpc("settle_friend_battle_v2", { p_battle: battleId, p_force: false });
+      if (res == null) return i === 0 ? undefined : null;
+      if (!res.pending) return res;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    return SupabaseAuth._rpc("settle_friend_battle_v2", { p_battle: battleId, p_force: true });
+  }
+
   /* ---------- 完結 ---------- */
   function finishBattle() {
     /* PvP：兩邊客戶端都會行到呢度（seed 同步），寫 winner 落 row。
@@ -2176,6 +2317,7 @@ const BattleUI = (() => {
     if (mode === "pvp" && pvpBattle && state.winner) {
       const w = state.winner;   /* state 視角 = row 視角（create 時已對齊 p1/p2） */
       PvpNet.finishBattleRow(pvpBattle.id, w);
+      pvpReport = reportPvpResult(pvpBattle.id, w);
     }
     const won = state.winner === mySide;
     saveTeamCare();   /* 正常完結（包括投降）先寫；中途斷線／關 app 唔會行到呢度 */
@@ -2309,9 +2451,12 @@ const BattleUI = (() => {
        匿名：本地加鑽石。AI 首通由 server 判斷（本地記錄可能跨機唔齊） */
     if (loggedIn && isFriend) {
       /* 好友局：server 專用結算（每日 5 場計鑽、唔扣答題配額） */
-      const res = (window.SupabaseAuth && SupabaseAuth.settleFriendBattle)
+      let res = await settleFriendV2(pvpBattle && pvpBattle.id);
+      if (res === undefined) res = (window.SupabaseAuth && SupabaseAuth.settleFriendBattle)
         ? await SupabaseAuth.settleFriendBattle(won ? "win" : "lose")
         : null;
+      if (res && res.disputed && window.App && App.toast) App.toast("Results didn't match — this battle won't count");
+      else if (res && res.result === "win" && res.confirmed === false && window.App && App.toast) App.toast("Opponent didn't confirm — win recorded without diamonds");
       if (res && typeof res.balance === "number") {
         diamonds = typeof res.bonus === "number" ? res.bonus : diamonds;
         st.diamonds = res.balance;
@@ -2467,6 +2612,7 @@ const BattleUI = (() => {
     document.getElementById("party-cancel").onclick = () => {
       if (partyForced) return;   /* 強制換寵冇得走 */
       sfx("select", .9);
+      if (shiftPick) { endShift(null); return; }
       closeParty();
       showMainMenu();
       narrate(`What will ${myActive().name.toUpperCase()} do?`);

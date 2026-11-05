@@ -6013,3 +6013,68 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   .word-audio-btn svg { width: 24px; height: 24px; }
   .word-audio-btn.slow { width: 38px; height: 38px; border-radius: 12px; font-size: 1.05rem; }
 }
+
+/* =====================================================================
+   第 14 項 Trainer Avatar ＋ 第 13 項 PvP pre-battle 頁
+   ===================================================================== */
+.trainer-avatar { image-rendering: pixelated; object-fit: contain; }
+.friends-avatar.is-trainer { position: relative; cursor: pointer; background: linear-gradient(180deg, #eef4ff, #dfe9fb); }
+.friends-avatar.is-trainer img { transform: scale(1.15); transform-origin: 50% 70%; }
+.friends-avatar-edit {
+  position: absolute; left: 0; right: 0; bottom: 0; font-size: 8px; font-weight: 900; letter-spacing: .5px;
+  color: #fff; background: rgba(26, 42, 68, .72); text-align: center; line-height: 12px;
+}
+
+/* 揀頭像 */
+.avp-box { display: flex; flex-direction: column; gap: 10px; }
+.avp-title { margin: 0; text-align: center; font-size: 1.05rem; font-weight: 900; color: #1a2a44; }
+.avp-current { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.avp-current .avp-big { width: 72px; height: 72px; border-radius: 14px; background: #eef4ff; }
+.avp-current b { font-size: .95rem; color: #1a2a44; }
+.avp-scroll { padding-right: 2px; }
+.avp-group + .avp-group { margin-top: 10px; }
+.avp-gtitle { font-size: .72rem; font-weight: 900; letter-spacing: .6px; color: #6b7590; text-transform: uppercase; margin: 0 0 6px 2px; }
+.avp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.avp-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 5px;
+  border: 2px solid #d5dae3; border-radius: 12px; background: #fff; cursor: pointer; font-family: inherit;
+  min-height: 44px;
+}
+.avp-item img { width: 56px; height: 56px; }
+.avp-item span { font-size: .62rem; font-weight: 800; color: #3b4a63; line-height: 1.1; text-align: center; }
+.avp-item.on { border-color: #2a75bb; background: #eaf3fc; box-shadow: 0 0 0 2px rgba(42, 117, 187, .25); }
+.avp-item:active { transform: scale(.96); }
+
+/* PvP pre-battle（開戰前，蓋喺揀隊／戰鬥畫面上面） */
+.pre-battle {
+  position: fixed; inset: 0; z-index: 140; display: none; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(10, 16, 30, .72);
+}
+.pb-card {
+  width: min(680px, 100%); max-height: 100%; overflow-y: auto; border-radius: 14px; border: 3px solid #1a2a44;
+  background: linear-gradient(180deg, #fdfdff, #eaf0fb); padding: 12px 14px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.pb-kicker { font-size: .72rem; font-weight: 900; letter-spacing: 1px; color: #6b7590; }
+.pb-row { display: flex; align-items: stretch; justify-content: center; gap: 8px; width: 100%; }
+.pb-side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.pb-avatar {
+  width: 96px; height: 96px; border-radius: 16px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden;
+}
+.pb-me .pb-avatar { background: radial-gradient(circle at 50% 80%, #cfe3ff, #eef4ff 70%); }
+.pb-foe .pb-avatar { background: radial-gradient(circle at 50% 80%, #ffd6d6, #fff0f0 70%); }
+.pb-avatar img { width: 96px; height: 96px; }
+.pb-foe .pb-avatar img { transform: scaleX(-1); }
+.pb-name { font-size: .95rem; font-weight: 900; color: #1a2a44; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-rec { font-size: .74rem; color: #3b4a63; }
+.pb-team { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 2px; }
+.pb-mon { display: flex; flex-direction: column; align-items: center; width: 44px; }
+.pb-mon img { width: 40px; height: 40px; image-rendering: pixelated; object-fit: contain; }
+.pb-mon span { font-size: .58rem; color: #6b7590; font-weight: 800; }
+.pb-vs { align-self: center; font-size: 1.6rem; font-weight: 900; font-style: italic; color: #e3350d; text-shadow: 0 2px 0 #1a2a44; }
+.pb-h2h { font-size: .8rem; color: #1a2a44; background: #fff; border: 2px solid #d5dae3; border-radius: 999px; padding: 2px 12px; }
+.pre-battle .pb-go { width: auto; min-width: 180px; padding-left: 28px; padding-right: 28px; }
+@media (max-height: 460px) {
+  .pb-avatar, .pb-avatar img { width: 72px; height: 72px; }
+  .pb-card { gap: 5px; padding: 8px 10px 10px; }
+}
