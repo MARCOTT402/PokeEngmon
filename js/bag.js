@@ -40,11 +40,19 @@ const BagUI = (() => {
   }
   function heldList() {
     const count = k => (window.Pet ? Pet.countOf(k) : 0) || 0;
-    return (typeof STONE_KINDS !== "undefined" ? STONE_KINDS : []).map(k => ({
+    const out = (typeof STONE_KINDS !== "undefined" ? STONE_KINDS : []).map(k => ({
       id: k, cat: "stones", name: STONE_LABELS[k], icon: (window.Care ? Care.ITEM_SPRITE(k + "-stone") : null), emoji: STONE_ICONS[k], n: count(k),
       desc: "Give it to a Pokémon. If that Pokémon can evolve with it, it evolves right away and the stone is used up; otherwise it just holds the stone."
     }));
+    /* Mega 石（第 4c 段）：只顯示持有嘅 */
+    if (window.Care && Care.ownedMegas) Care.ownedMegas().forEach(k => {
+      const m = MEGA_STONES[k];
+      out.push({ id: k, cat: "mega", name: m.stoneName, icon: Care.ITEM_SPRITE(k), n: Care.megaCount(k), mega: m,
+        desc: `Give it to ${speciesName(m.dexId)}. In battle, tap MEGA on the move screen to Mega Evolve into ${m.formName} — once per battle. It changes back after the battle.` });
+    });
+    return out;
   }
+  const speciesName = d => { const p = (typeof dexOf === "function") ? dexOf(d) : null; return (p && p.name) || ("#" + d); };
 
   /* ---------- 骨架 ---------- */
   function build() {
@@ -635,6 +643,9 @@ const BagUI = (() => {
           ${S.battle ? "" : `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div>`}
           <div class="bag-note">Paralyzed, asleep or frozen Pokémon can't eat. Feeding when already full makes it throw up.</div>` : ""}
         ${it.cat === "medicine" ? `<div class="bag-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon. Revival doesn't count.</div>` : ""}
+        ${it.cat === "mega" ? `<div class="bag-kv"><span>Mega Evolves</span><b>${esc(speciesName(it.mega.dexId))} → ${esc(it.mega.formName)}</b></div>
+          <div class="bag-kv"><span>Mega type</span><b>${it.mega.types.map(t => `<img src="${typeIconURL(t)}" alt="${t}" style="height:12px">`).join(" ")}</b></div>
+          <div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div>` : ""}
         ${it.cat === "stones" ? `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div><div class="bag-kv"><span>Held in battle</span><b>No effect (same as the original games)</b></div>` : ""}
         <div class="bag-note">${S.battle ? "Tip: drag it onto a Pokémon on the left, or tap Use then tap a Pokémon. Using an item ends your turn." : `Tip: drag it onto a Pokémon in My Team, or tap ${verbOf(it)} then tap a Pokémon.`}</div>
         <div class="bag-actions">${it.berry && !S.battle ? `<button type="button" class="bag-btn alt" id="bag-btn-hold" ${it.n <= 0 ? "disabled" : ""}>Hold</button>` : ""}<button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 || it.usable === false ? "disabled" : ""}>${S.battle ? "Use" : verbOf(it)}</button></div>`;
@@ -937,10 +948,13 @@ const BagUI = (() => {
      第 3a 段：用道具・攜帶進化石・送回大木博士
      ===================================================================== */
   const isBerryId = k => !!(window.Care && Care.isBerry && Care.isBerry(k));
+  const isMegaId = k => !!(window.Care && Care.isMega && Care.isMega(k));
+  /* 樹果／Mega 石：經 hold_item RPC（server 管數量）；進化石：client 直寫 */
+  const isRpcHeld = k => isBerryId(k) || isMegaId(k);
   const heldSprite = k => (window.Care ? Care.ITEM_SPRITE(isBerryId(k) ? Care.BERRIES[k].sprite : (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
-  const heldName = k => (isBerryId(k) ? Care.BERRIES[k].name : null) || (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
+  const heldName = k => (isBerryId(k) ? Care.BERRIES[k].name : null) || (isMegaId(k) ? MEGA_STONES[k].stoneName : null) || (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
   const itemInfo = id => (S.battle ? S.battle.items() : itemList().concat(heldList())).find(x => x.id === id);
-  function verbOf(it) { return it.cat === "stones" ? "Give" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
+  function verbOf(it) { return (it.cat === "stones" || it.cat === "mega") ? "Give" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
 
   /* 用道具模式：撳 Use → 跳去 Pokémon tab → 撳目標（或者撳左欄隊伍） */
   function startTarget(id, mode) {
@@ -971,7 +985,7 @@ const BagUI = (() => {
     }
     const e = entryOf(uid); if (!e) return;
     if (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(id)) { giveStone(id, uid); return; }
-    if (hold) { holdBerry(id, uid); return; }
+    if (hold || isMegaId(id)) { holdBerry(id, uid); return; }
     if (applyItem.busy) return;
     applyItem.busy = true;
     const name = entryCurrentSpecies(e)[1];
@@ -991,7 +1005,7 @@ const BagUI = (() => {
   async function holdBerry(id, uid) {
     const e = entryOf(uid); if (!e || holdBerry.busy) return;
     holdBerry.busy = true;
-    const res = await Care.holdBerry(e, id);
+    const res = await Care.holdItem(e, id);
     holdBerry.busy = false;
     if (!res || !res.ok) { toast({ none: "No berry left", not_found: "Pokémon not found", bad_item: "That can't be held" }[res && res.reason] || "Couldn't hold it — try again"); return; }
     buzz();
@@ -1003,9 +1017,9 @@ const BagUI = (() => {
   /* 進化石：啱條件即刻進化（石用完）；唔啱就攜帶 */
   async function giveStone(stone, uid) {
     let e = entryOf(uid); if (!e) return;
-    /* 攜帶緊樹果：先經 server 退返落背包，再當冇攜帶處理 */
-    if (e.heldItem && isBerryId(e.heldItem)) {
-      const r = await Care.holdBerry(e, null);
+    /* 攜帶緊樹果／Mega 石：先經 server 退返落背包，再當冇攜帶處理 */
+    if (e.heldItem && isRpcHeld(e.heldItem)) {
+      const r = await Care.holdItem(e, null);
       if (!r || !r.ok) { toast("Couldn't swap the held item — try again"); return; }
       e = entryOf(uid); if (!e) return;
     }
@@ -1044,9 +1058,9 @@ const BagUI = (() => {
   async function takeHeld(uid) {
     const st = loadState(); const x = st.entries.find(y => y.uid === uid);
     if (!x || !x.heldItem) return;
-    if (isBerryId(x.heldItem)) {
+    if (isRpcHeld(x.heldItem)) {
       const k = x.heldItem;
-      const r = await Care.holdBerry(x, null);
+      const r = await Care.holdItem(x, null);
       if (!r || !r.ok) { toast("Couldn't take it back — try again"); return; }
       toast(`Took the ${heldName(k)} back`);
       refreshAll();
@@ -1121,7 +1135,7 @@ const BagUI = (() => {
     if (st.moveLoadouts) delete st.moveLoadouts[uid];
     saveState();
     /* server 已退道具；本地跟住加（樹果 → 樹果袋；進化石 → items） */
-    if (held) { if (isBerryId(held)) Care.addBerry(held, 1); else Pet.addItem(held, 1); }
+    if (held) { if (isBerryId(held)) Care.addBerry(held, 1); else if (isMegaId(held)) Care.addMega(held, 1); else Pet.addItem(held, 1); }
     if (window.Sync && Sync.patchAccount && online()) Sync.patchAccount({ my_team: st.myTeam });
     buzz();
     const cell = root.querySelector(`#bag-grid [data-uid="${uid}"]`);

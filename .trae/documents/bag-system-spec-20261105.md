@@ -166,6 +166,17 @@
 - **送返大木博士**：攜帶樹果退返背包（`release_to_oak` 更新）。
 - 已知限制：`held_item` 仍有 client column grant（進化石 B 方案），理論上可以直寫攜帶樹果唔扣數；要收緊需將進化石攜帶都改經 RPC。
 
+## 12.2 第 4c 段：Mega 進化（2026-11-05 實作）
+
+- **範圍**：Gen 1–5 物種（圖鑑號 ≤ 649）全部有 Mega 石嘅形態 = **70 粒**（46 粒經典 + 24 粒 Legends Z-A 新 Mega，例如 Raichu X／Y、Dragonite、Feraligatr、Garchomp Z）；Rayquaza 冇 Mega 石（靠 Dragon Ascent）唔包。資料由 `tools/fetch_mega.py` 抽 PokéAPI → `js/mega-data.js`。Darkrai／Heatran 嘅 Mega 特性 PokéAPI 未有，暫用原本特性（`abilityGuess`）。
+- **掉落**：答題 10/10 → 3% 掉 1 粒；只會掉你擁有物種（任何一隻 entry 嘅 `owned_species`）嘅石；同一物種 X／Y 隨機。server `award_mega`，每日最多抽 30 次。
+- **存放**：`user_account.items_mega`（只經 RPC 寫）；背包 Held items tab 顯示持有嘅 Mega 石，詳情有「Mega Evolves A → Mega A」、Mega 屬性、邊個攜帶緊。
+- **攜帶**：Give → 撳 Pokémon（拖放都得）；任何 Pokémon 都可以拎住，但只有對應物種先 Mega 到。`hold_item` RPC（樹果同 Mega 石共用；`hold_berry` 變 wrapper）；送返大木博士退返 Mega 石。
+- **戰鬥**：FIGHT 頁有 **MEGA** 掣（攜帶對應石 + 今場未用過先出現），撳一下準備，再揀招 → 回合開始、出招之前 Mega 進化（p1 先 p2 後），之後先用 Mega 速度排先後。每場每位訓練家一次；換走都保持 Mega；戰鬥完變返原形（戰鬥用副本）。
+- **Mega 效果**：屬性、特性（引擎有實作嘅特性先有效）、HP 以外能力值（同一套 IV／EV／性格重計）、精靈圖（PokeRogue `<dex>-mega[-x|-y|-z]`）；HP 唔變；名唔變。
+- **文字**：「Raichu's Raichunite X is reacting to your Key Stone!」→ 閃光 + 換圖 →「Raichu has Mega Evolved into Mega Raichu X!」。PvP：action 帶 `mega: true`，兩邊各自模擬。
+- **戰鬥背包**：Mega 石灰色（Can't use this in battle）。AI 訓練家唔會 Mega。
+
 ## 13. 待定
 
 - [ ] 第 6 節樹果細節。

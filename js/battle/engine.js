@@ -106,11 +106,12 @@ const Battle = (() => {
     let base = Math.floor(((2 * level / 5 + 2) * power * atk / def) / 50) + 2;
 
     /* STAB（Adaptability 由 1.5 → 2.0） */
-    const atkTypes = speciesTypes(attacker.dexId);
+    /* 用戰鬥中嘅屬性（Mega 進化會變屬性）；冇就用物種屬性 */
+    const atkTypes = (attacker.types && attacker.types.length) ? attacker.types : speciesTypes(attacker.dexId);
     if (atkTypes.includes(move.type)) base = Math.floor(base * (attacker.ability === "adaptability" ? 2 : 1.5));
 
     /* 相剋（0 = 免疫，直接零傷，唔可以俾 min-1 clamp 夾返 1） */
-    const defTypes = speciesTypes(defender.dexId);
+    const defTypes = (defender.types && defender.types.length) ? defender.types : speciesTypes(defender.dexId);
     const mult = (typeof typeMultiplier === "function") ? typeMultiplier(move.type, defTypes) : 1;
     if (mult === 0) return { damage: 0, effectiveness: 0 };
     base = Math.floor(base * mult);
@@ -210,8 +211,11 @@ const Battle = (() => {
       volatile: { flinch: false, confusion: 0, substitute: 0, flashFire: false, critBoost: 0, micle: false },
       /* 背包第 4b 段：攜帶樹果（自動觸發、食完消失）；性格俾 Figy 類樹果判斷「唔鍾意嘅味」 */
       nature: entry.nature || "hardy",
-      held: (typeof entry.heldItem === "string" && /-berry$/.test(entry.heldItem)) ? entry.heldItem : null,
+      /* 攜帶樹果或者 Mega 石（第 4c 段）；進化石戰鬥冇效果唔帶 */
+      held: (typeof entry.heldItem === "string" && (/-berry$/.test(entry.heldItem) || (typeof MEGA_STONES !== "undefined" && MEGA_STONES[entry.heldItem]))) ? entry.heldItem : null,
       heldUsed: null,
+      /* Mega 進化要用嚟重計能力值 */
+      ivs: entry.ivs || {}, evs: entry.evs || {},
       /* 特性：entry 已經 roll 咗嘅就用嗰個；未 roll（舊存檔／新捕捉）先用 slot 1 */
       ability: (typeof entry.ability === "string" && entry.ability)
         ? entry.ability

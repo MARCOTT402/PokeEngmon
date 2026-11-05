@@ -1503,6 +1503,13 @@ const App = {
         if (berry && Care.BERRIES[berry]) rewards.drops.unshift({ kind: berry, label: `🫐 ${Care.BERRIES[berry].name} +1` });
       } catch (e) {}
     }
+    /* 背包第 4c 段：全對 → 3% 掉 Mega 石（只會係你擁有物種嘅石；登入由 server 抽） */
+    if (window.Care && Care.awardMega && data.score === data.total) {
+      try {
+        const mega = await Care.awardMega(true);
+        if (mega && typeof MEGA_STONES !== "undefined" && MEGA_STONES[mega]) rewards.drops.unshift({ kind: mega, label: `🔮 ${MEGA_STONES[mega].stoneName} +1` });
+      } catch (e) {}
+    }
     /* 狀態系統：答題掉藥（全對穩掉 1 隻、1–9 題 10%；登入由 server 抽） */
     if (window.Care) {
       try {

@@ -195,6 +195,8 @@ window.Sync = (() => {
           st.curveMode = acct.curve_mode;
           try { if (window.SM2 && SM2.setMode) SM2.setMode(acct.curve_mode); } catch (e) {}
         }
+        /* Mega 石（第 4c 段）：只經 RPC 寫，雲端就係權威 */
+        if (acct.items_mega && typeof acct.items_mega === "object") st.megaStones = Object.assign({}, acct.items_mega);
         /* 背包：雲端 null = 未上過雲 → 保留本機（首次 backfill 靠呢條規則） */
         if (acct.items_food != null || acct.items_premium != null || acct.items_revive != null || acct.items_stones != null) {
           const bag = (st.items && typeof st.items === "object") ? st.items : { food: 0, premium: 0, revive: 0 };

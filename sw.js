@@ -33,6 +33,7 @@ const ASSETS = [
   "./js/qimg-db.js",
   "./js/gens-data.js",
   "./js/pokemon.js",
+  "./js/mega-data.js",
   "./js/dex-sort.js",
   "./js/genpack.js",
   "./js/storage.js",

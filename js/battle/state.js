@@ -673,6 +673,49 @@ const BattleState = (() => {
     return msgs;
   }
 
+  /* ---------- Mega 進化（背包第 4c 段；跟原作） ----------
+     攜帶對應 Mega 石 + 每場每位訓練家一次；回合開始、出招之前進化（之後速度用 Mega 數值排先後）。
+     改屬性、特性、HP 以外嘅能力值同精靈圖；HP 唔變；換走都保持 Mega；戰鬥完自動變返（戰鬥用嘅係副本） */
+  function megaOf(p) {
+    if (!p || !p.held || typeof MEGA_STONES === "undefined") return null;
+    const m = MEGA_STONES[p.held];
+    return (m && m.dexId === p.dexId) ? m : null;
+  }
+  function canMega(state, side) {
+    const p = active(state, side);
+    return !!(p && p.hp > 0 && !p.mega && !state[side].megaUsed && megaOf(p));
+  }
+  function megaStats(base, p) {
+    const nat = (typeof natureInfo === "function") ? natureInfo(p.nature) : { plus: null, minus: null };
+    const maxIv = (typeof MAX_IV !== "undefined") ? MAX_IV : 31;
+    const out = {};
+    ["atk", "def", "spa", "spd", "spe"].forEach(k => {
+      const iv = Number((p.ivs && p.ivs[k]) != null ? p.ivs[k] : maxIv);
+      const ev = Number((p.evs && p.evs[k]) || 0);
+      const core = Math.floor(((2 * (base[k] || 0) + iv + Math.floor(ev / 4)) * p.level) / 100);
+      out[k] = Math.floor((core + 5) * (nat.plus === k ? 1.1 : nat.minus === k ? 0.9 : 1));
+    });
+    return out;
+  }
+  /* trainer：「your」／「Ash's」（只係文字，唔影響 RNG） */
+  function megaEvolve(state, side, trainer) {
+    if (!canMega(state, side)) return false;
+    const p = active(state, side);
+    const m = megaOf(p);
+    log(state, `${p.name}'s ${m.stoneName} is reacting to ${trainer || "its trainer's"} Key Stone!`);
+    Object.assign(p.stats, megaStats(m.baseStats, p));
+    p.types = m.types.slice();
+    p.ability = m.ability;
+    p.mega = m.stone;
+    p.megaSprite = m.spriteKey;
+    p.megaName = m.formName;
+    state[side].megaUsed = true;
+    log(state, `${p.name} has Mega Evolved into ${m.formName}!`);
+    /* 新特性嘅上場效果（例如 Mega Manectric 嘅 Intimidate） */
+    onSwitchIn(state, side).forEach(msg => log(state, msg));
+    return true;
+  }
+
   /* ---------- 檢查勝負 ---------- */
   function hasUsable(team) { return team.some(p => p.hp > 0); }
 
@@ -797,7 +840,8 @@ const BattleState = (() => {
     create, active, otherSide, log,
     executeMove, endTurnResidual, endTurnField, switchTo, onSwitchIn,
     applyEntryHazards, hasUsable, checkFinished, statusLabel, useItem, ITEMS,
-    HELD, checkHeld, custapCheck, berryLabel
+    HELD, checkHeld, custapCheck, berryLabel,
+    megaOf, canMega, megaEvolve
   };
 })();
 

@@ -132,6 +132,40 @@ const Care = (() => {
   const berryCount = k => Math.max(0, Number(berryBag()[k]) || 0);
   function addBerry(k, n) { const b = berryBag(); b[k] = Math.max(0, (Number(b[k]) || 0) + n); if (!b[k]) delete b[k]; saveState(); }
   function ownedBerries() { const b = berryBag(); return BERRY_ROWS.map(r => r[0] + "-berry").filter(k => (b[k] || 0) > 0); }
+  /* ---------- Mega 石（第 4c 段）：st.megaStones { slug: n }；登入只經 RPC 寫 ---------- */
+  const isMega = k => !!(typeof MEGA_STONES !== "undefined" && MEGA_STONES[k]);
+  function megaBag() { const st = loadState(); if (!st.megaStones || typeof st.megaStones !== "object") st.megaStones = {}; return st.megaStones; }
+  const megaCount = k => Math.max(0, Number(megaBag()[k]) || 0);
+  function addMega(k, n) { const b = megaBag(); b[k] = Math.max(0, (Number(b[k]) || 0) + n); if (!b[k]) delete b[k]; saveState(); }
+  function ownedMegas() { const b = megaBag(); return (typeof MEGA_STONES !== "undefined" ? Object.keys(MEGA_STONES) : []).filter(k => (b[k] || 0) > 0); }
+  /* 玩家擁有嘅物種（現時形態 + 每隻 entry 曾經係過嘅物種）；同 server award_mega 用 owned_species 一致 */
+  function ownedSpeciesSet() {
+    const s = new Set();
+    loadState().entries.forEach(e => {
+      (e.ownedSpecies || []).forEach(d => s.add(Number(d)));
+      if (typeof entryCurrentSpecies === "function") { const c = entryCurrentSpecies(e); if (c && c[0]) s.add(Number(c[0])); }
+    });
+    return s;
+  }
+  /* 答題全對 → 3% 掉 1 粒 Mega 石（只會係玩家擁有物種嘅石）；登入由 server 抽 */
+  const MEGA_RATE = 0.03;
+  async function awardMega(perfect) {
+    if (!perfect || typeof MEGA_STONES === "undefined") return null;
+    if (online()) {
+      const res = await rpc("award_mega", { p_perfect: true });
+      if (!res || !res.slug) return null;
+      if (res.mega) { const st = loadState(); st.megaStones = Object.assign({}, res.mega); saveState(); }
+      return res.slug;
+    }
+    if (Math.random() >= MEGA_RATE) return null;
+    const owned = ownedSpeciesSet();
+    const pool = Object.keys(MEGA_STONES).filter(k => owned.has(MEGA_STONES[k].dexId));
+    if (!pool.length) return null;
+    const slug = pool[Math.floor(Math.random() * pool.length)];
+    addMega(slug, 1);
+    return slug;
+  }
+
   /* 掉落：同一級入面按權重抽 */
   function rollBerry(perfect) {
     const pool = Object.values(BERRIES).filter(b => b.tier === (perfect ? "super" : "normal"));
@@ -427,30 +461,33 @@ const Care = (() => {
     return slug;
   }
 
-  /* 攜帶樹果（第 4b 段）：slug = null → 拆返落背包；原本攜帶嘅道具（樹果／進化石）自動退返 */
-  async function holdBerry(entry, slug) {
+  /* 攜帶樹果（第 4b 段）／Mega 石（第 4c 段）：slug = null → 拆返落背包；原本攜帶嘅道具（樹果／Mega 石／進化石）自動退返 */
+  async function holdItem(entry, slug) {
     const st = loadState();
     const x = st.entries.find(y => y.uid === entry.uid);
     if (!x) return { ok: false, reason: "not_found" };
     const prev = x.heldItem || null;
-    if (slug && berryCount(slug) <= 0) return { ok: false, reason: "none" };
+    if (slug && !isBerry(slug) && !isMega(slug)) return { ok: false, reason: "bad_item" };
+    if (slug && (isBerry(slug) ? berryCount(slug) : megaCount(slug)) <= 0) return { ok: false, reason: "none" };
     if ((prev || null) === (slug || null)) return { ok: true, prev };
     if (online()) {
-      const res = await rpc("hold_berry", { p_entry: x.uid, p_berry: slug || null });
+      const res = await rpc("hold_item", { p_entry: x.uid, p_item: slug || null });
       if (!res || !res.ok) return res || { ok: false, reason: "offline" };
       const y = loadState().entries.find(z => z.uid === x.uid);
       if (y) y.heldItem = slug || null;
       saveState();
       if (res.state) applyState(res.state);   /* 樹果數量以 server 為準 */
-      if (prev && !isBerry(prev) && window.Pet) Pet.addItem(prev, 1);   /* 進化石：server 已退，本地跟住加 */
+      if (res.mega && typeof res.mega === "object") { const s2 = loadState(); s2.megaStones = Object.assign({}, res.mega); saveState(); }
+      if (prev && !isBerry(prev) && !isMega(prev) && window.Pet) Pet.addItem(prev, 1);   /* 進化石：server 已退，本地跟住加 */
       return { ok: true, prev };
     }
     x.heldItem = slug || null;
     saveState();
-    if (slug) addBerry(slug, -1);
-    if (prev) { if (isBerry(prev)) addBerry(prev, 1); else if (window.Pet) Pet.addItem(prev, 1); }
+    if (slug) { if (isBerry(slug)) addBerry(slug, -1); else addMega(slug, -1); }
+    if (prev) { if (isBerry(prev)) addBerry(prev, 1); else if (isMega(prev)) addMega(prev, 1); else if (window.Pet) Pet.addItem(prev, 1); }
     return { ok: true, prev };
   }
+  const holdBerry = holdItem;
 
   /* 戰鬥正常完結：寫返出戰隊伍 HP／狀態 + 扣藥。team: [{ uid, hp(0–1000), status, poison }] */
   async function settleBattle(team, used) {
@@ -483,7 +520,8 @@ const Care = (() => {
     ensure, settleOne, settleAll, feedRule, useRule,
     maxHp, hpOf, isFaint, statusKey, sleepLeftMs, eventText,
     online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle,
-    BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry, holdBerry
+    BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry, holdBerry, holdItem,
+    isMega, megaCount, addMega, ownedMegas, awardMega, MEGA_RATE
   };
 })();
 

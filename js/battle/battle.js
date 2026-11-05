@@ -42,6 +42,7 @@ const BattleUI = (() => {
   let levelSyncLevel = null;   /* Inferno：玩家隊伍臨時同步等級 */
   let aiPotions = 0;           /* 狀態系統第一期：Inferno AI Potion 已拎走，恆為 0 */
   let myFullRestores = 0;      /* 舊 Inferno Full Restore（已拎走，保留變數免舊路徑出錯） */
+  let megaArmed = false;       /* FIGHT 頁 MEGA 掣（第 4c 段）：揀招時一齊交 mega:true */
   let battleUsed = {};         /* 今場用咗嘅背包道具 { potion: n, ... }，戰鬥完一次過扣 */
   const BAG_ITEMS = ["potion", "super_potion", "antidote", "burn_heal", "paralyze_heal", "awakening", "ice_heal", "revive"];
 
@@ -1082,6 +1083,11 @@ const BattleUI = (() => {
       out.push({ id: k, name: Care.BERRIES[k].name, icon: Care.ITEM_SPRITE(k), n: Care.berryCount(k), cat: "berries", usable: false,
         desc: "Can't be used from the Bag in battle." });
     });
+    /* Mega 石：灰色（要攜帶，喺揀招頁撳 MEGA） */
+    if (window.Care && Care.ownedMegas) Care.ownedMegas().forEach(k => {
+      out.push({ id: k, name: MEGA_STONES[k].stoneName, icon: Care.ITEM_SPRITE(k), n: Care.megaCount(k), cat: "held", usable: false,
+        desc: "Can't use this in battle — a Pokémon has to hold it. Tap MEGA on the move screen to Mega Evolve." });
+    });
     return out;
   }
 
@@ -1565,7 +1571,7 @@ const BattleUI = (() => {
     foeBar.style.width = foePct + "%";
     foeBar.style.background = hpColor(foePct);
     if (typeof PokeSprite !== "undefined") {
-      PokeSprite.show(document.getElementById("foe-sprite"), foe.dexId, "front");
+      PokeSprite.show(document.getElementById("foe-sprite"), foe.megaSprite || foe.dexId, "front");
     }
     /* 我方 HP box */
     document.getElementById("my-name").textContent = mine.name;
@@ -1577,7 +1583,7 @@ const BattleUI = (() => {
     document.getElementById("my-hp-cur").textContent = Math.max(0, mine.hp);
     document.getElementById("my-hp-max").textContent = mine.maxHp;
     if (typeof PokeSprite !== "undefined") {
-      PokeSprite.show(document.getElementById("my-sprite"), mine.dexId, "back");
+      PokeSprite.show(document.getElementById("my-sprite"), mine.megaSprite || mine.dexId, "back");
     }
 
     /* status badges（FRLG 原裝 icon） */
@@ -1725,6 +1731,7 @@ const BattleUI = (() => {
     });
     const back = document.getElementById("bmp-back");
     back.onclick = () => { showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`); };
+    renderMegaButton();
     document.getElementById("battle-action-menu").style.display = "none";
     document.getElementById("battle-move-menu").style.display = "flex";
     const bottom = document.querySelector(".battle-bottom");
@@ -1829,12 +1836,32 @@ const BattleUI = (() => {
   }
 
   /* ---------- 玩家出招 ---------- */
+  /* MEGA 掣：攜帶對應 Mega 石 + 今場未用過先出；撳一下 = 準備（揀招時一齊 Mega 進化） */
+  function renderMegaButton() {
+    const box = document.querySelector("#battle-move-menu .bmp-moves");
+    if (!box) return;
+    let btn = document.getElementById("bmp-mega");
+    const can = !!(BattleState.canMega && BattleState.canMega(state, mySide));
+    if (!can) { megaArmed = false; if (btn) btn.remove(); return; }
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "bmp-mega"; btn.className = "bmp-mega"; btn.type = "button";
+      box.appendChild(btn);
+    }
+    const m = BattleState.megaOf(myActive());
+    btn.textContent = megaArmed ? "MEGA ✓" : "MEGA";
+    btn.title = `Mega Evolve into ${m.formName} with your move`;
+    btn.classList.toggle("on", megaArmed);
+    btn.onclick = () => { megaArmed = !megaArmed; renderMegaButton(); };
+  }
   function chooseMove(idx) {
     if (acting) return;
     acting = true;
     /* 即刻收埋選單，免得等緊 click 講對話時誤撳到招式掣 */
     hideActionMenus();
     const action = { kind: "move", moveIdx: idx };
+    if (megaArmed && BattleState.canMega && BattleState.canMega(state, mySide)) action.mega = true;
+    megaArmed = false;
     resolveTurn(action);
   }
 
@@ -1959,7 +1986,7 @@ const BattleUI = (() => {
         /* 用藥：只限戰前投票准用藥，而且係引擎認得嘅道具；否則當冇效 → 出第一招 */
         : (raw.kind === "item" && pvpRules && pvpRules.items && BattleState.ITEMS[raw.itemId])
           ? { kind: "item", itemId: raw.itemId, target: raw.target }
-          : { kind: "move", moveIdx: raw.moveIdx || 0 };
+          : { kind: "move", moveIdx: raw.moveIdx || 0, mega: !!raw.mega };
       runTurnResolution(playerAction, foeAction);
     } catch (e) {
       console.warn("[PvP] turn error:", e);
@@ -1973,6 +2000,15 @@ const BattleUI = (() => {
     const myMove = playerAction.kind === "move" ? moveInfo(myActive().moves[playerAction.moveIdx].slug) : null;
     const foeMove = foeAction.kind === "move" ? moveInfo(foeActive().moves[foeAction.moveIdx].slug) : null;
     const wName = state.weather && state.weather.name;
+    /* Mega 進化（第 4c 段）：回合開始、出招之前；p1 先 p2 後，PvP 兩邊一致；之後速度用 Mega 數值 */
+    const megaLog = state.log.length;
+    const megaSides = [];
+    ["p1", "p2"].forEach(s => {
+      const act = s === mySide ? playerAction : foeAction;
+      if (act.kind === "move" && act.mega && BattleState.megaEvolve &&
+          BattleState.megaEvolve(state, s, s === mySide ? "your" : `${foeTrainerName()}'s`)) megaSides.push(s);
+    });
+    const megaMsgs = state.log.slice(megaLog).map(l => l.msg);
     /* Custap（攜帶樹果）：揀咗出招 + HP ≤ 25% → 同優先度先出手；p1 先 p2 後判斷，PvP 兩邊一致 */
     const custLog = state.log.length;
     const custap = {};
@@ -1991,6 +2027,17 @@ const BattleUI = (() => {
 
     narrate("");
     (async () => {
+      /* Mega：第一句（石頭起反應）→ 閃光 + 換精靈圖 → 其餘句子 */
+      if (megaMsgs.length) {
+        await say(megaMsgs[0]);
+        megaSides.forEach(s => {
+          const el = document.getElementById(s === mySide ? "my-sprite" : "foe-sprite");
+          if (el) { el.classList.remove("anim-mega"); void el.offsetWidth; el.classList.add("anim-mega"); setTimeout(() => el.classList.remove("anim-mega"), 900); }
+        });
+        await sleep(450);
+        render();
+        for (const m of megaMsgs.slice(1)) await say(m);
+      }
       for (const m of custMsgs) await say(m);
       for (const act of order) {
         if (state.finished) break;

@@ -687,9 +687,18 @@ Incident (2026-11-05，背包第 4a 段)：`#view-battle` 搬入橫向紅框 `.b
 
 ## Rule 68 — 戰鬥測試：名唔好寫死、推進文字要撳 `.battle-bottom`、回合完 = 選單打開
 
-Incident (2026-11-05，背包第 4b 段)：(1) node 測試用 `chainKey: "bulbasaur", level: 30` 建隊，引擎按等級進化成 Venusaur，regex 寫死「Bulbasaur ate its…」全部 FAIL（引擎其實啱）。(2) 瀏覽器自動推進戰鬥文字撳 `#battle-text` 冇反應（`waitTap` 聽 `.battle-bottom`），又等「What will…」先出招，但回合完 `showMainMenu()` 唔會 narrate → loop 以為卡死。
+Incident (2026-11-05，背包第 4b 段)：(1) node 測試用 `chainKey: "bulbasaur", level: 30`（冇 `stage`）建隊，出嚟係 Venusaur，regex 寫死「Bulbasaur ate its…」全部 FAIL（引擎其實啱）。**更正（第 4c 段）**：物種由 `entryCurrentSpecies` 按 `stage` 決定，唔係等級；冇 `stage`（undefined）會跌落「最後一段」fallback。(2) 瀏覽器自動推進戰鬥文字撳 `#battle-text` 冇反應（`waitTap` 聽 `.battle-bottom`），又等「What will…」先出招，但回合完 `showMainMenu()` 唔會 narrate → loop 以為卡死。
 
-- node 測試：用 `chainKey` 建隊時，名要由 `team[i].name` 讀，或者 regex 唔包名；唔好假設未進化。
+- node 測試：用 `chainKey` 建隊一定要寫 `stage`（1 = 第一段），想要邊隻就寫邊段；名由 `team[i].name` 讀，或者 regex 唔包名。
 - 瀏覽器推進對白：`document.querySelector('.battle-bottom').click()`（programmatic click 冇座標，唔會誤撳 RUN）。
 - 判斷「輪到我」：`.battle-bottom.menu-open` + `#battle-action-menu` 顯示，唔好靠文字。
 - 1v1 對手（Youngster 等）隊伍只得 1 隻：測換 Pokémon／後備觸發要揀多隻隊伍嘅對手或者用 node 測試。
+
+## Rule 69 — 由外部 API 抽遊戲資料：唔好靠單一關聯欄位；列出 skip 清單逐條核對
+
+Incident (2026-11-05，背包第 4c 段)：用 PokéAPI `item.held_by_pokemon`／說明文字配 Mega 石 → Mega 形態，Legends Z-A 新 Mega 石（Raichunite X、Feraligite 等 24 粒）呢兩樣都冇，全部被 skip，一開始只得 46 粒；另外有形態 `abilities` 係空 array，script 直接 crash。
+
+- 由「目標實體」反推（例如 `/pokemon?limit=…` 搵晒 `*-mega*` 形態），再用名稱規則配對（同後綴 + 最長共同前綴，平手就 skip），唔好只信一個關聯欄位。
+- script 一定 print 每條 skip 同原因，完成後逐條睇：係真係唔應該有（例如 Rayquaza 冇 Mega 石），定係配對漏咗。
+- 每個欄位都要預咗會空（空 array／null）：有 fallback 就標記（例如 `abilityGuess: true`），冇就 skip 並 print。
+- 新加嘅 overlay 掣（例如 FIGHT 頁 MEGA）要用最長嘅文字截圖睇有冇壓住隔籬內容，有就預留 padding。

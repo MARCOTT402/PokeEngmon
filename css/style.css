@@ -5453,3 +5453,26 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .bag-root.switching .bag-lockov { display: flex; }
 .bag-root.in-battle .bag-colhead span { color: #e03a32; }
 .bag-inbattle { position: absolute; right: 4px; top: -7px; font-size: 8px; font-weight: 900; background: #e03a32; color: #fff; border-radius: 4px; padding: 1px 4px; }
+
+/* =====================================================================
+   背包第 4c 段：Mega 進化 — FIGHT 頁 MEGA 掣 + 進化閃光
+   ===================================================================== */
+.bmp-mega {
+  position: absolute; right: 6px; top: 25%; transform: translateY(-50%);
+  background: none; border: 1.5px solid currentColor; border-radius: 6px; color: inherit; font: inherit;
+  font-size: clamp(9px, 2.6vw, 13px); padding: 1px 6px; cursor: pointer; opacity: .85; letter-spacing: .5px;
+}
+.bmp-mega:hover { opacity: 1; }
+/* MEGA 掣疊喺第 2 招右邊：預留位，唔好壓住招式名 */
+.bmp-moves:has(.bmp-mega) .bmp-move-btn:nth-of-type(2) { padding-right: 64px; }
+.bmp-mega.on {
+  opacity: 1; color: #fff; border-color: transparent;
+  background: linear-gradient(90deg, #ff4f8b, #ffb347, #7cf29a, #5ab0ff, #c58bff);
+  box-shadow: 0 0 8px rgba(255, 255, 255, .6);
+}
+#my-sprite.anim-mega, #foe-sprite.anim-mega { animation: battle-mega-flash .9s ease-out; }
+@keyframes battle-mega-flash {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(3) saturate(0); transform: scale(1.08); }
+  100% { filter: brightness(1); transform: scale(1); }
+}

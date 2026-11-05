@@ -87,12 +87,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from", dest="start", type=int, default=152)
     ap.add_argument("--to", dest="end", type=int, default=649)
+    ap.add_argument("--mega", action="store_true", help="下載 js/mega-data.js 入面所有 Mega 形態（key = <dex>-mega[-x|-y|-z]）")
     args = ap.parse_args()
     os.makedirs(CACHE, exist_ok=True)
 
+    # (index key, PokeRogue 檔名)
+    if args.mega:
+        import re
+        src = open(os.path.join(ROOT, "js", "mega-data.js"), encoding="utf-8").read()
+        keys = sorted(set(re.findall(r'"spriteKey": "([0-9]+-mega(?:-[xyz])?)"', src)))
+        targets = [(k, k) for k in keys]
+    else:
+        targets = [(str(dex), f"{dex}-{FORM[dex]}" if dex in FORM else str(dex)) for dex in range(args.start, args.end + 1)]
+
     jobs = []
-    for dex in range(args.start, args.end + 1):
-        name = f"{dex}-{FORM[dex]}" if dex in FORM else str(dex)
+    for dex, name in targets:
         for side, prefix in SIDES.items():
             jobs.append((RAW + prefix + name + ".json", os.path.join(CACHE, f"{side}-{dex}.json")))
             jobs.append((RAW + prefix + name + ".png", os.path.join(CACHE, f"{side}-{dex}.png")))
@@ -106,7 +115,7 @@ def main():
     index.setdefault("back", {})
 
     written, missing = 0, []
-    for dex in range(args.start, args.end + 1):
+    for dex, _name in targets:
         for side in SIDES:
             jp = os.path.join(CACHE, f"{side}-{dex}.json")
             pp = os.path.join(CACHE, f"{side}-{dex}.png")
