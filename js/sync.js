@@ -213,6 +213,9 @@ window.Sync = (() => {
           }
           st.items = bag;
         }
+        /* 背包第 2 段：我的隊伍／背包設定（雲端 null = 未上過雲 → 保留本機） */
+        if (Array.isArray(acct.my_team)) st.myTeam = acct.my_team.map(String).slice(0, 6);
+        if (acct.bag_prefs && typeof acct.bag_prefs === "object") st.bagPrefs = acct.bag_prefs;
         /* likes（trade 進化條件）：雲端未上過就保留本機 */
         if (acct.trainer_likes != null) {
           st.trainerLikes = Math.max(0, Number(acct.trainer_likes) || 0);
@@ -426,6 +429,7 @@ window.Sync = (() => {
     if (typeof fields.stone_used === "string" && fields.stone_used) body.stone_used = fields.stone_used;
     /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */
     if (typeof fields.is_final === "boolean") body.is_final = fields.is_final;
+    if (typeof fields.favorite === "boolean") body.favorite = fields.favorite;
     /* 自訂配招（1–4 個招式 slug）：非經濟數值，column-level grant 開放直寫 */
     if (Array.isArray(fields.move_loadout) && fields.move_loadout.length) {
       body.move_loadout = fields.move_loadout.slice(0, 4).map(String);
@@ -484,6 +488,20 @@ window.Sync = (() => {
   /* 狀態系統第一期：飽肚值／HP／狀態改由 care RPC 寫（client 冇 update 權），呢個 push 停用 */
   async function pushPet() { return false; }
 
+  /* 背包第 2 段：my_team／bag_prefs（非經濟數值，column-level grant 開放直寫） */
+  async function patchAccount(fields) {
+    const ref = _accountRef();
+    if (!ref.isAuth || !fields) return false;
+    const body = {};
+    if (Array.isArray(fields.my_team)) body.my_team = fields.my_team.slice(0, 6).map(String);
+    if (fields.bag_prefs && typeof fields.bag_prefs === "object") body.bag_prefs = fields.bag_prefs;
+    if (!Object.keys(body).length) return false;
+    try {
+      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, body);
+      return true;
+    } catch (e) { console.warn("[Sync] patchAccount failed:", e.message); return false; }
+  }
+
   async function pushItems(items) {
     const ref = _accountRef();
     if (!ref.isAuth || !items) return false;
@@ -518,6 +536,7 @@ window.Sync = (() => {
     syncClock,
     pushPet,
     pushItems,
+    patchAccount,
     flush: () => _flush(),
     isEnabled: () => !!(cfg() && cfg().anonKey && (window.SupabaseAuth ? SupabaseAuth.isEnabled() : true))
   };

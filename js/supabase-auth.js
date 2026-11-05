@@ -641,6 +641,12 @@ const SupabaseAuth = {
     return this._rpc("use_entry_candy", { entry_id: entryId, count, exp_delta: expDelta });
   },
 
+  /* ---------- RPC：共用 EV Point Unit 分配（背包第 2 段；回傳 {ok, added, evs, points, pool}） ---------- */
+  async allocEvShared(entryId, stat, n) {
+    if (!this.isLoggedIn()) return null;
+    return this._rpc("alloc_ev_shared", { p_entry: entryId, p_stat: stat, p_n: n || 1 });
+  },
+
   /* ---------- RPC：分配 EV（回傳 {evs, ev_points}） ---------- */
   async allocEv(entryId, stat) {
     if (!this.currentUser()) return null;

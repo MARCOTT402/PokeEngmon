@@ -71,6 +71,8 @@ function defaultState() {
     },   // 電子寵物背包（目前只存本機，未上雲）
     trainerLikes: 0,        // 未來 leaderboard likes；≥20 = trade 進化條件
     moveLoadouts: {},       // uid -> [招式 slug ×≤4]：玩家自訂持有招式（pull 重推後還原用）
+    myTeam: [],             // 我的隊伍：entry uid ×≤6（AI／PvP／好友戰共用；雲端 user_account.my_team）
+    bagPrefs: {},           // 背包設定（排序 chip 次序等；雲端 user_account.bag_prefs）
     curveMode: "standard"   // 遺忘曲線模式：standard / junior / teen / adult
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
@@ -511,6 +513,7 @@ function localEntryFromServer(e) {
     ability: (typeof e.ability === "string" && e.ability) ? e.ability : undefined,
     obtainedAt: e.obtained_at
   });
+  out.favorite = e.favorite === true;   /* 我的最愛（心心） */
   /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0
      狀態系統第一期：pet_health = 飽肚值；HP／狀態全部由 server（care RPC）寫 */
   out.pet = (e.pet_health == null && e.hp_permille == null) ? null : {

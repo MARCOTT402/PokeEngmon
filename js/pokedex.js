@@ -465,21 +465,10 @@ const Pokedex = {
         ${abLine}
         <div class="dex-stats">${statCells}</div>
 
-        <div class="dex-ev">
-          <div class="dex-ev-head">
-            <span>EV Points <b class="ev-points">${entry.evPoints || 0}</b></span>
-            <span class="dex-ev-total">EV ${evTotal(entry.evs)} / ${MAX_EV_TOTAL}</span>
-          </div>
-          <div class="dex-ev-tip">Duplicate pulls give 1 EV point. Tap a stat to add +1.</div>
-          <div class="ev-grid">${evButtons}</div>
-        </div>
-
         <div class="dex-moves">
           <div class="dex-moves-title">Moves (${(entry.moves || []).length}/4)</div>
           ${cards}
-          <div class="dex-moves-title dex-moves-sub">Other Moves</div>
-          <div class="dex-moves-tip">Tap an other move, then tap a held move to swap it in.</div>
-          <div class="dex-other-moves">${otherCards}</div>
+          <div class="dex-moves-tip">Change moves and add EVs in the Bag (Battle → Bag).</div>
         </div>
 
         <div class="dex-candy">

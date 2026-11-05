@@ -661,3 +661,11 @@ Incident (2026-11-05，背包 prototype 戰鬥文字框)：自己畫面同對手
 
 - 每個動畫用 `const t = setInterval(...)` 自己清自己；「仲有冇動畫跑緊」用計數器（`typing++`／`typing--`）。
 - 用 `Promise.all` 等幾個動畫時，要測「一長一短」兩段文字，短嗰個先完都唔可以影響長嗰個。
+
+## Rule 65 — 喺有 Rule 60 stopPropagation 嘅 overlay 入面做拖放：pointermove／pointerup 要掛 window capture
+
+Incident (2026-11-05，背包第 2 段)：`#bag-root` 跟 Rule 60 截停 `pointerdown／pointerup／click` 冒泡。拖放模組將 `pointerup` 掛喺 `document` → 永遠收唔到 → 拎起咗放唔低，隊伍冇變；滑鼠拖捲 chip 列都一樣卡住。
+
+- overlay 入面嘅拖放／拖捲／撳住連加：`window.addEventListener("pointermove"|"pointerup"|"pointercancel", h, true)`（capture 階段，喺 overlay 截停之前已經收到）。
+- 唔好掛 `document` bubble；亦唔好為咗拖放拎走 Rule 60 嘅 stopPropagation（會令 sheet 外部點擊 handler 誤關）。
+- 驗收一定要用真滑鼠拖（`left_click_drag`）一次，唔好只 call JS 函數。

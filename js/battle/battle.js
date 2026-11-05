@@ -914,7 +914,13 @@ const BattleUI = (() => {
     }
 
     /* 如果一定要全選（持有數 = 隊伍大小），預設全選（次序 = 排序後次序），照樣可以調位 */
-    if (teamSize >= owned.length) owned.forEach((_, i) => order.push(i));
+    /* 我的隊伍（背包）：預填頭 N 隻（NvN 出排頭 N 隻；Faint 嘅已喺 pool 排除），出戰前照樣可以調整 */
+    const myTeam = (typeof BagUI !== "undefined" && BagUI.getTeam) ? BagUI.getTeam() : (st.myTeam || []);
+    myTeam.forEach(uid => {
+      const i = owned.findIndex(e => e.uid === uid);
+      if (i >= 0 && order.length < teamSize && !order.includes(i)) order.push(i);
+    });
+    if (teamSize >= owned.length) owned.forEach((_, i) => { if (!order.includes(i)) order.push(i); });
     renderGrid();
     document.getElementById("team-select-confirm").onclick = () => {
       if (order.length !== teamSize) { toast(`Pick exactly ${teamSize} Pokémon`); return; }
