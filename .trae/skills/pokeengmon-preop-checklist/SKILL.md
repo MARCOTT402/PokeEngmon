@@ -669,3 +669,10 @@ Incident (2026-11-05，背包第 2 段)：`#bag-root` 跟 Rule 60 截停 `pointe
 - overlay 入面嘅拖放／拖捲／撳住連加：`window.addEventListener("pointermove"|"pointerup"|"pointercancel", h, true)`（capture 階段，喺 overlay 截停之前已經收到）。
 - 唔好掛 `document` bubble；亦唔好為咗拖放拎走 Rule 60 嘅 stopPropagation（會令 sheet 外部點擊 handler 誤關）。
 - 驗收一定要用真滑鼠拖（`left_click_drag`）一次，唔好只 call JS 函數。
+
+## Rule 66 — 「共用池」數值存喺個別 row：刪 row 之前要將佢嗰份搬走
+
+Incident (2026-11-05，背包第 3a 段)：EV Point Unit 係共用池（= 全部 entry 嘅 `ev_points` 加總）。送 Pokémon 返大木博士時刪咗佢嘅 row，佢身上未用嘅 3 點跟住消失（池 17 → 15，應該係 18）。
+
+- 任何「加總先係真數」嘅資源（共用 EV 池等），刪除／合併 row 之前，先將嗰 row 嘅份額轉去另一個 row（server RPC 同 client 本地兩邊都要做）。
+- 測試要對「池總數」：刪除前總數 − 退還規則 = 刪除後總數，唔好只睇單一 row。

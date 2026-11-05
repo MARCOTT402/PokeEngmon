@@ -421,28 +421,10 @@ const App = {
             <img src="assets/items/premium.png" alt="Premium Food"><span>Premium +50</span>
             <b class="pc-count" data-count="premium">0</b>
           </div>
-          <div class="pc-item" data-kind="revive">
-            <img src="assets/items/revive.png" alt="Revival"><span>Revival</span>
-            <b class="pc-count" data-count="revive">0</b>
-          </div>
-        </div>
-        <div class="pc-items meds" id="pc-meds">
-          ${Care.MED_KINDS.map(kind => `
-          <div class="pc-item med" data-kind="${kind}" title="${Care.MED_INFO[kind].effect}">
-            <img src="${Care.ITEM_SPRITE(Care.MED_INFO[kind].sprite)}" alt="${Care.MED_INFO[kind].name}"><span>${Care.MED_INFO[kind].name}</span>
-            <b class="pc-count" data-count="${kind}">0</b>
-          </div>`).join("")}
-        </div>
-        <div class="pc-meds-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon.</div>
-        <div class="pc-items stones" id="pc-stones">
-          ${STONE_KINDS.map(kind => `
-          <div class="pc-item stone" data-kind="${kind}">
-            <span class="stone-icon">${STONE_ICONS[kind]}</span><span>${STONE_LABELS[kind]}</span>
-            <b class="pc-count" data-count="${kind}">0</b>
-          </div>`).join("")}
         </div>
         <div class="pc-evo-note" id="pc-evo-note"></div>
-        <div class="pc-tip">Drag an item onto your partner — or tap an item, then tap the stage.</div>
+        <div class="pc-tip">Drag food onto your partner — or tap it, then tap the stage.</div>
+        <div class="pc-bag-note">Medicine, Revival and evolution stones are in the <b>Bag</b>. <button type="button" class="pc-open-bag" id="pc-open-bag">Open Bag ›</button></div>
 
         <div class="pc-rosterhead"><span>Your Pokémon</span><span>Tap to bring it to the stage</span></div>
         <div class="pc-sortbar">
@@ -454,6 +436,8 @@ const App = {
 
     const modal = document.getElementById("modal-root");
     modal.querySelector(".pc-close").onclick = () => this.closeModal();
+    const openBag = modal.querySelector("#pc-open-bag");
+    if (openBag) openBag.onclick = () => { this.closeModal(); if (typeof BagUI !== "undefined") BagUI.open({ from: "home" }); };
 
     /* 精靈列表排序（同圖鑑共用 DEXSORT 定義） */
     DEXSORT.bindControls(
@@ -731,7 +715,7 @@ const App = {
         const likes = loadState().trainerLikes || 0;
         txt = `Needs ${TRADE_LIKES_REQUIRED} likes to evolve (${likes}/${TRADE_LIKES_REQUIRED})`;
       } else if (info.target && info.stone) {
-        txt = `Use a ${STONE_LABELS[info.stone]} to evolve.`;
+        txt = `Give it a ${STONE_LABELS[info.stone]} in the Bag to evolve.`;
       } else if (info.target) {
         txt = (entry.level || 1) >= (info.needLevel || 0)
           ? "Ready to evolve!"

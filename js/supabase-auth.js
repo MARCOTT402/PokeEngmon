@@ -641,6 +641,12 @@ const SupabaseAuth = {
     return this._rpc("use_entry_candy", { entry_id: entryId, count, exp_delta: expDelta });
   },
 
+  /* ---------- RPC：送 Pokémon 返大木博士（回傳 {ok, refund, recipient, held, dex_caught}） ---------- */
+  async releaseToOak(entryId) {
+    if (!this.isLoggedIn()) return null;
+    return this._rpc("release_to_oak", { p_entry: entryId });
+  },
+
   /* ---------- RPC：共用 EV Point Unit 分配（背包第 2 段；回傳 {ok, added, evs, points, pool}） ---------- */
   async allocEvShared(entryId, stat, n) {
     if (!this.isLoggedIn()) return null;

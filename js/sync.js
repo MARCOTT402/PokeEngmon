@@ -216,6 +216,7 @@ window.Sync = (() => {
         /* 背包第 2 段：我的隊伍／背包設定（雲端 null = 未上過雲 → 保留本機） */
         if (Array.isArray(acct.my_team)) st.myTeam = acct.my_team.map(String).slice(0, 6);
         if (acct.bag_prefs && typeof acct.bag_prefs === "object") st.bagPrefs = acct.bag_prefs;
+        if (Array.isArray(acct.dex_caught)) st.dexCaught = acct.dex_caught.map(Number).filter(n => n > 0);
         /* likes（trade 進化條件）：雲端未上過就保留本機 */
         if (acct.trainer_likes != null) {
           st.trainerLikes = Math.max(0, Number(acct.trainer_likes) || 0);
@@ -430,6 +431,8 @@ window.Sync = (() => {
     /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */
     if (typeof fields.is_final === "boolean") body.is_final = fields.is_final;
     if (typeof fields.favorite === "boolean") body.favorite = fields.favorite;
+    /* 攜帶道具：null = 拆除 */
+    if ("held_item" in fields) body.held_item = (typeof fields.held_item === "string" && fields.held_item) ? fields.held_item : null;
     /* 自訂配招（1–4 個招式 slug）：非經濟數值，column-level grant 開放直寫 */
     if (Array.isArray(fields.move_loadout) && fields.move_loadout.length) {
       body.move_loadout = fields.move_loadout.slice(0, 4).map(String);

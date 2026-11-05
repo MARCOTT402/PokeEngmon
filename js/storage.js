@@ -73,6 +73,7 @@ function defaultState() {
     moveLoadouts: {},       // uid -> [招式 slug ×≤4]：玩家自訂持有招式（pull 重推後還原用）
     myTeam: [],             // 我的隊伍：entry uid ×≤6（AI／PvP／好友戰共用；雲端 user_account.my_team）
     bagPrefs: {},           // 背包設定（排序 chip 次序等；雲端 user_account.bag_prefs）
+    dexCaught: [],          // 曾經捕捉過嘅圖鑑號（送走都保留「已捕捉」；雲端 user_account.dex_caught）
     curveMode: "standard"   // 遺忘曲線模式：standard / junior / teen / adult
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
@@ -190,6 +191,8 @@ const MAX_GEN = 5;
 function isGenComplete(n) {
   const st = loadState();
   const owned = new Set(st.entries.map(e => e.chainKey));
+  /* 送咗返大木博士嘅都當已捕捉（圖鑑保留） */
+  (st.dexCaught || []).forEach(id => { const sp = (typeof SPECIES !== "undefined") ? SPECIES[Number(id)] : null; if (sp && sp.chainKey) owned.add(sp.chainKey); });
   return chainsOfGen(n).every(c => owned.has(c.key));
 }
 
@@ -514,6 +517,7 @@ function localEntryFromServer(e) {
     obtainedAt: e.obtained_at
   });
   out.favorite = e.favorite === true;   /* 我的最愛（心心） */
+  out.heldItem = (typeof e.held_item === "string" && e.held_item) ? e.held_item : null;   /* 攜帶道具 */
   /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0
      狀態系統第一期：pet_health = 飽肚值；HP／狀態全部由 server（care RPC）寫 */
   out.pet = (e.pet_health == null && e.hp_permille == null) ? null : {
@@ -701,7 +705,7 @@ function getActiveEntry() {
 /* 已收集物種數（所有 entry 嘅 ownedSpecies 聯集） */
 function collectedCount() {
   const st = loadState();
-  const set = new Set();
+  const set = new Set((st.dexCaught || []).map(Number));   /* 送走嘅都保留「已捕捉」 */
   st.entries.forEach(e => {
     if (!Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);
     (e.ownedSpecies || []).forEach(id => set.add(id));

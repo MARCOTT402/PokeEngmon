@@ -132,7 +132,7 @@ const Pokedex = {
 
   /* 擁有集合 + 每個物種最高等級（排序用） */
   _ownedInfo(st) {
-    const owned = new Set();
+    const owned = new Set((st.dexCaught || []).map(Number));   /* 送咗返大木博士嘅都保留「已捕捉」 */
     const levels = new Map();
     st.entries.forEach(e => {
       if (!Array.isArray(e.ownedSpecies)) ensureEntryPokemonData(e);

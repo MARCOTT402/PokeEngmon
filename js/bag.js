@@ -13,7 +13,7 @@
 const BagUI = (() => {
   const W = 956, H = 440;
   const TABS = ["pokemon", "items", "held"];
-  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false };
+  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null };
   let root = null, rotateEl = null;
   const $ = sel => root.querySelector(sel);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -28,15 +28,15 @@ const BagUI = (() => {
       out.push({ id: k, cat: "medicine", name: m.name, icon: Care.ITEM_SPRITE(m.sprite), n: count(k), desc: m.effect });
     });
     out.push({ id: "revive", cat: "medicine", name: "Revival", icon: "assets/items/revive.png", n: count("revive"), desc: "Revives a fainted Pokémon with full HP and full fullness, and clears every status." });
-    out.push({ id: "food", cat: "food", name: "Food", icon: "assets/items/food.png", n: count("food"), desc: "Fullness +25%. Will become berries in a later update." });
-    out.push({ id: "premium", cat: "food", name: "Premium Food", icon: "assets/items/premium.png", n: count("premium"), desc: "Fullness +50%. Will become berries in a later update." });
+    out.push({ id: "food", cat: "food", name: "Food", icon: "assets/items/food.png", n: count("food"), desc: "Fullness +25%. Can't be eaten while paralyzed, asleep or frozen. Feeding when already full makes it throw up." });
+    out.push({ id: "premium", cat: "food", name: "Premium Food", icon: "assets/items/premium.png", n: count("premium"), desc: "Fullness +50%. Can't be eaten while paralyzed, asleep or frozen. Feeding when already full makes it throw up." });
     return out;
   }
   function heldList() {
     const count = k => (window.Pet ? Pet.countOf(k) : 0) || 0;
     return (typeof STONE_KINDS !== "undefined" ? STONE_KINDS : []).map(k => ({
-      id: k, cat: "stones", name: STONE_LABELS[k], emoji: STONE_ICONS[k], n: count(k),
-      desc: "Evolves a matching Pokémon (the stone is used up)."
+      id: k, cat: "stones", name: STONE_LABELS[k], icon: (window.Care ? Care.ITEM_SPRITE(k + "-stone") : null), emoji: STONE_ICONS[k], n: count(k),
+      desc: "Give it to a Pokémon. If that Pokémon can evolve with it, it evolves right away and the stone is used up; otherwise it just holds the stone."
     }));
   }
 
@@ -77,12 +77,14 @@ const BagUI = (() => {
                 <button type="button" class="bag-tab" data-tab="held">Held items</button>
               </div>
               <div class="bag-chips" id="bag-chips"></div>
+              <div class="bag-banner" id="bag-banner"><span id="bag-banner-t"></span><button type="button" id="bag-banner-x">Cancel</button></div>
               <div class="bag-gridwrap" id="bag-gridwrap"><div class="bag-grid" id="bag-grid"></div></div>
               <div class="bag-dropzone" id="bag-dropzone">Drop here to remove from team</div>
             </section>
             <aside class="bag-detail" id="bag-detail"></aside>
             <div class="bag-me" id="bag-me"></div>
             <div class="bag-sortov" id="bag-sortov"></div>
+            <div class="bag-sortov" id="bag-oakov"></div>
           </div>
           <div class="bag-chin"><button type="button" class="bag-ball bag-home" id="bag-home" aria-label="Back"></button><span class="bag-home-lbl" id="bag-home-lbl">HOME</span></div>
         </div>
@@ -109,6 +111,7 @@ const BagUI = (() => {
     $("#bag-bezel").addEventListener("click", () => App.toast("Locked while the Bag is open"));
     bindSwipe();
     bindChipScroll();
+    $("#bag-banner-x").addEventListener("click", cancelTarget);
     window.addEventListener("resize", fit);
     const mq = window.matchMedia("(orientation: landscape)");
     (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(() => { fit(); autoHideRotate(); });
@@ -166,7 +169,7 @@ const BagUI = (() => {
     if (isPortrait()) showRotate("landscape");
   }
   function close() {
-    flushEv();
+    flushEv(); cancelTarget();
     if (ME.uid) { $("#bag-me").classList.remove("show"); ME.uid = null; }
     const finish = () => {
       root.classList.remove("show");
@@ -371,6 +374,7 @@ const BagUI = (() => {
           <span class="bag-pic"><img class="bag-spr" src="${animatedURL(c[0])}" alt="" loading="lazy" draggable="false">
             ${ti >= 0 ? `<span class="bag-teamno">${ti + 1}</span>` : e.uid === st.activeUid ? `<span class="bag-tag">PARTNER</span>` : ""}
             ${key ? `<img class="bag-st" src="assets/battle/ui/status-${Care.STATUS_INFO[key].icon}.png" alt="">` : faint ? `<img class="bag-st" src="assets/battle/ui/status-fnt.png" alt="">` : ""}
+            ${e.heldItem ? `<img class="bag-held" src="${heldSprite(e.heldItem)}" alt="">` : ""}
             <button type="button" class="bag-heart ${e.favorite ? "on" : ""}" data-fav="1" aria-label="Favorite">${HEART}</button></span>
           <span class="bag-cap">${caption(e)}</span>
         </div>`;
@@ -380,6 +384,7 @@ const BagUI = (() => {
         el.addEventListener("click", ev => {
           if (Drag.justDropped) return;
           if (ev.target.closest("[data-fav]")) { toggleFav(uid, el); return; }
+          if (S.target) { applyItem(S.target, uid); return; }
           const now = Date.now();
           if (lastTap.uid === uid && now - lastTap.t < 320) { toggleFav(uid, el, true); lastTap.uid = null; return; }
           lastTap.uid = uid; lastTap.t = now;
@@ -394,7 +399,10 @@ const BagUI = (() => {
           <span class="bag-pic">${it.icon ? `<img class="bag-spr" src="${it.icon}" alt="" draggable="false">` : `<span class="bag-emoji">${it.emoji}</span>`}<span class="bag-cnt">×${it.n}</span></span>
           <span class="bag-cap"><b>${esc(it.name)}</b></span>
         </button>`).join("") + (S.tab === "held" ? `<div class="bag-empty small">Mega stones and other held items will appear here later.</div>` : "");
-      g.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () => select({ kind: S.tab, id: el.dataset.id })));
+      g.querySelectorAll("[data-id]").forEach(el => {
+        el.addEventListener("click", () => { if (!Drag.justDropped) { cancelTarget(); select({ kind: S.tab, id: el.dataset.id }); } });
+        Drag.bind(el, () => { const it = itemInfo(el.dataset.id); return it && it.n > 0 ? { kind: "item", id: it.id, img: it.icon || "" , label: it.icon ? null : it.name } : null; });
+      });
     }
     restore();
     if (anim) { g.classList.remove("in-l", "in-r", "in-f"); void g.offsetWidth; g.classList.add(anim); }
@@ -429,6 +437,7 @@ const BagUI = (() => {
       const cls = h.faint ? "faint" : h.pct < 20 ? "low" : h.pct <= 50 ? "mid" : "";
       return `<div class="bag-slot fill ${h.faint ? "fnt" : ""} ${S.sel && S.sel.uid === uid ? "sel" : ""}" data-uid="${esc(uid)}" data-slot="${i}" data-drop="slot">
         <img class="bag-spr" src="${animatedURL(c[0])}" alt="" draggable="false">
+        ${e.heldItem ? `<img class="bag-held slot" src="${heldSprite(e.heldItem)}" alt="">` : ""}
         <div class="bag-slot-info"><div class="nm">${esc(c[1])}</div>
           <div class="lv">Lv.${e.level || 1} ${key ? `<img src="assets/battle/ui/status-${Care.STATUS_INFO[key].icon}.png" alt="">` : ""}</div>
           <div class="bag-minihp ${cls}"><i style="width:${h.pct}%"></i></div></div>
@@ -439,7 +448,7 @@ const BagUI = (() => {
     box.innerHTML = html;
     restore();
     box.querySelectorAll(".bag-slot[data-uid]").forEach(el => {
-      el.addEventListener("click", () => { if (!Drag.justDropped) select({ kind: "pokemon", uid: el.dataset.uid }); });
+      el.addEventListener("click", () => { if (Drag.justDropped) return; if (S.target) { applyItem(S.target, el.dataset.uid); return; } select({ kind: "pokemon", uid: el.dataset.uid }); });
       Drag.bind(el, () => ({ kind: "teamslot", uid: el.dataset.uid, img: animatedURL(entryCurrentSpecies(entryOf(el.dataset.uid))[0]) }));
     });
   }
@@ -468,7 +477,7 @@ const BagUI = (() => {
       root.querySelectorAll("[data-drop]").forEach(s => s.classList.remove("drop-ok", "drop-hot"));
       root.classList.toggle("removing", on && k === "teamslot");
       if (!on) return;
-      const sel = k === "move" ? "[data-drop=mslot]" : "[data-drop=slot]";
+      const sel = k === "move" ? "[data-drop=mslot]" : k === "item" ? "[data-drop=slot][data-uid]" : "[data-drop=slot]";
       root.querySelectorAll(sel).forEach(s => s.classList.add("drop-ok"));
     }
     function targetAt(x, y) {
@@ -476,6 +485,7 @@ const BagUI = (() => {
       const k = press.payload.kind;
       if (k === "move") return el.closest("[data-drop=mslot]");
       if (k === "teamslot" && el.closest(".bag-mid")) return $("#bag-dropzone");
+      if (k === "item") return el.closest("[data-drop=slot][data-uid]");
       return el.closest("[data-drop=slot]");
     }
     function move(x, y) {
@@ -518,6 +528,7 @@ const BagUI = (() => {
     document.addEventListener("contextmenu", e => { if (press) e.preventDefault(); });
     function onDrop(pl, t) {
       if (pl.kind === "move") { ME.slot = Number(t.dataset.ms); learnMove(pl.name, ME.slot); return; }
+      if (pl.kind === "item") { applyItem(pl.id, t.dataset.uid); return; }
       const team = getTeam();
       const name = uid => entryCurrentSpecies(entryOf(uid))[1];
       if (pl.kind === "pokemon") {
@@ -557,7 +568,11 @@ const BagUI = (() => {
         <div class="bag-item-big"><span class="bag-ib">${it.icon ? `<img src="${it.icon}" alt="">` : `<span class="bag-emoji big">${it.emoji}</span>`}</span>
           <div><div class="bag-dname">${esc(it.name)}</div><div class="bag-dsub">×${it.n} in bag</div></div></div>
         <div class="bag-desc">${esc(it.desc)}</div>
-        <div class="bag-note">Using items from the Bag arrives in the next update — for now use Partner Care.</div>`;
+        ${it.cat === "medicine" ? `<div class="bag-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon. Revival doesn't count.</div>` : ""}
+        ${it.cat === "stones" ? `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div><div class="bag-kv"><span>Held in battle</span><b>No effect (same as the original games)</b></div>` : ""}
+        <div class="bag-note">Tip: drag it onto a Pokémon in My Team, or tap ${it.cat === "stones" ? "Give" : it.cat === "food" ? "Feed" : "Use"} then tap a Pokémon.</div>
+        <div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 ? "disabled" : ""}>${it.cat === "stones" ? "Give" : it.cat === "food" ? "Feed" : "Use"}</button></div>`;
+      $("#bag-btn-use").addEventListener("click", () => startTarget(it.id));
       return;
     }
     const e = entryOf(S.sel.uid);
@@ -597,11 +612,15 @@ const BagUI = (() => {
       <div class="bag-moves">${(e.moves || []).map(slug => moveRowHTML(slug)).join("") || `<div class="bag-note">No moves yet</div>`}</div>
       <div class="bag-kv"><span>Nature</span><b>${esc(e.nature || "—")}</b></div>
       <div class="bag-kv"><span>Ability</span><b>${esc(typeof abilityName === "function" && e.ability ? abilityName(e.ability) : "—")}</b></div>
+      <div class="bag-kv"><span>Held item</span>${e.heldItem ? `<b class="bag-heldrow"><img src="${heldSprite(e.heldItem)}" alt="">${esc(heldName(e.heldItem))} <button type="button" id="bag-unheld">Remove</button></b>` : "<b>None</b>"}</div>
       <div class="bag-actions">
         <button type="button" class="bag-btn alt" id="bag-btn-moves">Moves</button>
         <button type="button" class="bag-btn alt ${S.evPick ? "on" : ""}" id="bag-btn-ev" ${pool <= 0 && !S.evPick ? "disabled" : ""}>${S.evPick ? "Done" : `EV ×${pool}`}</button>
         <button type="button" class="bag-btn" id="bag-btn-team">${inTeam ? "Leave team" : "Join team"}</button>
+        <button type="button" class="bag-btn alt bag-oakbtn" id="bag-btn-oak" title="Send to Prof. Oak" aria-label="Send to Prof. Oak">⇪</button>
       </div>`;
+    const unh = $("#bag-unheld"); if (unh) unh.addEventListener("click", () => takeHeld(e.uid));
+    $("#bag-btn-oak").addEventListener("click", () => openOak(e.uid));
     $("#bag-dheart").addEventListener("click", () => toggleFav(e.uid, root.querySelector(`#bag-grid [data-uid="${e.uid}"]`)));
     $("#bag-btn-moves").addEventListener("click", () => { flushEv(); S.evPick = false; openMoveEditor(e.uid); });
     $("#bag-btn-ev").addEventListener("click", () => { if (S.evPick) flushEv(); S.evPick = !S.evPick; evPending.length = 0; renderDetail(); });
@@ -802,6 +821,162 @@ const BagUI = (() => {
   function meSteps() {
     const a = $("#me-st2"), b = $("#me-st3"); if (!a) return;
     a.classList.toggle("on", !ME.pick); b.classList.toggle("on", !!ME.pick);
+  }
+
+  /* =====================================================================
+     第 3a 段：用道具・攜帶進化石・送回大木博士
+     ===================================================================== */
+  const heldSprite = k => (window.Care ? Care.ITEM_SPRITE((typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
+  const heldName = k => (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
+  const itemInfo = id => itemList().concat(heldList()).find(x => x.id === id);
+  function verbOf(it) { return it.cat === "stones" ? "Give" : it.cat === "food" ? "Feed" : "Use"; }
+
+  /* 用道具模式：撳 Use → 跳去 Pokémon tab → 撳目標（或者撳左欄隊伍） */
+  function startTarget(id) {
+    const it = itemInfo(id); if (!it || it.n <= 0) return;
+    S.target = id;
+    if (S.tab !== "pokemon") { S.tab = "pokemon"; renderTabInd(); renderChips(); renderGrid("in-r"); }
+    $("#bag-banner-t").textContent = `${verbOf(it)} ${it.name}: tap a Pokémon`;
+    $("#bag-banner").classList.add("show");
+    root.classList.add("targeting");
+  }
+  function cancelTarget() {
+    S.target = null;
+    if (!root) return;
+    $("#bag-banner").classList.remove("show");
+    root.classList.remove("targeting");
+  }
+  function refreshAll() { renderTeam(); renderGrid(); renderDetail(true); if (window.App && App.renderHome) App.renderHome(); }
+
+  async function applyItem(id, uid) {
+    cancelTarget();
+    const e = entryOf(uid); if (!e) return;
+    if (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(id)) { giveStone(id, uid); return; }
+    if (applyItem.busy) return;
+    applyItem.busy = true;
+    const name = entryCurrentSpecies(e)[1];
+    const it = itemInfo(id) || { name: id };
+    const out = (id === "food" || id === "premium") ? await Care.feed(e, id) : await Care.use(e, id);
+    applyItem.busy = false;
+    if (out && out.ok) toast(Care.eventText(out.event, name, it.name));
+    else toast(Care.REASON_TEXT[out && out.reason] || "Can't use that now");
+    buzz();
+    S.sel = { kind: "pokemon", uid };
+    refreshAll();
+  }
+
+  /* 進化石：啱條件即刻進化（石用完）；唔啱就攜帶 */
+  function giveStone(stone, uid) {
+    const e = entryOf(uid); if (!e) return;
+    const name = entryCurrentSpecies(e)[1];
+    const chk = canStoneEvolve(e, stone);
+    if (chk.ok) {
+      const res = Pet.useItem(stone, e);
+      if (!res.ok) { toast(res.msg); return; }
+      if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+        if (res.branch != null) Sync.patchEntry(e.uid, { branch: res.branch });
+        Sync.patchEntry(e.uid, { stone_used: stone });
+        if (Sync.pushItems) Sync.pushItems(Pet.items());
+      }
+      /* 進化動畫：暫時收埋背包，播完再開返 */
+      root.classList.remove("show");
+      const reopen = () => { root.classList.add("show"); S.sel = { kind: "pokemon", uid: e.uid }; refreshAll(); };
+      if (window.App && App.showEvolveModal) App.showEvolveModal(res.evolvedTo, reopen, res.evolvedFrom);
+      else reopen();
+      return;
+    }
+    const st = loadState(); const x = st.entries.find(y => y.uid === uid);
+    const prev = x.heldItem;
+    x.heldItem = stone;
+    saveState();
+    Pet.addItem(stone, -1);
+    if (prev) Pet.addItem(prev, 1);
+    if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+      Sync.patchEntry(uid, { held_item: stone });
+      if (Sync.pushItems) Sync.pushItems(Pet.items());
+    }
+    buzz();
+    toast(`${name} is now holding the ${heldName(stone)}${prev ? ` (${heldName(prev)} went back to the bag)` : ""}`);
+    S.sel = { kind: "pokemon", uid };
+    refreshAll();
+  }
+  function takeHeld(uid) {
+    const st = loadState(); const x = st.entries.find(y => y.uid === uid);
+    if (!x || !x.heldItem) return;
+    const k = x.heldItem; x.heldItem = null; saveState();
+    Pet.addItem(k, 1);
+    if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
+      Sync.patchEntry(uid, { held_item: null });
+      if (Sync.pushItems) Sync.pushItems(Pet.items());
+    }
+    toast(`Took the ${heldName(k)} back`);
+    refreshAll();
+  }
+
+  /* 送回大木博士：退還佢身上用咗嘅 EV + 額外 1 個 EV Point Unit；攜帶道具退返；圖鑑保留。撳住 1 秒確認 */
+  function openOak(uid) {
+    const e = entryOf(uid); if (!e) return;
+    const c = entryCurrentSpecies(e); const st = loadState();
+    const evUsed = STAT_KEYS.reduce((a, k) => a + ((e.evs || {})[k] || 0), 0);
+    const block = st.activeUid === uid ? "This is your Partner — pick another Partner in Partner Care first."
+      : st.entries.length <= 1 ? "You can't send away your last Pokémon." : "";
+    const ov = $("#bag-oakov");
+    ov.innerHTML = `<div class="bag-modal">
+      <div class="bag-oakhead"><img src="${animatedURL(c[0])}" alt=""><div><b>Send ${esc(c[1])} to Prof. Oak?</b>
+        <div class="bag-dsub">Lv.${e.level || 1} · No.${String(c[0]).padStart(3, "0")}${getTeam().includes(uid) ? " · leaves your team" : ""}</div></div></div>
+      <div class="bag-kv"><span>EV Point Units used on it</span><b>${evUsed}</b></div>
+      <div class="bag-kv"><span>Thank-you bonus</span><b>+1</b></div>
+      <div class="bag-kv total"><span>You get back</span><b>${evUsed + 1} EV Point Units</b></div>
+      ${e.heldItem ? `<div class="bag-kv"><span>Held item returns to the bag</span><b>${esc(heldName(e.heldItem))}</b></div>` : ""}
+      <div class="bag-kv"><span>Pokédex</span><b>Stays caught</b></div>
+      ${block ? `<div class="bag-note warn">${block}</div>` : `<div class="bag-note">This can't be undone.</div>`}
+      <div class="bag-modal-a"><button type="button" class="bag-btn alt" id="bag-oak-cancel">Cancel</button>
+        <button type="button" class="bag-btn hold" id="bag-oak-go" ${block ? "disabled" : ""}><span class="fill"></span><span class="t">Hold to send</span></button></div></div>`;
+    ov.classList.add("show");
+    ov.onclick = ev => { if (ev.target === ov) ov.classList.remove("show"); };
+    $("#bag-oak-cancel").addEventListener("click", () => ov.classList.remove("show"));
+    if (block) return;
+    const go = $("#bag-oak-go"); let t = null;
+    const stop = () => { go.classList.remove("holding"); clearTimeout(t); };
+    go.addEventListener("pointerdown", () => { go.classList.add("holding"); t = setTimeout(() => { stop(); sendToOak(uid); }, 1000); });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(x => go.addEventListener(x, stop));
+  }
+  async function sendToOak(uid) {
+    $("#bag-oakov").classList.remove("show");
+    const e = entryOf(uid); if (!e) return;
+    const name = entryCurrentSpecies(e)[1];
+    const evUsed = STAT_KEYS.reduce((a, k) => a + ((e.evs || {})[k] || 0), 0);
+    let res = null;
+    if (online() && SupabaseAuth.releaseToOak) {
+      res = await SupabaseAuth.releaseToOak(uid);
+      if (!res || !res.ok) {
+        toast({ partner: "You can't send away your Partner", last: "You can't send away your last Pokémon", not_found: "Pokémon not found" }[res && res.reason] || "Couldn't reach Prof. Oak — try again");
+        return;
+      }
+    }
+    const st = loadState();
+    const idx = st.entries.findIndex(x => x.uid === uid); if (idx < 0) return;
+    const ent = st.entries[idx];
+    const others = st.entries.filter(x => x.uid !== uid);
+    const recipient = (res && res.recipient) || (st.activeUid && st.activeUid !== uid ? st.activeUid : others[0].uid);
+    const refund = res ? Number(res.refund) : evUsed + 1;
+    /* 佢身上未用嘅點屬於共用池 → 一齊搬去收件 entry（同 release_to_oak 一致） */
+    const kept = Math.max(0, ent.evPoints || 0);
+    const rec = st.entries.find(x => x.uid === recipient); if (rec) rec.evPoints = (rec.evPoints || 0) + refund + kept;
+    const held = ent.heldItem;
+    const caught = new Set((st.dexCaught || []).map(Number));
+    (res && Array.isArray(res.dex_caught) ? res.dex_caught : (ent.ownedSpecies || [])).forEach(id => caught.add(Number(id)));
+    st.dexCaught = [...caught];
+    st.entries.splice(idx, 1);
+    st.myTeam = (st.myTeam || []).filter(u => u !== uid);
+    if (st.moveLoadouts) delete st.moveLoadouts[uid];
+    saveState();
+    if (held) { Pet.addItem(held, 1); if (window.Sync && Sync.pushItems && online()) { /* server 已退石；本地同步數量 */ } }
+    if (window.Sync && Sync.patchAccount && online()) Sync.patchAccount({ my_team: st.myTeam });
+    buzz();
+    const cell = root.querySelector(`#bag-grid [data-uid="${uid}"]`);
+    const done = () => { S.sel = null; refreshAll(); toast(`${name} went to Prof. Oak — you got ${refund} EV Point Unit${refund > 1 ? "s" : ""}`); };
+    if (cell) { cell.classList.add("bye"); setTimeout(done, 420); } else done();
   }
 
   /* ---------- 自訂排序 chip 次序 ---------- */
