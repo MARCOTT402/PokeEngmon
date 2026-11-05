@@ -239,6 +239,27 @@ const SupabaseAuth = {
     }
   },
 
+  /* ---------- 重寄 sign up confirmation email ----------
+     GoTrue POST /auth/v1/resend { type: "signup", email }；redirect_to 用 query param（同 supabase-js 一致） */
+  async resendSignup(email) {
+    const url = `${this.URL}/auth/v1/resend?redirect_to=${encodeURIComponent(this._cleanURL())}`;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "signup", email })
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error_description || d.msg || d.error || "Failed to resend email");
+      }
+      return { ok: true };
+    } catch (e) {
+      console.warn("[Auth] resendSignup failed:", e.message);
+      return { ok: false, error: e.message };
+    }
+  },
+
   /* ---------- 已登入帳戶連接 Google identity（Manual Linking） ----------
      條件：Supabase Dashboard 要開 Enable Manual Linking。
      如果 Manual Linking 未開，endpoint 回 404，呢個函式會 return { error: "manual_linking_disabled" }

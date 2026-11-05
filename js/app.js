@@ -2169,120 +2169,552 @@ const App = {
     });
   },
 
+  /* ================= Auth UI v2（v1.59：單一卡片 + Create account / Sign in tab） =================
+     - Google 掣喺兩個 tab 都有，按 tab 轉名（Sign up / Sign in with Google）—— Rule 55 / Rule 73
+     - isGate=true → 首次進入嘅強制登入 gate：唔俾點外面、Esc 關，亦冇 ✕（Rule 51）
+     - 所有 email/password input 用正確 autocomplete，俾 iOS Keychain／Password Manager 自動填
+     - input 一律 16px 字，防 iOS focus 自動 zoom */
+  _authLast() {
+    try { return JSON.parse(localStorage.getItem("pe_auth_last") || "null") || {}; } catch (e) { return {}; }
+  },
+  _authRemember(method, email) {
+    try {
+      const prev = this._authLast();
+      localStorage.setItem("pe_auth_last", JSON.stringify({ method, email: email || prev.email || "" }));
+    } catch (e) {}
+  },
+  /* 只有滑鼠／觸控板裝置先 autofocus；手機一開就彈鍵盤會遮住半張卡 */
+  _authFinePointer() {
+    try { return window.matchMedia("(hover: hover) and (pointer: fine)").matches; } catch (e) { return false; }
+  },
+  _authIcon(name) {
+    if (name === "google") return `<svg class="au-gicon" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.1l6.6 4.8C14.7 15 19 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 16.3 4.5 9.6 8.8 6.3 14.1z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.6-1.9 13-5l-6-4.8c-2.1 1.4-4.8 2.3-7.9 2.3-5.2 0-9.7-3.1-11.3-7.4l-6.5 5C9.3 39.2 16.1 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6 4.8C42 33.9 43.5 29.2 43.5 24c0-1.2-.1-2.4-.4-3.5z"/></svg>`;
+    if (name === "eye") return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    if (name === "eyeOff") return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`;
+    if (name === "mail") return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`;
+    return "";
+  },
+  _authSpinner(label) { return `<span class="au-spin" aria-hidden="true"></span><span>${label}</span>`; },
+  _authCloseBtn(isGate) {
+    return isGate ? "" : `<button type="button" class="au-iconbtn au-x" data-act="close" aria-label="Close">✕</button>`;
+  },
+
+  /* GoTrue 原始錯誤 → 用戶睇得明嘅文案（field = 要標紅邊一格） */
+  _authError(raw) {
+    const m = String(raw || "");
+    if (/already (been )?registered|already exists/i.test(m)) return { code: "taken", field: "email", msg: "This email already has an account." };
+    if (/invalid login credentials|invalid grant/i.test(m)) return { code: "creds", field: "pass", msg: "Incorrect email or password." };
+    if (/not confirmed/i.test(m)) return { code: "unconfirmed", msg: "Please confirm your email first — check your inbox for the activation link." };
+    if (/rate limit|too many|security purposes/i.test(m)) return { code: "rate", msg: "Too many attempts. Please wait a minute and try again." };
+    if (/password/i.test(m) && /(should|weak|least|characters)/i.test(m)) return { code: "weak", field: "pass", msg: m };
+    if (/failed to fetch|network|load failed/i.test(m)) return { code: "net", msg: "Can't reach the server. Check your connection and try again." };
+    return { code: "other", msg: m || "Something went wrong. Please try again." };
+  },
+
+  _authFieldHTML(o) {
+    const pw = o.type === "password";
+    return `
+      <div class="au-field${pw ? " has-eye" : ""}" data-f="${o.key}">
+        <div class="au-lab"><label for="${o.id}">${o.label}</label>${o.aside || ""}</div>
+        <div class="au-wrap">
+          <input id="${o.id}" class="au-input" type="${o.type || "text"}" name="${o.name}" autocomplete="${o.ac}" ${o.attrs || ""}
+            placeholder="${o.ph || ""}" value="${escapeHTML(o.value || "")}" aria-describedby="${o.id}-m">
+          ${pw ? `<button type="button" class="au-eye" data-act="eye" aria-label="Show password" aria-pressed="false">${this._authIcon("eye")}</button>` : ""}
+        </div>
+        ${o.meter ? `<div class="au-meter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>` : ""}
+        <div class="au-msg${o.hint ? " hint" : ""}" id="${o.id}-m" data-hint="${escapeHTML(o.hint || "")}">${o.hint || ""}</div>
+      </div>`;
+  },
+
+  /* 表單 helper：inline 驗證、錯誤、banner、loading 鎖定 */
+  _authForm(root, mode) {
+    const self = this;
+    const field = k => root.querySelector(`.au-field[data-f="${k}"]`);
+    const F = {
+      val(k) { const i = field(k)?.querySelector("input"); return i ? (k === "pass" ? i.value : i.value.trim()) : ""; },
+      setErr(k, msg) {
+        const f = field(k); if (!f) return;
+        f.classList.add("invalid"); f.classList.remove("valid");
+        f.querySelector("input").setAttribute("aria-invalid", "true");
+        const m = f.querySelector(".au-msg"); m.className = "au-msg err"; m.textContent = msg; m.dataset.err = "1";
+      },
+      clearErr(k) {
+        const f = field(k); if (!f) return;
+        f.classList.remove("invalid");
+        f.querySelector("input").removeAttribute("aria-invalid");
+        const m = f.querySelector(".au-msg");
+        if (m.dataset.err) { m.dataset.err = ""; m.className = "au-msg" + (m.dataset.hint ? " hint" : ""); m.textContent = m.dataset.hint || ""; }
+      },
+      check(k) {
+        const v = F.val(k);
+        let err = "";
+        if (k === "name") err = !v ? "Pick a trainer name." : (v.length < 2 ? "Use at least 2 characters." : "");
+        if (k === "email") err = !v ? "Enter your email." : (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "That doesn't look like an email — check for typos." : "");
+        if (k === "pass") err = !v ? (mode === "signup" ? "Create a password." : "Enter your password.") : (mode === "signup" && v.length < 8 ? "Password needs at least 8 characters." : "");
+        if (err) { F.setErr(k, err); return false; }
+        F.clearErr(k);
+        if (k !== "pass") field(k)?.classList.add("valid");
+        return true;
+      },
+      checkAll(keys) {
+        let first = null;
+        keys.forEach(k => { if (!F.check(k) && !first) first = k; });
+        if (first) field(first).querySelector("input").focus();
+        return !first;
+      },
+      banner(html, kind) {
+        const b = root.querySelector("#au-banner");
+        if (b) b.innerHTML = html ? `<div class="au-banner ${kind || ""}" role="alert">${html}</div>` : "";
+      },
+      busy(on, label) {
+        root.classList.toggle("is-busy", on);
+        root.querySelectorAll("input, button").forEach(x => { if (x.id !== "au-submit") x.disabled = on; });
+        const b = root.querySelector("#au-submit");
+        if (!b) return;
+        if (!b.dataset.label) b.dataset.label = b.textContent.trim();
+        b.disabled = on;
+        b.innerHTML = on ? self._authSpinner(label) : b.dataset.label;
+      },
+      focusFirst() {
+        if (!self._authFinePointer()) return;
+        const ins = [...root.querySelectorAll(".au-field input")];
+        const i = ins.find(x => !x.value) || ins[0];
+        if (i) i.focus();
+      }
+    };
+    /* blur 先驗證（唔好一打字就鬧）；再打字即清錯誤 */
+    root.querySelectorAll(".au-field input").forEach(inp => {
+      const k = inp.closest(".au-field").dataset.f;
+      inp.addEventListener("blur", () => { if (inp.value && !root.classList.contains("is-busy")) F.check(k); });
+      inp.addEventListener("input", () => { F.clearErr(k); F.banner(""); });
+    });
+    /* 顯示／隱藏密碼 */
+    root.querySelectorAll("[data-act=eye]").forEach(btn => {
+      btn.onclick = () => {
+        const inp = btn.parentElement.querySelector("input");
+        const show = inp.type === "password";
+        inp.type = show ? "text" : "password";
+        btn.innerHTML = self._authIcon(show ? "eyeOff" : "eye");
+        btn.setAttribute("aria-pressed", String(show));
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      };
+    });
+    const close = root.querySelector("[data-act=close]");
+    if (close) close.onclick = () => this.closeModal();
+    this._authBindEsc();
+    return F;
+  },
+
+  _authBindEsc() {
+    if (this._authEscBound) return;
+    this._authEscBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const au = document.querySelector("#modal-root .au");
+      if (!au || au.dataset.gate === "1" || au.classList.contains("is-busy")) return;
+      this.closeModal();
+    });
+  },
+
   /* isGate=true 時代表首次進入 App 嘅強制登入 gate，唔俾 click outside 關閉 */
-  openLoginHub(isGate) {
-    const st = loadState();
+  openLoginHub(isGate, tab) {
     const user = window.SupabaseAuth ? SupabaseAuth.currentUser() : null;
-    const deviceId = ensureDeviceId();
+    if (user) { this._showAccountHub(); return; }
+    this._showAuth(isGate, tab);
+  },
+  _showSignUpForm(isGate) { this._showAuth(isGate, "signup"); },
+  _showSignInForm(isGate) { this._showAuth(isGate, "signin"); },
 
-    if (user) {
-      /* 已登入 → Account Hub：顯示已連接嘅 identities，俾用戶管理 */
-      this._showAccountHub();
+  /* ---------- 主 Auth 卡：Create account / Sign in ---------- */
+  _showAuth(isGate, tab, opts = {}) {
+    const last = this._authLast();
+    const t = (tab === "signin" || tab === "signup") ? tab : (last.method ? "signin" : "signup");
+    const up = t === "signup";
+    const email = opts.email != null ? opts.email : (up ? "" : (last.email || ""));
+    const lastG = !up && last.method === "google";
+    const lastE = !up && last.method === "email";
+
+    this.showModal(`
+      <div class="login-hub au" data-gate="${isGate ? 1 : 0}" role="dialog" aria-labelledby="au-title">
+        ${this._authCloseBtn(isGate)}
+        <div class="au-brand">
+          <div class="lh-ball au-ball" aria-hidden="true"></div>
+          <h2 class="au-title" id="au-title">${up ? "Create your Trainer account" : "Welcome back, Trainer"}</h2>
+          <p class="au-sub">${up ? "Save your Pokémon and progress across all your devices." : "Sign in to continue where you left off."}</p>
+        </div>
+
+        <div class="au-seg" role="tablist" aria-label="Account" data-tab="${t}">
+          <span class="au-seg-pill" aria-hidden="true"></span>
+          <button type="button" role="tab" id="au-tab-signup" aria-selected="${up}" tabindex="${up ? 0 : -1}" data-tab-btn="signup">Create account</button>
+          <button type="button" role="tab" id="au-tab-signin" aria-selected="${!up}" tabindex="${up ? -1 : 0}" data-tab-btn="signin">Sign in</button>
+        </div>
+
+        <button type="button" class="au-btn au-btn-google" id="au-google">
+          ${lastG ? `<span class="au-last">Last used</span>` : ""}
+          ${this._authIcon("google")}<span>${up ? "Sign up with Google" : "Sign in with Google"}</span>
+        </button>
+
+        <div class="au-divider"><span>or with email</span></div>
+
+        <div id="au-banner" aria-live="polite"></div>
+        <form id="au-form" class="au-form" novalidate>
+          ${up ? this._authFieldHTML({ key: "name", id: "au-name", label: "Trainer name", name: "nickname", ac: "nickname",
+                   attrs: 'maxlength="24" enterkeyhint="next" autocapitalize="words"', ph: "e.g. Ash" }) : ""}
+          ${this._authFieldHTML({ key: "email", id: "au-email", type: "email", name: "email", ac: up ? "email" : "username",
+              label: `Email${lastE ? ' <span class="au-last-inline">Last used</span>' : ""}`,
+              attrs: 'inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next"',
+              ph: "you@example.com", value: email })}
+          ${this._authFieldHTML({ key: "pass", id: "au-pass", type: "password", name: "password", ac: up ? "new-password" : "current-password",
+              label: "Password",
+              aside: up ? "" : `<button type="button" class="au-link au-link-sm" data-act="forgot">Forgot password?</button>`,
+              attrs: `enterkeyhint="${up ? "done" : "go"}"${up ? ' minlength="8"' : ""}`,
+              ph: up ? "At least 8 characters" : "Your password",
+              meter: up,
+              hint: up ? "Use 8+ characters. Mix letters and numbers to make it stronger." : "" })}
+          <button type="submit" class="au-btn au-btn-primary" id="au-submit">${up ? "Create account" : "Sign in"}</button>
+        </form>
+
+        <p class="au-foot">${up
+          ? "Your trainer data, Pokémon and diamonds are saved to the cloud and sync across devices."
+          : `New here? <button type="button" class="au-link" data-tab-btn="signup">Create an account</button>`}</p>
+      </div>`, !!isGate);
+
+    const root = document.querySelector("#modal-root .au");
+    const q = s => root.querySelector(s);
+    const F = this._authForm(root, t);
+    const curEmail = () => (q("#au-email")?.value || "").trim();
+
+    /* Tab 切換：保留已打嘅 email */
+    root.querySelectorAll("[data-tab-btn]").forEach(b => {
+      b.onclick = () => {
+        const nt = b.dataset.tabBtn;
+        if (nt === t) return;
+        this._showAuth(isGate, nt, { email: curEmail(), dir: nt === "signin" ? 1 : -1 });
+      };
+    });
+    q(".au-seg").onkeydown = (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const nt = up ? "signin" : "signup";
+      this._showAuth(isGate, nt, { email: curEmail(), keepTabFocus: true });
+    };
+    if (opts.dir) root.style.setProperty("--au-dx", (opts.dir * 14) + "px");
+
+    q("#au-google").onclick = () => this._authGoogle(q("#au-google"));
+
+    const fg = q("[data-act=forgot]");
+    if (fg) fg.onclick = () => this._showForgot(isGate, curEmail());
+
+    const pass = q("#au-pass");
+    if (up) {
+      const meter = q(".au-meter");
+      const msg = q("#au-pass-m");
+      pass.addEventListener("input", () => {
+        const p = pass.value;
+        let s = 0;
+        if (p) {
+          if (p.length >= 8) s++;
+          if (/[a-z]/i.test(p) && /\d/.test(p)) s++;
+          if (/[^a-z0-9]/i.test(p) || (/[A-Z]/.test(p) && /[a-z]/.test(p))) s++;
+          if (p.length >= 12) s++;
+          s = Math.max(1, s);
+        }
+        meter.dataset.s = String(s);
+        if (!msg.dataset.err) {
+          const left = 8 - p.length;
+          msg.textContent = p && left > 0 ? `${left} more character${left > 1 ? "s" : ""}` : msg.dataset.hint;
+        }
+      });
     } else {
-      /* 未登入 → Tab 結構：Social / Create / Sign In；isGate 模式唔俾關 modal */
-      this.showModal(`
-        <div class="login-hub">
-          <div class="lh-ball" aria-hidden="true"></div>
-          <h3>🔐 Save Your Progress</h3>
-          <p class="lh-sub">Sign in to sync across devices &amp; never lose your trainer data.</p>
-
-          <div class="lh-actions">
-            <button id="lh-google" class="btn-big btn-google">
-              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.1l6.6 4.8C14.7 15 19 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 16.3 4.5 9.6 8.8 6.3 14.1z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.6-1.9 13-5l-6-4.8c-2.1 1.4-4.8 2.3-7.9 2.3-5.2 0-9.7-3.1-11.3-7.4l-6.5 5C9.3 39.2 16.1 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6 4.8C42 33.9 43.5 29.2 43.5 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
-              Continue with Google
-            </button>
-          </div>
-
-          <div class="lh-divider"><span>or Email</span></div>
-
-          <div class="lh-actions">
-            <button id="lh-create" class="btn-big btn-primary">Create Account</button>
-            <button id="lh-signin" class="btn-big btn-plain">Sign In</button>
-          </div>
-
-          <p class="lh-note">By signing up, your progress saves to the cloud and syncs across devices. Your trainer data, Pokémon, and diamonds carry over.</p>
-        </div>`, !!isGate);  /* isGate=true → noClose=true → 唔俾 click outside 關閉 */
-
-      document.getElementById("lh-google").onclick = async () => {
-        this.closeModal();
-        try { await SupabaseAuth.signInWithGoogle(); }
-        catch (e) { console.warn("Google sign-in failed:", e); }
+      /* Caps Lock 提示（淨係桌面鍵盤有用） */
+      const msg = q("#au-pass-m");
+      const caps = (e) => {
+        if (!e.getModifierState || msg.dataset.err) return;
+        const on = e.getModifierState("CapsLock");
+        msg.className = "au-msg" + (on ? " warn" : "");
+        msg.textContent = on ? "Caps Lock is on" : "";
       };
-      document.getElementById("lh-create").onclick = () => {
-        /* 如果係 gate 模式，sign up form 都應該唔俾關 */
-        const signUpEl = document.getElementById("lh-signup-form");
-        if (signUpEl) signUpEl._isGate = isGate;
-        this.closeModal();
-        this._showSignUpForm(isGate);
-      };
-      document.getElementById("lh-signin").onclick = () => {
-        this.closeModal();
-        this._showSignInForm(isGate);
-      };
+      pass.addEventListener("keyup", caps);
+      pass.addEventListener("keydown", caps);
     }
+
+    q("#au-form").onsubmit = (e) => {
+      e.preventDefault();
+      if (root.classList.contains("is-busy")) return;
+      F.banner("");
+      if (!F.checkAll(up ? ["name", "email", "pass"] : ["email", "pass"])) return;
+      if (up) this._authDoSignup(root, F, isGate);
+      else this._authDoSignin(root, F, isGate);
+    };
+
+    if (opts.keepTabFocus) q(`#au-tab-${t}`).focus();
+    else F.focusFirst();
+  },
+
+  _authGoogle(btn) {
+    const html = btn.innerHTML;
+    this._authRemember("google");
+    btn.disabled = true;
+    btn.innerHTML = this._authSpinner("Opening Google…");
+    /* signInWithGoogle 會 redirect 走，正常唔會 resolve；失敗先還原掣 */
+    Promise.resolve()
+      .then(() => SupabaseAuth.signInWithGoogle())
+      .catch((e) => {
+        console.warn("Google sign-in failed:", e);
+        btn.disabled = false; btn.innerHTML = html;
+        this.toast("Couldn't open Google sign-in. Please try again.");
+      });
+  },
+
+  async _authDoSignup(root, F, isGate) {
+    const email = F.val("email"), nick = F.val("name"), pass = F.val("pass");
+    F.busy(true, "Creating account…");
+    const res = await SupabaseAuth.signUpWithEmail(email, pass);
+    if (!res.ok) {
+      F.busy(false);
+      const er = this._authError(res.error);
+      if (er.code === "taken") {
+        F.setErr("email", er.msg);
+        F.banner(`Already registered? <button type="button" class="au-link" data-go="signin">Sign in instead</button>`, "info");
+        root.querySelector("[data-go=signin]").onclick = () => this._showAuth(isGate, "signin", { email });
+      } else if (er.field) {
+        F.setErr(er.field, er.msg);
+      } else {
+        F.banner(escapeHTML(er.msg));
+      }
+      return;
+    }
+    this._authRemember("email", email);
+    /* 暱稱即刻寫入 local（需要 confirm email 嘅情況都保留），首次登入時 import_state 帶上雲 */
+    if (nick) {
+      const st = loadState();
+      st.playerName = nick;
+      st.nameCustomized = true;
+      saveState();
+    }
+    if (res.needConfirm) { this._showCheckEmail(email, "confirm", isGate); return; }
+
+    await SupabaseAuth.ensureFreshSession();
+    /* _postLogin 可能需要彈 overwrite 確認窗（掛 body，唔係 modal-root），所以完咗先 closeModal */
+    try { await this._postLogin(loadState()); } catch (err) {}
+    this._markLoggedIn();
+    this.closeModal();
+    this.renderHome();
+    this.toast(`✅ Welcome, ${nick}! Your progress is saved.`);
+  },
+
+  async _authDoSignin(root, F, isGate) {
+    const email = F.val("email"), pass = F.val("pass");
+    F.busy(true, "Signing in…");
+    const res = await SupabaseAuth.signInWithEmail(email, pass);
+    if (!res.ok) {
+      F.busy(false);
+      const er = this._authError(res.error);
+      if (er.code === "creds") {
+        F.setErr("pass", er.msg);
+        F.banner(`Couldn't sign you in. Check your password or <button type="button" class="au-link" data-go="forgot">reset it</button>.`);
+        root.querySelector("[data-go=forgot]").onclick = () => this._showForgot(isGate, email);
+        const p = root.querySelector("#au-pass");
+        if (p) { p.focus(); p.select(); }
+      } else if (er.code === "unconfirmed") {
+        F.banner(`${escapeHTML(er.msg)} <button type="button" class="au-link" data-go="resend">Resend link</button>`, "info");
+        root.querySelector("[data-go=resend]").onclick = () => this._showCheckEmail(email, "confirm", isGate, true);
+      } else if (er.field) {
+        F.setErr(er.field, er.msg);
+      } else {
+        F.banner(escapeHTML(er.msg));
+      }
+      return;
+    }
+    this._authRemember("email", email);
+    this.closeModal();
+    try { await this._postLogin(loadState()); } catch (err) {}
+    this._markLoggedIn();
+    this.closeModal();
+    this.renderHome();
+    this.toast(`✅ Signed in as ${email}`);
+  },
+
+  /* ---------- Forgot Password ---------- */
+  _showForgot(isGate, email = "") {
+    this.showModal(`
+      <div class="login-hub au" data-gate="${isGate ? 1 : 0}" role="dialog" aria-labelledby="au-title">
+        <button type="button" class="au-iconbtn au-back" data-act="back" aria-label="Back">←</button>
+        ${this._authCloseBtn(isGate)}
+        <div class="au-brand au-brand-pad">
+          <div class="au-art" aria-hidden="true">🔑</div>
+          <h2 class="au-title" id="au-title">Reset your password</h2>
+          <p class="au-sub">Enter the email you signed up with and we'll send you a secure link to set a new password.</p>
+        </div>
+        <div id="au-banner" aria-live="polite"></div>
+        <form id="au-form" class="au-form" novalidate>
+          ${this._authFieldHTML({ key: "email", id: "au-email", type: "email", name: "email", ac: "username", label: "Email",
+              attrs: 'inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send"',
+              ph: "you@example.com", value: email })}
+          <button type="submit" class="au-btn au-btn-primary" id="au-submit">Send reset link</button>
+        </form>
+      </div>`, !!isGate);
+
+    const root = document.querySelector("#modal-root .au");
+    const F = this._authForm(root, "forgot");
+    root.querySelector("[data-act=back]").onclick = () =>
+      this._showAuth(isGate, "signin", { email: F.val("email"), dir: -1 });
+    root.querySelector("#au-form").onsubmit = async (e) => {
+      e.preventDefault();
+      if (root.classList.contains("is-busy")) return;
+      if (!F.checkAll(["email"])) return;
+      const em = F.val("email");
+      F.busy(true, "Sending…");
+      const res = await SupabaseAuth.sendPasswordReset(em);
+      if (!res.ok) {
+        const er = this._authError(res.error);
+        if (er.code === "rate" || er.code === "net") { F.busy(false); F.banner(escapeHTML(er.msg)); return; }
+      }
+      /* Supabase 防 user enumeration：有冇呢個 email 都當成功 */
+      this._showCheckEmail(em, "reset", isGate);
+    };
+    F.focusFirst();
+  },
+
+  /* ---------- Check your inbox（sign up confirm / reset） ----------
+     sendNow=true：入嚟即刻再寄一次（例如 sign in 時發現 email 未 confirm） */
+  _showCheckEmail(email, kind, isGate, sendNow) {
+    const reset = kind === "reset";
+    this.showModal(`
+      <div class="login-hub au au-center" data-gate="${isGate ? 1 : 0}" role="dialog" aria-labelledby="au-title">
+        ${this._authCloseBtn(isGate)}
+        <div class="au-art" aria-hidden="true">✉️</div>
+        <h2 class="au-title" id="au-title">Check your inbox</h2>
+        <p class="au-sub">${reset ? "If an account exists for" : "We sent a confirmation link to"}<br><strong>${escapeHTML(email)}</strong></p>
+        <p class="au-hint">${reset
+          ? "Open the link in the email to choose a new password."
+          : "Tap the link in the email to activate your account, then come back and sign in."} Can't find it? Check your Spam or Promotions folder.</p>
+        <div class="au-stack">
+          <button type="button" class="au-btn au-btn-primary" data-act="done">${reset ? "Back to sign in" : "I've confirmed — Sign in"}</button>
+          <button type="button" class="au-btn au-btn-ghost" data-act="resend">Resend email</button>
+          <button type="button" class="au-link au-link-sm au-center-link" data-act="change">Wrong email? Change it</button>
+        </div>
+      </div>`, !!isGate);
+
+    const root = document.querySelector("#modal-root .au");
+    this._authForm(root, "check");
+    root.querySelector("[data-act=done]").onclick = () => this._showAuth(isGate, "signin", { email });
+    root.querySelector("[data-act=change]").onclick = () =>
+      reset ? this._showForgot(isGate, email) : this._showAuth(isGate, "signup", { email });
+
+    const rb = root.querySelector("[data-act=resend]");
+    const cooldown = (sec) => {
+      let n = sec;
+      rb.disabled = true;
+      rb.textContent = `Resend email in ${n}s`;
+      const tm = setInterval(() => {
+        if (!document.body.contains(rb)) { clearInterval(tm); return; }
+        n--;
+        if (n <= 0) { clearInterval(tm); rb.disabled = false; rb.textContent = "Resend email"; }
+        else rb.textContent = `Resend email in ${n}s`;
+      }, 1000);
+    };
+    const send = async () => {
+      rb.disabled = true;
+      rb.innerHTML = this._authSpinner("Sending…");
+      const res = reset ? await SupabaseAuth.sendPasswordReset(email) : await SupabaseAuth.resendSignup(email);
+      if (!document.body.contains(rb)) return;
+      if (res && res.ok) { this.toast("📧 Email sent again"); cooldown(60); }
+      else {
+        const er = this._authError(res && res.error);
+        this.toast(er.msg);
+        cooldown(er.code === "rate" ? 60 : 5);
+      }
+    };
+    rb.onclick = send;
+    if (sendNow) send(); else cooldown(60);
   },
 
   /* ---------- 已登入狀態 Account Hub ---------- */
   async _showAccountHub() {
     const user = SupabaseAuth.currentUser();
-    const identities = await SupabaseAuth.getIdentities();
+    let identities = [];
+    try { identities = (await SupabaseAuth.getIdentities()) || []; } catch (e) {}
     const emailIdent = identities.find(i => i.provider === "email");
     const googleIdent = identities.find(i => i.provider === "google");
     const hasGoogle = !!googleIdent;
     const hasEmail = !!emailIdent;
-    const trainerName = loadState().playerName || "The PokéEngmon Trainer";
+    const name = loadState().playerName || "The PokéEngmon Trainer";
+    const initial = (name.trim()[0] || "T").toUpperCase();
+    const gMail = googleIdent?.identity_data?.email || "";
+    const eMail = emailIdent?.identity_data?.email || "";
+    const hint = !hasGoogle
+      ? "Connect Google so you can sign in with one tap — and never get locked out."
+      : (!hasEmail ? "You sign in with your Google account." : "You can sign in with either method.");
 
     this.showModal(`
-      <div class="login-hub logged-in">
-        <div class="lh-ball" aria-hidden="true"></div>
-        <h3>✅ Connected Trainer</h3>
-        <p class="lh-email">${escapeHTML(trainerName)}</p>
-        <p class="lh-sub" style="margin-bottom:12px">Your progress is safely synced to the cloud.</p>
-
-        <div class="lh-linked">
-          <div class="lh-linked-title">Connected Accounts</div>
-          <div class="lh-linked-row ${hasEmail ? "on" : "off"}">
-            <span class="lh-linked-provider">✉️ Email</span>
-            <span class="lh-linked-val">${escapeHTML(emailIdent?.identity_data?.email || user.email || "—")}</span>
-          </div>
-          <div class="lh-linked-row ${hasGoogle ? "on" : "off"}">
-            <span class="lh-linked-provider">
-              <svg width="14" height="14" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.12 24.5c0-1.56-.15-3.06-.41-4.5H24v8.51h11.84C34.77 33.61 29.2 37.5 24 37.5c-7.43 0-13.5-6.07-13.5-13.5s6.07-13.5 13.5-13.5c3.44 0 6.59 1.29 8.98 3.41l6.18-6.18C35.52 4.99 30.02 2.5 24 2.5 11.57 2.5 1.5 12.57 1.5 25s10.07 22.5 22.5 22.5c11.05 0 20.1-7.92 22.12-18.5z"/></svg>
-              Google
-            </span>
-            <span class="lh-linked-val">${hasGoogle ? "Connected" : "—"}</span>
+      <div class="login-hub au" data-gate="0" role="dialog" aria-labelledby="au-title">
+        ${this._authCloseBtn(false)}
+        <div class="au-acct">
+          <div class="au-avatar" aria-hidden="true">${escapeHTML(initial)}</div>
+          <div class="au-acct-info">
+            <div class="au-acct-name" id="au-title">${escapeHTML(name)}</div>
+            <div class="au-acct-email">${escapeHTML(user?.email || gMail || eMail || "")}</div>
+            <div class="au-synced">Progress synced</div>
           </div>
         </div>
-
-        ${!hasGoogle ? `
-          <div class="lh-actions" style="margin-top:14px">
-            <button id="lh-link-google" class="btn-big btn-google">Link Google Account</button>
+        <div class="au-sec">Sign-in methods</div>
+        <div class="au-list">
+          <div class="au-li">
+            <span class="au-li-ic">${this._authIcon("google")}</span>
+            <span class="au-li-t">Google${gMail ? `<small>${escapeHTML(gMail)}</small>` : ""}</span>
+            ${hasGoogle ? `<span class="au-pill-ok">Connected</span>` : `<button type="button" class="au-link" id="au-link-google">Connect</button>`}
           </div>
-        ` : ""}
-
-        <div class="lh-actions" style="margin-top:14px">
-          <button id="lh-signout" class="btn-big btn-plain">Sign out</button>
+          <div class="au-li">
+            <span class="au-li-ic">${this._authIcon("mail")}</span>
+            <span class="au-li-t">Email &amp; password${eMail ? `<small>${escapeHTML(eMail)}</small>` : ""}</span>
+            ${hasEmail ? `<span class="au-pill-ok">Connected</span>` : `<span class="au-muted">Not set</span>`}
+          </div>
         </div>
-        <p class="lh-note">Linking Google lets you sign in with either your email or Google account.</p>
+        <p class="au-hint au-hint-left">${hint}</p>
+        <div class="au-stack">
+          <button type="button" class="au-btn au-btn-danger-ghost" id="au-signout">Sign out</button>
+        </div>
       </div>`, false);
 
-    if (!hasGoogle) {
-      document.getElementById("lh-link-google").onclick = async () => {
-        const btn = document.getElementById("lh-link-google");
-        btn.disabled = true; btn.textContent = "Redirecting...";
+    const root = document.querySelector("#modal-root .au");
+    this._authForm(root, "account");
+
+    const lg = root.querySelector("#au-link-google");
+    if (lg) {
+      lg.onclick = async () => {
+        lg.disabled = true;
+        lg.innerHTML = this._authSpinner("Connecting…");
         const res = await SupabaseAuth.linkGoogle();
         if (res && !res.ok) {
-          btn.disabled = false; btn.textContent = "Link Google Account";
+          lg.disabled = false; lg.textContent = "Connect";
           if (res.error === "manual_linking_disabled") {
             this.toast("Please enable Manual Linking in Supabase Dashboard (Auth → Settings → Security)");
           } else {
-            this.toast("Failed to link Google: " + (res.error || "unknown"));
+            this.toast("Failed to connect Google: " + (res.error || "unknown"));
           }
         }
       };
     }
+    root.querySelector("#au-signout").onclick = () => this._confirmSignOut();
+  },
 
-    document.getElementById("lh-signout").onclick = async () => {
+  _confirmSignOut() {
+    this.showModal(`
+      <div class="login-hub au au-center" data-gate="0" role="alertdialog" aria-labelledby="au-title">
+        <div class="au-art" aria-hidden="true">👋</div>
+        <h2 class="au-title" id="au-title">Sign out?</h2>
+        <p class="au-sub">Your progress is safe in the cloud. Progress on this device will be cleared until you sign in again.</p>
+        <div class="au-stack">
+          <button type="button" class="au-btn au-btn-danger" id="au-submit">Sign out</button>
+          <button type="button" class="au-btn au-btn-ghost" data-act="cancel">Cancel</button>
+        </div>
+      </div>`, false);
+    const root = document.querySelector("#modal-root .au");
+    const F = this._authForm(root, "signout");
+    root.querySelector("[data-act=cancel]").onclick = () => this._showAccountHub();
+    root.querySelector("#au-submit").onclick = async () => {
+      F.busy(true, "Signing out…");
       try {
         await SupabaseAuth.signOut();
         if (window.Friends && Friends.stopPolling) Friends.stopPolling();
@@ -2295,265 +2727,13 @@ const App = {
         this.closeModal();
         this.renderHome();
         this.toast("Signed out — local progress cleared");
-        /* Sign out 後 → 自動彈 Login Gate（500ms 等 toast 顯示） */
-        setTimeout(() => { this.openLoginHub(true); }, 500);
+        /* Sign out 後 → 自動彈 Login Gate（Rule 51；500ms 等 toast 顯示） */
+        setTimeout(() => { this.openLoginHub(true, "signin"); }, 500);
       } catch (e) {
         console.error("[SignOut] failed:", e);
+        F.busy(false);
         this.toast("Sign out failed: " + e.message);
       }
-    };
-  },
-
-  /* ---------- Sign Up Form ---------- */
-  _showSignUpForm(isGate) {
-    this.showModal(`
-      <div class="login-hub">
-        <button id="lh-back" class="lh-back" aria-label="Back">←</button>
-        <div class="lh-ball" aria-hidden="true"></div>
-        <h3>Create Account</h3>
-        <p class="lh-sub">Save your progress to the cloud. Never lose a Pokémon again.</p>
-        <form id="lh-signup-form" class="lh-form" autocomplete="off">
-          <input id="su-email" type="email" class="lh-input" placeholder="Email address" required>
-          <input id="su-nick" type="text" class="lh-input" placeholder="Trainer Name" maxlength="24" required>
-          <input id="su-pass" type="password" class="lh-input" placeholder="Password (8+ characters)" minlength="8" required>
-          <input id="su-pass2" type="password" class="lh-input" placeholder="Confirm password" minlength="8" required>
-          <div id="lh-signup-error" class="lh-error" hidden></div>
-          <button id="lh-signup-btn" type="submit" class="btn-big btn-primary">Create Account</button>
-        </form>
-        <p class="lh-alt">Already have an account? <a id="lh-to-signin" href="#">Sign in</a></p>
-      </div>`, !!isGate);
-
-    /* Back button → 返去 Login Hub（保留 isGate 模式） */
-    document.getElementById("lh-back").onclick = () => { this.closeModal(); this.openLoginHub(isGate); };
-
-    const errBox = document.getElementById("lh-signup-error");
-    const form = document.getElementById("lh-signup-form");
-
-    document.getElementById("lh-to-signin").onclick = (e) => {
-      e.preventDefault();
-      this.closeModal();
-      this._showSignInForm(isGate);
-    };
-
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("su-email").value.trim();
-      const nick = document.getElementById("su-nick").value.trim();
-      const pass = document.getElementById("su-pass").value;
-      const pass2 = document.getElementById("su-pass2").value;
-
-      /* 前端基本校验 */
-      if (!email || !nick || !pass || !pass2) {
-        errBox.textContent = "Please fill in all fields.";
-        errBox.hidden = false; return;
-      }
-      if (pass.length < 8) {
-        errBox.textContent = "Password must be at least 8 characters.";
-        errBox.hidden = false; return;
-      }
-      if (pass !== pass2) {
-        errBox.textContent = "Passwords do not match.";
-        errBox.hidden = false; return;
-      }
-      if (!email.includes("@")) {
-        errBox.textContent = "Please enter a valid email address.";
-        errBox.hidden = false; return;
-      }
-
-      const btn = document.getElementById("lh-signup-btn");
-      btn.disabled = true; btn.textContent = "Creating...";
-      errBox.hidden = true;
-
-      const res = await SupabaseAuth.signUpWithEmail(email, pass);
-      btn.disabled = false; btn.textContent = "Create Account";
-
-      if (!res.ok) {
-        errBox.textContent = res.error || "Sign up failed.";
-        errBox.hidden = false;
-        return;
-      }
-
-      if (res.needConfirm) {
-        /* Supabase 開咗 Confirm Email → 顯示 email sent 提示 */
-        this.showModal(`
-          <div class="login-hub">
-            <div class="lh-ball" aria-hidden="true"></div>
-            <h3>Check Your Email</h3>
-            <p class="lh-sub">We sent a confirmation link to <strong>${escapeHTML(email)}</strong>. Please click the link to activate your account, then sign in.</p>
-            <div class="lh-actions">
-              <button id="lh-back-to-signin" class="btn-big btn-primary">Back to Sign In</button>
-            </div>
-          </div>`, false);
-        document.getElementById("lh-back-to-signin").onclick = () => {
-          this.closeModal();
-          this._showSignInForm();
-        };
-        return;
-      }
-
-      /* 成功！走 _postLogin 流程 import 本地進度 */
-      /* 注意：唔好再 closeModal()，因為 modal 已經被 Sign Up → Check Email 嘅 modal 蓋過
-         但呢個分支（needConfirm=false）並冇彈 Check Email modal，所以要先 close */
-      /* 寫入暱稱 → 改 playerName 然後走 importState */
-      const st = loadState();
-      if (nick) {
-        st.playerName = nick;
-        st.nameCustomized = true;
-        saveState();
-      }
-      await SupabaseAuth.ensureFreshSession();
-      /* _postLogin 可能需要 modal 顯示確認窗，所以唔好先 closeModal */
-      try { await this._postLogin(loadState()); } catch (err) {}
-      /* 更新 UI + 關閉 modal（_postLogin 內部唔會關 modal） */
-      this._markLoggedIn();
-      this.closeModal();
-      this.renderHome();
-      this.toast(`✅ Welcome, ${escapeHTML(nick)}! Your progress is saved.`);
-    };
-  },
-
-  /* ---------- Sign In Form ---------- */
-  _showSignInForm(isGate) {
-    this.showModal(`
-      <div class="login-hub">
-        <button id="lh-back" class="lh-back" aria-label="Back">←</button>
-        <div class="lh-ball" aria-hidden="true"></div>
-        <h3>Sign In</h3>
-        <p class="lh-sub">Welcome back! Sign in to sync your progress.</p>
-        <div class="lh-actions">
-          <button id="si-google" class="btn-big btn-google">
-            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.1l6.6 4.8C14.7 15 19 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 16.3 4.5 9.6 8.8 6.3 14.1z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.6-1.9 13-5l-6-4.8c-2.1 1.4-4.8 2.3-7.9 2.3-5.2 0-9.7-3.1-11.3-7.4l-6.5 5C9.3 39.2 16.1 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6 4.8C42 33.9 43.5 29.2 43.5 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
-            Continue with Google
-          </button>
-        </div>
-        <div class="lh-divider"><span>or Email</span></div>
-        <form id="lh-signin-form" class="lh-form" autocomplete="off">
-          <input id="si-email" type="email" class="lh-input" placeholder="Email address" required>
-          <input id="si-pass" type="password" class="lh-input" placeholder="Password" required>
-          <div id="lh-signin-error" class="lh-error" hidden></div>
-          <button id="lh-signin-btn" type="submit" class="btn-big btn-primary">Sign In</button>
-        </form>
-        <p class="lh-alt">
-          <a id="lh-to-forgot" href="#">Forgot password?</a>
-          ·
-          <a id="lh-to-create" href="#">Create account</a>
-        </p>
-      </div>`, !!isGate);
-
-    /* Back button → 返去 Login Hub（保留 isGate 模式） */
-    document.getElementById("lh-back").onclick = () => { this.closeModal(); this.openLoginHub(isGate); };
-
-    /* Sign In 頁都提供 Google 入口：新用戶用 Google 帳戶登入時會自動建立帳戶 */
-    document.getElementById("si-google").onclick = async () => {
-      this.closeModal();
-      try { await SupabaseAuth.signInWithGoogle(); }
-      catch (e) { console.warn("Google sign-in failed:", e); }
-    };
-
-    const errBox = document.getElementById("lh-signin-error");
-    const form = document.getElementById("lh-signin-form");
-
-    document.getElementById("lh-to-create").onclick = (e) => {
-      e.preventDefault();
-      this.closeModal();
-      this._showSignUpForm(isGate);
-    };
-    document.getElementById("lh-to-forgot").onclick = (e) => {
-      e.preventDefault();
-      this.closeModal();
-      this._showForgotPasswordForm(isGate);
-    };
-
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("si-email").value.trim();
-      const pass = document.getElementById("si-pass").value;
-
-      if (!email || !pass) {
-        errBox.textContent = "Please enter your email and password.";
-        errBox.hidden = false; return;
-      }
-
-      const btn = document.getElementById("lh-signin-btn");
-      btn.disabled = true; btn.textContent = "Signing in...";
-      errBox.hidden = true;
-
-      const res = await SupabaseAuth.signInWithEmail(email, pass);
-      btn.disabled = false; btn.textContent = "Sign In";
-
-      if (!res.ok) {
-        /* Supabase 通常回「Invalid login credentials」— 要俾清楚提示 */
-        errBox.textContent = res.error || "Invalid email or password.";
-        errBox.hidden = false;
-        return;
-      }
-
-      /* 成功！走 _postLogin 合併 */
-      this.closeModal();
-      try { await this._postLogin(loadState()); } catch (err) {}
-      this._markLoggedIn();
-      this.closeModal();
-      this.renderHome();
-      this.toast(`✅ Signed in as ${escapeHTML(email)}`);
-    };
-  },
-
-  /* ---------- Forgot Password Form ---------- */
-  _showForgotPasswordForm(isGate) {
-    this.showModal(`
-      <div class="login-hub">
-        <button id="lh-back" class="lh-back" aria-label="Back">←</button>
-        <div class="lh-ball" aria-hidden="true"></div>
-        <h3>Reset Password</h3>
-        <p class="lh-sub">Enter your email and we'll send you a link to reset your password.</p>
-        <form id="lh-forgot-form" class="lh-form" autocomplete="off">
-          <input id="fp-email" type="email" class="lh-input" placeholder="Email address" required>
-          <div id="lh-forgot-error" class="lh-error" hidden></div>
-          <button id="lh-forgot-btn" type="submit" class="btn-big btn-primary">Send Reset Link</button>
-        </form>
-        <p class="lh-alt"><a id="lh-forgot-back" href="#">← Back to Sign In</a></p>
-      </div>`, !!isGate);
-
-    /* Back button → 返去 Login Hub（保留 isGate 模式） */
-    document.getElementById("lh-back").onclick = () => { this.closeModal(); this.openLoginHub(isGate); };
-
-    const errBox = document.getElementById("lh-forgot-error");
-    const form = document.getElementById("lh-forgot-form");
-
-    document.getElementById("lh-forgot-back").onclick = (e) => {
-      e.preventDefault();
-      this.closeModal();
-      this._showSignInForm(isGate);
-    };
-
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("fp-email").value.trim();
-      if (!email || !email.includes("@")) {
-        errBox.textContent = "Please enter a valid email address.";
-        errBox.hidden = false; return;
-      }
-      const btn = document.getElementById("lh-forgot-btn");
-      btn.disabled = true; btn.textContent = "Sending...";
-      errBox.hidden = true;
-
-      const res = await SupabaseAuth.sendPasswordReset(email);
-      btn.disabled = false; btn.textContent = "Send Reset Link";
-
-      /* Supabase 為咗防 user enumeration，有冇呢個 email 都回 200 → 直接顯示 sent */
-      this.showModal(`
-        <div class="login-hub">
-          <div class="lh-ball" aria-hidden="true"></div>
-          <h3>Check Your Email</h3>
-          <p class="lh-sub">If an account exists for <strong>${escapeHTML(email)}</strong>, we've sent a reset link. Click it in the email to create a new password.</p>
-          <div class="lh-actions">
-            <button id="lh-forgot-done" class="btn-big btn-primary">Done</button>
-          </div>
-        </div>`, false);
-      document.getElementById("lh-forgot-done").onclick = () => {
-        this.closeModal();
-        this._showSignInForm();
-      };
     };
   },
 

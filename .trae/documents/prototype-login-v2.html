@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Login v2 Prototype</title>
+<style>
+:root{
+  --red:#e53935; --red-d:#c62828; --ink:#1b1b22; --ink2:#4b5563; --ink3:#9aa3af;
+  --line:#e5e7eb; --field:#f7f7f9; --ok:#16a34a; --err:#dc2626; --err-bg:#fef2f2;
+  --card:#fff; --radius:18px;
+  --ease:cubic-bezier(.25,1,.5,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef0f4;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+
+/* ---------- prototype toolbar（唔屬於 app） ---------- */
+.proto-bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
+  padding:10px 16px;background:#111827;color:#fff;font-size:13px}
+.proto-bar b{margin-right:4px}
+.proto-bar button{font:inherit;border:1px solid #374151;background:#1f2937;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer}
+.proto-bar button.on{background:#e53935;border-color:#e53935;color:#fff}
+.proto-bar .sep{width:1px;height:20px;background:#374151;margin:0 4px}
+.proto-hint{text-align:center;font-size:12px;color:#6b7280;margin:10px 16px 0}
+
+/* ---------- 模擬 Pokédex 外框 ---------- */
+.stage{display:flex;justify-content:center;padding:18px 16px 40px}
+.device{width:440px;height:900px;background:var(--red);border-radius:34px;padding:58px 14px 56px;position:relative;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);transition:width .35s var(--ease),height .35s var(--ease)}
+.device[data-size="tablet"]{width:640px;height:900px;border-radius:28px}
+.device[data-size="desktop"]{width:820px;height:760px;border-radius:22px}
+.device::before{content:"";position:absolute;top:16px;left:22px;width:26px;height:26px;border-radius:50%;background:#4fc3f7;border:3px solid #fff;box-shadow:0 0 0 3px var(--ink)}
+.device::after{content:"";position:absolute;bottom:14px;left:50%;transform:translateX(-50%);width:40px;height:28px;border-radius:14px;background:#b71c1c;border:2.5px solid var(--ink)}
+.screen{position:relative;height:100%;background:linear-gradient(#fde68a,#fca5a5);border:2.5px solid var(--ink);border-radius:14px;overflow:hidden;container-type:inline-size}
+.fake-home{position:absolute;inset:0;padding:18px;display:grid;grid-template-rows:auto 1fr auto;gap:14px;filter:saturate(.8)}
+.fake-home .row{height:40px;border-radius:12px;background:rgba(255,255,255,.55)}
+.fake-home .mon{border-radius:20px;background:rgba(255,255,255,.35)}
+
+/* ---------- modal ---------- */
+.backdrop{position:absolute;inset:0;background:rgba(20,24,40,.55);backdrop-filter:blur(3px);display:flex;justify-content:center;
+  align-items:flex-start;padding:14px 12px;overflow-y:auto;scrollbar-width:none}
+.card{width:100%;max-width:420px;background:var(--card);border-radius:var(--radius);box-shadow:0 18px 40px rgba(0,0,0,.28);
+  padding:22px 20px 18px;position:relative;animation:card-in .28s var(--ease)}
+@container (min-width:560px){ .backdrop{padding:24px} .card{padding:28px 28px 22px;margin-block:auto} }
+@keyframes card-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.screen-v{animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateX(var(--dx,0))}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.icon-btn{position:absolute;top:12px;width:36px;height:36px;border-radius:50%;border:0;background:#f3f4f6;color:var(--ink2);
+  display:grid;place-items:center;cursor:pointer;font-size:16px}
+.icon-btn:hover{background:#e5e7eb}
+.icon-btn.back{left:12px}.icon-btn.close{right:12px}
+
+/* brand header */
+.brand{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:16px}
+.ball{width:52px;height:52px;border-radius:50%;border:3px solid var(--ink);position:relative;margin-bottom:12px;
+  background:linear-gradient(180deg,var(--red) 0 46%,var(--ink) 46% 54%,#fafafa 54%)}
+.ball::after{content:"";position:absolute;inset:50% auto auto 50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:50%;background:#fff;border:3px solid var(--ink)}
+h2{font-size:21px;line-height:1.25;margin:0 0 4px;letter-spacing:-.01em}
+.sub{font-size:14px;color:var(--ink2);margin:0;line-height:1.45}
+
+/* segmented tabs */
+.seg{position:relative;display:grid;grid-template-columns:1fr 1fr;background:#f1f2f5;border-radius:12px;padding:4px;margin:0 0 16px}
+.seg button{position:relative;z-index:1;border:0;background:none;font:600 14px/1 inherit;font-family:inherit;color:var(--ink2);height:38px;border-radius:9px;cursor:pointer}
+.seg button[aria-selected="true"]{color:var(--ink)}
+.seg .pill{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);background:#fff;border-radius:9px;
+  box-shadow:0 1px 3px rgba(0,0,0,.12);transition:transform .28s var(--ease)}
+.seg[data-tab="signin"] .pill{transform:translateX(100%)}
+
+/* buttons */
+.btn{position:relative;width:100%;height:50px;border-radius:12px;border:0;font:700 16px/1 inherit;font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .12s,box-shadow .15s,background .15s}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:focus-visible,.seg button:focus-visible,.field input:focus-visible,.link:focus-visible,.icon-btn:focus-visible{outline:3px solid rgba(229,57,53,.35);outline-offset:2px}
+.btn-primary{background:var(--red);color:#fff;box-shadow:0 3px 0 var(--red-d)}
+.btn-primary:hover:not(:disabled){background:#ef4b47}
+.btn-primary:disabled{opacity:.6;cursor:default}
+.btn-google{background:#fff;color:#1f1f1f;border:1.5px solid #dadce0;font-weight:600;font-family:Roboto,system-ui,sans-serif}
+.btn-google:hover{background:#f8faff;border-color:#c6cad1}
+.btn-ghost{background:#f3f4f6;color:var(--ink)}
+.btn-danger-ghost{background:#fff;color:var(--err);border:1.5px solid #fecaca}
+.badge-last{position:absolute;top:-9px;right:12px;font:700 10px/1 inherit;letter-spacing:.03em;text-transform:uppercase;
+  background:#111827;color:#fff;padding:4px 7px;border-radius:999px}
+.spinner{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.divider{display:flex;align-items:center;gap:12px;color:var(--ink3);font-size:12px;margin:16px 0}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* fields */
+form{display:flex;flex-direction:column;gap:12px}
+.field label,.field .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.field .wrap{position:relative}
+.field input{width:100%;height:50px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--field);
+  font-size:16px;font-family:inherit;color:var(--ink);transition:border-color .15s,background .15s,box-shadow .15s}
+.field input:hover{border-color:#d1d5db}
+.field input:focus{outline:none;border-color:var(--red);background:#fff;box-shadow:0 0 0 4px rgba(229,57,53,.12)}
+.field.has-eye input{padding-right:52px}
+.field.invalid input{border-color:var(--err);background:#fff}
+.field.valid input{border-color:#86efac}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:none;border-radius:10px;cursor:pointer;color:var(--ink2);display:grid;place-items:center}
+.eye:hover{background:#eef0f3}
+.msg{font-size:12.5px;margin-top:6px;line-height:1.4;min-height:0}
+.msg.err{color:var(--err)}
+.msg.hint{color:var(--ink3)}
+.msg.warn{color:#b45309}
+.link{color:var(--red);font-weight:600;text-decoration:none;background:none;border:0;padding:0;font:inherit;font-weight:600;cursor:pointer}
+.link:hover{text-decoration:underline}
+.banner{display:block;margin-bottom:12px;background:var(--err-bg);border:1px solid #fecaca;color:#991b1b;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45}
+.banner.info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+
+.strength{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.strength i{height:4px;border-radius:2px;background:#e5e7eb;transition:background .2s}
+.strength[data-s="1"] i:nth-child(-n+1){background:#ef4444}
+.strength[data-s="2"] i:nth-child(-n+2){background:#f59e0b}
+.strength[data-s="3"] i:nth-child(-n+3){background:#84cc16}
+.strength[data-s="4"] i{background:var(--ok)}
+
+.foot{font-size:12px;color:var(--ink3);text-align:center;line-height:1.5;margin:14px 0 0}
+.foot a{color:var(--ink2)}
+.center{text-align:center}
+.mail-art{width:64px;height:64px;border-radius:20px;background:#fef2f2;display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
+.stack{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.muted{color:var(--ink3);font-size:13px}
+
+/* account hub */
+.acct-head{display:flex;align-items:center;gap:14px;margin:4px 0 16px}
+.avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#fca5a5,#e53935);color:#fff;font:800 22px/56px inherit;text-align:center;flex:none}
+.acct-head .n{font-weight:800;font-size:18px}
+.acct-head .e{font-size:13px;color:var(--ink2);word-break:break-all}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ok);font-weight:600;margin-top:4px}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.list{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.list .li{display:flex;align-items:center;gap:12px;padding:12px 14px;font-size:14px}
+.list .li+.li{border-top:1px solid var(--line)}
+.list .li .t{flex:1}
+.pill-ok{font-size:12px;font-weight:700;color:var(--ok);background:#f0fdf4;padding:4px 8px;border-radius:999px}
+.list .li .link{font-size:13px}
+.sec-title{font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin:4px 2px 8px}
+.toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-140%);background:#111827;color:#fff;font-size:13px;font-weight:600;
+  padding:10px 14px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.25);transition:transform .3s var(--ease);z-index:10;white-space:nowrap}
+.toast.show{transform:translate(-50%,0)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <b>Device</b>
+  <button data-dev="phone" class="on">📱 Phone 440</button>
+  <button data-dev="tablet">Tablet</button>
+  <button data-dev="desktop">🖥 Desktop</button>
+  <span class="sep"></span>
+  <b>Mode</b>
+  <button data-gate="1" class="on">Login Gate（首次）</button>
+  <button data-gate="0">由 Settings 打開</button>
+  <span class="sep"></span>
+  <button id="reset">Reset demo</button>
+</div>
+<p class="proto-hint">試下：密碼打 <code>wrong</code> 會出 server error；Email 打 <code>taken@x.com</code> 會出「已註冊」；Sign up 成功 → Check email；Sign in 成功 → Account Hub。</p>
+
+<div class="stage">
+  <div class="device" id="device" data-size="phone">
+    <div class="screen">
+      <div class="fake-home"><div class="row"></div><div class="mon"></div><div class="row"></div></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="backdrop" id="backdrop">
+        <div class="card" id="card" role="dialog" aria-modal="true" aria-labelledby="dlg-title"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const G = `<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.1l6.6 4.8C14.7 15 19 12.5 24 12.5c3 0 5.8 1.1 7.9 3l5.7-5.7C33.8 6.4 29.1 4.5 24 4.5 16.3 4.5 9.6 8.8 6.3 14.1z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.6-1.9 13-5l-6-4.8c-2.1 1.4-4.8 2.3-7.9 2.3-5.2 0-9.7-3.1-11.3-7.4l-6.5 5C9.3 39.2 16.1 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6 4.8C42 33.9 43.5 29.2 43.5 24c0-1.2-.1-2.4-.4-3.5z"/></svg>`;
+const EYE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`;
+
+const S = { gate:true, tab:null, lastMethod:null, lastEmail:"", user:null, busy:false };
+const card = document.getElementById("card");
+const $ = s => card.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+const isPhone = () => document.getElementById("device").dataset.size==="phone";
+
+function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),2200)}
+
+function render(html, dx=0){
+  card.innerHTML = `<div class="screen-v" style="--dx:${dx}px">${html}</div>`;
+}
+function closeBtn(){ return S.gate ? "" : `<button class="icon-btn close" aria-label="Close" data-act="close">✕</button>`; }
+
+/* ============ Auth（單一畫面 + 分段 tab） ============ */
+function showAuth(tab, dx=0){
+  S.tab = tab || S.tab || (S.lastMethod ? "signin" : "signup");
+  const t = S.tab, up = t==="signup";
+  const gLabel = up ? "Sign up with Google" : "Sign in with Google";
+  const showLast = !up && S.lastMethod;
+  render(`
+    ${closeBtn()}
+    <div class="brand">
+      <div class="ball" aria-hidden="true"></div>
+      <h2 id="dlg-title">${up ? "Create your Trainer account" : "Welcome back, Trainer"}</h2>
+      <p class="sub">${up ? "Save your Pokémon and progress across all your devices." : "Sign in to continue where you left off."}</p>
+    </div>
+
+    <div class="seg" role="tablist" data-tab="${t}">
+      <span class="pill" aria-hidden="true"></span>
+      <button role="tab" aria-selected="${up}" data-tab-btn="signup">Create account</button>
+      <button role="tab" aria-selected="${!up}" data-tab-btn="signin">Sign in</button>
+    </div>
+
+    <button class="btn btn-google" data-act="google">
+      ${showLast && S.lastMethod==="google" ? `<span class="badge-last">Last used</span>` : ""}
+      ${G}<span>${gLabel}</span>
+    </button>
+
+    <div class="divider">or with email</div>
+
+    <div id="banner"></div>
+    <form id="f" novalidate>
+      ${up ? `
+      <div class="field" data-f="name">
+        <label for="su-name">Trainer name</label>
+        <div class="wrap"><input id="su-name" name="nickname" autocomplete="nickname" maxlength="24" enterkeyhint="next" placeholder="e.g. Ash"></div>
+        <div class="msg" id="su-name-m"></div>
+      </div>` : ""}
+      <div class="field" data-f="email">
+        <label for="f-email">Email${showLast && S.lastMethod==="email" ? ` <span class="muted" style="font-weight:500">Last used</span>`:""}</label>
+        <div class="wrap"><input id="f-email" type="email" name="email" autocomplete="${up?"email":"username"}" inputmode="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" placeholder="you@example.com" value="${up?"":esc(S.lastEmail)}"></div>
+        <div class="msg" id="f-email-m"></div>
+      </div>
+      <div class="field has-eye" data-f="pass">
+        <div class="lab"><label for="f-pass" style="margin:0">Password</label>${up?"":`<button type="button" class="link" style="font-size:13px" data-act="forgot">Forgot password?</button>`}</div>
+        <div class="wrap">
+          <input id="f-pass" type="password" name="password" autocomplete="${up?"new-password":"current-password"}" enterkeyhint="${up?"done":"go"}" ${up?'minlength="8"':""} placeholder="${up?"At least 8 characters":"Your password"}">
+          <button type="button" class="eye" data-act="eye" aria-label="Show password" aria-pressed="false">${EYE}</button>
+        </div>
+        ${up?`<div class="strength" id="str" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`:""}
+        <div class="msg ${up?"hint":""}" id="f-pass-m">${up?"Use 8+ characters. Mix letters and numbers to make it stronger.":""}</div>
+      </div>
+      <button class="btn btn-primary" id="submit" type="submit">${up?"Create account":"Sign in"}</button>
+    </form>
+
+    <p class="foot">${up
+      ? `By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.`
+      : `New here? <button class="link" data-tab-btn="signup">Create an account</button>`}</p>
+  `, dx);
+
+  // tabs
+  card.querySelectorAll("[data-tab-btn]").forEach(b=>b.onclick=()=>{ const nt=b.dataset.tabBtn; if(nt!==S.tab){ showAuth(nt, nt==="signin"?16:-16); focusFirst(); } });
+  card.querySelector('[role=tablist]').onkeydown = e => { if(e.key==="ArrowRight"||e.key==="ArrowLeft"){ showAuth(S.tab==="signup"?"signin":"signup"); card.querySelector('[aria-selected=true]').focus(); } };
+  $('[data-act=google]').onclick = googleFlow;
+  $('[data-act=eye]').onclick = e => { const i=$("#f-pass"), b=e.currentTarget, show=i.type==="password"; i.type=show?"text":"password"; b.innerHTML=show?EYE_OFF:EYE; b.setAttribute("aria-pressed",show); b.setAttribute("aria-label",show?"Hide password":"Show password"); i.focus(); };
+  const fg = $('[data-act=forgot]'); if (fg) fg.onclick = () => showForgot($("#f-email").value.trim());
+  bindClose();
+
+  const pass = $("#f-pass");
+  pass.addEventListener("keyup", e => { const caps = e.getModifierState && e.getModifierState("CapsLock"); if(!up){ const m=$("#f-pass-m"); m.className="msg "+(caps?"warn":""); m.textContent = caps ? "Caps Lock is on" : (m.dataset.err||""); } });
+  if (up) pass.addEventListener("input", () => { $("#str").dataset.s = strength(pass.value); clearErr("pass"); $("#f-pass-m").className="msg hint"; $("#f-pass-m").textContent = pass.value.length && pass.value.length<8 ? `${8-pass.value.length} more character${8-pass.value.length>1?"s":""}` : "Use 8+ characters. Mix letters and numbers to make it stronger."; });
+  // validate on blur, clear on input
+  card.querySelectorAll(".field input").forEach(inp => {
+    inp.addEventListener("blur", () => { if (inp.value) validateField(inp.closest(".field").dataset.f); });
+    inp.addEventListener("input", () => { const f=inp.closest(".field").dataset.f; if(f!=="pass") clearErr(f); $("#banner").innerHTML=""; });
+  });
+  $("#f").onsubmit = e => { e.preventDefault(); up ? doSignup() : doSignin(); };
+}
+
+function strength(p){ if(!p) return 0; let s=0; if(p.length>=8)s++; if(/[a-z]/i.test(p)&&/\d/.test(p))s++; if(/[^a-z0-9]/i.test(p)||/[A-Z]/.test(p)&&/[a-z]/.test(p))s++; if(p.length>=12)s++; return Math.max(1,s); }
+function setErr(f,msg){ const el=card.querySelector(`[data-f=${f}]`); if(!el)return; el.classList.add("invalid"); el.classList.remove("valid"); const inp=el.querySelector("input"); inp.setAttribute("aria-invalid","true"); const m=el.querySelector(".msg"); m.className="msg err"; m.textContent=msg; m.dataset.err=msg; m.id && inp.setAttribute("aria-describedby",m.id); }
+function clearErr(f){ const el=card.querySelector(`[data-f=${f}]`); if(!el)return; el.classList.remove("invalid"); el.querySelector("input").removeAttribute("aria-invalid"); const m=el.querySelector(".msg"); if(m.classList.contains("err")){m.textContent="";m.className="msg";m.dataset.err="";} }
+function validateField(f){
+  const v = card.querySelector(`[data-f=${f}] input`)?.value.trim() ?? "";
+  if (f==="name"){ if(!v) return setErr(f,"Pick a trainer name"), false; if(v.length<2) return setErr(f,"Use at least 2 characters"), false; }
+  if (f==="email"){ if(!v) return setErr(f,"Enter your email"), false; if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return setErr(f,"That doesn't look like an email — check for typos"), false; }
+  if (f==="pass"){ const p=card.querySelector(`[data-f=pass] input`).value; if(!p) return setErr(f,"Enter a password"), false; if(S.tab==="signup"&&p.length<8) return setErr(f,"Password needs at least 8 characters"), false; }
+  clearErr(f); if(f!=="pass") card.querySelector(`[data-f=${f}]`).classList.add("valid"); return true;
+}
+function validateAll(fields){ let first=null; fields.forEach(f=>{ if(!validateField(f) && !first) first=f; }); if(first) card.querySelector(`[data-f=${first}] input`).focus(); return !first; }
+function setBusy(on, label){ S.busy=on; const b=$("#submit"); card.querySelectorAll("input,button").forEach(x=>{ if(x!==b) x.disabled=on; }); b.disabled=on; b.innerHTML = on ? `<span class="spinner"></span><span>${label}</span>` : (S.tab==="signup"?"Create account":"Sign in"); }
+function banner(html, kind=""){ $("#banner").innerHTML = `<div class="banner ${kind}" role="alert">${html}</div>`; }
+function focusFirst(){ if (isPhone()) return; /* 手機唔 autofocus，避免一開就彈鍵盤遮畫面 */ const i=card.querySelector(".field input:not([value]):not([value=''])")||card.querySelector(".field input"); i&&i.focus(); }
+
+async function doSignup(){
+  if (!validateAll(["name","email","pass"])) return;
+  const email=$("#f-email").value.trim();
+  setBusy(true,"Creating account…"); await wait(1100);
+  if (email==="taken@x.com"){ setBusy(false); setErr("email","This email already has an account"); banner(`Already registered? <button class="link" id="go-si">Sign in instead</button>`, "info"); $("#go-si").onclick=()=>{ S.lastEmail=email; showAuth("signin",16); }; return; }
+  S.lastEmail=email; S.lastMethod="email"; S.pendingName=$("#su-name").value.trim();
+  showCheckEmail(email, "confirm");
+}
+async function doSignin(){
+  if (!validateAll(["email","pass"])) return;
+  const email=$("#f-email").value.trim(), p=$("#f-pass").value;
+  setBusy(true,"Signing in…"); await wait(1000);
+  if (p==="wrong"){ setBusy(false); setErr("pass","Incorrect email or password"); banner(`Couldn't sign you in. Check your password or <button class="link" id="b-fg">reset it</button>.`); $("#b-fg").onclick=()=>showForgot(email); $("#f-pass").select(); return; }
+  S.lastEmail=email; S.lastMethod="email"; S.user={ name: S.pendingName || email.split("@")[0], email, google:false, emailId:true };
+  showAccount(true);
+}
+async function googleFlow(e){
+  const b=e.currentTarget; b.disabled=true; b.innerHTML=`<span class="spinner" style="color:#5f6368"></span><span>Opening Google…</span>`;
+  await wait(1100);
+  S.lastMethod="google"; S.user={ name:"Ash Ketchum", email:"ash@gmail.com", google:true, emailId:false };
+  showAccount(true);
+}
+
+/* ============ Forgot / Check email ============ */
+function showForgot(prefill=""){
+  render(`
+    <button class="icon-btn back" aria-label="Back" data-act="back">←</button>${closeBtn()}
+    <div class="brand" style="margin-top:8px">
+      <div class="mail-art" aria-hidden="true">🔑</div>
+      <h2 id="dlg-title">Reset your password</h2>
+      <p class="sub">Enter the email you signed up with. We'll send you a secure link to set a new password.</p>
+    </div>
+    <div id="banner"></div>
+    <form id="f" novalidate>
+      <div class="field" data-f="email">
+        <label for="f-email">Email</label>
+        <div class="wrap"><input id="f-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" enterkeyhint="send" value="${esc(prefill)}" placeholder="you@example.com"></div>
+        <div class="msg" id="f-email-m"></div>
+      </div>
+      <button class="btn btn-primary" id="submit" type="submit">Send reset link</button>
+    </form>
+  `, 16);
+  $('[data-act=back]').onclick = () => showAuth("signin",-16);
+  bindClose();
+  $("#f").onsubmit = async e => { e.preventDefault(); if(!validateAll(["email"])) return; const em=$("#f-email").value.trim(); const b=$("#submit"); b.disabled=true; b.innerHTML=`<span class="spinner"></span><span>Sending…</span>`; await wait(900); showCheckEmail(em,"reset"); };
+  focusFirst();
+}
+function showCheckEmail(email, kind){
+  const reset = kind==="reset";
+  render(`
+    ${closeBtn()}
+    <div class="center" style="padding-top:6px">
+      <div class="mail-art" aria-hidden="true">✉️</div>
+      <h2 id="dlg-title">Check your inbox</h2>
+      <p class="sub">${reset ? "If an account exists for" : "We sent a confirmation link to"}<br><strong style="color:var(--ink)">${esc(email)}</strong></p>
+      <p class="muted" style="margin:10px 0 0">${reset ? "Open the link to choose a new password." : "Tap the link in the email to activate your account, then come back and sign in."} Can't find it? Check Spam or Promotions.</p>
+    </div>
+    <div class="stack">
+      <button class="btn btn-primary" data-act="done">${reset ? "Back to sign in" : "I've confirmed — Sign in"}</button>
+      <button class="btn btn-ghost" data-act="resend" disabled>Resend email in <span id="cd">30</span>s</button>
+      <button class="link" style="align-self:center;font-size:13px;margin-top:4px" data-act="wrong">Wrong email? Change it</button>
+    </div>
+  `, 16);
+  bindClose();
+  $('[data-act=done]').onclick = () => showAuth("signin",-16);
+  $('[data-act=wrong]').onclick = () => reset ? showForgot(email) : showAuth("signup",-16);
+  const rb=$('[data-act=resend]'); let n=30;
+  const tick=setInterval(()=>{ if(!document.body.contains(rb)) return clearInterval(tick); n--; if(n<=0){ clearInterval(tick); rb.disabled=false; rb.textContent="Resend email"; } else rb.querySelector("#cd").textContent=n; },1000);
+  rb.onclick = () => { toast("Email sent again"); rb.disabled=true; n=30; rb.innerHTML=`Resend email in <span id="cd">30</span>s`; const t2=setInterval(()=>{ if(!document.body.contains(rb)) return clearInterval(t2); n--; if(n<=0){clearInterval(t2);rb.disabled=false;rb.textContent="Resend email";} else rb.querySelector("#cd").textContent=n; },1000); };
+}
+
+/* ============ Account Hub（已登入） ============ */
+function showAccount(justSignedIn){
+  S.gate=false;
+  const u=S.user;
+  if (justSignedIn) toast(`Signed in as ${u.email}`);
+  render(`
+    <button class="icon-btn close" aria-label="Close" data-act="close">✕</button>
+    <div class="acct-head">
+      <div class="avatar" aria-hidden="true">${esc(u.name[0]||"T").toUpperCase()}</div>
+      <div><div class="n" id="dlg-title">${esc(u.name)}</div><div class="e">${esc(u.email)}</div><div class="sync">Progress synced</div></div>
+    </div>
+    <div class="sec-title">Sign-in methods</div>
+    <div class="list">
+      <div class="li">${G}<span class="t">Google</span>${u.google?`<span class="pill-ok">Connected</span>`:`<button class="link" data-act="link-g">Connect</button>`}</div>
+      <div class="li"><span style="width:20px;text-align:center">✉️</span><span class="t">Email &amp; password</span>${u.emailId?`<span class="pill-ok">Connected</span>`:`<span class="muted">Not set</span>`}</div>
+    </div>
+    <p class="muted" style="margin:8px 2px 0;font-size:12px">${u.google&&u.emailId?"You can sign in with either method.":"Connect another method so you never get locked out."}</p>
+    <div class="stack">
+      <button class="btn btn-danger-ghost" data-act="signout">Sign out</button>
+    </div>
+  `);
+  bindClose();
+  const lg=$('[data-act=link-g]'); if(lg) lg.onclick=async()=>{ lg.innerHTML=`<span class="spinner" style="width:14px;height:14px;color:var(--red)"></span>`; await wait(900); u.google=true; showAccount(); toast("Google connected"); };
+  $('[data-act=signout]').onclick = confirmSignout;
+}
+function confirmSignout(){
+  render(`
+    <div class="center" style="padding-top:6px">
+      <div class="mail-art" aria-hidden="true">👋</div>
+      <h2 id="dlg-title">Sign out?</h2>
+      <p class="sub">Your progress is safe in the cloud. Progress on this device will be cleared until you sign in again.</p>
+    </div>
+    <div class="stack">
+      <button class="btn btn-primary" style="background:var(--err);box-shadow:0 3px 0 #991b1b" data-act="yes">Sign out</button>
+      <button class="btn btn-ghost" data-act="no">Cancel</button>
+    </div>
+  `);
+  $('[data-act=no]').onclick=()=>showAccount();
+  $('[data-act=yes]').onclick=async e=>{ e.currentTarget.innerHTML=`<span class="spinner"></span><span>Signing out…</span>`; await wait(700); S.user=null; S.gate=true; S.tab="signin"; toast("Signed out"); showAuth("signin"); };
+}
+
+function bindClose(){ const c=$('[data-act=close]'); if(c) c.onclick=()=>{ document.getElementById("backdrop").style.display="none"; toast("（Modal closed — 撳 Reset demo 再開）"); }; }
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !S.gate && !S.busy){ const c=$('[data-act=close]'); c&&c.click(); } });
+
+/* prototype controls */
+document.querySelectorAll("[data-dev]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-dev]").forEach(x=>x.classList.toggle("on",x===b)); document.getElementById("device").dataset.size=b.dataset.dev; });
+document.querySelectorAll("[data-gate]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-gate]").forEach(x=>x.classList.toggle("on",x===b)); S.gate=b.dataset.gate==="1"; document.getElementById("backdrop").style.display=""; S.user?showAccount():showAuth(); });
+document.getElementById("reset").onclick=()=>{ Object.assign(S,{tab:null,lastMethod:null,lastEmail:"",user:null,pendingName:""}); S.gate=document.querySelector("[data-gate].on").dataset.gate==="1"; document.getElementById("backdrop").style.display=""; showAuth(); };
+
+showAuth();
+</script>
+</body>
+</html>

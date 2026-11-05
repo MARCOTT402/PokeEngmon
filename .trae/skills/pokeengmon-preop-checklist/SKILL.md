@@ -574,7 +574,7 @@ Incident (2026-11-04)：Login Hub 有 `Continue with Google`，但 `_showSignInF
 - 任何「可以開始使用」嘅 auth 頁（Login Hub、Sign In、Sign Up、Account Hub）都必須列出所有 available providers，唔可以假設用戶會行到特定一頁。
 - 覆核方法：逐頁問「新用戶入到呢頁，佢想用嘅 provider 喺唔喺度？」而唔係只看主入口。
 - Sign In 頁現已加 `#si-google`（`btn-google` + `or Email` divider，同 Hub 一樣 layout）；新加 auth 頁要照抄同一結構，`signInWithGoogle()` 對新帳戶會自動建帳（`migrateAnonymous` 回 true → 觸發 Curve 設定，見 Rule 48）。
-- 文案維持業界標準 `Continue with Google`（Google/GitHub/X 皆用此寫法），唔好改成長句或雙行；可發現性問題用「每個入口都提供」解決，唔係改按鈕文字。
+- ~~文案維持 `Continue with Google`~~（v1.59 起由用戶推翻，見 Rule 73）：Google 掣按所在 tab 轉名 —— Create account tab = `Sign up with Google`、Sign in tab = `Sign in with Google`（都係 Google branding 官方允許字串）。唔好改成長句或雙行；可發現性問題仍然用「每個入口都提供」解決。
 - 驗證：`node tools/preview-iphone.mjs --headless --click "#btn-entry-yes" --js "doc.querySelector('#lh-signin').click()" --shot out.png`，確認 Sign In 頁見到 Google 掣 + 表單冇被裁切。
 
 ## Rule 56 — 換進度條星星做動畫跑手：sprite sheet 化 + `flex: none` + 光暈 + 邊界淨空
@@ -734,6 +734,29 @@ Incident (2026-11-05，Quiz v2 圖片題)：`.word-image` 用 `height: clamp(170
 - 驗收：每個尺寸（440×956、375×812、375×667、820×1180、1280×800）量 `#quiz-scroll` 嘅 `scrollHeight - clientHeight` 要 ≤ 4，同埋輸入格 `bottom` 要細過鍵盤 `top`。
 
 Skill: Rule 72 added
+
+## Rule 73 — Auth UI v2：單一卡片 + Create/Sign in tab；表單一定要俾 Password Manager 用、input 16px
+
+Incident (2026-11-05，login 商用級改版)：舊版要撳 3 下（Hub → Create/Sign in → 表單）先見到表單；Google 掣喺 Hub 同 Sign in 頁各有一份，但 Create account 頁冇。另外有兩個真 bug：
+1. 全部表單 `autocomplete="off"` → iOS Keychain／Google Password Manager 唔識自動填或者儲密碼。
+2. `.lh-input` 14px → iOS Safari 一 focus 就自動 zoom in。
+
+**規格（`js/app.js` `_showAuth` 一族、`css/style.css` `.au-*`）：**
+- `openLoginHub(isGate, tab)` → 已登入就 `_showAccountHub()`，否則 `_showAuth()`。冇 tab 時：`localStorage.pe_auth_last` 有記錄就開 Sign in（預填 email、對應方法標「Last used」），冇就開 Create account。`_showSignUpForm`／`_showSignInForm` 只係 wrapper。
+- Google 掣兩個 tab 都有，按 tab 轉名（見 Rule 55）。
+- autocomplete：sign up 用 `nickname`／`email`／`new-password`；sign in 同 forgot 用 `username`／`current-password`。email 格要 `inputmode="email" autocapitalize="off" spellcheck="false"`，加 `enterkeyhint`。
+- 所有 auth input 至少 16px。新增任何表單 input 都要跟呢條，唔係淨係 auth。
+- 驗證：blur 先驗證，打字就清錯誤，submit 時 focus 第一個錯嘅格。錯誤顯示喺格下面（`.au-msg.err`）；server 錯誤經 `_authError()` 對應成人話（taken／creds／unconfirmed／rate／net）。
+- Loading：`F.busy()` 鎖晒成張卡，submit 掣轉 spinner。`.is-busy` 時唔俾 Esc 關。
+- 只有 `(hover: hover) and (pointer: fine)` 先 autofocus。手機唔 autofocus，否則一開就彈鍵盤遮住卡。
+- Gate（`data-gate="1"`）：冇 ✕、點外面唔關、Esc 唔關（Rule 51）。非 gate 可以用 ✕、Esc 或者點外面關。
+- Check-inbox 頁：Resend 有 60s cooldown。confirm 用 `SupabaseAuth.resendSignup()`（`POST /auth/v1/resend`），reset 用 `sendPasswordReset()`。
+- Sign up 即使要 confirm email，都要先將暱稱寫入 local `playerName`，等首次登入 `import_state` 帶上雲（舊版呢個情況會漏咗個暱稱）。
+- `App.toast()` 用 `textContent`，唔好再 `escapeHTML()` 一次，否則會見到 `&amp;`。
+- Curve setup modal 仍然用舊 `.login-hub`／`.lh-ball`／`.lh-sub`／`.lh-actions`，唔好刪。
+- 驗收：要 stub `SupabaseAuth.*`（唔好用假帳號打 production Supabase），測 empty submit、taken、creds、forgot → check inbox、gate 唔關得、Account Hub → Sign out confirm；尺寸 440×956 同桌面都要測，`.modal-card` 唔可以有 overflow。
+
+Skill: Rule 73 added
 
 ## Rule 74 — 答題空格：顯示字同透明 input 嘅字型（字重、字距、size、family）一定要一致，否則浮標越打越向左移
 
