@@ -1,0 +1,1847 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bag Prototype</title>
+<!-- 背包 prototype v2（純前端假資料，唔接 app state）。基準：iPhone 17 Pro Max 橫向 956×440（Rule 30）
+     手勢：拖放（道具→Pokémon／Pokémon→隊伍／隊伍→背包／隊伍內調位）、左右 swipe 換 tab、雙擊加心心 -->
+<style>
+  :root {
+    --ink: #1b1b22; --muted: #7d786c; --card: #fffdf7; --line: #1b1b22;
+    --soft: #efeadf; --blue: #2b5cb8; --red: #e03a32; --gold: #f2b705; --heart: #ef3b5a;
+    --ease: cubic-bezier(.25, 1, .5, 1);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif; color: var(--ink);
+    background: #2a2d36; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  button { font-family: inherit; color: inherit; }
+  img { -webkit-user-drag: none; }
+
+  /* ---------- prototype 控制列（唔屬於 app） ---------- */
+  .proto-bar {
+    position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 50;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;
+    color: #cfd3dc; font-size: 12px;
+  }
+  .proto-bar button {
+    border: 1px solid #555b6a; background: #3a3f4c; color: #fff; border-radius: 8px;
+    padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .proto-bar button.on { background: var(--blue); border-color: var(--blue); }
+  .help {
+    position: fixed; top: 46px; left: 50%; transform: translateX(-50%); z-index: 50; display: none;
+    background: #fff; color: var(--ink); border-radius: 12px; padding: 12px 16px; font-size: 12.5px; line-height: 1.6;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4); max-width: 520px;
+  }
+  .help.show { display: block; }
+  .help b { color: var(--blue); }
+
+  /* ---------- 縮放舞台：956×440 機身 ---------- */
+  .stage { width: 956px; height: 440px; transform-origin: center center; flex: none; }
+
+  /* ---------- 紅色機身（逆時針轉橫）：裝飾列 | 數據列 | 屏幕 | 下巴 ---------- */
+  .frame {
+    width: 100%; height: 100%;
+    display: grid; grid-template-columns: 44px 52px 1fr 48px;
+    background: linear-gradient(90deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
+    border-radius: 18px 0 0 18px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    position: relative; overflow: hidden;
+  }
+  .deco { position: relative; background: linear-gradient(90deg, #f0524a, #e84038); border-radius: 18px 0 0 18px; }
+  .deco-seam { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .deco-lens {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #bff6ff 0 18%, #35d3f0 45%, #0a9fc4 100%);
+    border: 3px solid #24303a; box-shadow: 0 0 0 2px rgba(255,255,255,.25), inset -4px -4px 8px rgba(0,0,0,.25);
+  }
+  .deco-brand {
+    position: absolute; left: 6px; top: 52px; writing-mode: vertical-rl; transform: rotate(180deg);
+    font-size: 10px; font-weight: 900; letter-spacing: .07em; color: #5a100b;
+    font-family: "Arial Narrow", Arial, sans-serif; white-space: nowrap;
+  }
+  .ball {
+    width: 24px; height: 24px; border-radius: 50%; border: 2.5px solid #24303a; overflow: hidden; position: relative;
+    background: linear-gradient(180deg, #f24b42 0 46%, #24303a 46% 56%, #fff 56% 100%);
+  }
+  .ball::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
+    border-radius: 50%; background: #fff; border: 2px solid #24303a;
+  }
+  .deco .ball { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); }
+  .bezel {
+    background: linear-gradient(90deg, #f0524a 0%, #e03a32 60%, #d42f28 100%);
+    border-right: 2.5px solid #8a1712;
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 10px 0;
+  }
+  .bezel-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #fff; }
+  .stat svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 1px rgba(60,8,5,.45)); }
+  .num {
+    font-size: 9.5px; font-weight: 900; color: #fff8e1; padding: 2px 5px; border-radius: 999px;
+    background: rgba(60,8,5,.42); border: 1px solid rgba(255,255,255,.22); white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  /* 背包開住：紅框數據鍵全部鎖定（同 app 嘅 .frame-locked 一樣：淡化 + 去飽和） */
+  .bezel.locked .stat { opacity: .38; filter: saturate(.5); cursor: not-allowed; }
+  .chin { background: linear-gradient(90deg, #d42f28, #b5231d); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .home-ball { width: 40px; height: 40px; border: 3px solid #111; cursor: pointer; transition: transform .1s; }
+  .home-ball:active { transform: scale(.9); }
+  .home-lbl { font-size: 8px; font-weight: 900; color: #fff8e1; letter-spacing: .04em; text-align: center; line-height: 1.1; opacity: .9; }
+  .home-ball::after { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+
+  /* ---------- 屏幕 ---------- */
+  .screen {
+    margin: 6px; min-width: 0; min-height: 0;
+    background: var(--card); border: 3px solid #111; border-radius: 16px;
+    box-shadow: inset 0 0 0 2px #dfe4ee; overflow: hidden;
+    display: grid; grid-template-columns: 172px 1fr 268px; position: relative;
+  }
+
+  /* 左欄：我的隊伍 */
+  .team { border-right: 2px solid var(--soft); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .col-head { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 900; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+  .col-head small { font-size: 9px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .screen.battle .team .col-head span { color: var(--red); }
+  .slots { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; min-height: 0; flex: 1; scrollbar-width: none; }
+  .slot {
+    display: grid; grid-template-columns: 38px 1fr 14px; align-items: center; gap: 6px;
+    border: 2px solid var(--line); border-radius: 10px; background: #fff; padding: 3px 6px 3px 3px;
+    cursor: grab; position: relative; min-height: 50px; box-shadow: 0 2px 0 var(--line);
+    transition: transform .18s var(--ease), background .15s, box-shadow .15s; touch-action: pan-y;
+  }
+  .slot:active { cursor: grabbing; }
+  .slot.sel { background: #fff4c2; }
+  .slot.empty {
+    border-style: dashed; box-shadow: none; color: var(--muted); display: flex; justify-content: center;
+    font-size: 10.5px; font-weight: 800; cursor: default; text-align: center; line-height: 1.25;
+  }
+  .slot img.spr { width: 38px; height: 38px; object-fit: contain; image-rendering: pixelated; }
+  .slot .nm { font-size: 11.5px; font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot .lv { font-size: 10px; font-weight: 800; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .slot .lv img { height: 10px; }
+  .slot .order { font-size: 10px; font-weight: 900; color: var(--muted); text-align: center; }
+  .slot .held-mini { position: absolute; left: 24px; top: 26px; width: 18px; height: 18px; image-rendering: pixelated; }
+  .mini-hp { height: 5px; border-radius: 999px; border: 1px solid #4a4a52; background: #fff; overflow: hidden; margin-top: 3px; }
+  .mini-hp > i { display: block; height: 100%; background: #22a55a; transition: width .4s var(--ease); }
+  .mini-hp.mid > i { background: #f5a524; } .mini-hp.low > i { background: #e5383b; } .mini-hp.faint { background: #e4e4e8; }
+  .slot.fnt img.spr { filter: grayscale(1) opacity(.6); }
+
+  /* 拖放狀態 */
+  body.dragging, body.dragging * { cursor: grabbing !important; }
+  .drop-ok { outline: 3px dashed var(--blue); outline-offset: 1px; }
+  .drop-hot { background: #dde8ff !important; transform: scale(1.03); }
+  .drop-no { outline: 3px dashed #c9c5b8; outline-offset: 1px; opacity: .55; }
+  .lifted { opacity: .35; }
+  .ghost {
+    position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none;
+    width: 64px; height: 64px; border-radius: 14px; border: 2px solid var(--line); background: #fff;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    transform: translate(-50%, -60%) scale(1.08) rotate(-4deg); transition: transform .12s var(--ease);
+  }
+  .ghost img { width: 80%; height: 80%; object-fit: contain; image-rendering: pixelated; }
+  .ghost.over-ok { transform: translate(-50%, -60%) scale(1.18) rotate(0); border-color: var(--blue); }
+  .bag-drop {
+    position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+    background: rgba(43,92,184,.08); border: 3px dashed var(--blue); border-radius: 12px; margin: 4px;
+    color: var(--blue); font-weight: 900; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .15s;
+  }
+  .mid.removing .bag-drop { opacity: 1; }
+  .mid.removing .bag-drop.hot { background: rgba(43,92,184,.18); }
+
+  /* 中欄 */
+  .mid { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 8px 8px 0; gap: 6px; position: relative; }
+  .tabs { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; background: var(--soft); border-radius: 11px; border: 2px solid var(--line); }
+  .tab-ind {
+    position: absolute; top: 3px; bottom: 3px; left: 3px; border-radius: 8px; background: var(--red);
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); transition: transform .32s var(--ease), width .32s var(--ease);
+  }
+  .tab {
+    position: relative; z-index: 1; border: 0; background: none; border-radius: 8px; padding: 5px 4px;
+    font-size: 11.5px; font-weight: 900; cursor: pointer; transition: color .2s;
+  }
+  .tab.on { color: #fff; }
+  .tab.locked { color: #bcb7a8; cursor: not-allowed; }
+  .tab.locked::after { content: " 🔒"; font-size: 9px; }
+  .tools { display: flex; gap: 5px; align-items: center; }
+  /* 篩選／排序列：手指左右掃（pan-x）、滑鼠拖、滾輪都可以橫向捲；兩邊有淡出提示仲有嘢 */
+  .seg {
+    display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; flex: 1; padding: 1px;
+    touch-action: pan-x; overscroll-behavior-x: contain; cursor: grab; scroll-behavior: smooth;
+  }
+  .seg::-webkit-scrollbar { display: none; }
+  .seg.dragging { cursor: grabbing; scroll-snap-type: none; scroll-behavior: auto; }
+  .seg.fade-r { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .seg.fade-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%); mask-image: linear-gradient(90deg, transparent, #000 15%); }
+  .seg.fade-l.fade-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+  .chip {
+    flex: none; scroll-snap-align: start; border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+    font-size: 10.5px; font-weight: 800; padding: 3px 9px; cursor: pointer; transition: background .2s, color .2s, transform .15s;
+  }
+  .chip:active { transform: scale(.94); }
+  .chip.on { background: var(--ink); color: #fff; }
+  .chip .dir { font-size: 9px; margin-left: 2px; }
+  .banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px; overflow: hidden;
+    background: var(--blue); color: #fff; border-radius: 8px; font-size: 11px; font-weight: 800;
+    max-height: 0; padding: 0 8px; transition: max-height .25s var(--ease), padding .25s var(--ease);
+  }
+  .banner.show { max-height: 40px; padding: 5px 8px; }
+  .banner button { border: 0; background: rgba(255,255,255,.2); color: #fff; border-radius: 6px; font-size: 10.5px; font-weight: 900; padding: 3px 8px; cursor: pointer; }
+  .gridwrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  .grid {
+    position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 2px 14px;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px 6px; align-content: start;
+    touch-action: pan-y; scroll-behavior: smooth;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 16px), transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 10px, #000 calc(100% - 16px), transparent 100%);
+  }
+  .grid.in-l { animation: inL .3s var(--ease); }
+  .grid.in-r { animation: inR .3s var(--ease); }
+  .grid.in-f { animation: inF .22s ease; }
+  @keyframes inL { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes inR { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes inF { from { opacity: .2; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .grid.swiping { transition: none; }
+  .scroll-pos {
+    position: absolute; right: 1px; top: 6px; width: 4px; border-radius: 4px; background: rgba(27,27,34,.35);
+    opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+  .scroll-pos.show { opacity: 1; }
+
+  .cell {
+    position: relative; border: 2px solid var(--line); border-radius: 11px; background: #fff;
+    display: flex; flex-direction: column; align-items: center; cursor: pointer; box-shadow: 0 2px 0 var(--line);
+    transition: transform .15s var(--ease), background .15s; touch-action: pan-y;
+  }
+  .cell:active { transform: scale(.96); }
+  .cell .pic { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+  .cell .pic img.spr { width: 82%; height: 82%; object-fit: contain; image-rendering: pixelated; }
+  .cell .cap {
+    width: 100%; border-top: 1.5px solid var(--soft); font-size: 9.5px; font-weight: 900; color: #4a4a52; text-align: center;
+    padding: 2px 2px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 18px;
+  }
+  .cell .cap img { height: 11px; }
+  .cell .cap.two { flex-direction: column; gap: 0; line-height: 1.2; padding: 2px 2px 3px; }
+  .cell .cap-n { font-size: 10px; font-weight: 900; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .cell .cap-v { font-size: 9px; font-weight: 800; color: var(--muted); display: flex; gap: 2px; align-items: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .cell .cap-v .warn { color: #d33; }
+  .cell.sel { background: #fff4c2; outline: 2.5px solid var(--gold); outline-offset: 1px; }
+  .cell .cnt { position: absolute; right: 3px; bottom: 3px; font-size: 10px; font-weight: 900; background: rgba(27,27,34,.8); color: #fff; border-radius: 999px; padding: 0 5px; }
+  .cell .heart { position: absolute; right: 2px; top: 2px; width: 15px; height: 15px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .cell .heart svg, .d-name .heart svg { width: 100%; height: 100%; display: block; }
+  .heart path { fill: none; stroke: #cfc8b8; stroke-width: 2.2; transition: fill .2s, stroke .2s; }
+  .heart.on path { fill: var(--heart); stroke: var(--heart); }
+  .heart.pop { animation: pop .35s var(--ease); }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.5); } 100% { transform: scale(1); } }
+  .big-heart { position: absolute; left: 50%; top: 42%; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; animation: bigHeart .7s ease forwards; z-index: 3; }
+  .big-heart path { fill: var(--heart); stroke: #fff; stroke-width: 1.5; }
+  @keyframes bigHeart { 0% { transform: scale(.2); opacity: 0; } 30% { transform: scale(1.15); opacity: 1; } 70% { transform: scale(1); opacity: 1; } 100% { transform: scale(1) translateY(-10px); opacity: 0; } }
+  .cell .teamno { position: absolute; left: 3px; top: 3px; font-size: 8.5px; font-weight: 900; background: var(--blue); color: #fff; border-radius: 4px; padding: 1px 4px; }
+  .cell .partner { position: absolute; left: 3px; top: 3px; font-size: 8px; font-weight: 900; background: var(--red); color: #fff; border-radius: 4px; padding: 1px 3px; }
+  .cell .st { position: absolute; left: 2px; bottom: 2px; height: 10px; }
+  .cell .held { position: absolute; right: 1px; bottom: 1px; width: 20px; height: 20px; image-rendering: pixelated; filter: drop-shadow(0 1px 0 #fff); }
+  .cell.fnt .pic img.spr { filter: grayscale(1) opacity(.55); }
+  .cell.dim { opacity: .38; filter: grayscale(.8); }
+  .cell .tag { position: absolute; left: 3px; top: 3px; font-size: 8px; font-weight: 900; color: #fff; border-radius: 4px; padding: 1px 3px; }
+  .ev-icon { width: 70%; height: 70%; border-radius: 10px; background: linear-gradient(160deg, #8fd1ff, #2b5cb8); border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 15px; }
+  .empty-note { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; padding: 40px 10px; line-height: 1.5; }
+
+  /* 右欄 */
+  .detail { border-left: 2px solid var(--soft); padding: 8px 10px 10px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
+  .detail.fade > * { animation: dIn .25s var(--ease) both; }
+  @keyframes dIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+  .d-head { display: flex; align-items: center; gap: 8px; }
+  .d-spr { position: relative; width: 62px; height: 62px; flex: none; }
+  .d-spr img.spr { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+  .d-spr .held-on {
+    position: absolute; right: -4px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center;
+    animation: pop .4s var(--ease);
+  }
+  .d-spr .held-on img { width: 20px; height: 20px; image-rendering: pixelated; }
+  .d-title { flex: 1; min-width: 0; }
+  .d-name { font-size: 16px; font-weight: 900; line-height: 1.1; display: flex; align-items: center; gap: 6px; }
+  .d-name .heart { width: 18px; height: 18px; border: 0; background: none; padding: 0; cursor: pointer; }
+  .d-sub { font-size: 10.5px; font-weight: 800; color: var(--muted); margin-top: 2px; }
+  .types { display: flex; gap: 3px; margin-top: 3px; align-items: center; }
+  .types img { height: 13px; }
+  .bars { display: flex; flex-direction: column; gap: 3px; }
+  .bar-row { display: grid; grid-template-columns: 52px 1fr 48px; align-items: center; gap: 6px; font-size: 10px; font-weight: 900; color: #4a4a52; }
+  .bar-row .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 999px; border: 1.5px solid #4a4a52; background: #fff; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: #22a55a; transition: width .5s var(--ease); }
+  .bar.mid > i { background: #f5a524; } .bar.low > i { background: #e5383b; }
+  .bar.faint { background: #e4e4e8; } .bar.faint > i { background: #9a9aa2; }
+  .bar.full > i { background: #f5a524; }
+  .sec { font-size: 10px; font-weight: 900; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; margin-top: 2px; display: flex; justify-content: space-between; align-items: center; }
+  .stats { display: flex; flex-direction: column; gap: 2px; }
+  .srow { display: grid; grid-template-columns: 64px 26px 1fr 30px; white-space: nowrap; gap: 5px; align-items: center; font-size: 10.5px; font-weight: 800; border-radius: 6px; transition: background .2s; }
+  .srow.pickable { cursor: pointer; background: #eef3ff; }
+  .srow.pickable:active { background: #d6e3ff; }
+  .srow .k { color: #4a4a52; padding-left: 2px; }
+  .srow .val { text-align: right; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .srow .sb { height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+  .srow .sb > i { display: block; height: 100%; background: #f2a33a; transition: width .3s var(--ease); }
+  .srow .ev { text-align: right; color: var(--blue); font-weight: 900; font-variant-numeric: tabular-nums; padding-right: 2px; }
+  .srow .ev.zero { color: #b8b2a4; }
+  .srow.plus .k { color: #d33; } .srow.minus .k { color: #36c; }
+  .moves { display: flex; flex-direction: column; gap: 3px; }
+  /* 招式行：左邊屬性色條 + 分類 icon */
+  .move {
+    display: grid; grid-template-columns: 20px minmax(0, 1fr) 28px 38px; gap: 5px; align-items: center;
+    border: 1.5px solid var(--line); border-left: 5px solid var(--tc); border-radius: 8px; background: #fff;
+    padding: 3px 6px 3px 4px; font-size: 11px; font-weight: 900; transition: background .2s, transform .15s, box-shadow .2s;
+  }
+  .move .mcat { width: 18px; height: 18px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; }
+  .move .mcat svg { width: 12px; height: 12px; }
+  .move .mname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .move .mtype { height: 11px; }
+  .move .mpow { text-align: right; font-size: 10px; color: #4a4a52; font-variant-numeric: tabular-nums; }
+  .move .mpow small { color: #a49e90; font-size: 8.5px; }
+  .move .pp { text-align: right; font-variant-numeric: tabular-nums; font-size: 10px; color: #4a4a52; }
+  .move.tall { grid-template-columns: 20px minmax(0, 1fr) auto; grid-template-rows: auto auto; row-gap: 1px; padding: 4px 7px 4px 4px; }
+  .move.tall .mcat { grid-row: 1 / 3; }
+  .move.tall .mmeta { grid-column: 2 / 4; display: flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 800; color: var(--muted); }
+  .move.tall .mmeta .mtype { height: 10px; }
+  .cat-legend { display: flex; gap: 6px; align-items: center; text-transform: none; letter-spacing: 0; font-size: 9px; }
+  .cat-legend i { width: 11px; height: 11px; display: inline-flex; margin-right: 1px; }
+  .cat-legend i svg { width: 100%; height: 100%; }
+  /* 換招面板 */
+  .me-head { display: flex; align-items: center; gap: 6px; }
+  .me-head img { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; }
+  .me-back { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); background: #fff; font-size: 20px; font-weight: 900; line-height: 1; cursor: pointer; padding: 0 0 3px; }
+  .move.slotmv, .move.learnmv { cursor: pointer; min-height: 32px; }
+  .move.slotmv.picked { background: #fff4c2; box-shadow: 0 0 0 2.5px var(--gold); }
+  .move.learnmv:active, .move.slotmv:active { transform: scale(.98); }
+  .move.swapped { animation: swapIn .5s var(--ease); }
+  @keyframes swapIn { 0% { background: #dcf5e3; transform: scale(1.03); } 100% { background: #fff4c2; transform: none; } }
+  /* Lv 徽章 */
+  .d-lvrow { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .lv-badge { background: var(--ink); color: #fff; border-radius: 7px; padding: 1px 7px; font-size: 11px; font-weight: 800; line-height: 1.4; }
+  .lv-badge b { font-size: 15px; font-weight: 900; margin-left: 1px; }
+  .d-lvrow .d-sub { margin-top: 0; }
+  /* EV 加點：2×3 大格，最少 46px 高，格與格之間留 6px 免誤觸 */
+  .evgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .evtile {
+    position: relative; min-height: 46px; border: 2px solid var(--line); border-radius: 10px; background: #fff;
+    display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; gap: 2px 6px;
+    padding: 5px 8px; text-align: left; cursor: pointer; box-shadow: 0 2px 0 var(--line); touch-action: manipulation;
+    transition: transform .1s, background .15s;
+  }
+  .evtile:active { transform: translateY(2px); box-shadow: none; background: #eef3ff; }
+  .evtile:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .evtile .et-k { font-size: 10.5px; font-weight: 900; color: #4a4a52; }
+  .evtile .et-v { font-size: 13px; font-weight: 900; color: var(--blue); font-variant-numeric: tabular-nums; text-align: right; }
+  .evtile .et-v small { font-size: 8.5px; color: #a49e90; }
+  .evtile .et-bar { grid-column: 1 / -1; height: 5px; border-radius: 999px; background: var(--soft); overflow: hidden; margin-right: 26px; }
+  .evtile .et-bar i { display: block; height: 100%; background: var(--blue); transition: width .15s; }
+  .evtile .et-plus { position: absolute; right: 6px; bottom: 4px; font-size: 10px; font-weight: 900; color: #fff; background: var(--blue); border-radius: 6px; padding: 1px 4px; }
+  .evtile.bump .et-v { animation: pop .25s var(--ease); }
+  .evtools { display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-weight: 700; color: var(--muted); }
+  .evtools button { border: 1.5px solid var(--line); background: #fff; border-radius: 7px; font-size: 10.5px; font-weight: 900; padding: 3px 10px; cursor: pointer; }
+  .evtools button:disabled { opacity: .4; cursor: not-allowed; }
+  .kv { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; font-weight: 800; padding: 3px 0; border-bottom: 1px dashed #e2ddd0; }
+  .kv b { font-weight: 900; display: flex; align-items: center; gap: 4px; }
+  .kv b img { width: 18px; height: 18px; image-rendering: pixelated; }
+  .kv button { border: 1.5px solid var(--line); background: #fff; border-radius: 6px; font-size: 10px; font-weight: 900; padding: 1px 6px; cursor: pointer; }
+  .actions {
+    display: flex; gap: 5px; margin-top: auto; padding: 6px 0 2px;
+    position: sticky; bottom: -10px; background: var(--card); box-shadow: 0 -6px 8px -6px rgba(0,0,0,.15);
+  }
+  .actions:empty { display: none; }
+  .btn {
+    flex: 1; min-width: 0; border: 2px solid var(--line); border-radius: 10px; background: #ffd23f; font-weight: 900; font-size: 11.5px;
+    padding: 7px 4px; cursor: pointer; box-shadow: 0 2px 0 var(--line); transition: transform .12s; white-space: nowrap;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: none; }
+  .btn.alt { background: #fff; }
+  .btn.on { background: var(--blue); color: #fff; }
+  .btn:disabled { background: #ecebe6; color: #b3ae9f; border-color: #c9c5b8; box-shadow: none; cursor: not-allowed; }
+  .item-big { display: flex; align-items: center; gap: 10px; }
+  .item-big .ib { width: 64px; height: 64px; border: 2px solid var(--line); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #fff; flex: none; }
+  .item-big .ib img { width: 48px; height: 48px; image-rendering: pixelated; }
+  .pill { display: inline-block; font-size: 9.5px; font-weight: 900; border-radius: 999px; padding: 1px 7px; background: var(--soft); color: #4a4a52; margin-right: 3px; }
+  .pill.green { background: #dcf5e3; color: #1d7a3e; }
+  .desc { font-size: 11.5px; line-height: 1.45; color: #3a3a42; font-weight: 600; }
+  .note { font-size: 10px; color: var(--muted); font-weight: 700; line-height: 1.4; background: #f6f2e8; border-radius: 8px; padding: 6px 8px; }
+  .note.blue { background: #dde8ff; color: var(--blue); }
+
+  /* toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: rgba(27,27,34,.92); color: #fff; font-size: 12px; font-weight: 800; padding: 7px 14px; border-radius: 999px;
+    transition: all .22s var(--ease); pointer-events: none; white-space: nowrap; z-index: 20;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 轉手機提示（參考：斜紋底 + 中間手機旋轉動畫 + 「仍然這樣玩」） */
+  .rotate {
+    position: fixed; inset: 0; z-index: 40; color: #fff; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background:
+      radial-gradient(ellipse at center, rgba(120,26,22,.0) 0%, rgba(20,6,6,.55) 75%),
+      repeating-linear-gradient(135deg, #5a1612 0 22px, #45100d 22px 44px);
+    text-align: center; padding: 24px;
+  }
+  .rotate.show { display: flex; animation: inF .25s ease; }
+  .rot-art { position: relative; width: 150px; height: 110px; }
+  .rot-arrow { position: absolute; left: 40px; top: 0; width: 80px; height: 44px; }
+  .rot-phone {
+    position: absolute; left: 52px; top: 26px; width: 44px; height: 78px; border-radius: 9px;
+    background: linear-gradient(180deg, #f0524a, #d42f28); border: 3px solid #111; box-shadow: 3px 3px 0 #111;
+    animation: spin 2.4s cubic-bezier(.6,0,.3,1) infinite; transform-origin: 50% 60%;
+  }
+  .rot-phone::before { content: ""; position: absolute; inset: 9px 5px 13px; background: #fffdf7; border: 2px solid #111; border-radius: 4px; }
+  .rot-phone::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #fff; border: 2px solid #111; }
+  @keyframes spin { 0%, 20% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+  .rotate.back .rot-phone { animation-name: spinBack; }
+  .rotate.back .rot-arrow { transform: scaleX(-1); }
+  @keyframes spinBack { 0%, 20% { transform: rotate(-90deg); } 50%, 80% { transform: rotate(0); } 100% { transform: rotate(-90deg); } }
+  .rotate h2 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: .02em; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
+  .rotate p { margin: 0; font-weight: 700; font-size: 14px; color: #ffd9d4; }
+  .rotate button {
+    margin-top: 6px; border: 2px solid rgba(255,255,255,.55); background: rgba(255,255,255,.14); color: #fff;
+    border-radius: 999px; padding: 9px 22px; font-weight: 800; font-size: 14px; cursor: pointer; backdrop-filter: blur(2px);
+  }
+  .rotate button:active { transform: scale(.96); }
+
+  /* ---------- 換招頁（蓋住中欄 + 右欄） ---------- */
+  .me-ov {
+    position: absolute; top: 0; bottom: 0; left: 172px; right: 0; z-index: 8; background: var(--card);
+    border-left: 2px solid var(--soft); display: flex; flex-direction: column; padding: 8px 10px 8px;
+    transform: translateX(30px); opacity: 0; pointer-events: none; transition: transform .28s var(--ease), opacity .2s;
+  }
+  .me-ov.show { transform: none; opacity: 1; pointer-events: auto; }
+  .me2-head { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 2px solid var(--soft); }
+  .me2-head > img { width: 44px; height: 44px; object-fit: contain; image-rendering: pixelated; }
+  .me2-title { font-size: 15px; font-weight: 900; line-height: 1.2; }
+  .me2-steps { flex: 1; display: flex; gap: 4px; justify-content: center; }
+  .me2-steps span { font-size: 10px; font-weight: 800; color: #b3ae9f; padding: 3px 8px; border-radius: 999px; background: #f2efe6; transition: all .2s; }
+  .me2-steps span.on { color: #fff; background: var(--blue); }
+  .me2-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.15fr; gap: 10px; padding-top: 6px; }
+  .me2-cur, .me2-learn { display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+  .me2-slots { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; min-height: 0; flex: 1; }
+  .me2-list { display: grid; grid-template-columns: 1fr; gap: 5px; overflow-y: auto; min-height: 0; flex: 1; align-content: start; padding: 2px; }
+  .me2-cats { display: flex; gap: 3px; text-transform: none; letter-spacing: 0; }
+  .chip.mini { font-size: 9.5px; padding: 1px 7px; display: inline-flex; align-items: center; gap: 3px; }
+  .chip.mini i { width: 10px; height: 10px; display: inline-flex; }
+  .chip.mini i svg { width: 100%; height: 100%; }
+  .mcard {
+    border: 2px solid var(--line); border-left: 6px solid var(--tc); border-radius: 10px; background: #fff;
+    padding: 5px 8px; cursor: pointer; transition: background .2s, box-shadow .2s, transform .12s; touch-action: pan-y;
+  }
+  .mcard:active { transform: scale(.98); }
+  .mcard.picked { background: #fff4c2; box-shadow: 0 0 0 2.5px var(--gold); }
+  .mcard.learn-card.picked { background: #e7efff; box-shadow: 0 0 0 2.5px var(--blue); }
+  .mcard.drop-hot { background: #dde8ff; transform: scale(1.02); }
+  .mcard.swapped { animation: swapIn .6s var(--ease); }
+  .mc-top { display: flex; align-items: center; gap: 6px; }
+  .mc-top .mcat { width: 18px; height: 18px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+  .mc-top .mcat svg { width: 12px; height: 12px; }
+  .mc-name { flex: 1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mc-top .mtype { height: 11px; }
+  .mc-stats { display: flex; gap: 8px; font-size: 9.5px; font-weight: 800; color: var(--muted); margin-top: 2px; }
+  .mc-stats b { color: var(--ink); }
+  .mc-desc { font-size: 10px; font-weight: 600; color: #3a3a42; line-height: 1.35; margin-top: 3px; }
+  .learn-card .mc-stats { gap: 5px; font-size: 9px; }
+  .me2-compare { border: 2px solid var(--line); border-radius: 10px; background: #fbf9f3; padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; min-height: 92px; }
+  .cmp-empty { font-size: 11px; color: var(--muted); font-weight: 700; margin: auto 0; text-align: center; }
+  .cmp-desc { font-size: 10.5px; font-weight: 600; line-height: 1.35; }
+  .cmp-grid { display: grid; grid-template-columns: 1fr 52px 52px 52px; font-size: 10px; font-weight: 800; row-gap: 2px; }
+  .cmp-grid span { text-align: center; }
+  .cmp-grid span:nth-child(4n+1) { text-align: left; }
+  .cmp-grid > span:nth-child(-n+4) { color: var(--muted); font-size: 9px; }
+  .cmp-old { color: var(--muted); text-decoration: line-through; }
+  .cmp-new { color: var(--blue); }
+  .cmp-grid em { font-style: normal; font-size: 9px; }
+  .cmp-grid em.up { color: #1d9a4a; } .cmp-grid em.down { color: #d33; } .cmp-grid em.same { color: #b3ae9f; }
+  .ghost.ghost-label { width: auto; height: auto; padding: 6px 12px; font-size: 12px; font-weight: 900; border-radius: 10px; }
+
+  /* ---------- 彈窗（大木博士／排序次序） ---------- */
+  .modal-ov {
+    position: absolute; inset: 0; z-index: 12; background: rgba(27,27,34,.45); display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-ov.show { opacity: 1; pointer-events: auto; }
+  .oak-card, .sort-card {
+    width: 330px; background: var(--card); border: 3px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 5px 0 var(--line);
+    display: flex; flex-direction: column; gap: 8px; transform: scale(.94); transition: transform .25s var(--ease);
+  }
+  .modal-ov.show .oak-card, .modal-ov.show .sort-card { transform: none; }
+  .oak-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .oak-head img { width: 52px; height: 52px; object-fit: contain; image-rendering: pixelated; }
+  .oak-rows .kv.total { font-size: 12px; border-bottom: 0; }
+  .ev-chip { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 16px; border-radius: 4px; background: linear-gradient(160deg, #8fd1ff, #2b5cb8); color: #fff; font-size: 8.5px; font-weight: 900; border: 1px solid var(--line); }
+  .oak-actions { display: flex; gap: 6px; }
+  .btn.hold { position: relative; overflow: hidden; background: #ffd9d6; }
+  .btn.hold .hold-fill { position: absolute; inset: 0; background: var(--red); transform: scaleX(0); transform-origin: left; }
+  .btn.hold.holding .hold-fill { transform: scaleX(1); transition: transform 1s linear; }
+  .btn.hold .hold-t { position: relative; }
+  .btn.hold.holding .hold-t { color: #fff; }
+  .oak-btn { flex: none !important; width: 38px; font-size: 15px !important; }
+  .cell.bye { animation: bye .42s var(--ease) forwards; }
+  @keyframes bye { to { transform: translateY(-14px) scale(.6); opacity: 0; } }
+  .sort-head { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+  .sort-list { display: flex; flex-direction: column; gap: 4px; max-height: 250px; overflow-y: auto; }
+  .sort-row { display: flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 9px; background: #fff; padding: 4px 6px; font-size: 12px; font-weight: 900; transition: background .15s, transform .15s; }
+  .sort-row.dragging { background: #fff4c2; transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+  .sort-row .grip { cursor: grab; font-size: 16px; color: var(--muted); padding: 0 4px; touch-action: none; }
+  .sort-row .sr-l { flex: 1; }
+  .sort-row button { width: 26px; height: 24px; border: 1.5px solid var(--line); background: #fff; border-radius: 6px; font-size: 10px; cursor: pointer; }
+  .sort-row button:disabled { opacity: .3; }
+  .chip.edit { border-style: dashed; color: var(--blue); border-color: var(--blue); }
+
+  /* 戰鬥文字框示範（FRLG 風格白框 + 深色描邊） */
+  .bt-ov {
+    position: absolute; inset: 0; z-index: 14; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; padding: 14px;
+    background: linear-gradient(180deg, #8fd0f0 0%, #bfe6c9 55%, #7fbf6a 56%, #5fa04e 100%);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .bt-ov.show { opacity: 1; pointer-events: auto; }
+  .bt-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; cursor: pointer; }
+  .bt-col { display: flex; flex-direction: column; gap: 4px; }
+  .bt-tag { align-self: flex-start; font-size: 10px; font-weight: 900; color: #fff; background: var(--blue); border-radius: 6px; padding: 2px 8px; }
+  .bt-tag.foe { background: var(--red); }
+  .bt-box {
+    position: relative; min-height: 78px; background: #fff; border: 4px solid #3a3a48; border-radius: 10px;
+    box-shadow: inset 0 0 0 3px #d8d4e8, 0 3px 0 #1b1b22; padding: 12px 16px;
+  }
+  .bt-box p { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.4; color: #3a3a48; letter-spacing: .01em; }
+  .bt-next { position: absolute; right: 12px; bottom: 6px; font-style: normal; color: #e03a32; font-size: 12px; animation: btBlink .8s steps(2) infinite; }
+  @keyframes btBlink { 50% { opacity: 0; } }
+  .bt-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; color: #1b3a1b; }
+  .bt-foot .btn { flex: none; padding: 6px 14px; }
+
+  /* 進化閃光 */
+  .d-spr.evo::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; background: radial-gradient(circle, #fff 0 30%, rgba(255,255,255,0) 70%); animation: evoFlash .9s ease-out forwards; }
+  @keyframes evoFlash { 0% { opacity: 1; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.6); } }
+
+  /* 戰鬥換 Pokémon：中欄鎖定 */
+  .lock-ov {
+    position: absolute; inset: 0; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: repeating-linear-gradient(135deg, rgba(239,234,223,.92) 0 10px, rgba(229,224,212,.92) 10px 20px); border-radius: 10px;
+    color: var(--muted); font-weight: 900; font-size: 13px; text-align: center;
+  }
+  .lock-ov small { font-weight: 700; font-size: 11px; }
+  .screen.switching .lock-ov { display: flex; }
+  .slot .active-tag { position: absolute; right: 4px; top: -7px; font-size: 8px; font-weight: 900; background: var(--red); color: #fff; border-radius: 4px; padding: 1px 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <span>Prototype:</span>
+  <button id="pb-normal" class="on">Normal bag</button>
+  <button id="pb-battle">In-battle bag</button>
+  <button id="pb-switch">In-battle switch</button>
+  <button id="pb-rotate">Rotate prompt</button>
+  <button id="pb-help">Gestures</button>
+</div>
+<div class="help" id="help">
+  <b>Drag</b> (mouse: press and move · touch: hold ~0.3s then move)<br>
+  · Item → a Pokémon in My Team = use / give it<br>
+  · Pokémon → a team slot = add (or replace that slot)<br>
+  · Team slot → another slot = reorder · Team slot → the middle area = remove<br>
+  <b>Swipe</b> left / right on the grid = switch tab (trackpad: two-finger swipe)<br>
+  <b>Double-tap</b> a Pokémon = toggle ♥ favorite<br>
+  <b>Tap</b> a sort chip again = flip ascending / descending<br>
+  <b>Sort / filter row</b>: swipe sideways (mouse: drag or scroll wheel)<br>
+  <b>EV</b>: open a Pokémon → EV → tap a tile = +1, hold = keep adding, Undo<br>
+  <b>Moves</b>: open a Pokémon → Moves → tap a current move → tap a new one<br>
+  <b>Moves</b> page: drag a move on the right onto a slot on the left to swap<br>
+  <b>Sort order</b>: tap ✎ Order at the end of the sort row<br>
+  <b>Prof. Oak</b>: open a Pokémon → ⇪ → hold to send (refunds its EV units + 1)<br>
+  <b>Status bar</b> is locked in the Bag · <b>Home</b> = back Home (or back to the battle)
+</div>
+
+<div class="stage" id="stage">
+  <div class="frame">
+    <div class="deco" aria-hidden="true">
+      <svg class="deco-seam" viewBox="0 0 44 100" preserveAspectRatio="none">
+        <path d="M24 100 V89 L34 85 V0" fill="none" stroke="#8a1712" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      </svg>
+      <span class="ball"></span>
+      <span class="deco-brand">POKÉDEX OF ANOMALIES</span>
+      <span class="deco-lens"></span>
+    </div>
+    <div class="bezel locked" id="bezel">
+      <div class="bezel-group">
+        <div class="stat">
+          <svg viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/><rect x="20.5" y="9.5" width="2" height="5" rx="1" fill="#1a1a1a"/><rect x="3.5" y="8.5" width="12" height="7" rx="1" fill="#ffe259"/></svg>
+          <span class="num">12</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="#7a1eaa" stroke="#1a1a1a" stroke-width="1.6"/><rect x="1.5" y="11.3" width="21" height="1.4" fill="#1a1a1a"/><path d="M1.6 12.7h20.8A10.5 10.5 0 0 1 1.6 12.7Z" fill="#d8d8d8"/><circle cx="12" cy="12" r="2.4" fill="#fff" stroke="#1a1a1a" stroke-width="1.2"/></svg>
+          <span class="num">91/151</span>
+        </div>
+      </div>
+      <div class="bezel-group">
+        <div class="stat">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1e7fbf" stroke="#062036" stroke-width="1.6"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#fff" opacity=".55"/></svg>
+          <span class="num">99930</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24"><path d="M13 2 L7.5 11.5 L11 12 L8 22 L16.5 10.5 L12 10.8 L14.5 2 Z" fill="#ffd54f" stroke="#3d1f00" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <span class="num">x2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen">
+      <aside class="team">
+        <div class="col-head"><span id="team-title">My Team</span><small id="team-hint">drag to reorder</small></div>
+        <div class="slots" id="slots"></div>
+      </aside>
+
+      <section class="mid" id="mid">
+        <div class="tabs" id="tabs">
+          <span class="tab-ind" id="tab-ind"></span>
+          <button class="tab" data-tab="pokemon">Pokémon</button>
+          <button class="tab" data-tab="items">Items</button>
+          <button class="tab" data-tab="held">Held items</button>
+        </div>
+        <div class="tools"><div class="seg" id="chips"></div></div>
+        <div class="banner" id="banner"><span id="banner-t"></span><button id="banner-x">Cancel</button></div>
+        <div class="gridwrap" id="gridwrap">
+          <div class="grid" id="grid"></div>
+          <div class="scroll-pos" id="scroll-pos"></div>
+        </div>
+        <div class="bag-drop" id="bag-drop" data-drop="bag">Drop here to remove from team</div>
+        <div class="lock-ov">🔒 Locked while switching<small>Pick a Pokémon on the left to switch in</small></div>
+      </section>
+
+      <aside class="detail" id="detail"></aside>
+      <div class="me-ov" id="me-ov"></div>
+      <div class="bt-ov" id="bt-ov"></div>
+      <div class="modal-ov" id="oak-ov"></div>
+      <div class="modal-ov" id="sort-ov"></div>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div class="chin"><span class="ball home-ball" id="home-ball" role="button" aria-label="Home"></span><span class="home-lbl" id="home-lbl">HOME</span></div>
+  </div>
+</div>
+
+<div class="rotate" id="rotate">
+  <div class="rot-art" aria-hidden="true">
+    <svg class="rot-arrow" viewBox="0 0 80 44"><path d="M8 38 C 14 10, 50 4, 66 22" fill="none" stroke="#111" stroke-width="10" stroke-linecap="round"/><path d="M8 38 C 14 10, 50 4, 66 22" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M56 14 L72 28 L74 10 Z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/></svg>
+    <div class="rot-phone"></div>
+  </div>
+  <h2 id="rotate-title">Please rotate your device</h2>
+  <p id="rotate-msg">The Bag works in landscape</p>
+  <button id="rotate-ok">Play like this anyway</button>
+</div>
+
+<script>
+/* ================= 假資料 ================= */
+const SPR = id => `../assets/animated/${id}.gif`;
+const ITEM = slug => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+const TYPE = t => `../assets/types/${t}.png`;
+const STATUS = s => `../assets/battle/ui/status-${s}.png`;
+const HEART = `<svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2Z"/></svg>`;
+const TYPE_COLOR = { fire: "#e8743b", flying: "#8ea8e8", ghost: "#6e5a9c", poison: "#9b4fb0", water: "#3b8ee8", ice: "#5cc8d0",
+  electric: "#e6b400", normal: "#9a9a7a", dragon: "#5a4ad8", grass: "#4caf50", bug: "#8ab020", psychic: "#e85a8a",
+  fighting: "#c0392b", fairy: "#e08ad8", ground: "#c9a24a", rock: "#a8903a", steel: "#8a9aa8", dark: "#5a4a40" };
+/* 招式：名 → [屬性, 分類, 威力, 命中, PP] */
+const MOVE_DB = {
+  "Flamethrower": ["fire", "special", 90, 100, 15], "Ember": ["fire", "special", 40, 100, 25], "Fire Spin": ["fire", "special", 35, 85, 15],
+  "Fire Punch": ["fire", "physical", 75, 100, 15], "Bite": ["dark", "physical", 60, 100, 25], "Slash": ["normal", "physical", 70, 100, 20],
+  "Shadow Ball": ["ghost", "special", 80, 100, 15], "Sludge Bomb": ["poison", "special", 90, 100, 10], "Hypnosis": ["psychic", "status", null, 60, 20],
+  "Dream Eater": ["psychic", "special", 100, 100, 15], "Lick": ["ghost", "physical", 30, 100, 30], "Confuse Ray": ["ghost", "status", null, 100, 10],
+  "Surf": ["water", "special", 90, 100, 15], "Ice Beam": ["ice", "special", 90, 100, 10], "Water Gun": ["water", "special", 40, 100, 25],
+  "Body Slam": ["normal", "physical", 85, 100, 15], "Withdraw": ["water", "status", null, null, 40], "Hydro Pump": ["water", "special", 110, 80, 5],
+  "Thunderbolt": ["electric", "special", 90, 100, 15], "Quick Attack": ["normal", "physical", 40, 100, 30], "Thunder Wave": ["electric", "status", null, 90, 20],
+  "Iron Tail": ["steel", "physical", 100, 75, 15], "Thunder": ["electric", "special", 110, 70, 10], "Agility": ["psychic", "status", null, null, 30],
+  "Rest": ["psychic", "status", null, null, 5], "Earthquake": ["ground", "physical", 100, 100, 10], "Crunch": ["dark", "physical", 80, 100, 15],
+  "Hyper Beam": ["normal", "special", 150, 90, 5], "Dragon Claw": ["dragon", "physical", 80, 100, 15], "Wing Attack": ["flying", "physical", 60, 100, 35],
+  "Thunder Punch": ["electric", "physical", 75, 100, 15], "Extreme Speed": ["normal", "physical", 80, 100, 5], "Dragon Dance": ["dragon", "status", null, null, 20],
+  "Twineedle": ["bug", "physical", 25, 100, 20], "Poison Jab": ["poison", "physical", 80, 100, 20], "String Shot": ["bug", "status", null, 95, 40],
+  "Tackle": ["normal", "physical", 40, 100, 35], "Bug Buzz": ["bug", "special", 90, 100, 10], "Razor Leaf": ["grass", "physical", 55, 95, 25],
+  "Vine Whip": ["grass", "physical", 45, 100, 25], "Sleep Powder": ["grass", "status", null, 75, 15], "Solar Beam": ["grass", "special", 120, 100, 10],
+  "Psychic": ["psychic", "special", 90, 100, 10], "Teleport": ["psychic", "status", null, null, 20], "Barrier": ["psychic", "status", null, null, 20],
+  "Confusion": ["psychic", "special", 50, 100, 25], "Poison Sting": ["poison", "physical", 15, 100, 35], "Acid": ["poison", "special", 40, 100, 30],
+  "Wrap": ["normal", "physical", 15, 90, 20], "Sing": ["normal", "status", null, 55, 15], "Pound": ["normal", "physical", 40, 100, 35],
+  "Moonblast": ["fairy", "special", 95, 100, 15], "Dig": ["ground", "physical", 80, 100, 10], "Sand Attack": ["ground", "status", null, 100, 15],
+  "Karate Chop": ["fighting", "physical", 50, 100, 25], "Low Kick": ["fighting", "physical", 60, 100, 20], "Seismic Toss": ["fighting", "physical", null, 100, 20],
+  "Focus Energy": ["normal", "status", null, null, 30], "Rock Throw": ["rock", "physical", 50, 90, 15], "Rock Slide": ["rock", "physical", 75, 90, 10],
+  "Defense Curl": ["normal", "status", null, null, 40]
+};
+/* 每個屬性：頭 4 招 = 已裝備，其餘 = 可學 */
+const LEARN_BY_TYPE = {
+  fire: ["Flamethrower", "Ember", "Bite", "Slash", "Fire Spin", "Fire Punch", "Agility"],
+  ghost: ["Shadow Ball", "Sludge Bomb", "Hypnosis", "Dream Eater", "Lick", "Confuse Ray"],
+  water: ["Surf", "Ice Beam", "Water Gun", "Body Slam", "Withdraw", "Hydro Pump", "Rest"],
+  electric: ["Thunderbolt", "Quick Attack", "Thunder Wave", "Iron Tail", "Thunder", "Agility"],
+  normal: ["Body Slam", "Rest", "Earthquake", "Crunch", "Hyper Beam", "Tackle", "Defense Curl"],
+  dragon: ["Dragon Claw", "Wing Attack", "Thunder Punch", "Extreme Speed", "Dragon Dance", "Hyper Beam"],
+  bug: ["Twineedle", "Poison Jab", "String Shot", "Tackle", "Bug Buzz", "Agility"],
+  grass: ["Razor Leaf", "Vine Whip", "Sleep Powder", "Tackle", "Solar Beam", "Acid"],
+  psychic: ["Psychic", "Teleport", "Barrier", "Confusion", "Rest", "Agility"],
+  poison: ["Poison Sting", "Acid", "Bite", "Wrap", "Sludge Bomb", "Poison Jab"],
+  fairy: ["Sing", "Pound", "Moonblast", "Rest", "Body Slam", "Defense Curl"],
+  ground: ["Dig", "Earthquake", "Slash", "Sand Attack", "Rock Slide", "Defense Curl"],
+  fighting: ["Karate Chop", "Low Kick", "Seismic Toss", "Focus Energy", "Rock Slide", "Body Slam"],
+  rock: ["Rock Throw", "Rock Slide", "Defense Curl", "Earthquake", "Tackle", "Dig"]
+};
+/* 傷害分類 icon：同 js/pokemon.js 嘅 DAMAGE_CLASS_INFO 一樣 */
+const CAT = {
+  physical: { label: "Physical", color: "#c0392b", icon: `<svg viewBox="0 0 24 24"><path d="M4.2 20.1l2.6-2.6-1.7-1.7-2.6 2.6a1.2 1.2 0 000 1.7 1.2 1.2 0 001.7 0z" fill="currentColor"/><path d="M8.2 17.9l-2.1-2.1L16.5 5.4l3.5-1.5-1.5 3.5L8.2 17.9z" fill="currentColor"/><path d="M17.7 3l3.3 3.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>` },
+  special: { label: "Special", color: "#2f6fce", icon: `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.3 6 6 2.4-6 2.4-2.3 6-2.3-6-6-2.4 6-2.4z" fill="currentColor"/><circle cx="19" cy="4" r="1.6" fill="currentColor"/><circle cx="5" cy="19" r="1.6" fill="currentColor"/></svg>` },
+  status: { label: "Status", color: "#6b7280", icon: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.4" fill="currentColor"/><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="3 3.4"/></svg>` }
+};
+const NATURES = [["Adamant", "atk", "spa"], ["Modest", "spa", "atk"], ["Timid", "spe", "atk"], ["Jolly", "spe", "spa"], ["Bold", "def", "atk"], ["Calm", "spd", "atk"], ["Bashful", null, null]];
+const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
+const STAT_LABEL = { hp: "HP", atk: "Attack", def: "Defense", spa: "Sp. Atk", spd: "Sp. Def", spe: "Speed" };
+
+/* 圖鑑號 : 名稱 / 屬性 */
+const DEX = {
+  1: ["Bulbasaur", "grass poison"], 2: ["Ivysaur", "grass poison"], 3: ["Venusaur", "grass poison"], 4: ["Charmander", "fire"], 5: ["Charmeleon", "fire"],
+  6: ["Charizard", "fire flying"], 7: ["Squirtle", "water"], 8: ["Wartortle", "water"], 9: ["Blastoise", "water"], 10: ["Caterpie", "bug"],
+  11: ["Metapod", "bug"], 12: ["Butterfree", "bug flying"], 13: ["Weedle", "bug poison"], 14: ["Kakuna", "bug poison"], 15: ["Beedrill", "bug poison"],
+  16: ["Pidgey", "normal flying"], 17: ["Pidgeotto", "normal flying"], 18: ["Pidgeot", "normal flying"], 19: ["Rattata", "normal"], 20: ["Raticate", "normal"],
+  21: ["Spearow", "normal flying"], 22: ["Fearow", "normal flying"], 23: ["Ekans", "poison"], 24: ["Arbok", "poison"], 25: ["Pikachu", "electric"],
+  26: ["Raichu", "electric"], 27: ["Sandshrew", "ground"], 28: ["Sandslash", "ground"], 29: ["Nidoran♀", "poison"], 30: ["Nidorina", "poison"],
+  31: ["Nidoqueen", "poison ground"], 32: ["Nidoran♂", "poison"], 33: ["Nidorino", "poison"], 34: ["Nidoking", "poison ground"], 35: ["Clefairy", "fairy"],
+  36: ["Clefable", "fairy"], 37: ["Vulpix", "fire"], 38: ["Ninetales", "fire"], 39: ["Jigglypuff", "normal fairy"], 40: ["Wigglytuff", "normal fairy"],
+  41: ["Zubat", "poison flying"], 42: ["Golbat", "poison flying"], 43: ["Oddish", "grass poison"], 44: ["Gloom", "grass poison"], 45: ["Vileplume", "grass poison"],
+  46: ["Paras", "bug grass"], 47: ["Parasect", "bug grass"], 48: ["Venonat", "bug poison"], 49: ["Venomoth", "bug poison"], 50: ["Diglett", "ground"],
+  51: ["Dugtrio", "ground"], 52: ["Meowth", "normal"], 53: ["Persian", "normal"], 54: ["Psyduck", "water"], 55: ["Golduck", "water"],
+  56: ["Mankey", "fighting"], 57: ["Primeape", "fighting"], 58: ["Growlithe", "fire"], 59: ["Arcanine", "fire"], 60: ["Poliwag", "water"],
+  61: ["Poliwhirl", "water"], 62: ["Poliwrath", "water fighting"], 63: ["Abra", "psychic"], 64: ["Kadabra", "psychic"], 65: ["Alakazam", "psychic"],
+  66: ["Machop", "fighting"], 67: ["Machoke", "fighting"], 68: ["Machamp", "fighting"], 69: ["Bellsprout", "grass poison"], 70: ["Weepinbell", "grass poison"],
+  71: ["Victreebel", "grass poison"], 72: ["Tentacool", "water poison"], 73: ["Tentacruel", "water poison"], 74: ["Geodude", "rock ground"], 75: ["Graveler", "rock ground"],
+  76: ["Golem", "rock ground"], 77: ["Ponyta", "fire"], 78: ["Rapidash", "fire"], 79: ["Slowpoke", "water psychic"], 80: ["Slowbro", "water psychic"],
+  26: ["Raichu", "electric"], 36: ["Clefable", "fairy"], 40: ["Wigglytuff", "normal fairy"], 45: ["Vileplume", "grass poison"],
+  62: ["Poliwrath", "water fighting"], 71: ["Victreebel", "grass poison"], 134: ["Vaporeon", "water"], 135: ["Jolteon", "electric"], 136: ["Flareon", "fire"],
+  92: ["Gastly", "ghost poison"], 94: ["Gengar", "ghost poison"], 122: ["Mr. Mime", "psychic fairy"], 129: ["Magikarp", "water"], 131: ["Lapras", "water ice"],
+  133: ["Eevee", "normal"], 143: ["Snorlax", "normal"], 147: ["Dratini", "dragon"], 149: ["Dragonite", "dragon flying"], 150: ["Mewtwo", "psychic"], 151: ["Mew", "psychic"]
+};
+const OWN_ORDER = [6, 94, 131, 25, 143, 149, 15, 1, 7, 39, 52, 54, 63, 92, 133, 147, 129, 41, 122, 150, 151,
+  ...Object.keys(DEX).map(Number).filter(n => n <= 80 && ![6, 15, 1, 7, 25, 39, 41, 52, 54, 63].includes(n))];
+const SPECIAL = { 94: { status: "psn", hpPct: 64, fav: true }, 131: { status: "slp", hpPct: 90 }, 25: { status: "fnt", hpPct: 0, full: 0 },
+  143: { hpPct: 38 }, 6: { fav: true }, 149: { fav: true }, 133: { fav: true }, 7: { status: "brn", hpPct: 72 }, 54: { status: "par" },
+  15: { partner: true, full: 21 }, 150: { fav: true } };
+
+let seed = 7;
+const rnd = n => { seed = (seed * 9301 + 49297) % 233280; return Math.floor(seed / 233280 * n); };
+const POKEMON = OWN_ORDER.map((id, i) => {
+  const [name, typeStr] = DEX[id];
+  const types = typeStr.split(" ");
+  const sp = SPECIAL[id] || {};
+  const lv = id >= 147 ? 40 + rnd(30) : 5 + rnd(40);
+  const stats = {}, evs = {};
+  STAT_KEYS.forEach(k => {
+    const base = 40 + rnd(70);
+    stats[k] = k === "hp" ? Math.floor(base * 2 * lv / 100) + lv + 10 : Math.floor(base * 2 * lv / 100) + 5;
+    evs[k] = [0, 0, 0, 0, 4, 32, 64, 128][rnd(8)];
+  });
+  const pool = LEARN_BY_TYPE[types[0]] || LEARN_BY_TYPE.normal;
+  const mv = pool.slice(0, 4);
+  const pp = {}; pool.forEach(n => { pp[n] = MOVE_DB[n][4] - rnd(3); });
+  return { uid: "u" + i, id, name, types, lv, rarity: id >= 147 ? "Legend" : id > 80 ? "Rare" : "Common",
+    ability: "—", status: sp.status || null, hpPct: sp.hpPct != null ? sp.hpPct : 100, full: sp.full != null ? sp.full : 30 + rnd(70),
+    fav: !!sp.fav, partner: !!sp.partner, nature: NATURES[rnd(NATURES.length)], stats, evs, moves: mv, pool, pp,
+    held: null, obtained: i };
+});
+POKEMON[0].held = "fire-stone";
+let team = ["u0", "u1", "u2", "u3", "u4", "u5"];
+
+/* items（medicine / berries / ev） + held（evolution stones） */
+const ITEMS = [
+  { slug: "potion", name: "Potion", cat: "medicine", n: 6, desc: "Restores 25% of a Pokémon's max HP.", care: "+25% HP", battle: "+25% HP (uses a turn)", battleOk: true },
+  { slug: "super-potion", name: "Super Potion", cat: "medicine", n: 2, desc: "Restores 50% of a Pokémon's max HP.", care: "+50% HP", battle: "+50% HP (uses a turn)", battleOk: true },
+  { slug: "antidote", name: "Antidote", cat: "medicine", n: 3, desc: "Cures poison and bad poison.", care: "Cures poison", battle: "Cures poison", battleOk: true, cure: ["psn", "tox"] },
+  { slug: "burn-heal", name: "Burn Heal", cat: "medicine", n: 1, desc: "Cures a burn.", care: "Cures burn", battle: "Cures burn", battleOk: true, cure: ["brn"] },
+  { slug: "paralyze-heal", name: "Paralyze Heal", cat: "medicine", n: 1, desc: "Cures paralysis.", care: "Cures paralysis", battle: "Cures paralysis", battleOk: true, cure: ["par"] },
+  { slug: "awakening", name: "Awakening", cat: "medicine", n: 2, desc: "Wakes a sleeping Pokémon.", care: "Cures sleep", battle: "Cures sleep", battleOk: true, cure: ["slp"] },
+  { slug: "ice-heal", name: "Ice Heal", cat: "medicine", n: 1, desc: "Thaws a frozen Pokémon.", care: "Cures freeze", battle: "Cures freeze", battleOk: true, cure: ["frz"] },
+  { slug: "revive", name: "Revival", cat: "medicine", n: 3, desc: "Revives a fainted Pokémon with full HP and full fullness, and clears every status.", care: "Faint only · full HP + fullness", battle: "Faint only", battleOk: true, faintOnly: true },
+  { slug: "oran-berry", name: "Oran Berry", cat: "berries", n: 8, desc: "A berry for Partner Care.", care: "Normal food · +25% fullness", battle: "Restores 10 HP", battleOk: true, food: "Normal", bHeal: 10 },
+  { slug: "pecha-berry", name: "Pecha Berry", cat: "berries", n: 4, desc: "A berry for Partner Care.", care: "Normal food · +25% fullness", battle: "Cures poison", battleOk: true, food: "Normal", bCure: ["psn", "tox"] },
+  { slug: "cheri-berry", name: "Cheri Berry", cat: "berries", n: 2, desc: "A berry for Partner Care.", care: "Normal food · +25% fullness", battle: "Cures paralysis", battleOk: true, food: "Normal", bCure: ["par"] },
+  { slug: "sitrus-berry", name: "Sitrus Berry", cat: "berries", n: 3, desc: "A filling berry for Partner Care.", care: "Super food · +50% fullness", battle: "Restores 25% HP", battleOk: true, food: "Super", bHealPct: 25 },
+  { slug: "lum-berry", name: "Lum Berry", cat: "berries", n: 1, desc: "A filling berry for Partner Care.", care: "Super food · +50% fullness", battle: "Cures any status", battleOk: true, food: "Super", bCure: ["psn", "tox", "brn", "par", "slp", "frz"] },
+  { slug: "ev-unit", name: "EV Point Unit", cat: "ev", n: 14, desc: "Adds 1 EV to a stat (max 252 per stat, 510 total). Duplicate pulls drop these.", care: "+1 EV", battle: "—", battleOk: false, ev: true },
+  { slug: "thunder-stone", name: "Thunder Stone", cat: "stones", n: 1, held: true, desc: "Give it to a Pokémon to hold.", care: "Held item", battle: "—", battleOk: false },
+  { slug: "moon-stone", name: "Moon Stone", cat: "stones", n: 2, held: true, desc: "Give it to a Pokémon to hold.", care: "Held item", battle: "—", battleOk: false },
+  { slug: "fire-stone", name: "Fire Stone", cat: "stones", n: 0, held: true, desc: "Give it to a Pokémon to hold.", care: "Held item", battle: "—", battleOk: false },
+  { slug: "water-stone", name: "Water Stone", cat: "stones", n: 1, held: true, desc: "Give it to a Pokémon to hold.", care: "Held item", battle: "—", battleOk: false },
+  { slug: "leaf-stone", name: "Leaf Stone", cat: "stones", n: 1, held: true, desc: "Give it to a Pokémon to hold.", care: "Held item", battle: "—", battleOk: false }
+];
+/* 進化石：圖鑑號 → 進化後圖鑑號（啱條件先會進化，否則只係攜帶） */
+const STONE_EVO = {
+  "thunder-stone": { 25: 26, 133: 135 },
+  "moon-stone": { 35: 36, 39: 40, 30: 31, 33: 34 },
+  "fire-stone": { 37: 38, 58: 59, 133: 136 },
+  "water-stone": { 61: 62, 133: 134 },
+  "leaf-stone": { 44: 45, 70: 71 }
+};
+let evolveFx = null;
+const ITEM_FILTERS = [["all", "All"], ["medicine", "Medicine"], ["berries", "Berries"], ["fossils", "Fossils"], ["ev", "EV units"]];
+const HELD_FILTERS = [["all", "All"], ["stones", "Evolution stones"], ["mega", "Mega stones"]];
+/* 照顧類排序（Fullness／HP loss／Faint／Status）一律將「最需要照顧」排頭 */
+const POKE_SORTS = [["no", "No."], ["level", "Level"], ["fav", "Favorites"], ["type", "Type"],
+  ["full", "Fullness"], ["hploss", "HP loss"], ["faint", "Faint"], ["status", "Status"]];
+const STATUS_NAME = { psn: "Poisoned", tox: "Badly poisoned", brn: "Burned", par: "Paralyzed", slp: "Asleep", frz: "Frozen", fnt: "Fainted" };
+const TABS = ["pokemon", "items", "held"];
+
+/* ================= 狀態 ================= */
+const S = { tab: "pokemon", itemFilter: "all", heldFilter: "all", sort: "no", dir: 1, movesFor: null, moveSlot: null, sel: null, target: null, battle: false, evPick: false };
+const $ = id => document.getElementById(id);
+const byUid = uid => POKEMON.find(p => p.uid === uid);
+const itemOf = slug => ITEMS.find(x => x.slug === slug);
+
+function toast(t) {
+  const el = $("toast"); el.textContent = t; el.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 1800);
+}
+function buzz() { try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} }
+function hpCls(p) { return p.status === "fnt" ? "faint" : p.hpPct < 20 ? "low" : p.hpPct <= 50 ? "mid" : ""; }
+function hpNum(p) { const max = p.stats.hp; return `${Math.round(max * p.hpPct / 100)}/${max}`; }
+function tabLocked(t) { return S.switching || (S.battle && t !== "items"); }
+
+/* ================= 左欄：我的隊伍 ================= */
+function renderTeam() {
+  const list = S.battle ? team.slice(0, 3) : team;
+  let html = list.map((uid, i) => {
+    const p = byUid(uid);
+    const sel = S.sel && S.sel.kind === "pokemon" && S.sel.uid === uid;
+    return `<div class="slot ${sel ? "sel" : ""} ${p.status === "fnt" ? "fnt" : ""}" data-uid="${uid}" data-slot="${i}" data-drop="slot">
+      <img class="spr" src="${SPR(p.id)}" alt="" draggable="false">
+      ${p.held ? `<img class="held-mini" src="${ITEM(p.held)}" alt="" draggable="false">` : ""}
+      <div style="min-width:0">
+        <div class="nm">${p.name}</div>
+        <div class="lv">Lv.${p.lv} ${p.status ? `<img src="${STATUS(p.status)}" alt="">` : ""}</div>
+        <div class="mini-hp ${hpCls(p)}"><i style="width:${p.hpPct}%"></i></div>
+      </div>
+      <span class="order">${i + 1}</span>
+      ${S.battle && i === 0 ? `<span class="active-tag">IN BATTLE</span>` : ""}
+    </div>`;
+  }).join("");
+  if (!S.battle) for (let i = list.length; i < 6; i++) html += `<div class="slot empty" data-slot="${i}" data-drop="slot">Drag a Pokémon here</div>`;
+  const restore = keepSprites($("slots"), "img.spr", spriteKey);
+  $("slots").innerHTML = html;
+  restore();
+  $("team-title").textContent = S.battle ? "Battle team" : "My Team";
+  $("team-hint").textContent = S.switching ? "tap to pick" : S.battle ? "drop medicine here" : "hold & drag";
+  $("slots").querySelectorAll(".slot[data-uid]").forEach(el => {
+    el.addEventListener("click", () => {
+      if (Drag.justDropped) return;
+      const uid = el.dataset.uid;
+      if (S.target) { applyTo(uid); return; }
+      select({ kind: "pokemon", uid });
+    });
+    if (!S.battle) Drag.bind(el, () => ({ kind: "teamslot", uid: el.dataset.uid, img: SPR(byUid(el.dataset.uid).id) }));
+  });
+}
+
+/* ================= 中欄：tabs ================= */
+function renderTabs() {
+  const idx = TABS.indexOf(S.tab);
+  $("tabs").querySelectorAll(".tab").forEach(b => {
+    b.classList.toggle("locked", tabLocked(b.dataset.tab));
+    b.classList.toggle("on", b.dataset.tab === S.tab);
+    b.onclick = () => switchTab(b.dataset.tab);
+  });
+  const w = ($("tabs").clientWidth - 6 - 8) / 3;
+  $("tab-ind").style.width = w + "px";
+  $("tab-ind").style.transform = `translateX(${idx * (w + 4)}px)`;
+}
+function switchTab(t, viaSwipe) {
+  if (t === S.tab) return;
+  if (tabLocked(t)) { toast("Only items can be used in battle"); return; }
+  const dir = TABS.indexOf(t) > TABS.indexOf(S.tab) ? "in-l" : "in-r";
+  if (S.target && t !== "pokemon") cancelTarget(true);
+  S.tab = t; S.sel = null; S.evPick = false; S.movesFor = null;
+  renderTabs(); renderChips(); renderGrid(dir); renderDetail(); renderTeam();
+  $("grid").scrollTop = 0;
+}
+
+/* 篩選／排序 chips（再撳一次已選嘅排序 = 反轉方向） */
+function renderChips() {
+  const c = $("chips");
+  let opts, cur;
+  if (S.tab === "pokemon") { opts = POKE_SORTS; cur = S.sort; }
+  else if (S.tab === "items") { opts = ITEM_FILTERS; cur = S.itemFilter; }
+  else { opts = HELD_FILTERS; cur = S.heldFilter; }
+  c.innerHTML = (S.tab === "pokemon" ? `<span class="chip" style="border:0;background:none;padding-left:0;cursor:default;color:var(--muted)">Sort</span>` : "") +
+    opts.map(([v, l]) => `<button class="chip ${cur === v ? "on" : ""}" data-v="${v}">${l}${S.tab === "pokemon" && cur === v ? `<span class="dir">${S.dir > 0 ? "▲" : "▼"}</span>` : ""}</button>`).join("") +
+    (S.tab === "pokemon" ? `<button class="chip edit" id="chip-edit" title="Change sort order">✎ Order</button>` : "");
+  const ce = $("chip-edit"); if (ce) ce.onclick = (e) => { e.stopPropagation(); openSortEditor(); };
+  c.querySelectorAll("button.chip[data-v]").forEach(b => b.onclick = () => {
+    const v = b.dataset.v;
+    if (S.tab === "pokemon") { if (S.sort === v) S.dir *= -1; else { S.sort = v; S.dir = 1; } }
+    else if (S.tab === "items") S.itemFilter = v; else S.heldFilter = v;
+    renderChips(); renderGrid("in-f");
+  });
+}
+
+const isFaint = p => p.status === "fnt";
+const hasStatus = p => !!p.status && p.status !== "fnt";
+function sortedPokemon() {
+  const byNo = (a, b) => a.id - b.id || a.obtained - b.obtained;
+  const f = {
+    no: byNo,
+    level: (a, b) => b.lv - a.lv || byNo(a, b),
+    fav: (a, b) => (b.fav - a.fav) || byNo(a, b),
+    type: (a, b) => a.types[0].localeCompare(b.types[0]) || byNo(a, b),
+    full: (a, b) => a.full - b.full || byNo(a, b),                      /* 最肚餓排頭 */
+    hploss: (a, b) => a.hpPct - b.hpPct || byNo(a, b),                  /* 扣血最多排頭 */
+    faint: (a, b) => isFaint(b) - isFaint(a) || a.hpPct - b.hpPct || byNo(a, b),
+    status: (a, b) => hasStatus(b) - hasStatus(a) || (a.status || "").localeCompare(b.status || "") || byNo(a, b)
+  };
+  const list = POKEMON.slice().sort(f[S.sort]);
+  return S.dir > 0 ? list : list.reverse();
+}
+/* 格仔下面：第一行一定係名，第二行顯示同排序對應嘅資料 */
+function caption(p) {
+  let v;
+  switch (S.sort) {
+    case "no": v = `No.${String(p.id).padStart(3, "0")}`; break;
+    case "level": v = `Lv.${p.lv}`; break;
+    case "type": v = p.types.map(t => `<img src="${TYPE(t)}" alt="${t}">`).join(""); break;
+    case "fav": v = p.fav ? `<span style="color:var(--heart)">♥ Favorite</span>` : "—"; break;
+    case "full": v = `<span class="${p.full < 30 ? "warn" : ""}">${p.full}% full</span>`; break;
+    case "hploss": v = `<span class="${p.hpPct < 50 ? "warn" : ""}">HP ${hpNum(p)}</span>`; break;
+    case "faint": v = isFaint(p) ? `<span class="warn">Fainted</span>` : `HP ${p.hpPct}%`; break;
+    case "status": v = hasStatus(p) ? `<span class="warn">${STATUS_NAME[p.status]}</span>` : (isFaint(p) ? "Fainted" : "OK"); break;
+  }
+  return `<span class="cap-n">${p.name}</span><span class="cap-v">${v}</span>`;
+}
+
+/* ================= 中欄：格仔 ================= */
+/* 重建 DOM 時沿用已載入嘅 GIF 節點，避免成格閃白 */
+function keepSprites(root, sel, key) {
+  const old = {};
+  root.querySelectorAll(sel).forEach(i => { const k = key(i); if (k) old[k] = i; });
+  return () => root.querySelectorAll(sel).forEach(i => { const o = old[key(i)]; if (o && o !== i) i.replaceWith(o); });
+}
+const spriteKey = i => i.getAttribute("src");
+
+function renderGrid(anim) {
+  const g = $("grid");
+  const restore = keepSprites(g, "img.spr", spriteKey);
+  if (S.tab === "pokemon") {
+    g.innerHTML = sortedPokemon().map(p => {
+      const sel = S.sel && S.sel.kind === "pokemon" && S.sel.uid === p.uid;
+      const it = S.target && itemOf(S.target);
+      const dim = it && !canUse(it, p);
+      const ti = team.indexOf(p.uid);
+      return `<div class="cell ${sel ? "sel" : ""} ${p.status === "fnt" ? "fnt" : ""} ${dim ? "dim" : ""}" data-uid="${p.uid}" data-drop="pokemon">
+        <div class="pic">
+          <img class="spr" src="${SPR(p.id)}" alt="" loading="lazy" draggable="false">
+          ${ti >= 0 ? `<span class="teamno">${ti + 1}</span>` : (p.partner ? `<span class="partner">PARTNER</span>` : "")}
+          ${p.status ? `<img class="st" src="${STATUS(p.status)}" alt="">` : ""}
+          ${p.held ? `<img class="held" src="${ITEM(p.held)}" alt="">` : ""}
+          <button class="heart ${p.fav ? "on" : ""}" data-fav="1" aria-label="Favorite">${HEART}</button>
+        </div>
+        <div class="cap two">${caption(p)}</div>
+      </div>`;
+    }).join("");
+    g.querySelectorAll(".cell").forEach(el => {
+      const uid = el.dataset.uid;
+      el.addEventListener("click", (e) => {
+        if (Drag.justDropped) return;
+        const p = byUid(uid);
+        if (e.target.closest("[data-fav]")) { toggleFav(p, el); return; }
+        /* 雙擊（雙 tap）= 心心 */
+        const now = Date.now();
+        if (lastTap.uid === uid && now - lastTap.t < 320) { toggleFav(p, el, true); lastTap.uid = null; return; }
+        lastTap.uid = uid; lastTap.t = now;
+        if (S.target) { applyTo(uid); return; }
+        select({ kind: "pokemon", uid });
+      });
+      if (!S.battle) Drag.bind(el, () => ({ kind: "pokemon", uid, img: SPR(byUid(uid).id) }));
+    });
+  } else {
+    const isHeld = S.tab === "held";
+    const f = isHeld ? S.heldFilter : S.itemFilter;
+    const list = ITEMS.filter(it => (isHeld ? it.held : !it.held) && (f === "all" || it.cat === f));
+    if (!list.length) {
+      const what = { fossils: "Fossils", mega: "Mega stones" }[f] || "Items";
+      g.innerHTML = `<div class="empty-note">Nothing here yet.<br>${what} will appear when they're added to the game.</div>`;
+    } else {
+      g.innerHTML = list.map(it => {
+        const sel = S.sel && S.sel.kind === "item" && S.sel.slug === it.slug;
+        const dim = (S.battle && !it.battleOk) || it.n <= 0;
+        const icon = it.ev ? `<div class="ev-icon">EV</div>` : `<img class="spr" src="${ITEM(it.slug)}" alt="" draggable="false">`;
+        const tag = it.food ? `<span class="tag" style="background:${it.food === "Super" ? "#b8860b" : "#4caf50"}">${it.food === "Super" ? "SUPER" : "FOOD"}</span>` : "";
+        return `<div class="cell ${sel ? "sel" : ""} ${dim ? "dim" : ""}" data-slug="${it.slug}">
+          <div class="pic">${tag}${icon}<span class="cnt">×${it.n}</span></div>
+          <div class="cap">${it.name}</div></div>`;
+      }).join("");
+      g.querySelectorAll(".cell").forEach(el => {
+        const it = itemOf(el.dataset.slug);
+        el.addEventListener("click", () => {
+          if (Drag.justDropped) return;
+          if (S.battle && !it.battleOk) { toast("Can't use this in battle"); return; }
+          cancelTarget(true); select({ kind: "item", slug: it.slug });
+        });
+        /* EV unit 唔可以拖（喺 Pokémon 嘅 EV 掣用）；冇存貨唔可以拖 */
+        if (!it.ev) Drag.bind(el, () => (it.n > 0 && (!S.battle || it.battleOk)) ? { kind: "item", slug: it.slug, img: ITEM(it.slug) } : null);
+      });
+    }
+  }
+  restore();
+  if (anim) { g.classList.remove("in-l", "in-r", "in-f"); void g.offsetWidth; g.classList.add(anim); }
+  updateScrollPos();
+}
+
+function toggleFav(p, el, big) {
+  p.fav = !p.fav;
+  buzz();
+  const h = el.querySelector(".heart");
+  if (h) { h.classList.toggle("on", p.fav); h.classList.remove("pop"); void h.offsetWidth; h.classList.add("pop"); }
+  if (big && p.fav) {
+    const b = document.createElement("div"); b.className = "big-heart"; b.innerHTML = HEART;
+    el.querySelector(".pic").appendChild(b); setTimeout(() => b.remove(), 750);
+  }
+  if (S.sort === "fav") setTimeout(() => renderGrid("in-f"), 380);
+  if (S.sel && S.sel.uid === p.uid) renderDetail(true);
+}
+
+/* 自製捲動位置指示（橫屏格仔好長時知道去到邊） */
+function updateScrollPos() {
+  const g = $("grid"), bar = $("scroll-pos");
+  const ratio = g.clientHeight / g.scrollHeight;
+  if (ratio >= 1) { bar.style.display = "none"; return; }
+  bar.style.display = "block";
+  const h = Math.max(24, (g.clientHeight - 12) * ratio);
+  bar.style.height = h + "px";
+  bar.style.transform = `translateY(${(g.scrollTop / (g.scrollHeight - g.clientHeight)) * (g.clientHeight - 12 - h)}px)`;
+}
+$("grid").addEventListener("scroll", () => {
+  updateScrollPos(); $("scroll-pos").classList.add("show");
+  clearTimeout(updateScrollPos._t); updateScrollPos._t = setTimeout(() => $("scroll-pos").classList.remove("show"), 700);
+}, { passive: true });
+
+/* ================= 選擇／用道具 ================= */
+const lastTap = { uid: null, t: 0 };
+/* 選擇只切 class，唔重建格仔（91 隻 GIF 重建會閃） */
+function select(sel) {
+  S.sel = sel; S.evPick = false; S.movesFor = null; evUndo.length = 0;
+  markSel(); renderDetail(true);
+  if (ME.p) { if (sel && sel.kind === "pokemon" && !S.battle) openMoveEditor(byUid(sel.uid)); else closeMoveEditor(); }
+}
+function markSel() {
+  const s = S.sel;
+  document.querySelectorAll("#grid .cell, #slots .slot[data-uid]").forEach(c => {
+    const on = !!s && ((s.kind === "pokemon" && c.dataset.uid === s.uid) || (s.kind === "item" && c.dataset.slug === s.slug));
+    c.classList.toggle("sel", on);
+  });
+}
+
+function canUse(it, p) {
+  if (it.held) return true;
+  if (it.faintOnly) return p.status === "fnt";
+  return p.status !== "fnt";
+}
+function startTarget(slug) {
+  if (S.battle && S.turnUsed) { toast("You've already acted this turn — one item per turn"); return; }
+  const it = itemOf(slug);
+  S.target = slug;
+  if (!S.battle && S.tab !== "pokemon") { S.tab = "pokemon"; renderTabs(); renderChips(); renderGrid("in-r"); }
+  $("banner-t").textContent = S.battle ? `${it.name}: tap a Pokémon on the left` : `${it.held ? "Give" : "Use"} ${it.name}: tap a Pokémon`;
+  $("banner").classList.add("show");
+  renderGrid(); renderTeam();
+}
+function cancelTarget(silent) {
+  if (!S.target) return;
+  S.target = null; $("banner").classList.remove("show");
+  if (!silent) { renderGrid(); renderTeam(); }
+}
+function applyTo(uid, slugOverride) {
+  const it = itemOf(slugOverride || S.target), p = byUid(uid);
+  if (!it) return;
+  if (S.battle && S.turnUsed) { cancelTarget(); toast("You've already acted this turn — one item per turn"); return; }
+  if (!canUse(it, p)) { toast(it.faintOnly ? "Revival only works on a fainted Pokémon" : `${p.name} has fainted — use a Revival`); return; }
+  if (S.battle && it.cat === "berries") {
+    const healable = (it.bHeal || it.bHealPct) && p.hpPct < 100;
+    const curable = it.bCure && it.bCure.includes(p.status);
+    if (!healable && !curable) { toast("It won't have any effect."); return; }
+  }
+  const evoTo = it.cat === "stones" && STONE_EVO[it.slug] && STONE_EVO[it.slug][p.id];
+  if (evoTo) {
+    /* 啱條件：即刻進化，進化石用完消失（唔會變攜帶道具） */
+    it.n -= 1;
+    const from = p.name;
+    p.id = evoTo; p.name = DEX[evoTo][0]; p.types = DEX[evoTo][1].split(" ");
+    STAT_KEYS.forEach(k => { p.stats[k] = Math.round(p.stats[k] * 1.25); });
+    toast(`${from} evolved into ${p.name}! (${it.name} used up)`);
+    evolveFx = p.uid;
+  } else if (it.held) {
+    if (p.held) itemOf(p.held).n += 1;
+    p.held = it.slug; it.n -= 1;
+    toast(`${p.name} is now holding ${it.name}`);
+  } else {
+    it.n -= 1;
+    const hp0 = Math.round(p.stats.hp * p.hpPct / 100), st0 = p.status;
+    if (it.slug === "revive") { p.status = null; p.hpPct = 100; p.full = 100; }
+    else if (it.slug === "potion") p.hpPct = Math.min(100, p.hpPct + 25);
+    else if (it.slug === "super-potion") p.hpPct = Math.min(100, p.hpPct + 50);
+    else if (it.cat === "berries" && S.battle) {
+      /* 戰鬥中：跟原作戰鬥效果（回血／解狀態），唔係加飽肚值 */
+      const before = p.hpPct;
+      if (it.bHeal) p.hpPct = Math.min(100, p.hpPct + it.bHeal / p.stats.hp * 100);
+      if (it.bHealPct) p.hpPct = Math.min(100, p.hpPct + it.bHealPct);
+      p.hpPct = Math.round(p.hpPct * 10) / 10;
+      const cured = it.bCure && it.bCure.includes(p.status);
+      if (cured) p.status = null;
+      it._fx = p.hpPct > before ? `+${Math.round((p.hpPct - before) / 100 * p.stats.hp)} HP` : cured ? "status cured" : "no effect";
+    }
+    else if (it.cat === "berries") p.full = Math.min(100, p.full + (it.food === "Super" ? 50 : 25));
+    else if (it.cure && it.cure.includes(p.status)) p.status = null;
+    it._fx = null;
+    if (S.battle) {
+      /* 戰鬥中：關背包 → 戰鬥文字框（自己畫面 + PvP 對手畫面） */
+      const hp1 = Math.round(p.stats.hp * p.hpPct / 100);
+      S.turnUsed = true;
+      showBattleText(itemLines(it, p, hp1 - hp0, st0 && st0 !== p.status ? st0 : null, st0 === "fnt"));
+    } else toast(`Used ${it.name} on ${p.name}`);
+  }
+  buzz();
+  cancelTarget(true);
+  S.sel = { kind: "pokemon", uid };
+  renderTeam(); renderGrid(); renderDetail(true);
+}
+
+/* ================= 戰鬥文字框示範 =================
+   背包每個操作都要寫入戰鬥文字；PvP 對手畫面見到同一件事（用對手視角嘅句子）。
+   正式版：BattleState.useItem 寫 log → 雙方各自模擬 → 各自 narrate。 */
+const ME_NAME = "ASH";   /* 示範用：你喺對手畫面嘅訓練家名 */
+const CURE_TEXT = {
+  psn: n => `${n} was cured of its poisoning!`, tox: n => `${n} was cured of its poisoning!`,
+  brn: n => `${n}'s burn was healed!`, par: n => `${n} was cured of paralysis!`,
+  slp: n => `${n} woke up!`, frz: n => `${n} thawed out!`
+};
+const aOrAn = w => /^[AEIOU]/i.test(w) ? "an" : "a";
+function itemLines(it, p, gained, cured, revived) {
+  const mine = [`You used ${aOrAn(it.name)} ${it.name}!`];
+  const foe = [`${ME_NAME} used ${aOrAn(it.name)} ${it.name}!`];
+  const add = (fn) => { mine.push(fn(p.name)); foe.push(fn(`The opposing ${p.name}`)); };
+  if (revived) add(n => `${n} was revived!`);
+  else {
+    if (gained > 0) add(n => `${n} recovered ${gained} HP!`);
+    if (cured && CURE_TEXT[cured]) add(CURE_TEXT[cured]);
+    if (gained <= 0 && !cured) add(() => "But it had no effect...");
+  }
+  return { mine, foe };
+}
+function showBattleText({ mine, foe }) {
+  const ov = $("bt-ov");
+  ov.innerHTML = `
+    <div class="bt-cols">
+      <div class="bt-col"><span class="bt-tag">Your screen</span><div class="bt-box"><p id="bt-mine"></p><i class="bt-next">▼</i></div></div>
+      <div class="bt-col"><span class="bt-tag foe">Opponent's screen (PvP)</span><div class="bt-box"><p id="bt-foe"></p><i class="bt-next">▼</i></div></div>
+    </div>
+    <div class="bt-foot"><span id="bt-step"></span><button class="btn alt" id="bt-close">Next turn (demo)</button></div>`;
+  ov.classList.add("show");
+  /* 兩個框同時打字：每個框用自己嘅 timer（共用一個會互相 clear 走，對手框會卡死） */
+  let i = 0, typing = 0;
+  const type = (el, text) => new Promise(res => {
+    let k = 0; el.textContent = ""; typing++;
+    const t = setInterval(() => { el.textContent = text.slice(0, ++k); if (k >= text.length) { clearInterval(t); typing--; res(); } }, 18);
+  });
+  const step = async () => {
+    if (i >= mine.length) { $("bt-step").textContent = "Turn ends — the opponent moves next"; ov.querySelectorAll(".bt-next").forEach(n => n.style.visibility = "hidden"); return; }
+    $("bt-step").textContent = `Tap to continue · ${i + 1}/${mine.length}`;
+    await Promise.all([type($("bt-mine"), mine[i]), type($("bt-foe"), foe[i])]);
+    i++;
+  };
+  ov.querySelector(".bt-cols").onclick = () => { if (!typing) step(); };
+  $("bt-close").onclick = () => { ov.classList.remove("show"); S.turnUsed = false; renderDetail(); toast("New turn — you can act again"); };
+  step();
+}
+
+/* ================= 右欄 ================= */
+function renderDetail(anim) {
+  const d = $("detail");
+  d.classList.remove("fade"); if (anim) { void d.offsetWidth; d.classList.add("fade"); }
+  if (!S.sel) {
+    d.innerHTML = `<div class="note" style="margin-top:8px">Tap an item or a Pokémon to see details.<br><br>
+      ${S.battle ? "In battle only Items work. Drag a medicine onto a Pokémon on the left, or tap it then tap the Pokémon." :
+      "Tip: hold and drag an item onto a Pokémon in My Team to use it. Drag Pokémon into team slots to build your team."}</div>`;
+    return;
+  }
+  if (S.sel.kind === "item") {
+    const it = itemOf(S.sel.slug);
+    const catName = ([...ITEM_FILTERS, ...HELD_FILTERS].find(f => f[0] === it.cat) || [0, ""])[1];
+    d.innerHTML = `
+      <div class="item-big">
+        <div class="ib">${it.ev ? `<div class="ev-icon" style="width:48px;height:48px">EV</div>` : `<img src="${ITEM(it.slug)}" alt="">`}</div>
+        <div><div class="d-name">${it.name}</div><div class="d-sub">×${it.n} in bag</div>
+          <div style="margin-top:4px"><span class="pill">${catName}</span>${it.food ? `<span class="pill green">${it.food} food</span>` : ""}</div></div>
+      </div>
+      <div class="desc">${it.desc}</div>
+      ${it.held ? `<div class="kv"><span>Held by</span><b>${POKEMON.filter(p => p.held === it.slug).map(p => p.name).join(", ") || "—"}</b></div>
+        <div class="kv"><span>Using it</span><b>${it.cat === "stones" ? "Evolves a matching Pokémon (stone is used up)" : "—"}</b></div>
+        <div class="kv"><span>Held in battle</span><b>${it.cat === "stones" ? "No effect (same as the original games)" : "—"}</b></div>` :
+        `<div class="kv"><span>Partner Care</span><b>${it.care}</b></div><div class="kv"><span>In battle</span><b>${it.battle}</b></div>`}
+      ${it.ev ? `<div class="note blue">Use it from a Pokémon: open the Pokémon tab, pick one, then tap EV.</div>` : ""}
+      ${it.cat === "medicine" || it.cat === "berries" ? `<div class="note">Every medicine counts toward overdose (3 within 1 min, or 3 within 5 turns in battle).</div>` : ""}
+      ${it.cat === "berries" ? `<div class="note">Berry list and Normal / Super split are placeholders — still to be decided.</div>` : ""}
+      ${it.held ? `<div class="note">Open question: does holding an evolution stone make the Pokémon evolve?</div>` : ""}
+      <div class="actions">${it.ev ? "" : `<button class="btn" id="btn-use" ${it.n <= 0 ? "disabled" : ""}>${it.held ? "Give" : "Use"}</button>`}</div>`;
+    const u = $("btn-use"); if (u) u.onclick = () => startTarget(it.slug);
+    return;
+  }
+  const p = byUid(S.sel.uid);
+  const [natName, up, down] = p.nature;
+  const evTotal = STAT_KEYS.reduce((a, k) => a + p.evs[k], 0);
+  const evItem = itemOf("ev-unit");
+  const inTeam = team.includes(p.uid);
+  d.innerHTML = `
+    <div class="d-head">
+      <div class="d-spr ${evolveFx === p.uid ? "evo" : ""}">
+        <img class="spr" src="${SPR(p.id)}" alt="" style="${p.status === "fnt" ? "filter:grayscale(1) opacity(.6)" : ""}">
+        ${p.held ? `<span class="held-on" title="${itemOf(p.held).name}"><img src="${ITEM(p.held)}" alt=""></span>` : ""}
+      </div>
+      <div class="d-title">
+        <div class="d-name"><span class="d-nm">${p.name}</span><button class="heart ${p.fav ? "on" : ""}" id="d-heart" aria-label="Favorite">${HEART}</button></div>
+        <div class="d-lvrow"><span class="lv-badge">Lv.<b>${p.lv}</b></span>
+          <span class="d-sub">No.${String(p.id).padStart(3, "0")} · ${p.rarity}${p.partner ? " · Partner" : ""}</span></div>
+        <div class="types">${p.types.map(t => `<img src="${TYPE(t)}" alt="${t}">`).join("")}
+          ${p.status ? `<img src="${STATUS(p.status)}" alt="" style="height:12px">` : ""}</div>
+      </div>
+    </div>
+    <div class="bars">
+      <div class="bar-row"><span>FULLNESS</span><div class="bar full"><i style="width:${p.full}%"></i></div><span class="v">${p.full}/100</span></div>
+      <div class="bar-row"><span>HP</span><div class="bar ${hpCls(p)}"><i style="width:${p.hpPct}%"></i></div><span class="v">${hpNum(p)}</span></div>
+    </div>
+    ${S.evPick ? evPanelHTML(p, evTotal, evItem) : `
+    <div class="sec"><span>Stats</span><span>EV ${evTotal}/510</span></div>
+    <div class="stats">${STAT_KEYS.map(k => `
+      <div class="srow ${k === up ? "plus" : k === down ? "minus" : ""}">
+        <span class="k">${STAT_LABEL[k]}${k === up ? " ▲" : k === down ? " ▼" : ""}</span>
+        <span class="val">${p.stats[k]}</span>
+        <div class="sb"><i style="width:${Math.min(100, p.stats[k] / 2)}%"></i></div>
+        <span class="ev ${p.evs[k] ? "" : "zero"}">${p.evs[k]}</span>
+      </div>`).join("")}</div>`}
+    <div class="sec"><span>Moves</span><span class="cat-legend">${Object.values(CAT).map(c => `<i style="color:${c.color}">${c.icon}</i>${c.label}`).join("")}</span></div>
+    <div class="moves">${p.moves.map(n => moveRowHTML(n, p)).join("")}</div>
+    <div class="kv"><span>Nature</span><b>${natName}</b></div>
+    <div class="kv"><span>Held item</span>${p.held ? `<b><img src="${ITEM(p.held)}" alt="">${itemOf(p.held).name} <button id="btn-unheld">Remove</button></b>` : "<b>None</b>"}</div>
+    <div class="actions">${S.switching ? `<button class="btn" id="btn-switch" ${p.status === "fnt" || team[0] === p.uid ? "disabled" : ""}>${team[0] === p.uid ? "Already in battle" : p.status === "fnt" ? "Fainted — can't battle" : `Switch in ${p.name}`}</button>` : S.battle ? "" : `
+      <button class="btn alt" id="btn-moves">Moves</button>
+      <button class="btn alt ${S.evPick ? "on" : ""}" id="btn-ev" ${evItem.n <= 0 && !S.evPick ? "disabled" : ""}>${S.evPick ? "Done" : `EV ×${evItem.n}`}</button>
+      <button class="btn" id="btn-team">${inTeam ? "Leave" : "Join team"}</button>
+      <button class="btn alt oak-btn" id="btn-oak" title="Send to Prof. Oak" aria-label="Send to Prof. Oak">⇪</button>`}</div>`;
+  evolveFx = null;
+  $("d-heart").onclick = () => { p.fav = !p.fav; buzz(); renderGrid(); renderDetail(); };
+  const un = $("btn-unheld");
+  if (un) un.onclick = () => { itemOf(p.held).n += 1; toast(`Took ${itemOf(p.held).name} back`); p.held = null; renderAll(); };
+  if (S.evPick) bindEvPanel(d, p, evItem);
+  const sw = $("btn-switch");
+  if (sw) sw.onclick = () => {
+    if (S.turnUsed) { toast("You've already acted this turn"); return; }
+    S.turnUsed = true;
+    const out = byUid(team[0]);
+    const i = team.indexOf(p.uid); [team[0], team[i]] = [team[i], team[0]];
+    buzz(); renderTeam(); renderDetail(true);
+    showBattleText({
+      mine: [`${out.name}, come back!`, `Go! ${p.name}!`],
+      foe: [`${ME_NAME} withdrew ${out.name}!`, `${ME_NAME} sent out ${p.name}!`]
+    });
+  };
+  if (!S.battle) {
+    $("btn-moves").onclick = () => { S.evPick = false; openMoveEditor(p); };
+    $("btn-oak").onclick = () => openOak(p);
+    $("btn-ev").onclick = () => { S.evPick = !S.evPick; evUndo.length = 0; renderDetail(); };
+    $("btn-team").onclick = () => {
+      if (inTeam) { team = team.filter(u => u !== p.uid); toast(`${p.name} left the team`); }
+      else if (team.length >= 6) { toast("Team is full — drag onto a slot to replace"); return; }
+      else { team.push(p.uid); toast(p.status === "fnt" ? `${p.name} joined — can't battle until revived` : `${p.name} joined the team`); }
+      renderAll();
+    };
+  }
+}
+
+/* 招式行：分類 icon + 招式名 + 屬性 icon + 威力 + PP */
+function moveRowHTML(n, p, extra) {
+  const [t, cat, pow, acc, ppMax] = MOVE_DB[n];
+  const c = CAT[cat];
+  const cur = p && p.pp[n] != null ? p.pp[n] : ppMax;
+  /* 細列（資料頁）：色條 = 屬性；換招頁用兩行版，多顯示屬性 icon／威力／命中 */
+  if (!extra) return `<div class="move" style="--tc:${TYPE_COLOR[t] || "#888"}" title="${t} · ${c.label}">
+    <span class="mcat" style="background:${c.color}">${c.icon}</span>
+    <span class="mname">${n}</span>
+    <span class="mpow">${pow == null ? "—" : pow}</span>
+    <span class="pp">${cur}/${ppMax}</span>
+  </div>`;
+  return `<div class="move tall ${extra.cls || ""}" ${extra.attr || ""} style="--tc:${TYPE_COLOR[t] || "#888"}">
+    <span class="mcat" style="background:${c.color}" title="${c.label}">${c.icon}</span>
+    <span class="mname">${n}</span>
+    <span class="pp">PP ${extra.learn ? ppMax : `${cur}/${ppMax}`}</span>
+    <span class="mmeta"><img class="mtype" src="${TYPE(t)}" alt="${t}"> ${c.label} · Pow ${pow == null ? "—" : pow} · Acc ${acc == null ? "—" : acc}</span>
+  </div>`;
+}
+
+/* 招式說明（原作效果；正式版改讀 moves.json 嘅 effect 文字） */
+const MOVE_DESC = {
+  "Flamethrower": "A powerful blast of fire. 10% chance to burn the target.",
+  "Ember": "Small flames. 10% chance to burn the target.",
+  "Fire Spin": "Traps the target in a vortex of fire for 4–5 turns, hurting it every turn.",
+  "Fire Punch": "A fiery punch. 10% chance to burn the target.",
+  "Bite": "Bites with sharp fangs. 30% chance to make the target flinch.",
+  "Slash": "Slashes with claws. High critical-hit ratio.",
+  "Shadow Ball": "Hurls a shadowy blob. 20% chance to lower the target's Sp. Def by 1.",
+  "Sludge Bomb": "Hurls unsanitary sludge. 30% chance to poison the target.",
+  "Hypnosis": "Hypnotic suggestion that puts the target to sleep.",
+  "Dream Eater": "Only works on a sleeping target. The user recovers 50% of the damage dealt.",
+  "Lick": "Licks with a long tongue. 30% chance to paralyze the target.",
+  "Confuse Ray": "A sinister ray that confuses the target.",
+  "Surf": "A big wave crashes down on the target.",
+  "Ice Beam": "An icy beam. 10% chance to freeze the target.",
+  "Water Gun": "Squirts water at the target.",
+  "Body Slam": "Slams with its whole body. 30% chance to paralyze the target.",
+  "Withdraw": "Hides in its shell. Raises the user's Defense by 1.",
+  "Hydro Pump": "Blasts a huge volume of water at high pressure.",
+  "Thunderbolt": "A strong electric blast. 10% chance to paralyze the target.",
+  "Quick Attack": "An extremely fast attack that always goes first (priority +1).",
+  "Thunder Wave": "A weak electric charge that paralyzes the target.",
+  "Iron Tail": "Hits with a steel-hard tail. 30% chance to lower the target's Defense by 1.",
+  "Thunder": "A wicked thunderbolt. 30% chance to paralyze the target.",
+  "Agility": "Relaxes and lightens its body. Raises the user's Speed by 2.",
+  "Rest": "Sleeps for 2 turns to fully restore HP and cure any status.",
+  "Earthquake": "A powerful quake that shakes the ground.",
+  "Crunch": "Crunches with sharp fangs. 20% chance to lower the target's Defense by 1.",
+  "Hyper Beam": "A devastating beam. The user can't move on the next turn.",
+  "Dragon Claw": "Slashes the target with huge, sharp claws.",
+  "Wing Attack": "Strikes the target with wings spread wide.",
+  "Thunder Punch": "An electrified punch. 10% chance to paralyze the target.",
+  "Extreme Speed": "A blindingly fast charge that always goes first (priority +2).",
+  "Dragon Dance": "A mystic dance. Raises the user's Attack and Speed by 1.",
+  "Twineedle": "Stabs twice with stingers. Each hit has a 20% chance to poison.",
+  "Poison Jab": "Stabs with a poisonous tentacle or arm. 30% chance to poison.",
+  "String Shot": "Binds the target with silk. Lowers its Speed by 2.",
+  "Tackle": "A physical charge with the whole body.",
+  "Bug Buzz": "A damaging sound wave. 10% chance to lower the target's Sp. Def by 1.",
+  "Razor Leaf": "Launches sharp-edged leaves. High critical-hit ratio.",
+  "Vine Whip": "Strikes the target with slender, whiplike vines.",
+  "Sleep Powder": "Scatters a powder that puts the target to sleep.",
+  "Solar Beam": "Absorbs light on the first turn, then fires a beam on the second.",
+  "Psychic": "A strong telekinetic attack. 10% chance to lower the target's Sp. Def by 1.",
+  "Teleport": "Switches the user out. Fails if there's no Pokémon to switch to.",
+  "Barrier": "Creates a sturdy wall. Raises the user's Defense by 2.",
+  "Confusion": "A weak telekinetic attack. 10% chance to confuse the target.",
+  "Poison Sting": "Stabs with a toxic barb. 30% chance to poison the target.",
+  "Acid": "Sprays a hide-melting acid. 10% chance to lower the target's Sp. Def by 1.",
+  "Wrap": "Wraps the target for 4–5 turns, hurting it every turn.",
+  "Sing": "A soothing lullaby that puts the target to sleep.",
+  "Pound": "Pounds the target with a tail or paw.",
+  "Moonblast": "Borrows the power of the moon. 30% chance to lower the target's Sp. Atk by 1.",
+  "Dig": "Burrows underground on the first turn, strikes on the second.",
+  "Sand Attack": "Hurls sand in the target's face. Lowers its accuracy by 1.",
+  "Karate Chop": "A chopping attack. High critical-hit ratio.",
+  "Low Kick": "A low, tripping kick. Stronger against heavier targets.",
+  "Seismic Toss": "Throws the target. Deals damage equal to the user's level.",
+  "Focus Energy": "Takes a deep breath and focuses. Raises the critical-hit ratio.",
+  "Rock Throw": "Throws a small rock at the target.",
+  "Rock Slide": "Hurls large boulders. 30% chance to make the target flinch.",
+  "Defense Curl": "Curls up to conceal weak spots. Raises the user's Defense by 1."
+};
+
+/* ================= 換招頁：蓋住中欄 + 右欄（左欄隊伍照見到） =================
+   左：而家 4 招（撳揀要換邊格）· 右：可學招式（可按分類篩）+ 比較卡 + 「Learn」掣
+   亦可以將可學招式拖去左邊格仔直接換。只改 class／局部 innerHTML，唔重建成頁（唔閃） */
+const ME = { p: null, slot: 0, pick: null, cat: "all" };
+function openMoveEditor(p) {
+  ME.p = p; ME.slot = 0; ME.pick = null; ME.cat = "all";
+  const ov = $("me-ov");
+  ov.innerHTML = `
+    <div class="me2-head">
+      <button class="me-back" id="me2-back" aria-label="Back">‹</button>
+      <img src="${SPR(p.id)}" alt="">
+      <div class="me2-title"><b>${p.name}</b> <span class="lv-badge">Lv.<b>${p.lv}</b></span>
+        <div class="types">${p.types.map(t => `<img src="${TYPE(t)}" alt="${t}">`).join("")}</div></div>
+      <div class="me2-steps"><span class="on" id="st1">① Pick a slot</span><span id="st2">② Pick a new move</span><span id="st3">③ Learn</span></div>
+      <button class="btn" id="me2-done" style="flex:none;padding:6px 16px">Done</button>
+    </div>
+    <div class="me2-body">
+      <section class="me2-cur">
+        <div class="sec"><span>Current moves</span><span>${p.moves.length}/4</span></div>
+        <div class="me2-slots" id="me2-slots"></div>
+        <div class="note">Tip: drag a move from the right onto a slot to swap it in.</div>
+      </section>
+      <section class="me2-learn">
+        <div class="sec"><span>Can learn</span><span class="me2-cats" id="me2-cats"></span></div>
+        <div class="me2-list" id="me2-list"></div>
+        <div class="me2-compare" id="me2-compare"></div>
+      </section>
+    </div>`;
+  ov.classList.add("show");
+  $("me2-back").onclick = $("me2-done").onclick = closeMoveEditor;
+  renderMeSlots(); renderMeCats(); renderMeList(); renderMeCompare(); steps();
+}
+function closeMoveEditor() {
+  $("me-ov").classList.remove("show");
+  ME.p = null;
+  renderDetail(true);
+}
+function moveCardHTML(n, p, opts) {
+  const [t, cat, pow, acc, ppMax] = MOVE_DB[n];
+  const c = CAT[cat];
+  const cur = p.pp[n] != null ? p.pp[n] : ppMax;
+  return `<div class="mcard ${opts.cls || ""}" ${opts.attr || ""} style="--tc:${TYPE_COLOR[t] || "#888"}">
+    <div class="mc-top"><span class="mcat" style="background:${c.color}" title="${c.label}">${c.icon}</span>
+      <b class="mc-name">${n}</b><img class="mtype" src="${TYPE(t)}" alt="${t}"></div>
+    <div class="mc-stats"><span>${c.label}</span><span>Pow <b>${pow == null ? "—" : pow}</b></span><span>Acc <b>${acc == null ? "—" : acc}</b></span><span>PP <b>${opts.learn ? ppMax : `${cur}/${ppMax}`}</b></span></div>
+    ${opts.desc ? `<div class="mc-desc">${MOVE_DESC[n] || ""}</div>` : ""}
+  </div>`;
+}
+function renderMeSlots() {
+  const p = ME.p;
+  $("me2-slots").innerHTML = p.moves.map((n, i) =>
+    moveCardHTML(n, p, { cls: `slot-card ${ME.slot === i ? "picked" : ""}`, attr: `data-ms="${i}" data-drop="mslot"`, desc: true })).join("");
+  $("me2-slots").querySelectorAll("[data-ms]").forEach(el => el.onclick = () => {
+    ME.slot = Number(el.dataset.ms);
+    $("me2-slots").querySelectorAll("[data-ms]").forEach(x => x.classList.toggle("picked", x === el));
+    steps(); renderMeCompare();
+  });
+}
+function renderMeCats() {
+  const opts = [["all", "All"], ["physical", "Physical"], ["special", "Special"], ["status", "Status"]];
+  $("me2-cats").innerHTML = opts.map(([v, l]) => `<button class="chip mini ${ME.cat === v ? "on" : ""}" data-cat="${v}">${v === "all" ? "" : `<i style="color:${ME.cat === v ? "#fff" : CAT[v].color}">${CAT[v].icon}</i>`}${l}</button>`).join("");
+  $("me2-cats").querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { ME.cat = b.dataset.cat; renderMeCats(); renderMeList(); });
+}
+function renderMeList() {
+  const p = ME.p;
+  const learn = p.pool.filter(n => !p.moves.includes(n) && (ME.cat === "all" || MOVE_DB[n][1] === ME.cat));
+  const list = $("me2-list");
+  list.innerHTML = learn.length ? learn.map(n => moveCardHTML(n, p, { cls: `learn-card ${ME.pick === n ? "picked" : ""}`, attr: `data-learn="${n}"`, learn: true })).join("")
+    : `<div class="note">No ${ME.cat === "all" ? "" : CAT[ME.cat].label.toLowerCase() + " "}moves to learn yet — level up to learn more.</div>`;
+  list.querySelectorAll("[data-learn]").forEach(el => {
+    el.onclick = () => {
+      if (Drag.justDropped) return;
+      ME.pick = el.dataset.learn;
+      list.querySelectorAll("[data-learn]").forEach(x => x.classList.toggle("picked", x === el));
+      steps(); renderMeCompare();
+    };
+    Drag.bind(el, () => ({ kind: "move", name: el.dataset.learn, label: el.dataset.learn }));
+  });
+}
+/* 比較卡：揀咗嘅新招 vs 準備被換走嗰招 */
+function renderMeCompare() {
+  const p = ME.p, box = $("me2-compare");
+  const oldN = p.moves[ME.slot];
+  if (!ME.pick) { box.innerHTML = `<div class="cmp-empty">Tap a move above to compare it with <b>${oldN}</b>.</div>`; return; }
+  const a = MOVE_DB[oldN], b = MOVE_DB[ME.pick];
+  const diff = (x, y, invert) => {
+    if (x == null || y == null) return "";
+    const d = y - x; if (!d) return `<em class="same">±0</em>`;
+    return `<em class="${(d > 0) !== !!invert ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</em>`;
+  };
+  box.innerHTML = `
+    <div class="cmp-desc"><b>${ME.pick}</b> — ${MOVE_DESC[ME.pick] || ""}</div>
+    <div class="cmp-grid">
+      <span></span><span>Pow</span><span>Acc</span><span>PP</span>
+      <span class="cmp-old">${oldN}</span><span>${a[2] ?? "—"}</span><span>${a[3] ?? "—"}</span><span>${a[4]}</span>
+      <span class="cmp-new">${ME.pick}</span><span>${b[2] ?? "—"} ${diff(a[2], b[2])}</span><span>${b[3] ?? "—"} ${diff(a[3], b[3])}</span><span>${b[4]} ${diff(a[4], b[4])}</span>
+    </div>
+    <button class="btn" id="me2-learn">Learn ${ME.pick} — replace ${oldN}</button>`;
+  $("me2-learn").onclick = () => learnMove(ME.pick, ME.slot);
+}
+function learnMove(n, i) {
+  const p = ME.p, old = p.moves[i];
+  p.moves[i] = n; ME.pick = null;
+  buzz(); toast(`${p.name} forgot ${old} and learned ${n}`);
+  renderMeSlots(); renderMeList(); renderMeCompare(); steps();
+  const card = $("me2-slots").querySelector(`[data-ms="${i}"]`); if (card) card.classList.add("swapped");
+}
+function steps() {
+  const s1 = $("st1"), s2 = $("st2"), s3 = $("st3"); if (!s1) return;
+  /* 一開始已經預選第 1 格，所以重點喺 ② 揀新招 → ③ Learn */
+  s1.classList.remove("on"); s2.classList.toggle("on", !ME.pick); s3.classList.toggle("on", !!ME.pick);
+}
+
+/* ================= 送回大木博士 =================
+   退還：佢身上用咗嘅 EV Point Unit（= 已加 EV 總數）+ 額外 1 個；攜帶道具退返背包。
+   拍檔／最後一隻唔可以送；喺隊入面會自動離隊。要撳住 1 秒確認（唔可以還原）。 */
+function openOak(p) {
+  const evUsed = STAT_KEYS.reduce((a, k) => a + p.evs[k], 0);
+  const ov = $("oak-ov");
+  const block = p.partner ? "This is your Partner — pick another Partner first." : POKEMON.length <= 1 ? "You can't send away your last Pokémon." : "";
+  ov.innerHTML = `<div class="oak-card">
+    <div class="oak-head"><img src="${SPR(p.id)}" alt=""><div><b>Send ${p.name} to Prof. Oak?</b>
+      <div class="d-sub">Lv.${p.lv} · No.${String(p.id).padStart(3, "0")}${team.includes(p.uid) ? " · leaves your team" : ""}</div></div></div>
+    <div class="oak-rows">
+      <div class="kv"><span>EV Point Units used on it</span><b>${evUsed}</b></div>
+      <div class="kv"><span>Thank-you bonus</span><b>+1</b></div>
+      <div class="kv total"><span>You get back</span><b><span class="ev-chip">EV</span> ×${evUsed + 1}</b></div>
+      ${p.held ? `<div class="kv"><span>Held item returns to bag</span><b><img src="${ITEM(p.held)}" alt="">${itemOf(p.held).name}</b></div>` : ""}
+    </div>
+    ${block ? `<div class="note" style="background:#ffe0dd;color:#b8231b">${block}</div>` : `<div class="note">This can't be undone.</div>`}
+    <div class="oak-actions">
+      <button class="btn alt" id="oak-cancel">Cancel</button>
+      <button class="btn hold" id="oak-go" ${block ? "disabled" : ""}><span class="hold-fill"></span><span class="hold-t">Hold to send</span></button>
+    </div></div>`;
+  ov.classList.add("show");
+  $("oak-cancel").onclick = () => ov.classList.remove("show");
+  ov.onclick = e => { if (e.target === ov) ov.classList.remove("show"); };
+  const go = $("oak-go"); if (block) return;
+  let t = null;
+  const start = () => { go.classList.add("holding"); t = setTimeout(() => sendToOak(p, evUsed), 1000); };
+  const stop = () => { go.classList.remove("holding"); clearTimeout(t); };
+  go.addEventListener("pointerdown", start);
+  ["pointerup", "pointerleave", "pointercancel"].forEach(ev => go.addEventListener(ev, stop));
+}
+function sendToOak(p, evUsed) {
+  $("oak-ov").classList.remove("show");
+  const ev = itemOf("ev-unit"); ev.n += evUsed + 1;
+  if (p.held) { itemOf(p.held).n += 1; p.held = null; }
+  team = team.filter(u => u !== p.uid);
+  const cell = $("grid").querySelector(`.cell[data-uid="${p.uid}"]`);
+  const finish = () => {
+    POKEMON.splice(POKEMON.indexOf(p), 1);
+    S.sel = null; buzz();
+    toast(`${p.name} went to Prof. Oak — got ${evUsed + 1} EV Point Units`);
+    renderAll();
+  };
+  if (cell) { cell.classList.add("bye"); setTimeout(finish, 420); } else finish();
+}
+
+/* ================= 自訂排序 chip 次序 =================
+   撳 ✎ → 列表可以上下拖（或 ▲▼）→ Done。正式版存 server 嘅用戶設定；prototype 存 localStorage */
+const SORT_ORDER_KEY = "proto_bag_sort_order";
+function loadSortOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SORT_ORDER_KEY) || "null");
+    if (Array.isArray(saved)) {
+      const map = Object.fromEntries(POKE_SORTS.map(s => [s[0], s]));
+      const next = saved.filter(k => map[k]).map(k => map[k]);
+      POKE_SORTS.forEach(s => { if (!next.includes(s)) next.push(s); });
+      POKE_SORTS.splice(0, POKE_SORTS.length, ...next);
+    }
+  } catch (e) {}
+}
+function saveSortOrder() { try { localStorage.setItem(SORT_ORDER_KEY, JSON.stringify(POKE_SORTS.map(s => s[0]))); } catch (e) {} }
+function openSortEditor() {
+  const ov = $("sort-ov");
+  const draw = () => {
+    ov.innerHTML = `<div class="sort-card">
+      <div class="sort-head"><b>Sort order</b><span class="d-sub">Drag ≡ or use ▲▼ — first one is the default</span></div>
+      <div class="sort-list" id="sort-list">${POKE_SORTS.map(([v, l], i) => `
+        <div class="sort-row" data-i="${i}"><span class="grip" data-grip="${i}">≡</span><span class="sr-l">${l}</span>
+          ${i === 0 ? `<span class="pill">Default</span>` : ""}
+          <button data-up="${i}" ${i === 0 ? "disabled" : ""}>▲</button><button data-dn="${i}" ${i === POKE_SORTS.length - 1 ? "disabled" : ""}>▼</button></div>`).join("")}</div>
+      <div class="oak-actions"><button class="btn alt" id="sort-reset">Reset</button><button class="btn" id="sort-done">Done</button></div></div>`;
+    const mv = (i, j) => { const [x] = POKE_SORTS.splice(i, 1); POKE_SORTS.splice(j, 0, x); draw(); };
+    ov.querySelectorAll("[data-up]").forEach(b => b.onclick = () => mv(+b.dataset.up, +b.dataset.up - 1));
+    ov.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => mv(+b.dataset.dn, +b.dataset.dn + 1));
+    $("sort-done").onclick = () => { saveSortOrder(); ov.classList.remove("show"); renderChips(); };
+    $("sort-reset").onclick = () => {
+      const def = ["no", "level", "fav", "type", "full", "hploss", "faint", "status"];
+      POKE_SORTS.sort((a, b) => def.indexOf(a[0]) - def.indexOf(b[0])); draw();
+    };
+    /* ≡ 上下拖：pointer 移動超過半行就同隔籬換位 */
+    ov.querySelectorAll("[data-grip]").forEach(g => g.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      let i = +g.dataset.grip; let y0 = e.clientY;
+      const rowH = g.closest(".sort-row").getBoundingClientRect().height / (parseFloat(getComputedStyle($("stage")).transform.split(",")[3]) || 1);
+      const scale = $("stage").getBoundingClientRect().width / 956;
+      const onMove = ev => {
+        const dy = (ev.clientY - y0) / scale;
+        if (dy > rowH * .55 && i < POKE_SORTS.length - 1) { const [x] = POKE_SORTS.splice(i, 1); POKE_SORTS.splice(i + 1, 0, x); i++; y0 = ev.clientY; redrawKeep(i); }
+        else if (dy < -rowH * .55 && i > 0) { const [x] = POKE_SORTS.splice(i, 1); POKE_SORTS.splice(i - 1, 0, x); i--; y0 = ev.clientY; redrawKeep(i); }
+      };
+      const onUp = () => { document.removeEventListener("pointermove", onMove); document.removeEventListener("pointerup", onUp); draw(); };
+      document.addEventListener("pointermove", onMove); document.addEventListener("pointerup", onUp);
+      redrawKeep(i);
+    }));
+  };
+  /* 拖緊時只更新文字同高亮，唔重綁 listener（避免甩手） */
+  const redrawKeep = (active) => {
+    ov.querySelectorAll(".sort-row").forEach((r, i) => {
+      r.querySelector(".sr-l").textContent = POKE_SORTS[i][1];
+      r.classList.toggle("dragging", i === active);
+    });
+  };
+  draw();
+  ov.classList.add("show");
+}
+
+/* EV 加點面板：6 個大格（2×3），撳一下 +1，撳住連加；有 Undo */
+const evUndo = [];
+function evPanelHTML(p, evTotal, evItem) {
+  return `<div class="sec"><span>Add EV</span><span class="ev-head-v">Units ×${evItem.n} · EV ${evTotal}/510</span></div>
+    <div class="evgrid">${STAT_KEYS.map(k => {
+      const can = evItem.n > 0 && p.evs[k] < 252 && evTotal < 510;
+      return `<button class="evtile" data-ev="${k}" ${can ? "" : "disabled"}>
+        <span class="et-k">${STAT_LABEL[k]}</span>
+        <span class="et-v">${p.evs[k]}<small>/252</small></span>
+        <span class="et-bar"><i style="width:${p.evs[k] / 252 * 100}%"></i></span>
+        <span class="et-plus">+1</span>
+      </button>`; }).join("")}</div>
+    <div class="evtools"><span>Tap = +1 · Hold = keep adding</span><button id="ev-undo" ${evUndo.length ? "" : "disabled"}>Undo</button></div>`;
+}
+function bindEvPanel(d, p, evItem) {
+  const add = (k) => {
+    const total = STAT_KEYS.reduce((a, s) => a + p.evs[s], 0);
+    if (evItem.n <= 0 || p.evs[k] >= 252 || total >= 510) return false;
+    p.evs[k] += 1; evItem.n -= 1; if (p.evs[k] % 4 === 0) p.stats[k] += 1;
+    evUndo.push(k); return true;
+  };
+  /* 原地更新（唔重建 DOM），撳住連加時先唔會甩手 */
+  const refresh = (k) => {
+    const total = STAT_KEYS.reduce((a, s) => a + p.evs[s], 0);
+    d.querySelectorAll(".evtile").forEach(t => {
+      const s = t.dataset.ev;
+      t.querySelector(".et-v").innerHTML = `${p.evs[s]}<small>/252</small>`;
+      t.querySelector(".et-bar i").style.width = (p.evs[s] / 252 * 100) + "%";
+      t.disabled = !(evItem.n > 0 && p.evs[s] < 252 && total < 510);
+    });
+    const head = d.querySelector(".ev-head-v"); if (head) head.textContent = `Units ×${evItem.n} · EV ${total}/510`;
+    const u = $("ev-undo"); if (u) u.disabled = !evUndo.length;
+    const t = d.querySelector(`.evtile[data-ev="${k}"]`);
+    if (t) { t.classList.remove("bump"); void t.offsetWidth; t.classList.add("bump"); }
+  };
+  d.querySelectorAll(".evtile").forEach(btn => {
+    const k = btn.dataset.ev;
+    let hold = null, rep = null, fired = false;
+    const stop = () => { clearTimeout(hold); clearInterval(rep); hold = rep = null; };
+    btn.addEventListener("pointerdown", e => {
+      if (btn.disabled) return;
+      fired = false;
+      hold = setTimeout(() => {
+        fired = true;
+        rep = setInterval(() => { if (!add(k)) { stop(); refresh(k); return; } refresh(k); buzz(); }, 90);
+      }, 380);
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(ev => btn.addEventListener(ev, stop));
+    document.addEventListener("pointerup", stop);
+    btn.addEventListener("click", () => { if (fired) return; if (add(k)) { buzz(); refresh(k); } });
+  });
+  const u = $("ev-undo");
+  if (u) u.onclick = () => {
+    const k = evUndo.pop(); if (!k) return;
+    if (p.evs[k] % 4 === 0) p.stats[k] -= 1;
+    p.evs[k] -= 1; evItem.n += 1; refresh(k);
+  };
+}
+
+function renderAll() { renderTeam(); renderTabs(); renderChips(); renderGrid(); renderDetail(); }
+
+/* ================= 拖放（pointer events；touch 要長撳 300ms 先拎起，唔阻上下捲） ================= */
+const Drag = (() => {
+  let press = null, ghost = null, overEl = null;
+  const api = { justDropped: false };
+
+  api.bind = (el, payloadFn) => el.addEventListener("pointerdown", e => {
+    if (e.button > 0 || S.target) return;
+    const payload = payloadFn(); if (!payload) return;
+    press = { el, payload, x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, started: false, timer: null };
+    if (e.pointerType !== "mouse") {
+      press.timer = setTimeout(() => { if (press && !press.started) begin(press.x, press.y); }, 300);
+    }
+  });
+
+  function begin(x, y) {
+    press.started = true; buzz();
+    document.body.classList.add("dragging");
+    press.el.classList.add("lifted");
+    ghost = document.createElement("div"); ghost.className = "ghost";
+    if (press.payload.label) { ghost.classList.add("ghost-label"); ghost.textContent = press.payload.label; }
+    else ghost.innerHTML = `<img src="${press.payload.img}" alt="">`;
+    document.body.appendChild(ghost);
+    markTargets(true);
+    move(x, y);
+  }
+  function markTargets(on) {
+    const k = press.payload.kind;
+    if (k === "move") {
+      document.querySelectorAll("[data-drop=mslot]").forEach(s => { s.classList.remove("drop-ok", "drop-hot"); if (on) s.classList.add("drop-ok"); });
+      return;
+    }
+    document.querySelectorAll(".slot[data-drop]").forEach(s => {
+      s.classList.remove("drop-ok", "drop-no", "drop-hot");
+      if (!on) return;
+      if (k === "item") {
+        const it = itemOf(press.payload.slug);
+        if (!s.dataset.uid) return;
+        s.classList.add(canUse(it, byUid(s.dataset.uid)) ? "drop-ok" : "drop-no");
+      } else s.classList.add("drop-ok");
+    });
+    $("mid").classList.toggle("removing", on && k === "teamslot");
+  }
+  function targetAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const k = press.payload.kind;
+    if (k === "move") return el.closest("[data-drop=mslot]");
+    if (k === "teamslot" && el.closest("#mid")) return $("bag-drop");
+    const slot = el.closest(".slot[data-drop]");
+    if (slot && !slot.classList.contains("drop-no")) {
+      if (k === "item" && !slot.dataset.uid) return null;
+      return slot;
+    }
+    return null;
+  }
+  function move(x, y) {
+    ghost.style.left = x + "px"; ghost.style.top = y + "px";
+    const t = targetAt(x, y);
+    if (t !== overEl) {
+      if (overEl) overEl.classList.remove("drop-hot", "hot");
+      overEl = t;
+      if (overEl) overEl.classList.add(overEl.id === "bag-drop" ? "hot" : "drop-hot");
+      ghost.classList.toggle("over-ok", !!overEl);
+    }
+  }
+  function end(drop) {
+    const p = press; press = null;
+    if (!p) return;
+    clearTimeout(p.timer);
+    if (!p.started) return;
+    api.justDropped = true; setTimeout(() => { api.justDropped = false; }, 60);
+    const t = drop ? overEl : null;
+    document.body.classList.remove("dragging");
+    p.el.classList.remove("lifted");
+    if (overEl) overEl.classList.remove("drop-hot", "hot");
+    overEl = null;
+    press = p; markTargets(false); press = null;
+    if (ghost) { ghost.remove(); ghost = null; }
+    if (t) onDrop(p.payload, t);
+  }
+
+  document.addEventListener("pointermove", e => {
+    if (!press || e.pointerId !== press.id) return;
+    if (!press.started) {
+      const d = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+      if (d > 6) {
+        if (press.type === "mouse") begin(e.clientX, e.clientY);
+        else { clearTimeout(press.timer); press = null; }   /* 未夠時間就郁 = 捲動／swipe */
+      }
+      return;
+    }
+    move(e.clientX, e.clientY);
+  });
+  document.addEventListener("pointerup", e => { if (press && e.pointerId === press.id) end(true); });
+  document.addEventListener("pointercancel", e => { if (press && e.pointerId === press.id) end(false); });
+  /* 拖緊時阻止 touch 捲動 */
+  document.addEventListener("touchmove", e => { if (press && press.started) e.preventDefault(); }, { passive: false });
+  document.addEventListener("contextmenu", e => { if (press) e.preventDefault(); });
+
+  function onDrop(pl, t) {
+    if (pl.kind === "item") { applyTo(t.dataset.uid, pl.slug); return; }
+    if (pl.kind === "move") { ME.slot = Number(t.dataset.ms); learnMove(pl.name, ME.slot); return; }
+    if (pl.kind === "pokemon") {
+      const slot = Number(t.dataset.slot), p = byUid(pl.uid);
+      const cur = team.indexOf(pl.uid);
+      if (cur >= 0) { const j = Math.min(slot, team.length - 1); [team[cur], team[j]] = [team[j], team[cur]]; toast(`${p.name} moved to slot ${j + 1}`); }
+      else if (slot < team.length) { const out = byUid(team[slot]); team[slot] = pl.uid; toast(`${p.name} replaced ${out.name}`); }
+      else { team.push(pl.uid); toast(`${p.name} joined the team`); }
+      buzz(); renderAll(); return;
+    }
+    if (pl.kind === "teamslot") {
+      const p = byUid(pl.uid), cur = team.indexOf(pl.uid);
+      if (t.id === "bag-drop") { team.splice(cur, 1); toast(`${p.name} went back to the bag`); }
+      else {
+        const j = Math.min(Number(t.dataset.slot), team.length - 1);
+        if (j !== cur) { [team[cur], team[j]] = [team[j], team[cur]]; toast(`Swapped slot ${cur + 1} ↔ ${j + 1}`); }
+      }
+      buzz(); renderAll();
+    }
+  }
+  return api;
+})();
+
+/* ================= 左右 swipe 換 tab（touch／pen）＋ trackpad 兩指橫掃 ================= */
+(() => {
+  const g = $("gridwrap");
+  let sw = null;
+  g.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") sw = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId }; });
+  g.addEventListener("pointerup", e => {
+    if (!sw || e.pointerId !== sw.id) return;
+    const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = Date.now() - sw.t; sw = null;
+    if (document.body.classList.contains("dragging") || Drag.justDropped) return;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 700) swipeTab(dx < 0 ? 1 : -1);
+  });
+  g.addEventListener("pointercancel", () => { sw = null; });
+  let wheelLock = 0;
+  g.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaX) < 30 || Math.abs(e.deltaX) < Math.abs(e.deltaY) * 1.5) return;
+    if (Date.now() < wheelLock) return;
+    wheelLock = Date.now() + 600;
+    swipeTab(e.deltaX > 0 ? 1 : -1);
+  }, { passive: true });
+  function swipeTab(step) {
+    const avail = TABS.filter(t => !tabLocked(t));
+    const i = avail.indexOf(S.tab) + step;
+    if (i < 0 || i >= avail.length) { $("grid").animate([{ transform: "translateX(0)" }, { transform: `translateX(${-step * 14}px)` }, { transform: "translateX(0)" }], { duration: 260, easing: "ease-out" }); return; }
+    switchTab(avail[i], true);
+  }
+})();
+
+/* ================= 篩選／排序列橫向捲動（滑鼠拖、滾輪；touch 用原生 pan-x） ================= */
+(() => {
+  const c = $("chips");
+  const fades = () => {
+    c.classList.toggle("fade-l", c.scrollLeft > 4);
+    c.classList.toggle("fade-r", c.scrollLeft + c.clientWidth < c.scrollWidth - 4);
+  };
+  c.addEventListener("scroll", fades, { passive: true });
+  new MutationObserver(() => requestAnimationFrame(fades)).observe(c, { childList: true });
+  let m = null, moved = false;
+  c.addEventListener("pointerdown", e => { if (e.pointerType === "mouse") { m = { x: e.clientX, sl: c.scrollLeft }; moved = false; } });
+  document.addEventListener("pointermove", e => {
+    if (!m) return;
+    const dx = e.clientX - m.x;
+    if (Math.abs(dx) > 4) { moved = true; c.classList.add("dragging"); c.scrollLeft = m.sl - dx; }
+  });
+  document.addEventListener("pointerup", () => { if (m) { m = null; c.classList.remove("dragging"); } });
+  /* 拖完唔好當 click 揀咗個 chip */
+  c.addEventListener("click", e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+  c.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { c.scrollLeft += e.deltaY; e.preventDefault(); }
+  }, { passive: false });
+  addEventListener("resize", fades);
+  setTimeout(fades, 50);
+})();
+
+/* ================= prototype 控制 ================= */
+/* mode：normal＝平時背包；battle＝戰鬥中開背包；switch＝戰鬥中換 Pokémon（同一個版面，中欄鎖定） */
+function setMode(mode) {
+  const battle = mode !== "normal";
+  S.battle = battle; S.switching = mode === "switch"; S.turnUsed = false;
+  S.tab = battle ? "items" : "pokemon"; S.sel = null; S.evPick = false; cancelTarget(true);
+  if (ME.p) $("me-ov").classList.remove("show");
+  $("screen").classList.toggle("battle", battle);
+  $("screen").classList.toggle("switching", S.switching);
+  $("pb-normal").classList.toggle("on", mode === "normal"); $("pb-battle").classList.toggle("on", mode === "battle"); $("pb-switch").classList.toggle("on", mode === "switch");
+  $("home-lbl").textContent = battle ? "BATTLE" : "HOME";
+  renderAll(); renderGrid("in-f");
+  if (S.switching) select({ kind: "pokemon", uid: team[0] });
+}
+$("pb-normal").onclick = () => setMode("normal");
+$("pb-battle").onclick = () => setMode("battle");
+$("pb-switch").onclick = () => setMode("switch");
+$("pb-rotate").onclick = () => { $("rotate-title").textContent = "Please rotate your device"; $("rotate-msg").textContent = "The Bag works in landscape"; $("rotate").classList.remove("back"); $("rotate").classList.add("show"); };
+$("pb-help").onclick = () => { $("help").classList.toggle("show"); $("pb-help").classList.toggle("on"); };
+$("rotate-ok").onclick = () => $("rotate").classList.remove("show");
+$("banner-x").onclick = () => cancelTarget();
+/* 紅框數據鍵：背包開住時鎖定 */
+$("bezel").querySelectorAll(".stat").forEach(s => s.addEventListener("click", () => toast("Locked while the Bag is open")));
+/* Home 鍵：平時返主頁（要轉返直向）；戰鬥中開背包 = 返戰鬥畫面 */
+$("home-ball").onclick = () => {
+  if (S.battle) toast("Back to the battle");
+  else { $("rotate-title").textContent = "Turn your phone upright"; $("rotate-msg").textContent = "Home works in portrait"; $("rotate").classList.add("show", "back"); }
+};
+
+function fit() {
+  const s = Math.min((innerWidth - 24) / 956, (innerHeight - 70) / 440, 1.6);
+  $("stage").style.transform = `scale(${s})`;
+}
+addEventListener("resize", () => { fit(); renderTabs(); });
+fit();
+loadSortOrder();
+renderAll();
+</script>
+</body>
+</html>

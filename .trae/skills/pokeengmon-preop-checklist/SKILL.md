@@ -643,3 +643,21 @@ Incident (2026-11-05)：用 `obtainPokemon()` + 改 `pet.health`／`exp` 喺本�
 - Tab Context 顯示嘅 URL 唔係 localhost（或者見到「user clicked … since an earlier tool call」提示）→ 先 `navigate` 返 localhost 再做。
 - 純讀（screenshot、`get_page_text`、讀 state）先可以喺正式站做。
 - 真係誤改咗：即刻停手，用 Supabase 雲端資料對返原值還原，並如實話畀用戶知。
+
+## Rule 63 — 一件道具有「育成效果」同「戰鬥效果」兩套：使用路徑一定要按場景分支，兩邊都要測
+
+Incident (2026-11-05，背包 prototype)：樹果育成 = 加飽肚值，戰鬥 = 原作效果（Oran +10 HP、Sitrus +25%、Pecha／Cheri／Lum 解狀態）。`applyTo()` 只寫咗育成分支，戰鬥中餵樹果只加飽肚值、冇回血，用戶先發現。同輪複查再搵到：Antidote 只解 `psn` 唔解 `tox`；換招 overlay 開住時撳左欄另一隻，overlay 仲顯示舊嗰隻；EV Undo stack 冇按 Pokémon 分，換隻後 Undo 會扣錯隻。
+
+- 道具定義要同時有育成欄位（`care`／`food`）同戰鬥欄位（`bHeal`／`bHealPct`／`bCure`），使用函數用 `S.battle`（正式版：戰鬥 state）分支，唔可以共用一條。
+- 解狀態用陣列（`cure: ["psn","tox"]`），唔好單一字串比較。
+- 戰鬥中「冇效果」（滿血又冇對應狀態）跟原作：提示 "It won't have any effect." 而且唔扣數；育成藥物照狀態 spec（滿血照扣、計過量）。
+- 蓋喺主畫面上面嘅 overlay（換招頁等）要跟住「當前選中」：`select()` 入面同步更新或者關閉 overlay。
+- 任何 Undo stack 換選中對象時要清空（或者每條記錄帶 uid）。
+- 改完背包流程，喺 `tools/prototype-bag.html` 用 console 跑一次三個 mode（Normal／In-battle bag／In-battle switch）嘅端到端檢查，`errs` 要係空。
+
+## Rule 64 — 同時跑幾個 setInterval／setTimeout 動畫：每個用自己嘅 local handle，唔好共用一個變數
+
+Incident (2026-11-05，背包 prototype 戰鬥文字框)：自己畫面同對手畫面兩個框同時打字，共用一個 `typing` 變數存 interval。第一個框打完 `clearInterval(typing)` 清咗第二個框嘅 timer → 對手框得半句、`Promise.all` 永遠唔 resolve，撳極都唔去下一句。
+
+- 每個動畫用 `const t = setInterval(...)` 自己清自己；「仲有冇動畫跑緊」用計數器（`typing++`／`typing--`）。
+- 用 `Promise.all` 等幾個動畫時，要測「一長一短」兩段文字，短嗰個先完都唔可以影響長嗰個。
