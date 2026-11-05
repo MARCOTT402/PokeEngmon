@@ -56,7 +56,54 @@
 
 - 取代現有 food／premium food：部分樹果 = Normal food 效果（飽肚值 +25%），部分 = Super food 效果（+50%）。只限育成。
 - 戰鬥內樹果效果跟原作。
-- **待定**：用邊幾款樹果、邊款屬 normal／super、戰鬥效果做幾多、掉落率、舊 food／premium 庫存點換。
+
+### 6.1 已確認（2026-11-05）
+
+| 項目 | 決定 |
+|---|---|
+| 用邊幾款 | **原作全部 67 款**（PokeAPI berry 1–64 + Roseli／Kee／Maranga） |
+| 分級 | 負責人交由 agent 定 → 見 6.2（有戰鬥大效果嘅 = Super，其餘 = Normal） |
+| 掉落 | 沿用而家方法：10/10 → 1 粒 Super 樹果（+ 原有 Revival 規則）；1–9 題 → 1 粒 Normal 樹果 |
+| 舊庫存 | 一換一：food → Oran Berry、premium → Sitrus Berry |
+| 攜帶 | 可以攜帶；戰鬥效果跟原作（自動觸發、用完消失） |
+| 從背包餵／用 | 育成 = 飽肚值（按分級）；麻痹／睡眠／冰凍照舊唔准食 |
+| 戰鬥中從背包用 | 跟原作（Rule 63：冇效果唔准用、唔扣數）；一回合一件 |
+| Mega 進化 | 跟原作：攜帶對應 Mega 石，每場戰鬥一次，揀招頁有 Mega 掣，戰鬥完變返原形；背包只顯示 Mega 石 |
+
+### 6.2 樹果分級同效果（原作 Gen 7+ 數值）
+
+掉落權重：同一級入面，**常用樹果權重 3，其餘 1**（免得狀態解藥類太難拎）。
+
+**Super food（+50% 飽肚值，21 款）**
+
+| 樹果 | 攜帶時戰鬥效果 | 權重 |
+|---|---|---|
+| Sitrus | HP ≤ 50% → 回 25% HP | 3 |
+| Lum | 解所有主要狀態 + 混亂 | 3 |
+| Figy／Wiki／Mago／Aguav／Iapapa | HP ≤ 25% → 回 1/3 HP；性格唔鍾意嗰種味會混亂 | 1 |
+| Liechi／Ganlon／Salac／Petaya／Apicot | HP ≤ 25% → 攻擊／防禦／速度／特攻／特防 +1 | 1 |
+| Lansat | HP ≤ 25% → 會心率 +2 | 1 |
+| Starf | HP ≤ 25% → 隨機一項能力 +2 | 1 |
+| Micle | HP ≤ 25% → 下一招命中 ×1.2 | 1 |
+| Custap | HP ≤ 25% → 下回合先出手 | 1 |
+| Enigma | 被效果絕佳嘅招打中 → 回 25% HP | 1 |
+| Jaboca／Rowap | 被物理／特殊招打中 → 對手扣 1/8 HP | 1 |
+| Kee／Maranga | 被物理／特殊招打中 → 防禦／特防 +1 | 1 |
+
+**Normal food（+25% 飽肚值，46 款）**
+
+| 樹果 | 攜帶時戰鬥效果 | 權重 |
+|---|---|---|
+| Cheri／Chesto／Pecha／Rawst／Aspear | 解麻痹／睡眠／中毒／燒傷／冰凍 | 3 |
+| Persim | 解混亂 | 3 |
+| Oran | HP ≤ 50% → 回 10 HP | 3 |
+| Leppa | 某招 PP 用完 → 回 10 PP | 3 |
+| Occa／Passho／Wacan／Rindo／Yache／Chople／Kebia／Shuca／Coba／Payapa／Tanga／Charti／Kasib／Haban／Colbur／Babiri／Roseli | 被對應屬性嘅效果絕佳招打中 → 傷害減半（火／水／電／草／冰／格鬥／毒／地面／飛行／超能力／蟲／岩石／幽靈／龍／惡／鋼／妖精） | 1 |
+| Chilan | 被一般系招打中 → 傷害減半 | 1 |
+| Pomeg／Kelpsy／Qualot／Hondew／Grepa／Tamato | 戰鬥冇效果；原作喺戰鬥外用 = HP／攻擊／防禦／特攻／特防／速度 EV −10 → 本作：喺背包餵嘅時候**同時** EV −10（可以用嚟重新分配 EV，扣咗嘅 EV 唔退 unit） | 1 |
+| Razz／Bluk／Nanab／Wepear／Pinap／Cornn／Magost／Rabuta／Nomel／Spelon／Pamtre／Watmel／Durin／Belue | 冇戰鬥效果（原作係製作寶可方塊用） | 1 |
+
+> 待負責人確認：EV −10 嗰 6 款樹果，餵嘅時候同時扣 EV（跟原作戰鬥外效果），定係只當食物？
 
 ## 7. EV point unit
 

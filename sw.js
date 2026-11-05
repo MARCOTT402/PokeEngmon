@@ -38,6 +38,7 @@ const ASSETS = [
   "./js/storage.js",
   "./js/pet.js",
   "./js/care.js",
+  "./js/bag.js",
   "./js/explain.js",
   "./js/quiz.js",
   "./js/gacha.js",

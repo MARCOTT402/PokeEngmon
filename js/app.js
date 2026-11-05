@@ -3186,6 +3186,12 @@ const App = {
       this._closeSheet("sheet-battle");
       if (typeof BattleUI !== "undefined") BattleUI.openMenu();
     };
+    /* 背包（橫向）：由 Battle sheet 入 */
+    const bagBtn = document.getElementById("btn-home-bag");
+    if (bagBtn) bagBtn.onclick = () => {
+      this._closeSheet("sheet-battle");
+      if (typeof BagUI !== "undefined") BagUI.open({ from: "home" });
+    };
 
     /* Setting sheet 內容按鈕 */
     document.getElementById("btn-name-edit").onclick = () => { this._closeSheet("sheet-setting"); this.openRename(); };

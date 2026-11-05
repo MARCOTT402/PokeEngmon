@@ -4,7 +4,7 @@
   "description": "Answer English questions, pull Pokémon and complete the Pokédex!",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#eaf4ff",
   "theme_color": "#ffcb05",
   "lang": "en",
