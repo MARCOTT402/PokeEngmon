@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.54.0...v1.55.0) (2026-11-05)
+
+
+### Features
+
+* **bag:** 67 berries replace food and premium (stage 3b) ([e27d694](https://github.com/MARCOTT402/PokeEngmon/commit/e27d6941d9dc6e5c962eb220e06077411840095a))
+
 # [1.54.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.53.0...v1.54.0) (2026-11-05)
 
 
