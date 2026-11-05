@@ -1,3 +1,10 @@
+# [1.62.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.61.0...v1.62.0) (2026-11-05)
+
+
+### Features
+
+* **battle:** KO switch prompt, Mega abilities, trainer avatars, PvP pre-battle and result cross-check ([e4b4ec7](https://github.com/MARCOTT402/PokeEngmon/commit/e4b4ec7dd4ff44fc1f9adafc8e40fdd456bbc9f6))
+
 # [1.61.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.60.1...v1.61.0) (2026-11-05)
 
 
