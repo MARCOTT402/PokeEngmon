@@ -1,3 +1,10 @@
+# [1.57.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.56.0...v1.57.0) (2026-11-05)
+
+
+### Features
+
+* **battle:** held berries trigger automatically in battle (stage 4b) ([18192c1](https://github.com/MARCOTT402/PokeEngmon/commit/18192c16bd2a311a4a8abef9e18920969fb738be))
+
 # [1.56.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.55.0...v1.56.0) (2026-11-05)
 
 
