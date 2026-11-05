@@ -1,3 +1,10 @@
+## [1.60.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.60.0...v1.60.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **quiz:** keep the input caret aligned with typed text in answer blanks ([462a35c](https://github.com/MARCOTT402/PokeEngmon/commit/462a35c94866dc4d0568c3ff9672a6e285267537))
+
 # [1.60.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.59.0...v1.60.0) (2026-11-05)
 
 
