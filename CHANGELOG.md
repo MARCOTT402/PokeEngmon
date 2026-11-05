@@ -1,3 +1,10 @@
+## [1.63.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.0...v1.63.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **quiz:** mix all due questions across selected units before drawing ([9a6323c](https://github.com/MARCOTT402/PokeEngmon/commit/9a6323c485e111f0c096f2f23068d76765288942))
+
 # [1.63.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.62.0...v1.63.0) (2026-11-05)
 
 
