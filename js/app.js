@@ -413,14 +413,20 @@ const App = {
         <div class="pc-state" id="pc-state"></div>
 
         <div class="pc-items">
-          <div class="pc-item" data-kind="food">
-            <img src="assets/items/food.png" alt="Food"><span>Food +25</span>
-            <b class="pc-count" data-count="food">0</b>
-          </div>
-          <div class="pc-item" data-kind="premium">
-            <img src="assets/items/premium.png" alt="Premium Food"><span>Premium +50</span>
-            <b class="pc-count" data-count="premium">0</b>
-          </div>
+          ${(() => {
+            /* 樹果（第 3b 段）取代 food／premium；舊庫存仲有先顯示 */
+            const legacy = ["food", "premium"].filter(k => Pet.countOf(k) > 0).map(k => `
+          <div class="pc-item" data-kind="${k}">
+            <img src="assets/items/${k}.png" alt=""><span>${k === "food" ? "Food +25" : "Premium +50"}</span>
+            <b class="pc-count" data-count="${k}">0</b>
+          </div>`).join("");
+            const berries = Care.ownedBerries().map(k => { const b = Care.BERRIES[k]; return `
+          <div class="pc-item berry ${b.tier}" data-kind="${k}" title="${b.name} — fullness +${b.fullness}%">
+            <img src="${Care.ITEM_SPRITE(b.sprite)}" alt=""><span>${b.name.replace(" Berry", "")} +${b.fullness}</span>
+            <b class="pc-count" data-count="${k}">0</b>
+          </div>`; }).join("");
+            return (legacy + berries) || `<div class="pc-berry-empty">No berries yet — answer quiz questions to collect them.</div>`;
+          })()}
         </div>
         <div class="pc-evo-note" id="pc-evo-note"></div>
         <div class="pc-tip">Drag food onto your partner — or tap it, then tap the stage.</div>
@@ -508,13 +514,13 @@ const App = {
   async _pcUse(kind) {
     const entry = getActiveEntry();
     this._pcSel = null;
-    if (window.Care && !STONE_KINDS.includes(kind) && Care.online()) {
+    if (window.Care && !STONE_KINDS.includes(kind) && (Care.online() || (Care.isBerry && Care.isBerry(kind)))) {
       if (this._pcBusy) return;
       this._pcBusy = true;
       const name = entryCurrentSpecies(entry)[1];
-      const out = (kind === "food" || kind === "premium") ? await Care.feed(entry, kind) : await Care.use(entry, kind);
+      const out = (kind === "food" || kind === "premium" || Care.isBerry(kind)) ? await Care.feed(entry, kind) : await Care.use(entry, kind);
       this._pcBusy = false;
-      const label = Care.MED_INFO[kind] ? Care.MED_INFO[kind].name : (kind === "premium" ? "Premium Food" : (kind === "revive" ? "Revival" : "Food"));
+      const label = Care.MED_INFO[kind] ? Care.MED_INFO[kind].name : (Care.BERRIES && Care.BERRIES[kind]) ? Care.BERRIES[kind].name : (kind === "premium" ? "Premium Food" : (kind === "revive" ? "Revival" : "Food"));
       if (out && out.ok) this._pcFloat(Care.eventText(out.event, name, label), /^(vomit|faint|od_)/.test(out.event) ? "bad" : "good");
       else this._pcToast(Care.REASON_TEXT[out && out.reason] || "Can't use that now");
       this._syncPetCare();
@@ -1490,6 +1496,13 @@ const App = {
     /* 電子寵物掉落：10/10 → 復活藥 1 + 高級食物 1（另有 10% 額外復活藥）；
        1–9 題 → 普通食物 1（另有 10% 復活藥） */
     rewards.drops = window.Pet ? Pet.rollDrops(data.score === data.total) : [];
+    /* 背包第 3b 段：答題掉樹果（全對 → Super、1–9 題 → Normal；登入由 server 抽） */
+    if (window.Care && Care.awardBerry) {
+      try {
+        const berry = await Care.awardBerry(data.score === data.total);
+        if (berry && Care.BERRIES[berry]) rewards.drops.unshift({ kind: berry, label: `🫐 ${Care.BERRIES[berry].name} +1` });
+      } catch (e) {}
+    }
     /* 狀態系統：答題掉藥（全對穩掉 1 隻、1–9 題 10%；登入由 server 抽） */
     if (window.Care) {
       try {

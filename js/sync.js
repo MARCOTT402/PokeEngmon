@@ -201,6 +201,11 @@ window.Sync = (() => {
           if (acct.items_food != null) bag.food = Math.max(0, Number(acct.items_food) || 0);
           if (acct.items_premium != null) bag.premium = Math.max(0, Number(acct.items_premium) || 0);
           if (acct.items_revive != null) bag.revive = Math.max(0, Number(acct.items_revive) || 0);
+          /* 樹果（第 3b 段）：雲端有 items_berries 就以雲端為準；food／premium 已一換一轉晒，本地歸 0 免得 pushItems 寫返上去 */
+          if (acct.items_berries && typeof acct.items_berries === "object") {
+            st.berries = Object.assign({}, acct.items_berries);
+            bag.food = 0; bag.premium = 0;
+          }
           /* 7 種藥：只經 RPC 寫，雲端數量就係權威 */
           if (acct.items_meds && typeof acct.items_meds === "object" && window.Pet && Pet.MED_KINDS) {
             Pet.MED_KINDS.forEach(k => { bag[k] = Math.max(0, Number(acct.items_meds[k]) || 0); });

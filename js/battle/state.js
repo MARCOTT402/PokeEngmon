@@ -571,9 +571,12 @@ const BattleState = (() => {
       return true;
     }
     let effect = false;
-    if (it.healPct) {
+    /* 回血：百分比（藥／Sitrus）、定額（Oran +10）、1/3（Figy 等） */
+    const heal = it.healPct ? Math.max(1, Math.round(p.maxHp * it.healPct / 100))
+      : it.heal ? it.heal : it.healFrac ? Math.max(1, Math.floor(p.maxHp / it.healFrac)) : 0;
+    if (heal) {
       const before = p.hp;
-      p.hp = Math.min(p.maxHp, p.hp + Math.max(1, Math.round(p.maxHp * it.healPct / 100)));
+      p.hp = Math.min(p.maxHp, p.hp + heal);
       if (p.hp > before) { log(state, `${p.name} recovered ${p.hp - before} HP!`); effect = true; }
     }
     if (it.cures && it.cures.includes(p.status)) {
@@ -581,6 +584,17 @@ const BattleState = (() => {
       p.status = null; p.statusTimer = 0; p.severePoison = false; p.odCount = 0;
       log(state, CURE_LOG[old](p.name));
       effect = true;
+    }
+    /* 混亂（臨時效果）：Persim／Lum */
+    if (it.cures && it.cures.includes("confusion") && p.volatile && p.volatile.confusion > 0) {
+      p.volatile.confusion = 0;
+      log(state, `${p.name} snapped out of its confusion!`);
+      effect = true;
+    }
+    /* Leppa：PP 最少嗰招回 10 PP */
+    if (it.pp) {
+      const mv = (p.moves || []).filter(m => m.pp < m.maxPp).sort((a, b) => a.pp - b.pp)[0];
+      if (mv) { mv.pp = Math.min(mv.maxPp, mv.pp + it.pp); log(state, `${p.name} restored PP to ${mv.name}!`); effect = true; }
     }
     if (!effect) log(state, "But it had no effect...");
     if (it.med) overdose(state, p);

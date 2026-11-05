@@ -234,6 +234,7 @@ const Pet = (() => {
   }
 
   function countOf(kind) {
+    if (window.Care && Care.isBerry && Care.isBerry(kind)) return Care.berryCount(kind);   /* 樹果另存 st.berries */
     return items()[kind] || 0;
   }
 
@@ -290,15 +291,11 @@ const Pet = (() => {
     if (perfect) {
       addItem("revive", 1);
       drops.push({ kind: "revive", label: "💊 Revival +1" });
-      addItem("premium", 1);
-      drops.push({ kind: "premium", label: "🍱 Premium Food +1" });
       if (Math.random() < 0.10) {
         addItem("revive", 1);
         drops.push({ kind: "revive", label: "💊 Revival +1 (bonus)" });
       }
     } else {
-      addItem("food", 1);
-      drops.push({ kind: "food", label: "🥣 Food +1" });
       if (Math.random() < 0.10) {
         addItem("revive", 1);
         drops.push({ kind: "revive", label: "💊 Revival +1" });

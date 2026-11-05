@@ -13,7 +13,7 @@
 const BagUI = (() => {
   const W = 956, H = 440;
   const TABS = ["pokemon", "items", "held"];
-  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null };
+  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, itemFilter: "all" };
   let root = null, rotateEl = null;
   const $ = sel => root.querySelector(sel);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -28,8 +28,14 @@ const BagUI = (() => {
       out.push({ id: k, cat: "medicine", name: m.name, icon: Care.ITEM_SPRITE(m.sprite), n: count(k), desc: m.effect });
     });
     out.push({ id: "revive", cat: "medicine", name: "Revival", icon: "assets/items/revive.png", n: count("revive"), desc: "Revives a fainted Pokémon with full HP and full fullness, and clears every status." });
-    out.push({ id: "food", cat: "food", name: "Food", icon: "assets/items/food.png", n: count("food"), desc: "Fullness +25%. Can't be eaten while paralyzed, asleep or frozen. Feeding when already full makes it throw up." });
-    out.push({ id: "premium", cat: "food", name: "Premium Food", icon: "assets/items/premium.png", n: count("premium"), desc: "Fullness +50%. Can't be eaten while paralyzed, asleep or frozen. Feeding when already full makes it throw up." });
+    if (count("food") > 0) out.push({ id: "food", cat: "food", name: "Food", icon: "assets/items/food.png", n: count("food"), desc: "Fullness +25%." });
+    if (count("premium") > 0) out.push({ id: "premium", cat: "food", name: "Premium Food", icon: "assets/items/premium.png", n: count("premium"), desc: "Fullness +50%." });
+    /* 樹果（第 3b 段）：只顯示持有嘅 */
+    if (window.Care && Care.ownedBerries) Care.ownedBerries().forEach(k => {
+      const b = Care.BERRIES[k];
+      out.push({ id: k, cat: "berries", name: b.name, icon: Care.ITEM_SPRITE(b.sprite), n: Care.berryCount(k), tier: b.tier, berry: b,
+        desc: `${b.tier === "super" ? "Super" : "Normal"} food — fullness +${b.fullness}%.` });
+    });
     return out;
   }
   function heldList() {
@@ -208,6 +214,7 @@ const BagUI = (() => {
     if (t === S.tab) return;
     const dir = TABS.indexOf(t) > TABS.indexOf(S.tab) ? "in-l" : "in-r";
     flushEv(); S.evPick = false;
+    if (t !== "items") S.itemFilter = "all";
     S.tab = t; S.sel = null;
     renderTabInd(); renderChips(); renderGrid(dir); renderDetail();
     $("#bag-grid").scrollTop = 0;
@@ -285,6 +292,12 @@ const BagUI = (() => {
   /* ---------- chips：排序（再撳＝反轉）＋ ✎ 自訂次序；可以左右捲 ---------- */
   function renderChips() {
     const c = $("#bag-chips");
+    if (S.tab === "items") {
+      const opts = [["all", "All"], ["medicine", "Medicine"], ["berries", "Berries"]];
+      c.innerHTML = opts.map(([v, l]) => `<button type="button" class="bag-chip ${S.itemFilter === v ? "on" : ""}" data-f="${v}">${l}</button>`).join("");
+      c.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { S.itemFilter = b.dataset.f; renderChips(); renderGrid("in-f"); }));
+      return;
+    }
     if (S.tab !== "pokemon") { c.innerHTML = ""; return; }
     if (!sortOrder().some(s => s[0] === S.sort)) S.sort = "no";
     c.innerHTML = `<span class="bag-chip-k">Sort</span>` + sortOrder().map(([v, l]) =>
@@ -393,10 +406,10 @@ const BagUI = (() => {
         Drag.bind(el, () => ({ kind: "pokemon", uid, img: animatedURL(entryCurrentSpecies(entryOf(uid))[0]) }));
       });
     } else {
-      const list = S.tab === "items" ? itemList() : heldList();
-      g.innerHTML = list.map(it => `
+      const list = S.tab === "items" ? itemList().filter(it => S.itemFilter === "all" || it.cat === S.itemFilter || (S.itemFilter === "berries" && it.cat === "food")) : heldList();
+      g.innerHTML = (list.length ? "" : `<div class="bag-empty">${S.itemFilter === "berries" ? "No berries yet — answer quiz questions to collect them." : "Nothing here yet."}</div>`) + list.map(it => `
         <button type="button" class="bag-cell ${it.n <= 0 ? "dim" : ""} ${S.sel && S.sel.id === it.id ? "sel" : ""}" data-id="${it.id}">
-          <span class="bag-pic">${it.icon ? `<img class="bag-spr" src="${it.icon}" alt="" draggable="false">` : `<span class="bag-emoji">${it.emoji}</span>`}<span class="bag-cnt">×${it.n}</span></span>
+          <span class="bag-pic">${it.tier ? `<span class="bag-tier ${it.tier}">${it.tier === "super" ? "SUPER" : "FOOD"}</span>` : ""}${it.icon ? `<img class="bag-spr" src="${it.icon}" alt="" draggable="false">` : `<span class="bag-emoji">${it.emoji}</span>`}<span class="bag-cnt">×${it.n}</span></span>
           <span class="bag-cap"><b>${esc(it.name)}</b></span>
         </button>`).join("") + (S.tab === "held" ? `<div class="bag-empty small">Mega stones and other held items will appear here later.</div>` : "");
       g.querySelectorAll("[data-id]").forEach(el => {
@@ -568,10 +581,14 @@ const BagUI = (() => {
         <div class="bag-item-big"><span class="bag-ib">${it.icon ? `<img src="${it.icon}" alt="">` : `<span class="bag-emoji big">${it.emoji}</span>`}</span>
           <div><div class="bag-dname">${esc(it.name)}</div><div class="bag-dsub">×${it.n} in bag</div></div></div>
         <div class="bag-desc">${esc(it.desc)}</div>
+        ${it.berry ? `<div class="bag-kv"><span>Partner Care</span><b>+${it.berry.fullness}% fullness${it.berry.ev ? ` · ${STAT_FULL[it.berry.ev]} EV −10` : ""}</b></div>
+          <div class="bag-kv"><span>Held in battle</span><b class="wrap">${esc(it.berry.held.replace(/^Held: /, ""))}</b></div>
+          <div class="bag-kv"><span>Use in battle</span><b>${it.berry.battle ? "Yes — from the Bag" : "—"}</b></div>
+          <div class="bag-note">Paralyzed, asleep or frozen Pokémon can't eat. Feeding when already full makes it throw up.</div>` : ""}
         ${it.cat === "medicine" ? `<div class="bag-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon. Revival doesn't count.</div>` : ""}
         ${it.cat === "stones" ? `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div><div class="bag-kv"><span>Held in battle</span><b>No effect (same as the original games)</b></div>` : ""}
-        <div class="bag-note">Tip: drag it onto a Pokémon in My Team, or tap ${it.cat === "stones" ? "Give" : it.cat === "food" ? "Feed" : "Use"} then tap a Pokémon.</div>
-        <div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 ? "disabled" : ""}>${it.cat === "stones" ? "Give" : it.cat === "food" ? "Feed" : "Use"}</button></div>`;
+        <div class="bag-note">Tip: drag it onto a Pokémon in My Team, or tap ${verbOf(it)} then tap a Pokémon.</div>
+        <div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 ? "disabled" : ""}>${verbOf(it)}</button></div>`;
       $("#bag-btn-use").addEventListener("click", () => startTarget(it.id));
       return;
     }
@@ -829,7 +846,7 @@ const BagUI = (() => {
   const heldSprite = k => (window.Care ? Care.ITEM_SPRITE((typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
   const heldName = k => (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
   const itemInfo = id => itemList().concat(heldList()).find(x => x.id === id);
-  function verbOf(it) { return it.cat === "stones" ? "Give" : it.cat === "food" ? "Feed" : "Use"; }
+  function verbOf(it) { return it.cat === "stones" ? "Give" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
 
   /* 用道具模式：撳 Use → 跳去 Pokémon tab → 撳目標（或者撳左欄隊伍） */
   function startTarget(id) {
@@ -856,9 +873,11 @@ const BagUI = (() => {
     applyItem.busy = true;
     const name = entryCurrentSpecies(e)[1];
     const it = itemInfo(id) || { name: id };
-    const out = (id === "food" || id === "premium") ? await Care.feed(e, id) : await Care.use(e, id);
+    const feeding = id === "food" || id === "premium" || (Care.isBerry && Care.isBerry(id));
+    const out = feeding ? await Care.feed(e, id) : await Care.use(e, id);
     applyItem.busy = false;
-    if (out && out.ok) toast(Care.eventText(out.event, name, it.name));
+    const cut = out && (out.ev_cut || out.evCut);
+    if (out && out.ok) toast(Care.eventText(out.event, name, it.name) + (cut ? ` (${STAT_FULL[Care.BERRIES[id].ev]} EV −${cut})` : ""));
     else toast(Care.REASON_TEXT[out && out.reason] || "Can't use that now");
     buzz();
     S.sel = { kind: "pokemon", uid };

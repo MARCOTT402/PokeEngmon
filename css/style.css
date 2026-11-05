@@ -5407,3 +5407,12 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* Partner Care：道具已經搬入背包 */
 .pc-bag-note { font-size: 11px; color: #5c6479; text-align: center; margin-top: 8px; background: #f3f5fa; border-radius: 10px; padding: 7px 10px; }
 .pc-open-bag { border: 0; background: #2b5cb8; color: #fff; border-radius: 999px; font: inherit; font-size: 10.5px; font-weight: 900; padding: 3px 10px; margin-left: 4px; cursor: pointer; }
+
+/* ----- 背包第 3b 段：樹果 ----- */
+.bag-tier { position: absolute; left: 3px; top: 3px; font-size: 8px; font-weight: 900; color: #fff; border-radius: 4px; padding: 1px 3px; background: #4caf50; }
+.bag-tier.super { background: #b8860b; }
+.bag-kv b.wrap { max-width: 62%; text-align: right; white-space: normal; line-height: 1.3; }
+.pc-item.berry img { width: 30px; height: 30px; image-rendering: pixelated; }
+.pc-item.berry.super { background: #fff8e6; border-color: #f0d58a; }
+.pc-items { flex-wrap: wrap; }
+.pc-berry-empty { font-size: 11px; color: #8a93a8; text-align: center; padding: 8px 4px; }

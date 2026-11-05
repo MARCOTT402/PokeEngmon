@@ -1018,6 +1018,21 @@ const BattleUI = (() => {
     Care.settleBattle(team, used).catch(e => console.warn("[Battle] settle team failed:", e && e.message));
   }
 
+  /* 戰鬥 BAG 道具：7 種藥 + Revival + 有戰鬥效果嘅持有樹果 */
+  function bagIds() {
+    const berries = (window.Care && Care.ownedBerries) ? Care.ownedBerries().filter(k => BattleState.ITEMS[k]) : [];
+    return BAG_ITEMS.concat(berries);
+  }
+  /* 樹果跟原作：冇效果唔准用、唔扣數（Rule 63）；藥照 spec 照用照扣 */
+  function berryWouldWork(id) {
+    const it = BattleState.ITEMS[id]; const p = myActive();
+    if (!it || !it.berry || !p || p.hp <= 0) return true;
+    if ((it.healPct || it.heal || it.healFrac) && p.hp < p.maxHp) return true;
+    if (it.cures && (it.cures.includes(p.status) || (it.cures.includes("confusion") && p.volatile && p.volatile.confusion > 0))) return true;
+    if (it.pp && (p.moves || []).some(m => m.pp < m.maxPp)) return true;
+    return false;
+  }
+
   /* 背包數量（扣埋今場已用） */
   function bagLeft(id) {
     return window.Pet ? Math.max(0, (Pet.countOf(id) || 0) - (battleUsed[id] || 0)) : 0;
@@ -1784,12 +1799,14 @@ const BattleUI = (() => {
     if (!btn) return;
     /* PvP：戰前投票准用藥先開 */
     const allowed = mode === "ai" || (mode === "pvp" && pvpRules && pvpRules.items);
-    btn.disabled = !(allowed && BAG_ITEMS.some(id => bagLeft(id) > 0));
+    btn.disabled = !(allowed && bagIds().some(id => bagLeft(id) > 0));
   }
 
   function bagInfoHTML(id) {
     const it = BattleState.ITEMS[id];
-    const eff = it.revive ? "Revives a fainted teammate (full HP)" : it.healPct ? `Restores ${it.healPct}% HP` : `Cures ${it.cures[0]}`;
+    const eff = it.revive ? "Revives a fainted teammate (full HP)" : it.healPct ? `Restores ${it.healPct}% HP`
+      : it.heal ? `Restores ${it.heal} HP` : it.healFrac ? `Restores 1/${it.healFrac} HP` : it.pp ? `Restores ${it.pp} PP`
+      : `Cures ${it.cures.length > 2 ? "any status" : it.cures[0]}`;
     return `<div class="bmp-info-head"><span class="bmp-cat">ITEM</span></div>
       <div class="bmp-info-row"><b>${it.label}</b><span>×${bagLeft(id)}</span></div>
       <div class="bmp-info-row"><span>${eff}</span></div>
@@ -1805,7 +1822,7 @@ const BattleUI = (() => {
       list.querySelectorAll("[data-target]").forEach(b => b.onclick = () => chooseItem("revive", +b.dataset.target));
       info.innerHTML = `<div class="bmp-info-head"><span class="bmp-cat">REVIVAL</span></div><div class="bmp-info-row"><span>Pick a fainted Pokémon</span></div>`;
     } else {
-      const have = BAG_ITEMS.filter(id => bagLeft(id) > 0);
+      const have = bagIds().filter(id => bagLeft(id) > 0);
       if (!have.length) { toast("Your bag is empty."); return; }
       list.innerHTML = have.map(id => `<button class="bmp-move-btn" data-item="${id}">${BattleState.ITEMS[id].label} ×${bagLeft(id)}</button>`).join("");
       list.querySelectorAll("[data-item]").forEach(b => {
@@ -1834,6 +1851,7 @@ const BattleUI = (() => {
       else { showBagMenu(fainted); return; }
     }
     if (itemId !== "revive" && myActive().hp <= 0) { toast("This Pokémon can't use an item."); return; }
+    if (!berryWouldWork(itemId)) { toast("It won't have any effect."); return; }
     acting = true;
     battleUsed[itemId] = (battleUsed[itemId] || 0) + 1;   /* 用咗就扣（HP 滿都照扣，計入過量） */
     hideActionMenus();
@@ -2283,7 +2301,7 @@ const BattleUI = (() => {
     document.getElementById("btn-battle-fight").onclick = showMoveMenu;
     document.getElementById("btn-battle-bag").onclick = () => {
       if (mode === "pvp" && !(pvpRules && pvpRules.items)) { toast("Medicine is off for this battle."); return; }
-      if (!BAG_ITEMS.some(id => bagLeft(id) > 0)) { toast("Your bag is empty."); return; }
+      if (!bagIds().some(id => bagLeft(id) > 0)) { toast("Your bag is empty."); return; }
       showBagMenu();
     };
     document.getElementById("btn-battle-pokemon").onclick = () => {

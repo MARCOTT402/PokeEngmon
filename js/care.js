@@ -45,6 +45,101 @@ const Care = (() => {
     not_found: "Pokémon not found",
     offline: "Couldn't reach the server — try again"
   };
+
+  /* ---------- 樹果（背包第 3b 段；spec bag-system-spec §6.2） ----------
+     [slug 前綴, 名, 分級 super／normal, 掉落權重, 攜帶效果說明, 戰鬥中由背包用嘅效果（null = 用唔到）, EV −10 能力值] */
+  const BERRY_ROWS = [
+    ["sitrus", "Sitrus", "super", 3, "Held: restores 25% HP when HP drops to half or less.", { healPct: 25 }],
+    ["lum", "Lum", "super", 3, "Held: cures any status condition and confusion.", { cures: ["burn", "paralyze", "sleep", "poison", "toxic", "freeze", "confusion"] }],
+    ["figy", "Figy", "super", 1, "Held: restores 1/3 HP at 25% HP or less (confuses if it dislikes spicy food).", { healFrac: 3 }],
+    ["wiki", "Wiki", "super", 1, "Held: restores 1/3 HP at 25% HP or less (confuses if it dislikes dry food).", { healFrac: 3 }],
+    ["mago", "Mago", "super", 1, "Held: restores 1/3 HP at 25% HP or less (confuses if it dislikes sweet food).", { healFrac: 3 }],
+    ["aguav", "Aguav", "super", 1, "Held: restores 1/3 HP at 25% HP or less (confuses if it dislikes bitter food).", { healFrac: 3 }],
+    ["iapapa", "Iapapa", "super", 1, "Held: restores 1/3 HP at 25% HP or less (confuses if it dislikes sour food).", { healFrac: 3 }],
+    ["liechi", "Liechi", "super", 1, "Held: raises Attack by 1 at 25% HP or less.", null],
+    ["ganlon", "Ganlon", "super", 1, "Held: raises Defense by 1 at 25% HP or less.", null],
+    ["salac", "Salac", "super", 1, "Held: raises Speed by 1 at 25% HP or less.", null],
+    ["petaya", "Petaya", "super", 1, "Held: raises Sp. Atk by 1 at 25% HP or less.", null],
+    ["apicot", "Apicot", "super", 1, "Held: raises Sp. Def by 1 at 25% HP or less.", null],
+    ["lansat", "Lansat", "super", 1, "Held: raises the critical-hit ratio at 25% HP or less.", null],
+    ["starf", "Starf", "super", 1, "Held: sharply raises a random stat at 25% HP or less.", null],
+    ["micle", "Micle", "super", 1, "Held: boosts the next move's accuracy at 25% HP or less.", null],
+    ["custap", "Custap", "super", 1, "Held: moves first next turn at 25% HP or less.", null],
+    ["enigma", "Enigma", "super", 1, "Held: restores 25% HP when hit by a super-effective move.", null],
+    ["jaboca", "Jaboca", "super", 1, "Held: hurts the attacker (1/8 HP) when hit by a physical move.", null],
+    ["rowap", "Rowap", "super", 1, "Held: hurts the attacker (1/8 HP) when hit by a special move.", null],
+    ["kee", "Kee", "super", 1, "Held: raises Defense by 1 when hit by a physical move.", null],
+    ["maranga", "Maranga", "super", 1, "Held: raises Sp. Def by 1 when hit by a special move.", null],
+    ["cheri", "Cheri", "normal", 3, "Held: cures paralysis.", { cures: ["paralyze"] }],
+    ["chesto", "Chesto", "normal", 3, "Held: wakes it up from sleep.", { cures: ["sleep"] }],
+    ["pecha", "Pecha", "normal", 3, "Held: cures poison.", { cures: ["poison", "toxic"] }],
+    ["rawst", "Rawst", "normal", 3, "Held: heals a burn.", { cures: ["burn"] }],
+    ["aspear", "Aspear", "normal", 3, "Held: thaws it out.", { cures: ["freeze"] }],
+    ["persim", "Persim", "normal", 3, "Held: cures confusion.", { cures: ["confusion"] }],
+    ["oran", "Oran", "normal", 3, "Held: restores 10 HP when HP drops to half or less.", { heal: 10 }],
+    ["leppa", "Leppa", "normal", 3, "Held: restores 10 PP to a move that runs out.", { pp: 10 }],
+    ["occa", "Occa", "normal", 1, "Held: halves damage from one super-effective Fire move.", null],
+    ["passho", "Passho", "normal", 1, "Held: halves damage from one super-effective Water move.", null],
+    ["wacan", "Wacan", "normal", 1, "Held: halves damage from one super-effective Electric move.", null],
+    ["rindo", "Rindo", "normal", 1, "Held: halves damage from one super-effective Grass move.", null],
+    ["yache", "Yache", "normal", 1, "Held: halves damage from one super-effective Ice move.", null],
+    ["chople", "Chople", "normal", 1, "Held: halves damage from one super-effective Fighting move.", null],
+    ["kebia", "Kebia", "normal", 1, "Held: halves damage from one super-effective Poison move.", null],
+    ["shuca", "Shuca", "normal", 1, "Held: halves damage from one super-effective Ground move.", null],
+    ["coba", "Coba", "normal", 1, "Held: halves damage from one super-effective Flying move.", null],
+    ["payapa", "Payapa", "normal", 1, "Held: halves damage from one super-effective Psychic move.", null],
+    ["tanga", "Tanga", "normal", 1, "Held: halves damage from one super-effective Bug move.", null],
+    ["charti", "Charti", "normal", 1, "Held: halves damage from one super-effective Rock move.", null],
+    ["kasib", "Kasib", "normal", 1, "Held: halves damage from one super-effective Ghost move.", null],
+    ["haban", "Haban", "normal", 1, "Held: halves damage from one super-effective Dragon move.", null],
+    ["colbur", "Colbur", "normal", 1, "Held: halves damage from one super-effective Dark move.", null],
+    ["babiri", "Babiri", "normal", 1, "Held: halves damage from one super-effective Steel move.", null],
+    ["roseli", "Roseli", "normal", 1, "Held: halves damage from one super-effective Fairy move.", null],
+    ["chilan", "Chilan", "normal", 1, "Held: halves damage from one Normal-type move.", null],
+    ["pomeg", "Pomeg", "normal", 1, "No battle effect. Eating it also lowers HP EVs by 10.", null, "hp"],
+    ["kelpsy", "Kelpsy", "normal", 1, "No battle effect. Eating it also lowers Attack EVs by 10.", null, "atk"],
+    ["qualot", "Qualot", "normal", 1, "No battle effect. Eating it also lowers Defense EVs by 10.", null, "def"],
+    ["hondew", "Hondew", "normal", 1, "No battle effect. Eating it also lowers Sp. Atk EVs by 10.", null, "spa"],
+    ["grepa", "Grepa", "normal", 1, "No battle effect. Eating it also lowers Sp. Def EVs by 10.", null, "spd"],
+    ["tamato", "Tamato", "normal", 1, "No battle effect. Eating it also lowers Speed EVs by 10.", null, "spe"],
+    ["razz", "Razz", "normal", 1, "No battle effect.", null], ["bluk", "Bluk", "normal", 1, "No battle effect.", null],
+    ["nanab", "Nanab", "normal", 1, "No battle effect.", null], ["wepear", "Wepear", "normal", 1, "No battle effect.", null],
+    ["pinap", "Pinap", "normal", 1, "No battle effect.", null], ["cornn", "Cornn", "normal", 1, "No battle effect.", null],
+    ["magost", "Magost", "normal", 1, "No battle effect.", null], ["rabuta", "Rabuta", "normal", 1, "No battle effect.", null],
+    ["nomel", "Nomel", "normal", 1, "No battle effect.", null], ["spelon", "Spelon", "normal", 1, "No battle effect.", null],
+    ["pamtre", "Pamtre", "normal", 1, "No battle effect.", null], ["watmel", "Watmel", "normal", 1, "No battle effect.", null],
+    ["durin", "Durin", "normal", 1, "No battle effect.", null], ["belue", "Belue", "normal", 1, "No battle effect.", null]
+  ];
+  const BERRIES = {};
+  BERRY_ROWS.forEach(([k, n, tier, w, held, battle, ev]) => {
+    BERRIES[k + "-berry"] = { slug: k + "-berry", name: n + " Berry", tier, weight: w, held, battle, ev: ev || null,
+      fullness: tier === "super" ? 50 : 25, sprite: k + "-berry" };
+  });
+  const isBerry = k => !!BERRIES[k];
+
+  /* 樹果存喺 st.berries { slug: n }；舊 food／premium 一換一（food → Oran、premium → Sitrus） */
+  function berryBag() {
+    const st = loadState();
+    if (!st.berries || typeof st.berries !== "object") st.berries = {};
+    if (st.items && ((st.items.food || 0) > 0 || (st.items.premium || 0) > 0) && !online()) {
+      st.berries["oran-berry"] = (st.berries["oran-berry"] || 0) + (st.items.food || 0);
+      st.berries["sitrus-berry"] = (st.berries["sitrus-berry"] || 0) + (st.items.premium || 0);
+      st.items.food = 0; st.items.premium = 0;
+      saveState();
+    }
+    return st.berries;
+  }
+  const berryCount = k => Math.max(0, Number(berryBag()[k]) || 0);
+  function addBerry(k, n) { const b = berryBag(); b[k] = Math.max(0, (Number(b[k]) || 0) + n); if (!b[k]) delete b[k]; saveState(); }
+  function ownedBerries() { const b = berryBag(); return BERRY_ROWS.map(r => r[0] + "-berry").filter(k => (b[k] || 0) > 0); }
+  /* 掉落：同一級入面按權重抽 */
+  function rollBerry(perfect) {
+    const pool = Object.values(BERRIES).filter(b => b.tier === (perfect ? "super" : "normal"));
+    let r = Math.random() * pool.reduce((a, b) => a + b.weight, 0);
+    for (const b of pool) { r -= b.weight; if (r < 0) return b.slug; }
+    return pool[0].slug;
+  }
+
   const SLEEP_MS = 30 * 60 * 1000;
   const CAP_MS = 60 * 24 * 3600 * 1000;
 
@@ -114,7 +209,8 @@ const Care = (() => {
       if (p.vomit >= 3 || p.hp <= 250) { p.hp = 0; p.vomit = 0; event = "faint"; }
       else { p.hp -= 250; event = p.vomit === 1 ? "vomit" : "vomit_severe"; }
     } else {
-      p.health = Math.min(100, p.health + (kind === "premium" ? 50 : 25));
+      const add = BERRIES[kind] ? BERRIES[kind].fullness : (kind === "premium" ? 50 : 25);
+      p.health = Math.min(100, p.health + add);
       p.vomit = 0;
     }
     if (p.hp <= 0) { p.status = null; p.poison = 0; p.statusSince = null; }
@@ -227,6 +323,8 @@ const Care = (() => {
       ["food", "premium", "revive"].forEach(k => {
         if (state.items[k] != null) bag[k] = Math.max(0, Number(state.items[k]) || 0);
       });
+      if (state.items.berries && typeof state.items.berries === "object") st.berries = Object.assign({}, state.items.berries);
+      if (state.evs && typeof state.evs === "object") st.entries.forEach(e => { if (state.evs[e.uid]) e.evs = state.evs[e.uid]; });
     }
     saveState();
     return true;
@@ -258,6 +356,14 @@ const Care = (() => {
     return changed;
   }
 
+  /* 扣 EV 樹果（Pomeg 等）：食咗嗰陣該項 EV −10（唔退 unit；同 care_feed 一致） */
+  function berryEv(entry, kind) {
+    const b = BERRIES[kind]; if (!b || !b.ev || !entry) return 0;
+    entry.evs = entry.evs || {};
+    const cut = Math.min(10, entry.evs[b.ev] || 0);
+    entry.evs[b.ev] = (entry.evs[b.ev] || 0) - cut;
+    return cut;
+  }
   async function feed(entry, kind) {
     if (!entry) return { ok: false, reason: "not_found" };
     if (online()) {
@@ -266,10 +372,14 @@ const Care = (() => {
       /* RPC 唔通（migration 未跑／斷網）→ 退返本地規則，唔好令玩家餵唔到；下次 server 結算會校正 */
       console.warn("[Care] care_feed unavailable — using local rules");
     }
-    if ((Pet.countOf(kind) || 0) <= 0) return { ok: false, reason: "no_item" };
+    const have = isBerry(kind) ? berryCount(kind) : (Pet.countOf(kind) || 0);
+    if (have <= 0) return { ok: false, reason: "no_item" };
     tickLocal();
     const out = feedRule(entry.pet, kind);
-    if (out.ok) Pet.addItem(kind, -1);
+    if (out.ok) {
+      if (isBerry(kind)) { addBerry(kind, -1); out.evCut = berryEv(entry, kind); }
+      else Pet.addItem(kind, -1);
+    }
     saveState();
     return out;
   }
@@ -304,6 +414,19 @@ const Care = (() => {
     return slug;
   }
 
+  /* 答題掉樹果（取代 food／premium）：10/10 → Super 樹果；1–9 題 → Normal 樹果 */
+  async function awardBerry(perfect) {
+    if (online()) {
+      const res = await rpc("award_berry", { p_perfect: !!perfect });
+      if (!res || !res.slug) return null;
+      if (res.berries) { const st = loadState(); st.berries = Object.assign({}, res.berries); saveState(); }
+      return res.slug;
+    }
+    const slug = rollBerry(!!perfect);
+    addBerry(slug, 1);
+    return slug;
+  }
+
   /* 戰鬥正常完結：寫返出戰隊伍 HP／狀態 + 扣藥。team: [{ uid, hp(0–1000), status, poison }] */
   async function settleBattle(team, used) {
     const st = loadState();
@@ -317,7 +440,7 @@ const Care = (() => {
       p.statusSince = (p.status === "slp" || p.status === "frz") ? iso(nowMs) : null;
       p.careAt = iso(nowMs); p.od = 0; p.medLog = [];
     });
-    Object.keys(used || {}).forEach(k => { if (used[k] > 0) Pet.addItem(k, -used[k]); });
+    Object.keys(used || {}).forEach(k => { if (used[k] > 0) { if (isBerry(k)) addBerry(k, -used[k]); else Pet.addItem(k, -used[k]); } });
     saveState();
     if (online()) {
       const res = await rpc("settle_battle_team", {
@@ -332,9 +455,17 @@ const Care = (() => {
     MED_KINDS, MED_INFO, STATUS_INFO, REASON_TEXT, ITEM_SPRITE, SLEEP_MS,
     ensure, settleOne, settleAll, feedRule, useRule,
     maxHp, hpOf, isFaint, statusKey, sleepLeftMs, eventText,
-    online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle
+    online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle,
+    BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry
   };
 })();
+
+/* 戰鬥中由背包用樹果：將有效果嘅樹果註冊入 BattleState.ITEMS（Rule 63：冇效果唔准用） */
+if (typeof BattleState !== "undefined" && BattleState.ITEMS) {
+  Object.values(Care.BERRIES).forEach(b => {
+    if (b.battle) BattleState.ITEMS[b.slug] = Object.assign({ label: b.name, berry: true }, b.battle);
+  });
+}
 
 window.Care = Care;
 if (typeof module !== "undefined" && module.exports) module.exports = Care;
