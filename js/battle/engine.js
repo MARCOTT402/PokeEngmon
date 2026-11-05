@@ -207,7 +207,11 @@ const Battle = (() => {
       severePoison: entry.battleStatus === "psn" && Number(entry.battlePoison) >= 2,   /* 嚴重中毒：毒傷 ×2 */
       odTurns: [], odCount: 0, odHits: 0,   /* 戰鬥內用藥過量追蹤 */
       statStages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
-      volatile: { flinch: false, confusion: 0, substitute: 0, flashFire: false },
+      volatile: { flinch: false, confusion: 0, substitute: 0, flashFire: false, critBoost: 0, micle: false },
+      /* 背包第 4b 段：攜帶樹果（自動觸發、食完消失）；性格俾 Figy 類樹果判斷「唔鍾意嘅味」 */
+      nature: entry.nature || "hardy",
+      held: (typeof entry.heldItem === "string" && /-berry$/.test(entry.heldItem)) ? entry.heldItem : null,
+      heldUsed: null,
       /* 特性：entry 已經 roll 咗嘅就用嗰個；未 roll（舊存檔／新捕捉）先用 slot 1 */
       ability: (typeof entry.ability === "string" && entry.ability)
         ? entry.ability

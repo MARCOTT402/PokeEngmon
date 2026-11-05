@@ -18,6 +18,7 @@
 | 圖鑑 | `js/pokedex.js` |
 | 育成（飽肚值／拍檔／道具） | `js/pet.js` |
 | 戰鬥畫面轉橫（橫向紅框 host #view-battle） | `js/battle/landscape.js` |
+| 攜帶樹果戰鬥觸發（HELD 表、checkHeld／custapCheck） | `js/battle/state.js`, `tools/_test_held_berries.js`, `supabase/migrations/supabase-migrate-20261105g-held-berries.sql`（hold_berry） |
 | 背包（橫向紅框、三欄、轉手機提示） | `js/bag.js`, `tools/prototype-bag.html`（設計稿） |
 | HP／狀態／用藥規則（server RPC + guest 本地） | `js/care.js`, `tools/_test_care.js`, `supabase/migrations/supabase-migrate-20261105c-care-status-phase1.sql` |
 | 數值 / 進化 / moves | `js/pokemon.js`, `js/data.js`, `js/gens-data.js` |

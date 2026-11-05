@@ -684,3 +684,12 @@ Incident (2026-11-05，背包第 4a 段)：`#view-battle` 搬入橫向紅框 `.b
 - 搬 view 入新容器時，喺新容器 selector 用 `!important` 清走 `position`、`inset／top／left／right／bottom`、`transform`、`max-width／max-height`、負 margin、`100vh` min-height。
 - 第一次搬完即刻 `getComputedStyle()` 睇 position／inset／transform，再截圖，唔好淨係睇 DOM 有冇搬到。
 - 離開時一定要搬返原位（用 comment placeholder 記住位置），並用 `App.showView` 包一層確保任何出口都會搬返。
+
+## Rule 68 — 戰鬥測試：名唔好寫死、推進文字要撳 `.battle-bottom`、回合完 = 選單打開
+
+Incident (2026-11-05，背包第 4b 段)：(1) node 測試用 `chainKey: "bulbasaur", level: 30` 建隊，引擎按等級進化成 Venusaur，regex 寫死「Bulbasaur ate its…」全部 FAIL（引擎其實啱）。(2) 瀏覽器自動推進戰鬥文字撳 `#battle-text` 冇反應（`waitTap` 聽 `.battle-bottom`），又等「What will…」先出招，但回合完 `showMainMenu()` 唔會 narrate → loop 以為卡死。
+
+- node 測試：用 `chainKey` 建隊時，名要由 `team[i].name` 讀，或者 regex 唔包名；唔好假設未進化。
+- 瀏覽器推進對白：`document.querySelector('.battle-bottom').click()`（programmatic click 冇座標，唔會誤撳 RUN）。
+- 判斷「輪到我」：`.battle-bottom.menu-open` + `#battle-action-menu` 顯示，唔好靠文字。
+- 1v1 對手（Youngster 等）隊伍只得 1 隻：測換 Pokémon／後備觸發要揀多隻隊伍嘅對手或者用 node 測試。

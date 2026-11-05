@@ -184,8 +184,150 @@ const BattleState = (() => {
         msgs.push(`Pointed stones dug into ${p.name}!`);
       }
     }
+    if (p.hp > 0) checkHeld(state, p, msgs);
     if (p.hp <= 0) msgs.push(`${p.name} fainted!`);
     return msgs;
+  }
+
+  /* ---------- 攜帶樹果（背包第 4b 段；效果跟原作 Gen 7+，自動觸發、食完消失） ----------
+     雙方客戶端各自模擬（PvP seed 一致），觸發位要喺兩邊一樣：出招後（目標先、出招者後）、
+     回合末、上場、用藥後；抗性／Enigma／Jaboca／Kee 類喺中招嗰下即時判斷 */
+  const ALL_CURES = ["burn", "paralyze", "sleep", "poison", "toxic", "freeze", "confusion"];
+  const PINCH = 0.25, HALF = 0.5;
+  const HELD = {
+    "sitrus-berry": { at: HALF, healPct: 25 },
+    "oran-berry": { at: HALF, heal: 10 },
+    "figy-berry": { at: PINCH, healFrac: 3, dislike: "atk" },
+    "wiki-berry": { at: PINCH, healFrac: 3, dislike: "spa" },
+    "mago-berry": { at: PINCH, healFrac: 3, dislike: "spe" },
+    "aguav-berry": { at: PINCH, healFrac: 3, dislike: "spd" },
+    "iapapa-berry": { at: PINCH, healFrac: 3, dislike: "def" },
+    "liechi-berry": { at: PINCH, boost: "atk" },
+    "ganlon-berry": { at: PINCH, boost: "def" },
+    "salac-berry": { at: PINCH, boost: "spe" },
+    "petaya-berry": { at: PINCH, boost: "spa" },
+    "apicot-berry": { at: PINCH, boost: "spd" },
+    "lansat-berry": { at: PINCH, focus: true },
+    "starf-berry": { at: PINCH, starf: true },
+    "micle-berry": { at: PINCH, micle: true },
+    "custap-berry": { custap: true },
+    "lum-berry": { cures: ALL_CURES },
+    "cheri-berry": { cures: ["paralyze"] },
+    "chesto-berry": { cures: ["sleep"] },
+    "pecha-berry": { cures: ["poison", "toxic"] },
+    "rawst-berry": { cures: ["burn"] },
+    "aspear-berry": { cures: ["freeze"] },
+    "persim-berry": { cures: ["confusion"] },
+    "leppa-berry": { leppa: 10 },
+    "enigma-berry": { enigma: true },
+    "jaboca-berry": { hurt: "physical" },
+    "rowap-berry": { hurt: "special" },
+    "kee-berry": { hitBoost: "physical", stat: "def" },
+    "maranga-berry": { hitBoost: "special", stat: "spd" },
+    "chilan-berry": { resist: "normal", any: true }
+  };
+  [["occa", "fire"], ["passho", "water"], ["wacan", "electric"], ["rindo", "grass"], ["yache", "ice"], ["chople", "fighting"],
+   ["kebia", "poison"], ["shuca", "ground"], ["coba", "flying"], ["payapa", "psychic"], ["tanga", "bug"], ["charti", "rock"],
+   ["kasib", "ghost"], ["haban", "dragon"], ["colbur", "dark"], ["babiri", "steel"], ["roseli", "fairy"]]
+    .forEach(([k, t]) => { HELD[k + "-berry"] = { resist: t }; });
+  const BOOST_NAME = { atk: "Attack", def: "Defense", spa: "Sp. Atk", spd: "Sp. Def", spe: "Speed" };
+  const berryLabel = slug => String(slug).replace(/-berry$/, "").replace(/^./, c => c.toUpperCase()) + " Berry";
+  function emit(state, out, msg) { if (out) out.push(msg); else log(state, msg); }
+  function heldOf(p) { return (p && p.hp > 0 && p.held) ? (HELD[p.held] || null) : null; }
+  function eatBerry(state, p, out) {
+    const slug = p.held;
+    p.held = null; p.heldUsed = slug;
+    emit(state, out, `${p.name} ate its ${berryLabel(slug)}!`);
+  }
+  function healBy(state, p, amount, out) {
+    const before = p.hp;
+    p.hp = Math.min(p.maxHp, p.hp + amount);
+    if (p.hp > before) emit(state, out, `${p.name} recovered ${p.hp - before} HP!`);
+  }
+  function raiseStat(state, p, key, n, out) {
+    p.statStages[key] = Math.min(6, (p.statStages[key] || 0) + n);
+    emit(state, out, `${p.name}'s ${BOOST_NAME[key]} ${n >= 2 ? "rose sharply" : "rose"}!`);
+  }
+  /* 通用觸發：主要狀態／混亂、PP 用完、HP 門檻（≤ 50% 或 ≤ 25%）。out = 訊息 list（冇就寫 log） */
+  function checkHeld(state, p, out) {
+    const h = heldOf(p);
+    if (!h) return false;
+    if (h.cures) {
+      const st = h.cures.includes(p.status) ? p.status : null;
+      const conf = h.cures.includes("confusion") && p.volatile && p.volatile.confusion > 0;
+      if (!st && !conf) return false;
+      eatBerry(state, p, out);
+      if (st) { p.status = null; p.statusTimer = 0; p.severePoison = false; p.odCount = 0; emit(state, out, CURE_LOG[st](p.name)); }
+      if (conf) { p.volatile.confusion = 0; emit(state, out, `${p.name} snapped out of its confusion!`); }
+      return true;
+    }
+    if (h.leppa) {
+      const mv = (p.moves || []).find(m => m.pp <= 0 && m.maxPp > 0);
+      if (!mv) return false;
+      eatBerry(state, p, out);
+      mv.pp = Math.min(mv.maxPp, h.leppa);
+      emit(state, out, `${p.name} restored PP to ${mv.name}!`);
+      return true;
+    }
+    if (!h.at || p.hp > Math.floor(p.maxHp * h.at)) return false;
+    /* 原作：升唔到（+6）就唔食 */
+    if (h.boost && (p.statStages[h.boost] || 0) >= 6) return false;
+    const starfKeys = ["atk", "def", "spa", "spd", "spe"].filter(k => (p.statStages[k] || 0) < 6);
+    if (h.starf && !starfKeys.length) return false;
+    if ((h.healPct || h.heal || h.healFrac) && p.hp >= p.maxHp) return false;
+    eatBerry(state, p, out);
+    if (h.healPct || h.heal || h.healFrac) {
+      healBy(state, p, h.healPct ? Math.max(1, Math.floor(p.maxHp * h.healPct / 100)) : (h.heal || Math.max(1, Math.floor(p.maxHp / h.healFrac))), out);
+      /* Figy 類：性格降嗰項能力 = 唔鍾意嗰種味 → 混亂 */
+      const nat = (h.dislike && typeof natureInfo === "function") ? natureInfo(p.nature) : null;
+      if (nat && nat.minus === h.dislike && !(p.volatile.confusion > 0) && !(STATUS_IMMUNE[p.ability] || []).includes("confusion")) {
+        p.volatile.confusion = 2 + Math.floor(BattleRng.next() * 4);
+        emit(state, out, `${p.name} became confused!`);
+      }
+    } else if (h.boost) raiseStat(state, p, h.boost, 1, out);
+    else if (h.focus) { p.volatile.critBoost = (p.volatile.critBoost || 0) + 2; emit(state, out, `${p.name} is getting pumped!`); }
+    else if (h.starf) raiseStat(state, p, starfKeys[Math.floor(BattleRng.next() * starfKeys.length)], 2, out);
+    else if (h.micle) { p.volatile.micle = true; emit(state, out, `${p.name} boosted the accuracy of its next move!`); }
+    return true;
+  }
+  /* Custap：揀咗出招 + HP ≤ 25% → 回合開始食，同優先度入面先出手（UI 層 call，p1 先 p2 後保持 PvP 一致） */
+  function custapCheck(state, side) {
+    const p = active(state, side);
+    const h = heldOf(p);
+    if (!h || !h.custap || p.hp > Math.floor(p.maxHp * PINCH)) return false;
+    eatBerry(state, p);
+    log(state, `${p.name} can act faster than normal, thanks to its Custap Berry!`);
+    return true;
+  }
+  /* 中招即時判斷：抗性樹果（傷害減半，喺扣血前）；回傳調整後傷害 */
+  function resistBerry(state, target, move, damage, effectiveness) {
+    const h = heldOf(target);
+    if (!h || !h.resist || h.resist !== move.type || !(h.any || effectiveness > 1)) return damage;
+    eatBerry(state, target);
+    log(state, `The ${berryLabel(target.heldUsed)} weakened the damage to ${target.name}!`);
+    return Math.max(1, Math.floor(damage / 2));
+  }
+  /* 中招後：Jaboca／Rowap（目標暈咗都會觸發）、Enigma、Kee／Maranga */
+  function afterHitBerry(state, actor, target, move, effectiveness) {
+    const h = target.held ? HELD[target.held] : null;
+    if (!h) return;
+    if (h.hurt && h.hurt === move.damage_class && actor.hp > 0) {
+      eatBerry(state, target);
+      actor.hp = Math.max(0, actor.hp - Math.max(1, Math.floor(actor.maxHp / 8)));
+      log(state, `${actor.name} was hurt by ${target.name}'s ${berryLabel(target.heldUsed)}!`);
+      if (actor.hp <= 0) log(state, `${actor.name} fainted!`);
+      return;
+    }
+    if (target.hp <= 0) return;
+    if (h.enigma && effectiveness > 1 && target.hp < target.maxHp) {
+      eatBerry(state, target);
+      healBy(state, target, Math.max(1, Math.floor(target.maxHp / 4)));
+      return;
+    }
+    if (h.hitBoost && h.hitBoost === move.damage_class && (target.statStages[h.stat] || 0) < 6) {
+      eatBerry(state, target);
+      raiseStat(state, target, h.stat, 1);
+    }
   }
 
   /* ---------- 單招執行（含多段） ---------- */
@@ -199,7 +341,13 @@ const BattleState = (() => {
       flinch_chance: 0, healing: 0, stat_chance: 0, min_hits: null, max_hits: null
     }
   };
+  /* 出招 + 出招後攜帶樹果判斷（目標先，出招者後：混亂打自己、反動、PP 用完） */
   function executeMove(state, side, moveIdx) {
+    executeMoveCore(state, side, moveIdx);
+    checkHeld(state, active(state, otherSide(side)));
+    checkHeld(state, active(state, side));
+  }
+  function executeMoveCore(state, side, moveIdx) {
     const actor = active(state, side);
     const target = active(state, otherSide(side));
     /* 目標已暈（例如被入場釘子打死）：招落空，唔重複計傷 */
@@ -241,6 +389,9 @@ const BattleState = (() => {
     if (actor.volatile.flinch) { actor.volatile.flinch = false; log(state, `${actor.name} flinched!`); return; }
 
     log(state, `${actor.name} used ${move.name}!`);
+    /* Micle：今招命中 ×1.2（用一次就冇） */
+    const micle = !!actor.volatile.micle;
+    actor.volatile.micle = false;
 
     /* ---------- 場地招式（天氣／釘子／壁） ---------- */
     const foeSideKey = otherSide(side);
@@ -284,17 +435,19 @@ const BattleState = (() => {
     const neverMiss = (moveObj.slug === "blizzard" && wName === "hail") || (moveObj.slug === "thunder" && wName === "rain");
 
     for (let hit = 0; hit < hitCount; hit++) {
-      if (!neverMiss && !hitCheckFor(state, effMove, actor, target)) {
+      const accMove = (micle && effMove.accuracy != null) ? Object.assign({}, effMove, { accuracy: effMove.accuracy * 1.2 }) : effMove;
+      if (!neverMiss && !hitCheckFor(state, accMove, actor, target)) {
         log(state, `${actor.name}'s attack missed!`);
         continue;
       }
       /* crit：Battle Armor 一律免疫（RNG 照樣消耗，PvP 兩邊序列先一致） */
-      let crit = BattleRng.next() < Battle.critChance(effMove.meta && effMove.meta.crit_rate);
+      /* Lansat：會心等級 +2 */
+      let crit = BattleRng.next() < Battle.critChance(((effMove.meta && effMove.meta.crit_rate) || 0) + (actor.volatile.critBoost || 0));
       if (target.ability === "battle-armor") crit = false;
       if (effMove.power && effMove.damage_class !== "status") {
         /* 受壁嗰邊：reflect 擋物理、lightScreen 擋特殊（crit 會喺 engine 無視） */
         const defSide = state[foeSideKey].side;
-        const { damage, effectiveness } = Battle.computeDamage(actor, target, effMove, {
+        let { damage, effectiveness } = Battle.computeDamage(actor, target, effMove, {
           crit,
           weather: wName,
           slug: moveObj.slug,
@@ -303,6 +456,8 @@ const BattleState = (() => {
         });
         /* 屬性免疫（0 倍）：成招落空，後續效果一律唔出 */
         if (effectiveness === 0) { log(state, `It doesn't affect ${target.name}...`); break; }
+        /* 抗性樹果：扣血前減半 */
+        damage = resistBerry(state, target, effMove, damage, effectiveness);
         /* Sturdy：滿 HP 食致命傷留 1 HP（Gen 5 規則） */
         if (target.ability === "sturdy" && target.hp === target.maxHp && damage >= target.hp) {
           target.hp = 1;
@@ -324,6 +479,8 @@ const BattleState = (() => {
             if (actor.hp <= 0) { log(state, `${actor.name} fainted!`); break; }
           }
         }
+        afterHitBerry(state, actor, target, effMove, effectiveness);
+        if (actor.hp <= 0 && target.hp > 0) break;
       }
       /* healing */
       if (move.meta && move.meta.healing) {
@@ -438,6 +595,8 @@ const BattleState = (() => {
         log(state, `${p.name} is hurt by its Solar Power!`);
       }
     }
+    /* 攜帶樹果：燒傷／毒／天氣扣到門檻都會食 */
+    if (p.hp > 0) checkHeld(state, p);
     /* 壁倒數（每邊各自計） */
     const sd = state[side].side;
     if (sd.reflect > 0 && --sd.reflect === 0) log(state, `Reflect on ${side === "p1" ? "your" : "the foe's"} side wore off!`);
@@ -478,7 +637,7 @@ const BattleState = (() => {
         out.status = null;
         log(state, `${out.name} was cured of its status by Natural Cure!`);
       }
-      if (out.volatile) out.volatile.flashFire = false;
+      if (out.volatile) { out.volatile.flashFire = false; out.volatile.critBoost = 0; out.volatile.micle = false; }
     }
     state[side].active = idx;
     const p = team[idx];
@@ -500,6 +659,8 @@ const BattleState = (() => {
     const msgs = [];
     const p = active(state, side);
     const foeP = active(state, otherSide(side));
+    /* 帶住育成狀態上場：攜帶解狀態樹果即刻食（跟原作） */
+    if (p && p.hp > 0) checkHeld(state, p, msgs);
     if (!p || p.hp <= 0 || !foeP || foeP.hp <= 0) return msgs;
     if (p.ability === "intimidate") {
       if (foeP.ability === "hyper-cutter") {
@@ -598,6 +759,8 @@ const BattleState = (() => {
     }
     if (!effect) log(state, "But it had no effect...");
     if (it.med) overdose(state, p);
+    /* 用藥過量中毒 → 攜帶 Pecha／Lum 即刻食 */
+    if (p.hp > 0) checkHeld(state, p);
     return true;
   }
 
@@ -633,7 +796,8 @@ const BattleState = (() => {
   return {
     create, active, otherSide, log,
     executeMove, endTurnResidual, endTurnField, switchTo, onSwitchIn,
-    applyEntryHazards, hasUsable, checkFinished, statusLabel, useItem, ITEMS
+    applyEntryHazards, hasUsable, checkFinished, statusLabel, useItem, ITEMS,
+    HELD, checkHeld, custapCheck, berryLabel
   };
 })();
 

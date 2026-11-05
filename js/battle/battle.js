@@ -993,7 +993,9 @@ const BattleUI = (() => {
       /* 育成 HP／狀態：對手部機要用同一個數值建隊，否則 desync */
       battleHp: e.battleHp == null ? null : e.battleHp,
       battleStatus: e.battleStatus || null,
-      battlePoison: e.battlePoison || 0
+      battlePoison: e.battlePoison || 0,
+      /* 攜帶樹果（第 4b 段）：對手部機要知先模擬到同一個觸發 */
+      heldItem: (typeof e.heldItem === "string" && /-berry$/.test(e.heldItem)) ? e.heldItem : null
     };
   }
 
@@ -1012,7 +1014,9 @@ const BattleUI = (() => {
       uid: p.uid,
       hp: p.hp <= 0 ? 0 : Math.max(1, Math.round(p.hp / p.maxHp * 1000)),
       status: p.hp > 0 ? (toCare[p.status] || null) : null,
-      poison: p.status === "poison" && p.severePoison ? 2 : 1
+      poison: p.status === "poison" && p.severePoison ? 2 : 1,
+      /* 攜帶樹果食咗 → server 清 held_item（只清同一粒） */
+      heldUsed: p.heldUsed || null
     }));
     const used = battleUsed; battleUsed = {};
     Care.settleBattle(team, used).catch(e => console.warn("[Battle] settle team failed:", e && e.message));
@@ -1044,7 +1048,7 @@ const BattleUI = (() => {
       mode: kind, forced: !!forced,
       team: () => me().team.map((p, i) => ({
         idx: i, name: p.name, dexId: p.dexId, level: p.level, hp: p.hp, maxHp: p.maxHp, status: p.status,
-        severe: !!p.severePoison, active: i === me().active, fainted: p.hp <= 0,
+        severe: !!p.severePoison, active: i === me().active, fainted: p.hp <= 0, held: p.held || null,
         moves: (p.moves || []).map(m => ({ slug: m.slug, name: m.name, pp: m.pp, maxPp: m.maxPp }))
       })),
       items: () => battleBagItems(),
@@ -1969,8 +1973,16 @@ const BattleUI = (() => {
     const myMove = playerAction.kind === "move" ? moveInfo(myActive().moves[playerAction.moveIdx].slug) : null;
     const foeMove = foeAction.kind === "move" ? moveInfo(foeActive().moves[foeAction.moveIdx].slug) : null;
     const wName = state.weather && state.weather.name;
-    const myAct = { kind: playerAction.kind, priority: myMove ? myMove.priority : 6, speed: Battle.effectiveStat(myActive(), "spe", false, wName), player: true, action: playerAction };
-    const foeAct = { kind: foeAction.kind, priority: foeMove ? foeMove.priority : 6, speed: Battle.effectiveStat(foeActive(), "spe", false, wName), player: false, action: foeAction };
+    /* Custap（攜帶樹果）：揀咗出招 + HP ≤ 25% → 同優先度先出手；p1 先 p2 後判斷，PvP 兩邊一致 */
+    const custLog = state.log.length;
+    const custap = {};
+    ["p1", "p2"].forEach(s => {
+      const act = s === mySide ? playerAction : foeAction;
+      if (act.kind === "move" && BattleState.custapCheck) custap[s] = BattleState.custapCheck(state, s);
+    });
+    const custMsgs = state.log.slice(custLog).map(l => l.msg);
+    const myAct = { kind: playerAction.kind, priority: myMove ? myMove.priority + (custap[mySide] ? 0.5 : 0) : 6, speed: Battle.effectiveStat(myActive(), "spe", false, wName), player: true, action: playerAction };
+    const foeAct = { kind: foeAction.kind, priority: foeMove ? foeMove.priority + (custap[foeSide] ? 0.5 : 0) : 6, speed: Battle.effectiveStat(foeActive(), "spe", false, wName), player: false, action: foeAction };
     /* PvP 同步關鍵：turnOrder 同速 tiebreak 食 RNG，
        兩邊客戶端必須用同一次序傳參（p1 行先），否則同一個 random 會出相反結果 */
     const firstAct = mySide === "p1" ? myAct : foeAct;
@@ -1979,6 +1991,7 @@ const BattleUI = (() => {
 
     narrate("");
     (async () => {
+      for (const m of custMsgs) await say(m);
       for (const act of order) {
         if (state.finished) break;
         const side = act.player ? mySide : foeSide;

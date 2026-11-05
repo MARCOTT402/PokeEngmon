@@ -427,12 +427,39 @@ const Care = (() => {
     return slug;
   }
 
+  /* 攜帶樹果（第 4b 段）：slug = null → 拆返落背包；原本攜帶嘅道具（樹果／進化石）自動退返 */
+  async function holdBerry(entry, slug) {
+    const st = loadState();
+    const x = st.entries.find(y => y.uid === entry.uid);
+    if (!x) return { ok: false, reason: "not_found" };
+    const prev = x.heldItem || null;
+    if (slug && berryCount(slug) <= 0) return { ok: false, reason: "none" };
+    if ((prev || null) === (slug || null)) return { ok: true, prev };
+    if (online()) {
+      const res = await rpc("hold_berry", { p_entry: x.uid, p_berry: slug || null });
+      if (!res || !res.ok) return res || { ok: false, reason: "offline" };
+      const y = loadState().entries.find(z => z.uid === x.uid);
+      if (y) y.heldItem = slug || null;
+      saveState();
+      if (res.state) applyState(res.state);   /* 樹果數量以 server 為準 */
+      if (prev && !isBerry(prev) && window.Pet) Pet.addItem(prev, 1);   /* 進化石：server 已退，本地跟住加 */
+      return { ok: true, prev };
+    }
+    x.heldItem = slug || null;
+    saveState();
+    if (slug) addBerry(slug, -1);
+    if (prev) { if (isBerry(prev)) addBerry(prev, 1); else if (window.Pet) Pet.addItem(prev, 1); }
+    return { ok: true, prev };
+  }
+
   /* 戰鬥正常完結：寫返出戰隊伍 HP／狀態 + 扣藥。team: [{ uid, hp(0–1000), status, poison }] */
   async function settleBattle(team, used) {
     const st = loadState();
     const nowMs = now();
     team.forEach(t => {
       const e = st.entries.find(x => x.uid === t.uid); if (!e) return;
+      /* 攜帶樹果戰鬥中食咗 → 冇咗 */
+      if (t.heldUsed && e.heldItem === t.heldUsed) e.heldItem = null;
       const p = ensure(e.pet || (e.pet = { health: 100 }));
       p.hp = Math.max(0, Math.min(1000, Math.round(t.hp)));
       p.status = p.hp > 0 ? (t.status || null) : null;
@@ -444,7 +471,7 @@ const Care = (() => {
     saveState();
     if (online()) {
       const res = await rpc("settle_battle_team", {
-        p_team: team.map(t => ({ id: t.uid, hp: Math.round(t.hp), status: t.status || null, poison: t.poison || 0 })),
+        p_team: team.map(t => ({ id: t.uid, hp: Math.round(t.hp), status: t.status || null, poison: t.poison || 0, held_used: t.heldUsed || null })),
         p_used: used || {}
       });
       if (res && res.state) applyState(res.state);
@@ -456,7 +483,7 @@ const Care = (() => {
     ensure, settleOne, settleAll, feedRule, useRule,
     maxHp, hpOf, isFaint, statusKey, sleepLeftMs, eventText,
     online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle,
-    BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry
+    BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry, holdBerry
   };
 })();
 

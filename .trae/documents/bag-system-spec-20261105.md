@@ -153,6 +153,19 @@
 - **戰鬥文字**：背包每個操作（用藥、樹果、Revival、換 Pokémon、攜帶樹果自動食）都要喺戰鬥文字框顯示，PvP 對手畫面都要見到（例如「Ash used a Potion!」→「Gengar recovered 25 HP!」、「Gengar's poison was cured!」、「Gengar ate its Sitrus Berry!」）。
   - 現況：引擎 `BattleState.useItem` 已經會寫 log（「X used a Potion!」→「Y recovered N HP!」），雙方各自模擬所以對手都見到；換 Pokémon 亦有「come back!／withdrew」文字。但 `BattleState.ITEMS` 只有 potion／full-restore，新藥同樹果要逐件補效果同句子，PvP 收到對手 item action 時亦只接受 `ITEMS` 入面有嘅道具。
 
+## 12.1 第 4b 段：攜帶樹果（2026-11-05 實作）
+
+- **攜帶**：背包 Items → 樹果 → 「Hold」→ 撳 Pokémon（拖放照舊 = 餵）。背包數量 −1；原本攜帶嘅道具（樹果／進化石）自動退返背包。server：`hold_berry(p_entry, p_berry)`（null = 拆返）。
+- **觸發位**（`BattleState.checkHeld`，雙方客戶端各自模擬，PvP 隊伍序列化帶 `heldItem`）：出招後（目標先、出招者後）、回合末殘留傷害後、上場（帶育成狀態入場會即刻解）、用藥後（過量中毒 → Pecha／Lum）。
+- **中招即時**：抗性樹果扣血前減半；Jaboca／Rowap（攻方扣 1/8，目標暈咗都觸發）、Enigma（效果絕佳 → 回 25%）、Kee／Maranga（+1）喺中招後。
+- **Custap**：揀出招 + HP ≤ 25% → 回合開始食，同優先度先出手（p1 先 p2 後判斷）。
+- **Micle** 下一招命中 ×1.2；**Lansat** 會心 +2（換走清）；**Starf** 隨機一項 +2；升唔到（+6）唔食；HP 滿唔食回血樹果；暈咗唔食。
+- **Figy 類**：性格降嗰項能力 = 唔鍾意嗰種味 → 混亂（Figy 攻、Wiki 特攻、Mago 速度、Aguav 特防、Iapapa 防禦）。
+- **戰鬥文字**：「X ate its Y Berry!」+ 效果句；戰鬥背包左欄顯示攜帶樹果 icon。
+- **完場**：正常完場 `settle_battle_team` 每隻帶 `held_used` → server 只清同一粒 held_item；斷線／中途離開唔扣（同藥一致）。
+- **送返大木博士**：攜帶樹果退返背包（`release_to_oak` 更新）。
+- 已知限制：`held_item` 仍有 client column grant（進化石 B 方案），理論上可以直寫攜帶樹果唔扣數；要收緊需將進化石攜帶都改經 RPC。
+
 ## 13. 待定
 
 - [ ] 第 6 節樹果細節。

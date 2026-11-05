@@ -13,7 +13,7 @@
 const BagUI = (() => {
   const W = 956, H = 440;
   const TABS = ["pokemon", "items", "held"];
-  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, itemFilter: "all", battle: null };
+  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, targetMode: null, itemFilter: "all", battle: null };
   let root = null, rotateEl = null;
   const $ = sel => root.querySelector(sel);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -469,6 +469,7 @@ const BagUI = (() => {
           <div class="lv">Lv.${p.level} ${ic ? `<img src="assets/battle/ui/status-${ic}.png" alt="">` : ""}</div>
           <div class="bag-minihp ${cls}"><i style="width:${pct}%"></i></div></div>
         <span class="ord">${p.idx + 1}</span>
+        ${p.held ? `<img class="bag-held slot" src="${heldSprite(p.held)}" alt="">` : ""}
         ${p.active ? `<span class="bag-inbattle">IN BATTLE</span>` : ""}
       </div>`;
     }).join("");
@@ -631,12 +632,14 @@ const BagUI = (() => {
         ${it.berry ? `<div class="bag-kv"><span>Partner Care</span><b>+${it.berry.fullness}% fullness${it.berry.ev ? ` · ${STAT_FULL[it.berry.ev]} EV −10` : ""}</b></div>
           <div class="bag-kv"><span>Held in battle</span><b class="wrap">${esc(it.berry.held.replace(/^Held: /, ""))}</b></div>
           <div class="bag-kv"><span>Use in battle</span><b>${it.berry.battle ? "Yes — from the Bag" : "—"}</b></div>
+          ${S.battle ? "" : `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div>`}
           <div class="bag-note">Paralyzed, asleep or frozen Pokémon can't eat. Feeding when already full makes it throw up.</div>` : ""}
         ${it.cat === "medicine" ? `<div class="bag-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon. Revival doesn't count.</div>` : ""}
         ${it.cat === "stones" ? `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div><div class="bag-kv"><span>Held in battle</span><b>No effect (same as the original games)</b></div>` : ""}
         <div class="bag-note">${S.battle ? "Tip: drag it onto a Pokémon on the left, or tap Use then tap a Pokémon. Using an item ends your turn." : `Tip: drag it onto a Pokémon in My Team, or tap ${verbOf(it)} then tap a Pokémon.`}</div>
-        <div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 || it.usable === false ? "disabled" : ""}>${S.battle ? "Use" : verbOf(it)}</button></div>`;
+        <div class="bag-actions">${it.berry && !S.battle ? `<button type="button" class="bag-btn alt" id="bag-btn-hold" ${it.n <= 0 ? "disabled" : ""}>Hold</button>` : ""}<button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 || it.usable === false ? "disabled" : ""}>${S.battle ? "Use" : verbOf(it)}</button></div>`;
       $("#bag-btn-use").addEventListener("click", () => startTarget(it.id));
+      const hb = $("#bag-btn-hold"); if (hb) hb.addEventListener("click", () => startTarget(it.id, "hold"));
       return;
     }
     const e = entryOf(S.sel.uid);
@@ -933,22 +936,23 @@ const BagUI = (() => {
   /* =====================================================================
      第 3a 段：用道具・攜帶進化石・送回大木博士
      ===================================================================== */
-  const heldSprite = k => (window.Care ? Care.ITEM_SPRITE((typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
-  const heldName = k => (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
+  const isBerryId = k => !!(window.Care && Care.isBerry && Care.isBerry(k));
+  const heldSprite = k => (window.Care ? Care.ITEM_SPRITE(isBerryId(k) ? Care.BERRIES[k].sprite : (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
+  const heldName = k => (isBerryId(k) ? Care.BERRIES[k].name : null) || (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
   const itemInfo = id => (S.battle ? S.battle.items() : itemList().concat(heldList())).find(x => x.id === id);
   function verbOf(it) { return it.cat === "stones" ? "Give" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
 
   /* 用道具模式：撳 Use → 跳去 Pokémon tab → 撳目標（或者撳左欄隊伍） */
-  function startTarget(id) {
+  function startTarget(id, mode) {
     const it = itemInfo(id); if (!it || it.n <= 0) return;
-    S.target = id;
+    S.target = id; S.targetMode = mode || null;
     if (!S.battle && S.tab !== "pokemon") { S.tab = "pokemon"; renderTabInd(); renderChips(); renderGrid("in-r"); }
-    $("#bag-banner-t").textContent = S.battle ? `${it.name}: tap a Pokémon on the left` : `${verbOf(it)} ${it.name}: tap a Pokémon`;
+    $("#bag-banner-t").textContent = S.battle ? `${it.name}: tap a Pokémon on the left` : `${mode === "hold" ? "Hold" : verbOf(it)} ${it.name}: tap a Pokémon`;
     $("#bag-banner").classList.add("show");
     root.classList.add("targeting");
   }
   function cancelTarget() {
-    S.target = null;
+    S.target = null; S.targetMode = null;
     if (!root) return;
     $("#bag-banner").classList.remove("show");
     root.classList.remove("targeting");
@@ -956,6 +960,7 @@ const BagUI = (() => {
   function refreshAll() { renderTeam(); renderGrid(); renderDetail(true); if (window.App && App.renderHome) App.renderHome(); }
 
   async function applyItem(id, uid) {
+    const hold = S.targetMode === "hold";
     cancelTarget();
     if (S.battle) {
       const idx = Number(String(uid).replace("bt-", ""));
@@ -966,6 +971,7 @@ const BagUI = (() => {
     }
     const e = entryOf(uid); if (!e) return;
     if (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(id)) { giveStone(id, uid); return; }
+    if (hold) { holdBerry(id, uid); return; }
     if (applyItem.busy) return;
     applyItem.busy = true;
     const name = entryCurrentSpecies(e)[1];
@@ -981,9 +987,28 @@ const BagUI = (() => {
     refreshAll();
   }
 
+  /* 攜帶樹果（第 4b 段）：戰鬥中自動觸發、食完消失；原本攜帶嘅道具退返背包 */
+  async function holdBerry(id, uid) {
+    const e = entryOf(uid); if (!e || holdBerry.busy) return;
+    holdBerry.busy = true;
+    const res = await Care.holdBerry(e, id);
+    holdBerry.busy = false;
+    if (!res || !res.ok) { toast({ none: "No berry left", not_found: "Pokémon not found", bad_item: "That can't be held" }[res && res.reason] || "Couldn't hold it — try again"); return; }
+    buzz();
+    toast(`${entryCurrentSpecies(e)[1]} is now holding the ${heldName(id)}${res.prev ? ` (${heldName(res.prev)} went back to the bag)` : ""}`);
+    S.sel = { kind: "pokemon", uid };
+    refreshAll();
+  }
+
   /* 進化石：啱條件即刻進化（石用完）；唔啱就攜帶 */
-  function giveStone(stone, uid) {
-    const e = entryOf(uid); if (!e) return;
+  async function giveStone(stone, uid) {
+    let e = entryOf(uid); if (!e) return;
+    /* 攜帶緊樹果：先經 server 退返落背包，再當冇攜帶處理 */
+    if (e.heldItem && isBerryId(e.heldItem)) {
+      const r = await Care.holdBerry(e, null);
+      if (!r || !r.ok) { toast("Couldn't swap the held item — try again"); return; }
+      e = entryOf(uid); if (!e) return;
+    }
     const name = entryCurrentSpecies(e)[1];
     const chk = canStoneEvolve(e, stone);
     if (chk.ok) {
@@ -1016,9 +1041,17 @@ const BagUI = (() => {
     S.sel = { kind: "pokemon", uid };
     refreshAll();
   }
-  function takeHeld(uid) {
+  async function takeHeld(uid) {
     const st = loadState(); const x = st.entries.find(y => y.uid === uid);
     if (!x || !x.heldItem) return;
+    if (isBerryId(x.heldItem)) {
+      const k = x.heldItem;
+      const r = await Care.holdBerry(x, null);
+      if (!r || !r.ok) { toast("Couldn't take it back — try again"); return; }
+      toast(`Took the ${heldName(k)} back`);
+      refreshAll();
+      return;
+    }
     const k = x.heldItem; x.heldItem = null; saveState();
     Pet.addItem(k, 1);
     if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
@@ -1087,7 +1120,8 @@ const BagUI = (() => {
     st.myTeam = (st.myTeam || []).filter(u => u !== uid);
     if (st.moveLoadouts) delete st.moveLoadouts[uid];
     saveState();
-    if (held) { Pet.addItem(held, 1); if (window.Sync && Sync.pushItems && online()) { /* server 已退石；本地同步數量 */ } }
+    /* server 已退道具；本地跟住加（樹果 → 樹果袋；進化石 → items） */
+    if (held) { if (isBerryId(held)) Care.addBerry(held, 1); else Pet.addItem(held, 1); }
     if (window.Sync && Sync.patchAccount && online()) Sync.patchAccount({ my_team: st.myTeam });
     buzz();
     const cell = root.querySelector(`#bag-grid [data-uid="${uid}"]`);
