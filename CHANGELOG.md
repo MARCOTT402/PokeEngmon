@@ -1,3 +1,10 @@
+# [1.58.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.57.0...v1.58.0) (2026-11-05)
+
+
+### Features
+
+* **battle:** Mega Evolution for gen 1-5 species (stage 4c) ([79785d9](https://github.com/MARCOTT402/PokeEngmon/commit/79785d91cba30205598230900f2360e88c03dc5b))
+
 # [1.57.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.56.0...v1.57.0) (2026-11-05)
 
 
