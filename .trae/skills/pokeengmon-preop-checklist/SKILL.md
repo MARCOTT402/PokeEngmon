@@ -734,3 +734,13 @@ Incident (2026-11-05，Quiz v2 圖片題)：`.word-image` 用 `height: clamp(170
 - 驗收：每個尺寸（440×956、375×812、375×667、820×1180、1280×800）量 `#quiz-scroll` 嘅 `scrollHeight - clientHeight` 要 ≤ 4，同埋輸入格 `bottom` 要細過鍵盤 `top`。
 
 Skill: Rule 72 added
+
+## Rule 74 — 答題空格：顯示字同透明 input 嘅字型（字重、字距、size、family）一定要一致，否則浮標越打越向左移
+
+Incident (2026-11-05，Quiz v2)：`.qb-cell` 入面係「顯示字 `.qb-text`＋透明 `.qb-input`（只睇到 caret）」疊埋。Quiz v2 CSS 將 `.qb-text` 改做 `font-weight: 800`，圖片題 `.quiz-sentence` 又加咗 `letter-spacing: .04em`，但 input 仍然係 600、冇字距 → 每打一個字 caret 就落後少少，用戶見到浮標「輸入多幾個字後移左位」。
+
+- 字重／字距要放喺 `.qb-cell`（或者佢上層），`.qb-text`、`.qb-ghost`、`.qb-input` 全部 `inherit`；唔好只改顯示字嘅 font。
+- `letter-spacing` 唔會自動傳入 `<input>`（form control 預設唔繼承 font 屬性），要明寫 `letter-spacing: inherit`。
+- 驗收：打 12 個字母，用 canvas `measureText`（input 嘅 computed font＋letterSpacing×字數）對比 `.qb-text` 闊度，差距要 ≤ 1px；句子題同圖片題都要測。
+
+Skill: Rule 74 added

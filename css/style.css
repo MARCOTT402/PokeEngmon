@@ -5155,7 +5155,11 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: background .22s ease, border-color .22s ease;
 }
 #view-quiz .qb-cell:focus-within { background: var(--qz-brand-l); border-bottom-color: var(--qz-brand); }
-#view-quiz .qb-text { color: var(--qz-brand); font-weight: 800; }
+/* 字重／字距放喺 .qb-cell，等顯示字（.qb-text／.qb-ghost）同透明 input 一齊繼承；
+   兩邊唔一致，浮標（input 嘅 caret）會越打越落後向左移（Rule 74） */
+#view-quiz .qb-cell { font-weight: 800; }
+#view-quiz .qb-text { color: var(--qz-brand); font-weight: inherit; }
+#view-quiz .qb-text, #view-quiz .qb-ghost, #view-quiz .qb-input { letter-spacing: inherit; font-weight: inherit; font-family: inherit; font-size: inherit; }
 #view-quiz .qb-cell.good { background: var(--qz-ok-l); border-bottom-color: var(--qz-ok); animation: qz-cell-pop .42s var(--qz-spring); }
 #view-quiz .qb-cell.good .qb-text { color: var(--qz-ok-ink); }
 #view-quiz .qb-cell.good::after {
