@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.49.0...v1.50.0) (2026-11-05)
+
+
+### Features
+
+* **home:** show labeled Fullness and HP bars on partner card ([02ec1e9](https://github.com/MARCOTT402/PokeEngmon/commit/02ec1e9fdb70e8ae5b2695f01f48f8574bc8b238))
+
 # [1.49.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.48.0...v1.49.0) (2026-11-05)
 
 
