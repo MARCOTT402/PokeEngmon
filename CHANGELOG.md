@@ -1,3 +1,10 @@
+# [1.56.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.55.0...v1.56.0) (2026-11-05)
+
+
+### Features
+
+* **battle:** landscape battle screen and three-column bag in battle (stage 4a) ([d1ebd7b](https://github.com/MARCOTT402/PokeEngmon/commit/d1ebd7b19bfdd2cf3c8001b4a1587292fb11db90)), closes [#view-battle](https://github.com/MARCOTT402/PokeEngmon/issues/view-battle)
+
 # [1.55.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.54.0...v1.55.0) (2026-11-05)
 
 
