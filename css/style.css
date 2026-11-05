@@ -3895,6 +3895,35 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   margin-bottom: 8px;
 }
 
+/* ----- PvP 戰前投票 ----- */
+.pvp-vote, .pvp-vote-wait, .pvp-vote-result {
+  display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%;
+}
+.pvp-vote-wait { align-items: center; gap: 16px; padding: 10px 0; }
+.pvp-vote-result { align-items: center; }
+.pvp-vote-head { display: flex; justify-content: space-between; align-items: baseline; }
+.pvp-vote-head .pvp-format-label { margin-top: 0; }
+.pvp-vote-timer { font-weight: 900; color: #2b5cb8; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.pvp-vote-timer.urgent { color: #e5383b; }
+.pvp-vote-row { display: flex; flex-direction: column; gap: 4px; }
+.pvp-vote-label { font-size: .8rem; font-weight: 800; color: #1a2a44; }
+.pvp-seg {
+  display: flex; border: 2px solid #2b5cb8; border-radius: 10px; overflow: hidden;
+}
+.pvp-seg button {
+  flex: 1 1 0; min-width: 0; padding: 9px 4px; border: 0; background: #fff;
+  color: #2b5cb8; font-weight: 800; font-size: .9rem; cursor: pointer;
+}
+.pvp-seg button + button { border-left: 2px solid #2b5cb8; }
+.pvp-seg button.on { background: #2b5cb8; color: #fff; }
+.pvp-seg button:disabled { color: #b7c0d2; background: #f2f4f8; cursor: not-allowed; }
+.pvp-vote-hint { margin: 0; font-size: .72rem; color: #6b7590; line-height: 1.35; }
+.pvp-vote-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.pvp-vote-table th, .pvp-vote-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid #e6eaf2; }
+.pvp-vote-table th { color: #6b7590; font-weight: 700; font-size: .72rem; }
+.pvp-vote-table td:first-child, .pvp-vote-table th:first-child { text-align: left; color: #1a2a44; font-weight: 800; }
+.pvp-vote-table td.final { color: #2b5cb8; font-weight: 900; }
+
 /* ----- 開場 intro：訓練家見面（FRLG） ----- */
 /* intro 期間收埋正常對戰 UI */
 .battle-view.intro-on .battle-hpbox,

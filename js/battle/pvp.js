@@ -5,6 +5,7 @@
    同步策略：battles row 存共同 seed，雙方客戶端各自模擬
    （rng.js 保證一致），每回合只交換 action：
      { turn: N, kind: "move", moveIdx } | { turn: N, kind: "switch", idx }
+     | { turn: N, kind: "item", itemId }（只限戰前投票准用藥）
    只接受 turn == 本地回合+1 嘅 action，舊 turn 無視 → 唔使清 action。
    配對規則：uid 細嗰個做莊起 battle row（p1），避免撞單。
    好友局（battles.is_friend = true）唔會落入隨機配對池。
@@ -20,7 +21,7 @@ const PvpNet = (() => {
   const FALLBACK_MAX_MS = 2200;
 
   /* 只攞必要欄位（回傳 payload 細啲，turn 交換更快） */
-  const SELECT_BATTLE = "id,state,seed,winner,team_size,p1_uid,p2_uid,p1_action,p2_action,p1_team,p2_team,is_friend";
+  const SELECT_BATTLE = "id,state,seed,winner,team_size,p1_uid,p2_uid,p1_action,p2_action,p1_team,p2_team,is_friend,p1_vote,p2_vote";
 
   function myUid() {
     return (window.SupabaseAuth && SupabaseAuth.currentUser && SupabaseAuth.currentUser())
@@ -246,6 +247,60 @@ const PvpNet = (() => {
       b => b && ((b.p1_team && b.p1_team.length && b.p2_team && b.p2_team.length) || b.state === "finished"));
   }
 
+  /* ============================================================
+     戰前投票（出戰數量／准唔准用藥／准唔准自願換 Pokémon）
+     vote = { size: 1–6, cap: 自己可出戰數, items: bool, switch: bool }
+     ============================================================ */
+  async function submitVote(battleId, side, vote) {
+    const col = side === "p1" ? "p1_vote" : "p2_vote";
+    await api("PATCH", `/battles?id=eq.${battleId}`, { [col]: vote, updated_at: Date.now() }, "return=minimal");
+  }
+
+  /* 等雙方票齊（或者對手已經走咗） */
+  function waitForVotes(battleId) {
+    return waitRow(battleId, b => b && ((b.p1_vote && b.p2_vote) || b.state === "finished"));
+  }
+
+  /* p1 將最終人數寫返 row 做紀錄（唔影響雙方各自計算） */
+  async function recordTeamSize(battleId, size) {
+    await api("PATCH", `/battles?id=eq.${battleId}`, { team_size: size, updated_at: Date.now() }, "return=minimal").catch(() => {});
+  }
+
+  /* seed → 獨立嘅偽隨機 bit（唔用 BattleRng，免得打亂戰鬥 RNG 序列） */
+  function seedBit(seed, salt) {
+    let x = ((Number(seed) >>> 0) ^ Math.imul(salt + 1, 0x9E3779B1)) >>> 0;
+    x ^= x << 13; x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5; x >>>= 0;
+    x = Math.imul(x ^ (x >>> 16), 0x45D9F3B) >>> 0;
+    return (x >>> 7) & 1;
+  }
+
+  /* 雙方客戶端用同一條規則計最終規則：
+     意見一致 → 照用；唔一致 → battle seed 喺兩個之中隨機抽（雙方結果一樣）。
+     人數最後再夾喺雙方可出戰數之內。 */
+  function resolveRules(seed, v1, v2) {
+    const a = normVote(v1), b = normVote(v2);
+    const pick = (x, y, salt) => (x === y ? x : (seedBit(seed, salt) ? y : x));
+    const rawSize = pick(a.size, b.size, 1);
+    const size = Math.max(1, Math.min(rawSize, a.cap, b.cap));
+    return {
+      size,
+      items: !!pick(a.items, b.items, 2),
+      switch: !!pick(a.switch, b.switch, 3),
+      votes: { p1: a, p2: b }
+    };
+  }
+
+  /* 缺票／壞票 → 預設：3 隻（之後夾 cap）、准用藥、准換 */
+  function normVote(v) {
+    v = v || {};
+    const cap = Math.max(1, Math.min(6, Math.round(Number(v.cap)) || 1));
+    const n = Math.round(Number(v.size));
+    const size = (n >= 1 && n <= 6) ? n : 3;
+    return { size, cap, items: v.items !== false, switch: v.switch !== false };
+  }
+
   /* 出招／換寵：寫落自己嗰欄，附 turn 防舊 action 污染 */
   async function submitAction(battleId, side, turn, action) {
     const col = side === "p1" ? "p1_action" : "p2_action";
@@ -269,6 +324,7 @@ const PvpNet = (() => {
     ACTION_TIMEOUT_MS,
     matchmake, leavePool,
     fetchBattle, submitTeam, waitForTeams,
+    submitVote, waitForVotes, recordTeamSize, resolveRules, normVote,
     submitAction, waitForOpponentAction, finishBattleRow
   };
 })();

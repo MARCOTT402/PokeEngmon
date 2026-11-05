@@ -1041,7 +1041,7 @@
       </div>
     </div>
 
-    <!-- PvP 配對面板：matching → 抽場制 → confirm -->
+    <!-- PvP 配對面板：matching → 戰前投票 → 公佈結果 → 揀隊 -->
     <div id="pvp-match-panel" class="pvp-match-panel" style="display:none">
       <div class="pvp-match-card">
         <div id="pvp-matching" class="pvp-matching">
@@ -1051,9 +1051,41 @@
         </div>
         <div id="pvp-matched" class="pvp-matched" style="display:none">
           <div class="pvp-found-title">Opponent found!</div>
-          <div class="pvp-format-label">Battle format</div>
-          <div class="pvp-format-value" id="pvp-format-value">3v3</div>
-          <button id="pvp-format-confirm" class="btn-big btn-primary">Confirm</button>
+          <div id="pvp-vote" class="pvp-vote">
+            <div class="pvp-vote-head">
+              <span class="pvp-format-label">Vote on the battle rules</span>
+              <span class="pvp-vote-timer" id="pvp-vote-timer">30s</span>
+            </div>
+            <div class="pvp-vote-row">
+              <div class="pvp-vote-label">Team size</div>
+              <div class="pvp-seg" data-key="size">
+                <button type="button" data-v="1">1v1</button><button type="button" data-v="2">2v2</button><button type="button" data-v="3">3v3</button><button type="button" data-v="4">4v4</button><button type="button" data-v="5">5v5</button><button type="button" data-v="6">6v6</button>
+              </div>
+            </div>
+            <div class="pvp-vote-row">
+              <div class="pvp-vote-label">Medicine</div>
+              <div class="pvp-seg" data-key="items">
+                <button type="button" data-v="1">Allowed</button><button type="button" data-v="0">Off</button>
+              </div>
+            </div>
+            <div class="pvp-vote-row">
+              <div class="pvp-vote-label">Switching</div>
+              <div class="pvp-seg" data-key="switch">
+                <button type="button" data-v="1">Allowed</button><button type="button" data-v="0">Off</button>
+              </div>
+            </div>
+            <p class="pvp-vote-hint">If you disagree, the rule is picked at random from both votes. A fainted Pokémon can always be replaced.</p>
+            <button id="pvp-vote-submit" type="button" class="btn-big btn-primary">Vote</button>
+          </div>
+          <div id="pvp-vote-wait" class="pvp-vote-wait" style="display:none">
+            <div class="pvp-spinner" aria-hidden="true"></div>
+            <div class="pvp-match-text">Waiting for your opponent's vote…</div>
+          </div>
+          <div id="pvp-vote-result" class="pvp-vote-result" style="display:none">
+            <div class="pvp-format-value" id="pvp-format-value">3v3</div>
+            <table class="pvp-vote-table" id="pvp-vote-table"></table>
+            <button id="pvp-format-confirm" type="button" class="btn-big btn-primary">Choose team</button>
+          </div>
         </div>
       </div>
     </div>

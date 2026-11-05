@@ -24,6 +24,10 @@ const BattleUI = (() => {
   let pvpFoeUid = null;      /* 對手 uid（隨機 PvP 用嚟加好友） */
   let pvpFoeName = null;     /* 對手名（好友局由邀請帶入） */
   let pvpIsFriend = false;   /* 好友局（is_friend = true，獎勵唔同） */
+  let pvpRules = null;       /* 戰前投票結果 { size, items, switch, votes } */
+  let pvpVoteTimer = null;   /* 投票倒數 interval */
+  let pvpVoteWait = null;    /* 等對手票嘅 waitRow（帶 cancel） */
+  const PVP_VOTE_SECONDS = 30;
   const toast = (m) => App.toast(m);
 
   /* ---------- 入口 ---------- */
@@ -539,12 +543,10 @@ const BattleUI = (() => {
     /* 好友局會改過標題，隨機配對要還原 */
     const foundTitle = document.querySelector(".pvp-found-title");
     if (foundTitle) foundTitle.textContent = "Opponent found!";
-    /* 場制隨機抽 1/3/6，唔會多過自己持有數 */
-    const st = loadState();
-    const ownedCount = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length).length;
-    const size = Math.min([1, 3, 6][Math.floor(Math.random() * 3)], Math.max(1, ownedCount));
-    pvpTeamSize = size;
-    pvpCancel = PvpNet.matchmake(size, {
+    /* 場制改由配對後嘅戰前投票決定；配對池／battle row 先填 3 做 placeholder */
+    pvpTeamSize = 3;
+    pvpRules = null;
+    pvpCancel = PvpNet.matchmake(3, {
       onMatched, onTimeout: onMatchTimeout, onError: onMatchError
     });
   }
@@ -578,7 +580,7 @@ const BattleUI = (() => {
     pvpIsFriend = !!battle.is_friend;
     document.getElementById("pvp-matching").style.display = "none";
     document.getElementById("pvp-matched").style.display = "flex";
-    document.getElementById("pvp-format-value").textContent = battle.team_size + "v" + battle.team_size;
+    startPvpVote(3);
   }
 
   /* 好友局：server 已開好 row，唔使配對，亦唔檢查每日答題配額 */
@@ -605,13 +607,157 @@ const BattleUI = (() => {
     if (matching) matching.style.display = "none";
     const matched = document.getElementById("pvp-matched");
     if (matched) matched.style.display = "flex";
-    const fmt = document.getElementById("pvp-format-value");
-    if (fmt) fmt.textContent = battle.team_size + "v" + battle.team_size;
     const title = document.querySelector(".pvp-found-title");
     if (title) title.textContent = "Friend challenge!";
+    /* 邀請只係叫人入場；規則同隨機 PvP 一樣由雙方投票 */
+    startPvpVote(3);
+  }
+
+  /* ---------- PvP 戰前投票：出戰數量／准唔准用藥／准唔准自願換 ---------- */
+  /* 可出戰數：狀態系統落地後要排除 Faint */
+  function pvpUsableCount() {
+    const st = loadState();
+    return st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length).length;
+  }
+
+  /* 人數 1–6，唔超過自己可出戰數 */
+  function pvpFitSize(size, cap) {
+    return Math.max(1, Math.min(size, cap));
+  }
+
+  function stopPvpVote() {
+    if (pvpVoteTimer) { clearInterval(pvpVoteTimer); pvpVoteTimer = null; }
+    if (pvpVoteWait && pvpVoteWait.cancel) pvpVoteWait.cancel();
+    pvpVoteWait = null;
+  }
+
+  function startPvpVote(defaultSize) {
+    stopPvpVote();
+    pvpRules = null;
+    const cap = Math.max(1, Math.min(6, pvpUsableCount()));
+    const n = Math.round(Number(defaultSize));
+    const base = (n >= 1 && n <= 6) ? n : 3;
+    const vote = { size: pvpFitSize(base, cap), cap, items: true, switch: true };
+
+    const voteBox = document.getElementById("pvp-vote");
+    voteBox.style.display = "flex";
+    document.getElementById("pvp-vote-wait").style.display = "none";
+    document.getElementById("pvp-vote-result").style.display = "none";
+
+    const syncSeg = () => {
+      voteBox.querySelectorAll(".pvp-seg").forEach(seg => {
+        const key = seg.dataset.key;
+        seg.querySelectorAll("button").forEach(btn => {
+          const v = Number(btn.dataset.v);
+          if (key === "size") {
+            btn.disabled = v > cap;
+            btn.classList.toggle("on", v === vote.size);
+          } else {
+            btn.disabled = false;
+            btn.classList.toggle("on", (v === 1) === vote[key]);
+          }
+        });
+      });
+    };
+    voteBox.querySelectorAll(".pvp-seg").forEach(seg => {
+      seg.querySelectorAll("button").forEach(btn => {
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          if (btn.disabled) return;
+          const v = Number(btn.dataset.v);
+          if (seg.dataset.key === "size") vote.size = v; else vote[seg.dataset.key] = v === 1;
+          sfx("select", .9);
+          syncSeg();
+        };
+      });
+    });
+    syncSeg();
+
+    let left = PVP_VOTE_SECONDS;
+    const timerEl = document.getElementById("pvp-vote-timer");
+    const paint = () => {
+      timerEl.textContent = left + "s";
+      timerEl.classList.toggle("urgent", left <= 5);
+    };
+    paint();
+    let submitted = false;
+    const submit = (auto) => {
+      if (submitted) return;
+      submitted = true;
+      /* 夠鐘未投 → 預設：3 隻（唔夠就用最多可出戰數）、准用藥、准換 */
+      const finalVote = auto
+        ? { size: pvpFitSize(3, cap), cap, items: true, switch: true }
+        : Object.assign({}, vote);
+      submitPvpVote(finalVote);
+    };
+    pvpVoteTimer = setInterval(() => {
+      left -= 1;
+      paint();
+      if (left <= 0) submit(true);
+    }, 1000);
+    document.getElementById("pvp-vote-submit").onclick = (ev) => { ev.stopPropagation(); submit(false); };
+  }
+
+  async function submitPvpVote(vote) {
+    if (pvpVoteTimer) { clearInterval(pvpVoteTimer); pvpVoteTimer = null; }
+    const battle = pvpBattle;
+    if (!battle) return;
+    document.getElementById("pvp-vote").style.display = "none";
+    document.getElementById("pvp-vote-wait").style.display = "flex";
+    try {
+      await PvpNet.submitVote(battle.id, pvpSide, vote);
+      pvpVoteWait = PvpNet.waitForVotes(battle.id);
+      /* 對手自己有 30s 倒數會自動交票；再等多 45s 都冇就當走咗 */
+      const b = await raceTimeout(pvpVoteWait, PvpNet.ACTION_TIMEOUT_MS + PVP_VOTE_SECONDS * 1000);
+      if (pvpVoteWait && pvpVoteWait.cancel) pvpVoteWait.cancel();
+      pvpVoteWait = null;
+      if (pvpBattle !== battle) return;   /* 期間已經離開／換咗局 */
+      if (!b || b.state === "finished" || !b.p1_vote || !b.p2_vote) {
+        if (!b) await PvpNet.finishBattleRow(battle.id, pvpSide);
+        abortPvpVote("Opponent left. Battle cancelled.");
+        return;
+      }
+      const seed = (b.seed != null) ? b.seed : battle.seed;
+      pvpRules = PvpNet.resolveRules(seed, b.p1_vote, b.p2_vote);
+      pvpTeamSize = pvpRules.size;
+      if (pvpSide === "p1") PvpNet.recordTeamSize(battle.id, pvpRules.size);
+      showPvpVoteResult();
+    } catch (e) {
+      console.warn("[PvP] vote failed:", e);
+      abortPvpVote("Network error: " + (e && e.message ? e.message.slice(0, 60) : ""));
+    }
+  }
+
+  function abortPvpVote(msg) {
+    stopPvpVote();
+    pvpBattle = null;
+    pvpRules = null;
+    document.getElementById("pvp-match-panel").style.display = "none";
+    toast(msg);
+    openMenu();
+  }
+
+  function showPvpVoteResult() {
+    const r = pvpRules;
+    const mine = r.votes[pvpSide];
+    const foe = r.votes[pvpSide === "p1" ? "p2" : "p1"];
+    const yn = b => (b ? "Allowed" : "Off");
+    const rows = [
+      ["Team size", mine.size + "v" + mine.size, foe.size + "v" + foe.size, r.size + "v" + r.size, mine.size !== foe.size],
+      ["Medicine", yn(mine.items), yn(foe.items), yn(r.items), mine.items !== foe.items],
+      ["Switching", yn(mine.switch), yn(foe.switch), yn(r.switch), mine.switch !== foe.switch]
+    ];
+    document.getElementById("pvp-vote-table").innerHTML =
+      "<tr><th></th><th>You</th><th>Foe</th><th>Rule</th></tr>" +
+      rows.map(([k, a, b, f, rnd]) =>
+        `<tr><td>${k}</td><td>${a}</td><td>${b}</td><td class="final">${rnd ? "🎲 " : ""}${f}</td></tr>`).join("");
+    document.getElementById("pvp-format-value").textContent = r.size + "v" + r.size;
+    document.getElementById("pvp-vote-wait").style.display = "none";
+    document.getElementById("pvp-vote-result").style.display = "flex";
   }
 
   function confirmFormat() {
+    if (!pvpRules) return;
     document.getElementById("pvp-match-panel").style.display = "none";
     openTeamSelect(() => launchBattle(), pvpTeamSize);
   }
@@ -1593,7 +1739,9 @@ const BattleUI = (() => {
   function refreshBagButton() {
     const btn = document.getElementById("btn-battle-bag");
     if (!btn) return;
-    btn.disabled = !(mode === "ai" && myFullRestores > 0);
+    /* PvP：戰前投票准用藥先有機會亮（背包藥物系統落地前 myFullRestores 恆為 0） */
+    const allowed = mode === "ai" || (mode === "pvp" && pvpRules && pvpRules.items);
+    btn.disabled = !(allowed && myFullRestores > 0);
   }
 
   function showBagMenu() {
@@ -1675,7 +1823,11 @@ const BattleUI = (() => {
         return;
       }
       const raw = b[foeCol] || {};
-      const foeAction = raw.kind === "switch" ? { kind: "switch", idx: raw.idx } : { kind: "move", moveIdx: raw.moveIdx };
+      const foeAction = raw.kind === "switch" ? { kind: "switch", idx: raw.idx }
+        /* 用藥：只限戰前投票准用藥，而且係引擎認得嘅道具；否則當冇效 → 出第一招 */
+        : (raw.kind === "item" && pvpRules && pvpRules.items && BattleState.ITEMS[raw.itemId])
+          ? { kind: "item", itemId: raw.itemId }
+          : { kind: "move", moveIdx: raw.moveIdx || 0 };
       runTurnResolution(playerAction, foeAction);
     } catch (e) {
       console.warn("[PvP] turn error:", e);
@@ -1710,7 +1862,7 @@ const BattleUI = (() => {
           await animatedSwitch(side, act.action.idx);
         } else if (act.action.kind === "item") {
           const logStart = state.log.length;
-          const who = side === mySide ? "You" : (aiTrainer ? aiTrainer.name : "The foe");
+          const who = side === mySide ? "You" : (aiTrainer ? aiTrainer.name : (pvpFoeName || "The foe"));
           BattleState.useItem(state, side, act.action.itemId, who);
           render();
           for (const l of state.log.slice(logStart)) await say(l.msg);
@@ -2064,16 +2216,24 @@ const BattleUI = (() => {
       /* 清走上一場嘅對手資料（加好友掣都收埋） */
       const addFoe = document.getElementById("br-add-foe");
       if (addFoe) { addFoe.style.display = "none"; addFoe.onclick = null; }
-      pvpBattle = null; pvpFoeUid = null; pvpFoeName = null; pvpIsFriend = false;
+      pvpBattle = null; pvpFoeUid = null; pvpFoeName = null; pvpIsFriend = false; pvpRules = null;
       /* AI 對戰返訓練家梯隊（重建列表 → 顯示新解鎖／✓）；PvP 返對戰主選單 */
       if (mode === "ai") openAITrainers(); else openMenu();
     };
     document.getElementById("btn-battle-fight").onclick = showMoveMenu;
     document.getElementById("btn-battle-bag").onclick = () => {
-      if (myFullRestores <= 0) { toast("BAG is empty — only Inferno battles give you an item."); return; }
+      if (mode === "pvp" && !(pvpRules && pvpRules.items)) { toast("Medicine is off for this battle."); return; }
+      if (myFullRestores <= 0) {
+        toast(mode === "pvp" ? "Your bag is empty." : "BAG is empty — only Inferno battles give you an item.");
+        return;
+      }
       showBagMenu();
     };
-    document.getElementById("btn-battle-pokemon").onclick = () => showSwitchMenu(false);
+    document.getElementById("btn-battle-pokemon").onclick = () => {
+      /* 戰前投票唔准自願換：只可以喺暈咗時強制換（showSwitchMenu(true) 另一條路） */
+      if (mode === "pvp" && pvpRules && !pvpRules.switch) { toast("Switching is off for this battle."); return; }
+      showSwitchMenu(false);
+    };
     /* RUN：撳一下彈確認窗（modal 唔可以撳外面關），再撳 RUN 先算投降認輸 */
     document.getElementById("btn-battle-run").onclick = () => {
       if (acting || !state) return;

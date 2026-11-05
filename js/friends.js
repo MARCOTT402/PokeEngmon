@@ -217,8 +217,7 @@ const Friends = (() => {
       const key = String(inv.invite_id);
       if (seenInvites.has(key)) return;
       seenInvites.add(key);
-      toast((inv.trainer_name || "A friend") + " challenged you to a "
-        + inv.team_size + "v" + inv.team_size + " battle!");
+      toast((inv.trainer_name || "A friend") + " challenged you to a battle!");
     });
   }
 
@@ -480,7 +479,7 @@ const Friends = (() => {
         + '<div class="fa-main">'
         + '<span class="fa-kind">Waiting</span>'
         + '<span class="fa-name">Waiting for ' + esc(waiting.friendName) + "…</span>"
-        + '<span class="fa-sub">⚔ ' + waiting.size + "v" + waiting.size
+        + '<span class="fa-sub">⚔ Rules decided by vote'
         + ' · <span class="fa-time" data-expires="' + (waiting.startedAt + INVITE_TTL_MS) + '"></span></span>'
         + "</div>"
         + '<div class="fa-actions">'
@@ -490,14 +489,13 @@ const Friends = (() => {
 
     const inv = it.inv;
     const name = esc(inv.trainer_name || "Trainer");
-    const size = Number(inv.team_size) || 3;
     const id = esc(inv.invite_id);
     const expires = inviteExpiresAt(inv);
 
     if (it.kind === "invite") {
       return '<div class="fa-row fa-invite">'
         + '<div class="fa-main">'
-        + '<span class="fa-kind">Battle invite · ' + size + "v" + size + "</span>"
+        + '<span class="fa-kind">Battle invite</span>'
         + '<span class="fa-name">' + name + "</span>"
         + '<span class="fa-sub"><span class="fa-time" data-expires="' + expires + '"></span> left</span>'
         + "</div>"
@@ -510,7 +508,7 @@ const Friends = (() => {
     /* outgoing pending */
     return '<div class="fa-row fa-out">'
       + '<div class="fa-main">'
-      + '<span class="fa-kind">Waiting · ' + size + "v" + size + "</span>"
+      + '<span class="fa-kind">Waiting</span>'
       + '<span class="fa-name">' + name + "</span>"
       + '<span class="fa-sub">Sent · <span class="fa-time" data-expires="' + expires + '"></span> left</span>'
       + "</div>"
@@ -884,18 +882,14 @@ const Friends = (() => {
     if (!window.App || !App.showModal) return;
     App.showModal('<div class="friends-invite-modal">'
       + '<h3 class="friends-modal-title">Invite ' + esc(name) + "</h3>"
-      + '<p class="friends-modal-sub">Choose a team size for the friendly battle.</p>'
-      + '<div class="friends-size-row">'
-      + '<button class="friends-size-btn" data-size="1">1v1</button>'
-      + '<button class="friends-size-btn" data-size="3">3v3</button>'
-      + '<button class="friends-size-btn" data-size="6">6v6</button>'
-      + "</div>"
+      + '<p class="friends-modal-sub">You will both vote on team size, medicine and switching before the battle.</p>'
+      + '<button id="friends-invite-send" class="btn-big btn-primary">SEND CHALLENGE</button>'
       + '<button id="friends-invite-cancel" class="btn-big btn-plain">CANCEL</button>'
       + "</div>", false);   /* 可以撳背景 / CANCEL 關閉 */
 
-    document.querySelectorAll(".friends-size-btn").forEach(b => {
-      b.onclick = () => sendInvite(uid, name, Number(b.dataset.size));
-    });
+    /* 人數由入場後嘅戰前投票決定；server 仍要 team_size ∈ {1,3,6}，送 3 做 placeholder */
+    const send = el("friends-invite-send");
+    if (send) send.onclick = () => sendInvite(uid, name, 3);
     const cancel = el("friends-invite-cancel");
     if (cancel) cancel.onclick = () => App.closeModal();
   }
