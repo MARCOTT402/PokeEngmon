@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.50.0...v1.51.0) (2026-11-05)
+
+
+### Features
+
+* **care:** HP, status and medicine system phase 1 ([ba65824](https://github.com/MARCOTT402/PokeEngmon/commit/ba65824f89dbdfbec530117a99009dec9155e802))
+
 # [1.50.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.49.0...v1.50.0) (2026-11-05)
 
 
