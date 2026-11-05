@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.60.1...v1.61.0) (2026-11-05)
+
+
+### Features
+
+* **auth:** commercial-grade login with single card and Create/Sign in tabs ([87b29f8](https://github.com/MARCOTT402/PokeEngmon/commit/87b29f82205fe092c11b8ac4e999cef318dc136e))
+
 ## [1.60.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.60.0...v1.60.1) (2026-11-05)
 
 
