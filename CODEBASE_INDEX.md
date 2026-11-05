@@ -21,6 +21,7 @@
 | 育成（飽肚值／拍檔／道具） | `js/pet.js` |
 | 戰鬥畫面轉橫（橫向紅框 host #view-battle） | `js/battle/landscape.js` |
 | 攜帶樹果戰鬥觸發（HELD 表、checkHeld／custapCheck） | `js/battle/state.js`, `tools/_test_held_berries.js`, `supabase/migrations/supabase-migrate-20261105g-held-berries.sql`（hold_berry） |
+| 攜帶道具規則（第 5 項：只限樹果／Mega 石；進化石只可以「使用」；held_item 只經 RPC） | `js/bag.js`（`giveStone`、`returnHeldStones`）, `supabase/migrations/supabase-migrate-20261105k-held-item-lock.sql`（trigger + 收回 grant） |
 | Mega 進化（70 粒 Mega 石資料、MEGA 掣、megaEvolve） | `js/mega-data.js`（`tools/fetch_mega.py` 產生）, `js/battle/state.js`, `tools/_test_mega.js`, `assets/battle/pkmn/{front,back}/<dex>-mega*.png`（`tools/fetch_pkmn_sprites.py --mega`）, `supabase/migrations/supabase-migrate-20261105h-mega.sql` |
 | Mega 特性（Tough Claws／Drought／Pixilate／Parental Bond／Mold Breaker 等，招式分類表） | `js/battle/engine.js`（`abilityPowerMult`、`isContact`）, `js/battle/state.js`（`onSwitchIn`、`priorityOf`、`trappedBy`、Electric Terrain）, `tools/_test_mega_abilities.js` |
 | 擊倒對手後問換 Pokémon（第 16 項；AI 戰免回合、PvP 當下回合 action） | `js/battle/battle.js`（`askYesNo`、`offerShift`、`shiftPick`） |

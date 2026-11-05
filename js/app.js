@@ -721,7 +721,7 @@ const App = {
         const likes = loadState().trainerLikes || 0;
         txt = `Needs ${TRADE_LIKES_REQUIRED} likes to evolve (${likes}/${TRADE_LIKES_REQUIRED})`;
       } else if (info.target && info.stone) {
-        txt = `Give it a ${STONE_LABELS[info.stone]} in the Bag to evolve.`;
+        txt = `Use a ${STONE_LABELS[info.stone]} in the Bag to evolve.`;
       } else if (info.target) {
         txt = (entry.level || 1) >= (info.needLevel || 0)
           ? "Ready to evolve!"

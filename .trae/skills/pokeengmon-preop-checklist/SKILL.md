@@ -778,3 +778,13 @@ Incident (2026-11-05，第 13／14 項 + 狀態第二期)：(1) 新 `js/avatars.
 - DDL dry-run（`execute_sql` 包 `raise exception` rollback）會俾 auto mode 擋：寫好 migration 交用戶跑，跑完先用 RPC 呼叫驗證。
 
 Skill: Rule 75 added
+
+## Rule 76 — 「有冇登入」用 `SupabaseAuth.isLoggedIn()`，唔好用 `Sync.isEnabled()`；server 退道具時本地唔好再加
+
+Incident (2026-11-05，第 5 項攜帶道具)：舊存檔攜帶進化石要退返背包，本地版用 `Sync.isEnabled()` 判斷「登入用戶由 server migration 退」→ 未登入都係 true，本地退還完全冇行。
+
+- `Sync.isEnabled()` 只代表有 Supabase 設定（匿名 device 都係 true），唔等於已登入；判斷登入一律用 `SupabaseAuth.isLoggedIn()`（`bag.js`／`care.js` 嘅 `online()`）。
+- 同一件道具 server（migration／RPC）同本地都可能退：登入用戶只信 server（pull 會帶返數量），本地只清 `heldItem`，唔好 `Pet.addItem` 再加，否則 `pushItems` 會將雙倍數推上雲。
+- 收回欄位 grant 之前，先 grep client 所有 `patchEntry({ <col> })`／PATCH body，一併拎走，否則整個 PATCH 會 401／403 連其他欄位都寫唔到。
+
+Skill: Rule 76 added

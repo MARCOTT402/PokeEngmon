@@ -42,7 +42,7 @@ const BagUI = (() => {
     const count = k => (window.Pet ? Pet.countOf(k) : 0) || 0;
     const out = (typeof STONE_KINDS !== "undefined" ? STONE_KINDS : []).map(k => ({
       id: k, cat: "stones", name: STONE_LABELS[k], icon: (window.Care ? Care.ITEM_SPRITE(k + "-stone") : null), emoji: STONE_ICONS[k], n: count(k),
-      desc: "Give it to a Pokémon. If that Pokémon can evolve with it, it evolves right away and the stone is used up; otherwise it just holds the stone."
+      desc: "Use it on a Pokémon that evolves with this stone — it evolves right away and the stone is used up. Like the original games, stones can't be held."
     }));
     /* Mega 石（第 4c 段）：只顯示持有嘅 */
     if (window.Care && Care.ownedMegas) Care.ownedMegas().forEach(k => {
@@ -176,6 +176,7 @@ const BagUI = (() => {
     root.classList.remove("in-battle", "switching");
     $("#bag-team-title").textContent = "My Team";
     if (window.Pet) Pet.runDailyCheck();
+    returnHeldStones();
     S.open = true;
     root.classList.add("show");
     document.body.classList.add("bag-open");
@@ -646,7 +647,7 @@ const BagUI = (() => {
         ${it.cat === "mega" ? `<div class="bag-kv"><span>Mega Evolves</span><b>${esc(speciesName(it.mega.dexId))} → ${esc(it.mega.formName)}</b></div>
           <div class="bag-kv"><span>Mega type</span><b>${it.mega.types.map(t => `<img src="${typeIconURL(t)}" alt="${t}" style="height:12px">`).join(" ")}</b></div>
           <div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div>` : ""}
-        ${it.cat === "stones" ? `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div><div class="bag-kv"><span>Held in battle</span><b>No effect (same as the original games)</b></div>` : ""}
+        ${it.cat === "stones" ? `<div class="bag-kv"><span>Can be held</span><b>No — use it to evolve</b></div>` : ""}
         <div class="bag-note">${S.battle ? "Tip: drag it onto a Pokémon on the left, or tap Use then tap a Pokémon. Using an item ends your turn." : `Tip: drag it onto a Pokémon in My Team, or tap ${verbOf(it)} then tap a Pokémon.`}</div>
         <div class="bag-actions">${it.berry && !S.battle ? `<button type="button" class="bag-btn alt" id="bag-btn-hold" ${it.n <= 0 ? "disabled" : ""}>Hold</button>` : ""}<button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 || it.usable === false ? "disabled" : ""}>${S.battle ? "Use" : verbOf(it)}</button></div>`;
       $("#bag-btn-use").addEventListener("click", () => startTarget(it.id));
@@ -954,7 +955,7 @@ const BagUI = (() => {
   const heldSprite = k => (window.Care ? Care.ITEM_SPRITE(isBerryId(k) ? Care.BERRIES[k].sprite : (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
   const heldName = k => (isBerryId(k) ? Care.BERRIES[k].name : null) || (isMegaId(k) ? MEGA_STONES[k].stoneName : null) || (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
   const itemInfo = id => (S.battle ? S.battle.items() : itemList().concat(heldList())).find(x => x.id === id);
-  function verbOf(it) { return (it.cat === "stones" || it.cat === "mega") ? "Give" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
+  function verbOf(it) { return it.cat === "mega" ? "Give" : it.cat === "stones" ? "Use" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
 
   /* 用道具模式：撳 Use → 跳去 Pokémon tab → 撳目標（或者撳左欄隊伍） */
   function startTarget(id, mode) {
@@ -1014,46 +1015,34 @@ const BagUI = (() => {
     refreshAll();
   }
 
-  /* 進化石：啱條件即刻進化（石用完）；唔啱就攜帶 */
+  /* 進化石（第 5 項，跟原作）：啱條件即刻進化（石用完）；唔啱 = 冇效果，石唔會被攜帶。攜帶道具唔受影響 */
   async function giveStone(stone, uid) {
-    let e = entryOf(uid); if (!e) return;
-    /* 攜帶緊樹果／Mega 石：先經 server 退返落背包，再當冇攜帶處理 */
-    if (e.heldItem && isRpcHeld(e.heldItem)) {
-      const r = await Care.holdItem(e, null);
-      if (!r || !r.ok) { toast("Couldn't swap the held item — try again"); return; }
-      e = entryOf(uid); if (!e) return;
-    }
-    const name = entryCurrentSpecies(e)[1];
+    const e = entryOf(uid); if (!e) return;
     const chk = canStoneEvolve(e, stone);
-    if (chk.ok) {
-      const res = Pet.useItem(stone, e);
-      if (!res.ok) { toast(res.msg); return; }
-      if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
-        if (res.branch != null) Sync.patchEntry(e.uid, { branch: res.branch });
-        Sync.patchEntry(e.uid, { stone_used: stone });
-        if (Sync.pushItems) Sync.pushItems(Pet.items());
-      }
-      /* 進化動畫：暫時收埋背包，播完再開返 */
-      root.classList.remove("show");
-      const reopen = () => { root.classList.add("show"); S.sel = { kind: "pokemon", uid: e.uid }; refreshAll(); };
-      if (window.App && App.showEvolveModal) App.showEvolveModal(res.evolvedTo, reopen, res.evolvedFrom);
-      else reopen();
-      return;
-    }
-    const st = loadState(); const x = st.entries.find(y => y.uid === uid);
-    const prev = x.heldItem;
-    x.heldItem = stone;
-    saveState();
-    Pet.addItem(stone, -1);
-    if (prev) Pet.addItem(prev, 1);
+    if (!chk.ok) { toast("It won't have any effect."); return; }
+    const res = Pet.useItem(stone, e);
+    if (!res.ok) { toast(res.msg); return; }
     if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
-      Sync.patchEntry(uid, { held_item: stone });
+      if (res.branch != null) Sync.patchEntry(e.uid, { branch: res.branch });
+      Sync.patchEntry(e.uid, { stone_used: stone });
       if (Sync.pushItems) Sync.pushItems(Pet.items());
     }
-    buzz();
-    toast(`${name} is now holding the ${heldName(stone)}${prev ? ` (${heldName(prev)} went back to the bag)` : ""}`);
-    S.sel = { kind: "pokemon", uid };
-    refreshAll();
+    /* 進化動畫：暫時收埋背包，播完再開返 */
+    root.classList.remove("show");
+    const reopen = () => { root.classList.add("show"); S.sel = { kind: "pokemon", uid: e.uid }; refreshAll(); };
+    if (window.App && App.showEvolveModal) App.showEvolveModal(res.evolvedTo, reopen, res.evolvedFrom);
+    else reopen();
+  }
+  /* 舊存檔（未登入）：攜帶緊進化石（B 方案）→ 退返背包。登入用戶由 migration 20261105k 喺 server 退，
+     唔好喺本地再加一次（會重複） */
+  function returnHeldStones() {
+    if (typeof STONE_KINDS === "undefined" || !window.Pet) return;
+    if (online()) return;   /* Sync.isEnabled() 未登入都係 true，要用登入狀態 */
+    const st = loadState(); let n = 0;
+    (st.entries || []).forEach(x => {
+      if (x.heldItem && STONE_KINDS.includes(x.heldItem)) { Pet.addItem(x.heldItem, 1); x.heldItem = null; n++; }
+    });
+    if (n) saveState();
   }
   async function takeHeld(uid) {
     const st = loadState(); const x = st.entries.find(y => y.uid === uid);
@@ -1066,12 +1055,9 @@ const BagUI = (() => {
       refreshAll();
       return;
     }
+    /* 舊版攜帶進化石：登入用戶 server 已經退咗（migration 20261105k），本地只清走；未登入先加返背包 */
     const k = x.heldItem; x.heldItem = null; saveState();
-    Pet.addItem(k, 1);
-    if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
-      Sync.patchEntry(uid, { held_item: null });
-      if (Sync.pushItems) Sync.pushItems(Pet.items());
-    }
+    if (!online()) Pet.addItem(k, 1);
     toast(`Took the ${heldName(k)} back`);
     refreshAll();
   }

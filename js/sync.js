@@ -440,8 +440,7 @@ window.Sync = (() => {
     /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */
     if (typeof fields.is_final === "boolean") body.is_final = fields.is_final;
     if (typeof fields.favorite === "boolean") body.favorite = fields.favorite;
-    /* 攜帶道具：null = 拆除 */
-    if ("held_item" in fields) body.held_item = (typeof fields.held_item === "string" && fields.held_item) ? fields.held_item : null;
+    /* 攜帶道具（held_item）唔再直寫：migration 20261105k 收回 grant，只經 hold_item RPC */
     /* 自訂配招（1–4 個招式 slug）：非經濟數值，column-level grant 開放直寫 */
     if (Array.isArray(fields.move_loadout) && fields.move_loadout.length) {
       body.move_loadout = fields.move_loadout.slice(0, 4).map(String);
