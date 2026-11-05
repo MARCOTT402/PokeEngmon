@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.52.0...v1.53.0) (2026-11-05)
+
+
+### Features
+
+* **bag:** My Team, favorites, sorting, move editor and shared EV units (stage 2) ([7b7e45b](https://github.com/MARCOTT402/PokeEngmon/commit/7b7e45b62380300c30becbe25db9b2901f586a48))
+
 # [1.52.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.51.0...v1.52.0) (2026-11-05)
 
 
