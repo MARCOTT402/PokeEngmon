@@ -72,6 +72,12 @@ const Quiz = {
     this.currentCell = 0;
     this.answered = false;
     this.startTime = Date.now();
+    this.segs = set.map(q => ({ key: this._key(q), re: false, state: "" }));
+    this.wrongTries = 0;
+    this.bestCombo = 0;
+    this._setCombo(0);
+    const segHost = document.getElementById("quiz-segs");
+    if (segHost) segHost.querySelectorAll(".qs-seg").forEach(e => e.remove());
     App.showView("view-quiz");
     this._renderQuestion();
   },
@@ -99,10 +105,100 @@ const Quiz = {
   _updateProgress() {
     const shown = this.seenQids.size;
     document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
-    const pct = this.total ? (this.seenQids.size / this.total) * 100 : 0;
-    document.getElementById("quiz-bar").style.width = `${pct}%`;
+    this._renderSegs();
+  },
+
+  /* ---------- 分段進度條：每題一格；用咗提示嘅題重排 → 尾加一格虛線 ---------- */
+  _renderSegs() {
+    const host = document.getElementById("quiz-segs");
+    if (!host) return;
     const runner = document.getElementById("quiz-bar-runner");
-    if (runner) runner.style.left = `${pct}%`;
+    const segs = this.segs || [];
+    let els = host.querySelectorAll(".qs-seg");
+    /* 格數唔同（新一組）→ 重建；只係多咗重排格 → 追加並播入場動畫 */
+    if (els.length > segs.length) { els.forEach(e => e.remove()); els = []; }
+    for (let i = els.length; i < segs.length; i++) {
+      const el = document.createElement("span");
+      el.className = "qs-seg" + (els.length && segs[i].re ? " new" : "");
+      host.insertBefore(el, runner || null);
+    }
+    els = host.querySelectorAll(".qs-seg");
+    const curIdx = segs.findIndex(s => !s.state);
+    segs.forEach((s, i) => {
+      const el = els[i];
+      el.classList.toggle("re", !!s.re);
+      el.classList.toggle("done", !!s.state);
+      el.classList.toggle("hinted", s.state === "hint");
+      el.classList.toggle("cur", i === curIdx && !this.answered);
+    });
+    const done = segs.filter(s => s.state).length;
+    host.setAttribute("aria-valuemax", String(segs.length));
+    host.setAttribute("aria-valuenow", String(done));
+    if (runner) {
+      const pct = segs.length ? (done / segs.length) * 100 : 0;
+      runner.style.left = `${pct}%`;
+    }
+  },
+
+  _popSeg(idx) {
+    const els = document.querySelectorAll("#quiz-segs .qs-seg");
+    const el = els[idx];
+    if (!el) return;
+    el.classList.remove("pop");
+    void el.offsetWidth;
+    el.classList.add("pop");
+  },
+
+  /* ---------- Combo（純視覺，唔影響獎勵）：連續無提示、無答錯答啱 ≥2 先顯示 ---------- */
+  _setCombo(n, bump) {
+    this.combo = n;
+    if (n > (this.bestCombo || 0)) this.bestCombo = n;
+    const el = document.getElementById("quiz-combo");
+    if (!el) return;
+    document.getElementById("quiz-combo-n").textContent = String(n);
+    el.classList.toggle("on", n >= 2);
+    if (bump && n >= 2) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+  },
+
+  /* ---------- 底部行動區狀態："" | ok | bad | hinted ---------- */
+  _setAction(kind, icon, title, sub) {
+    const a = document.getElementById("quiz-action");
+    if (!a) return;
+    a.classList.remove("ok", "bad", "hinted", "show-fb");
+    if (kind) a.classList.add(kind, "show-fb");
+    document.getElementById("quiz-fb-icon").textContent = icon || "";
+    const fb = document.getElementById("quiz-feedback");
+    fb.textContent = title || "";
+    fb.className = "quiz-feedback" + (kind === "ok" || kind === "hinted" ? " good" : kind === "bad" ? " bad" : "");
+    document.getElementById("quiz-fb-sub").textContent = sub || "";
+  },
+
+  /* Check 掣：未輸入就灰（空答案格除外，因為正確答案就係留空） */
+  _syncCheckBtn() {
+    const btn = document.getElementById("btn-quiz-check");
+    if (!btn) return;
+    const c = this.cells[this.currentCell];
+    btn.disabled = !this.answered && !!c && !c.empty && !c.green && !(c.value || "").trim();
+    /* App 鍵盤：右下 ✓ Submit（答完變 Next →）；左上提示鍵跟內容區提示掣狀態 */
+    const go = document.getElementById("qk-go");
+    if (go) {
+      go.disabled = btn.disabled;
+      go.classList.toggle("is-next", !!this.answered);
+      go.querySelector(".qk-go-ic").textContent = this.answered ? "→" : "✓";
+      go.querySelector(".qk-go-lb").textContent = this.answered ? "Next" : "Submit";
+    }
+    const hb = document.getElementById("btn-quiz-hint");
+    const kh = document.getElementById("qk-hint");
+    if (hb && kh) kh.disabled = hb.disabled || !!this.answered;
+    const hc = document.getElementById("quiz-hint-count");
+    const khc = document.getElementById("qk-hint-count");
+    if (hc && khc) { khc.hidden = hc.hidden; khc.textContent = hc.textContent; }
+  },
+
+  _clearBadState() {
+    const a = document.getElementById("quiz-action");
+    if (a && a.classList.contains("bad")) this._setAction("");
+    this.cells.forEach(c => { if (c.cellEl) c.cellEl.classList.remove("badc"); });
   },
 
   /* ---------- 渲染 ---------- */
@@ -122,6 +218,7 @@ const Quiz = {
     a.hintCount = 0;
     a.chosen = "";
     a.attemptCount = 0;   /* 每次重現重置 attempt；correctCount 保留用於防循環 */
+    this._curWrong = 0;
 
     this._updateProgress();
 
@@ -161,12 +258,31 @@ const Quiz = {
     this.cells = this._buildCells(q);
     this._renderCells(q);
 
+    /* 題型 chip + 指示語 */
+    const typeChip = document.getElementById("quiz-type-chip");
+    if (typeChip) typeChip.textContent = isWord ? "Picture word" : (q.topic || q.unit || q.category || "");
+    const prompt = document.getElementById("quiz-prompt");
+    if (prompt) {
+      prompt.textContent = item.requeued ? "Let's try this one again"
+        : isWord ? "Type what you hear"
+        : this.cells.length > 1 ? "Fill in the blanks" : "Fill in the blank";
+    }
+    cardEl.classList.remove("win");
+
     /* 工具列／確認 */
     document.getElementById("quiz-toolbar-before").classList.remove("hidden");
     document.getElementById("quiz-toolbar-after").classList.add("hidden");
     document.getElementById("btn-quiz-check").classList.remove("hidden");
-    document.getElementById("quiz-feedback").textContent = "";
-    document.getElementById("quiz-feedback").className = "quiz-feedback";
+    document.getElementById("btn-quiz-next").classList.add("hidden");
+    this._setAction("");
+    const hintBtn = document.getElementById("btn-quiz-hint");
+    if (hintBtn) hintBtn.disabled = false;
+    const hintCount = document.getElementById("quiz-hint-count");
+    if (hintCount) hintCount.hidden = true;
+    const kb = document.getElementById("quiz-keyboard");
+    if (kb) kb.classList.remove("kb-collapsed");
+    const scroller = document.getElementById("quiz-scroll");
+    if (scroller) scroller.scrollTop = 0;
 
     /* Chip：未答前顯示實際經過時間 */
     this._renderChip(q, null);
@@ -177,6 +293,7 @@ const Quiz = {
     this._syncKeyboard();
 
     this._focusCurrent();
+    this._syncCheckBtn();
   },
 
   /* 空格資料：primary 答案 split 空白；accept 只有同字數先納入逐格比對 */
@@ -318,44 +435,106 @@ const Quiz = {
   _buildKeyboard() {
     const host = document.getElementById("quiz-keyboard");
     if (!host || host.dataset.built) return;
-    host.dataset.built = "1";
-    const rows = [
-      ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-      ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-      ["z", "x", "c", "v", "b", "n", "m", "'", "-"],
-      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
-    ];
-    rows.forEach(row => {
+    host.dataset.built = "3";
+    /* 版面（用戶指定）：
+       頂部工具列：左＝查看提示、右＝語音模式
+       3 行 QWERTY；第 3 行左 ' 、右 ⌫；底行 123 ／ space ／ ✓ Submit（答完變 Next） */
+    const LETTERS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+    const mk = (label, cls, data) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "qk-key" + (cls ? " " + cls : "");
+      b.textContent = label;
+      Object.keys(data || {}).forEach(k => { b.dataset[k] = data[k]; });
+      return b;
+    };
+    const spacer = () => { const sp = document.createElement("span"); sp.className = "qk-spacer"; return sp; };
+
+    const tools = document.createElement("div");
+    tools.className = "qk-tools";
+    tools.innerHTML = `
+      <button type="button" class="qk-tool" id="qk-hint" data-kb="hint">
+        <span class="qk-tool-ic" aria-hidden="true">?</span><span class="qk-tool-lb">Hint</span>
+        <span class="qt-count" id="qk-hint-count" hidden></span>
+      </button>
+      <span class="qk-tools-gap"></span>
+      <button type="button" class="qk-tool" id="qk-voice" data-kb="voice" disabled title="Voice mode — coming soon">
+        <svg class="qk-tool-mic" viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="2.5" width="7" height="12" rx="3.5" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span class="qk-tool-lb">Voice mode</span>
+      </button>`;
+    host.appendChild(tools);
+
+    LETTERS.forEach((row, ri) => {
       const r = document.createElement("div");
       r.className = "qk-row";
-      row.forEach(ch => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "qk-key";
-        b.dataset.ch = ch;
-        b.textContent = ch;
-        r.appendChild(b);
-      });
-      if (row === rows[2]) {
-        const back = document.createElement("button");
-        back.type = "button";
-        back.className = "qk-key qk-wide";
-        back.dataset.kb = "back";
-        back.textContent = "⌫";
+      if (ri === 1) r.appendChild(spacer());
+      if (ri === 2) r.appendChild(mk("'", "qk-fn qk-side", { ch: "'", alt: "1" }));
+      [...row].forEach(ch => r.appendChild(mk(ch, "", { ch })));
+      if (ri === 1) r.appendChild(spacer());
+      if (ri === 2) {
+        const back = mk("⌫", "qk-fn qk-side", { kb: "back" });
         back.setAttribute("aria-label", "Delete");
         r.appendChild(back);
       }
       host.appendChild(r);
     });
+    const last = document.createElement("div");
+    last.className = "qk-row qk-row-last";
+    const num = mk("123", "qk-fn qk-wide", { kb: "num" });
+    num.setAttribute("aria-label", "Numbers");
+    const go = mk("", "qk-fn qk-wide qk-go", { kb: "go" });
+    go.id = "qk-go";
+    go.innerHTML = `<span class="qk-go-ic" aria-hidden="true">✓</span><span class="qk-go-lb">Submit</span>`;
+    last.append(num, mk("space", "qk-space", { ch: " " }), go);
+    host.appendChild(last);
 
-    /* pointerdown preventDefault：保留輸入格焦點，亦阻止系統鍵盤彈出 */
-    host.addEventListener("pointerdown", (e) => {
-      if (e.target.closest(".qk-key")) e.preventDefault();
+    /* 123 ↔ ABC：第一行換數字；第 3 行左鍵 ' ↔ - */
+    const toggleNum = () => {
+      const on = host.dataset.num !== "1";
+      host.dataset.num = on ? "1" : "";
+      const firstRow = host.querySelectorAll(".qk-row")[0].querySelectorAll(".qk-key");
+      firstRow.forEach((k, i) => {
+        const ch = on ? "1234567890"[i] : LETTERS[0][i];
+        k.dataset.ch = ch;
+        k.textContent = ch;
+      });
+      const alt = host.querySelector('[data-alt="1"]');
+      if (alt) { alt.dataset.ch = on ? "-" : "'"; alt.textContent = alt.dataset.ch; }
+      num.textContent = on ? "ABC" : "123";
+    };
+
+    /* pointerdown preventDefault：保留輸入格焦點，亦阻止系統鍵盤彈出；字母鍵出放大預覽 */
+    const clearDown = () => host.querySelectorAll(".down").forEach(k => {
+      k.classList.remove("down");
+      const bub = k.querySelector(".qk-bubble");
+      if (bub) bub.remove();
     });
+    host.addEventListener("pointerdown", (e) => {
+      const key = e.target.closest(".qk-key, .qk-tool");
+      if (!key) return;
+      e.preventDefault();
+      clearDown();
+      if (key.disabled) return;
+      key.classList.add("down");
+      if (key.dataset.ch && key.dataset.ch !== " " && !key.classList.contains("qk-fn")) {
+        const bub = document.createElement("span");
+        bub.className = "qk-bubble";
+        bub.textContent = key.dataset.ch;
+        key.appendChild(bub);
+      }
+      this._vibrate(5);
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(t => host.addEventListener(t, clearDown));
     host.addEventListener("click", (e) => {
-      const key = e.target.closest(".qk-key");
-      if (!key || this.answered) return;
-      if (key.dataset.kb === "back") this._kbBackspace();
+      const key = e.target.closest(".qk-key, .qk-tool");
+      if (!key || key.disabled) return;
+      const kb = key.dataset.kb;
+      if (kb === "num") { toggleNum(); return; }
+      if (kb === "go") { if (this.answered) this.next(); else this.check(); return; }
+      if (kb === "hint") { this.hint(); return; }
+      if (kb === "voice") return;
+      if (this.answered) return;
+      if (kb === "back") this._kbBackspace();
       else this._kbInsert(key.dataset.ch || "");
       this._focusCurrent();
     });
@@ -365,9 +544,15 @@ const Quiz = {
   _syncKeyboard() {
     const host = document.getElementById("quiz-keyboard");
     if (!host) return;
-    if (!this._isTouchDevice() || this._isCatchMode()) { host.hidden = true; return; }
+    const view = document.getElementById("view-quiz");
+    if (!this._isTouchDevice() || this._isCatchMode()) {
+      host.hidden = true;
+      if (view) view.classList.remove("kb-on");
+      return;
+    }
     this._buildKeyboard();
     host.hidden = false;
+    if (view) view.classList.add("kb-on");
   },
 
   _kbInsert(ch) {
@@ -419,6 +604,8 @@ const Quiz = {
 
     c.value = c.input.value;
     c.textEl.textContent = c.value;
+    /* 一打字就收返紅色「再試」回饋 */
+    this._clearBadState();
 
     const junior = this._isJunior();
     const a = this._answerFor(this.queue[0] && this.queue[0].q);
@@ -449,6 +636,7 @@ const Quiz = {
     this._syncCellWidth(c, c.value);
 
     if (val !== "" && this._cellMatch(c, val)) this._greenCell(i);
+    this._syncCheckBtn();
   },
 
   _greenCell(i) {
@@ -463,8 +651,10 @@ const Quiz = {
       this._complete();
     } else {
       this.currentCell = next;
+      this._vibrate(8);
       this._focusCurrent();
     }
+    this._syncCheckBtn();
   },
 
   /* 震動（提示 ghost 仍在 / 錯誤）*/
@@ -562,6 +752,7 @@ const Quiz = {
         a.hintCount = 1;
         this._catchL1();
       }
+      this._hintUI(a.hintCount);
       return;
     }
 
@@ -572,6 +763,7 @@ const Quiz = {
     if (used >= 1) {
       a.hintCount = 2;
       this._showL2(c);
+      this._hintUI(2);
       return;
     }
 
@@ -582,6 +774,22 @@ const Quiz = {
     const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
     if (val && !isPrefix) this._clearCell(c);
     this._showL1(c, val && isPrefix ? val.length : 0);
+    this._hintUI(1);
+  },
+
+  /* 提示後：底部黃色說明 + 計數 + combo 歸零（同一題用過提示會重排） */
+  _hintUI(level) {
+    const cnt = document.getElementById("quiz-hint-count");
+    if (cnt) { cnt.hidden = false; cnt.textContent = level >= 2 ? "2/2" : "1/2"; }
+    const btn = document.getElementById("btn-quiz-hint");
+    if (btn) btn.disabled = level >= 2;
+    this.cells.forEach(x => { if (x.cellEl) x.cellEl.classList.remove("badc"); });
+    this._setCombo(0);
+    const catchMode = this._isCatchMode();
+    this._setAction("hinted", "💡",
+      level >= 2 ? (catchMode ? "Grab the Master Ball!" : "Here's the full answer") : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
+      this.queue.length > 1 ? "This one will come back later in the set." : "");
+    this._syncCheckBtn();
   },
 
   /* ============ 小學生低 EF 精靈球捕捉模式 ============ */
@@ -614,6 +822,8 @@ const Quiz = {
     const voiceBtn = document.getElementById("btn-quiz-voice");
     if (voiceBtn) voiceBtn.classList.remove("hidden");
     document.getElementById("btn-quiz-check").classList.remove("hidden");
+    const view = document.getElementById("view-quiz");
+    if (view) view.classList.toggle("catch-on", this._isCatchMode());
 
     if (!this._isCatchMode()) return;
 
@@ -1060,6 +1270,8 @@ const Quiz = {
     const c = this.cells[this.currentCell];
     if (!c) return;
     const val = this._norm(c.value);
+    /* 未輸入就撳 Enter／Check：唔當答錯（空答案格除外） */
+    if (!val && !c.empty) { this._focusCurrent(); return; }
 
     if (this._cellMatch(c, val)) {
       this._greenCell(this.currentCell);
@@ -1085,6 +1297,11 @@ const Quiz = {
       /* 小學生所有答錯都閃紅，但第 1 次唔扣 EF */
       this._flashWrong();
       this._vibrate(50);
+      this.wrongTries = (this.wrongTries || 0) + 1;
+      this._setCombo(0);
+      const juniorMsg = ["Almost! Try once more 💪", "Here's a little help ↑", "Keep going — you can do it!", "Copy the grey letters ↑"];
+      this._setAction("bad", "✕", juniorMsg[Math.min(a.attemptCount, 4) - 1], "");
+      if (c.cellEl) c.cellEl.classList.add("badc");
       if (a.attemptCount === 1) {
         /* 第 1 次錯：閃紅但唔扣 EF，畀小朋友再試一次 */
         this._focusCurrent();
@@ -1107,9 +1324,15 @@ const Quiz = {
       return;
     }
 
-    /* 標準模式：錯誤只扣 EF，不重排、不清題、不寫 history */
+    /* 標準模式：錯誤只扣 EF，不重排、不清題、不寫 history（唔顯示答案，畀用戶再試） */
     this._flashWrong();
     this._vibrate(50);
+    this.wrongTries = (this.wrongTries || 0) + 1;
+    this._setCombo(0);
+    const tries = (this._curWrong = (this._curWrong || 0) + 1);
+    this._setAction("bad", "✕", tries >= 2 ? "Still not right — need a hint?" : "Not quite — try again",
+      "Check the spelling and the sentence around the blank.");
+    if (c.cellEl) c.cellEl.classList.add("badc");
     this._focusCurrent();
 
     const card = SM2.applyCheckFail(this._curCard || SM2.getOrCreateCard(item.q));
@@ -1226,32 +1449,55 @@ const Quiz = {
       this._applyGhost(c);
     });
     document.getElementById("btn-quiz-check").classList.add("hidden");
+    document.getElementById("btn-quiz-next").classList.remove("hidden");
     document.getElementById("quiz-toolbar-before").classList.add("hidden");
     document.getElementById("quiz-toolbar-after").classList.remove("hidden");
+    const cardEl = document.getElementById("quiz-card");
+    if (cardEl) { cardEl.classList.remove("bad"); cardEl.classList.add("win"); }
+    /* App 鍵盤保留：右下鍵變 Next（_syncCheckBtn） */
 
-    const fb = document.getElementById("quiz-feedback");
-    if (forceComplete) {
-      fb.textContent = "That word was tricky — let's try again tomorrow! You've got this! 🌟";
-    } else if (junior) {
-      if (qScore >= 5) fb.textContent = this._praise();
-      else if (qScore >= 4) fb.textContent = "Good try! You got it with a little hint.";
-      else if (qScore >= 3) fb.textContent = "Nice effort! Keep practicing.";
-      else fb.textContent = "No worries — let's try this one again soon.";
+    /* 分段進度：當前格填色；重排 → 尾加一格虛線 */
+    const segIdx = (this.segs || []).findIndex(sg => sg.key === this._key(q) && !sg.state);
+    if (segIdx >= 0) this.segs[segIdx].state = (usedHint || requeued) ? "hint" : "ok";
+    if (requeued) this.segs.push({ key: this._key(q), re: true, state: "" });
+
+    /* Combo：無提示、今題無答錯先 +1（純視覺） */
+    const cleanTry = !usedHint && !this._curWrong && !(junior && a.attemptCount > 0);
+    let comboMsg = "";
+    if (cleanTry) {
+      this._setCombo((this.combo || 0) + 1, true);
+      comboMsg = ({ 3: "3 in a row! 🔥", 5: "5 in a row — on fire!", 10: "Perfect streak!" })[this.combo] || "";
     } else {
-      fb.textContent = usedHint ? "Correct — hint used." : this._praise();
+      this._setCombo(0);
     }
-    fb.className = "quiz-feedback good";
+
+    /* 回饋文字：沿用原有字眼；下次複習時間放副標 */
+    let title;
+    if (forceComplete) {
+      title = "That word was tricky — let's try again tomorrow! You've got this! 🌟";
+    } else if (junior) {
+      if (qScore >= 5) title = comboMsg || this._praise();
+      else if (qScore >= 4) title = "Good try! You got it with a little hint.";
+      else if (qScore >= 3) title = "Nice effort! Keep practicing.";
+      else title = "No worries — let's try this one again soon.";
+    } else {
+      title = usedHint ? "Correct — hint used." : (comboMsg || this._praise());
+    }
+    const nextLabel = requeued ? "Review in 5 minutes"
+      : forceComplete ? "Review in 1 day"
+      : this._nextReviewLabel(card.interval_days);
+    const kind = (usedHint || requeued || forceComplete || (junior && qScore < 5)) ? "hinted" : "ok";
+    this._setAction(kind, "✓", title, (requeued ? "↻ " : "📅 ") + nextLabel);
+    this._vibrate(comboMsg ? [10, 30, 10] : 15);
 
     /* Chip：重排維持「Review in 5 minutes」原字眼；強制完結顯示明日再試 */
-    if (requeued) {
-      this._renderChip(q, "Review in 5 minutes");
-    } else if (forceComplete) {
-      this._renderChip(q, "Review in 1 day");
-    } else {
-      this._renderChip(q, this._nextReviewLabel(card.interval_days));
-    }
+    this._renderChip(q, nextLabel);
 
     this._updateProgress();
+    if (segIdx >= 0) this._popSeg(segIdx);
+    this._syncCheckBtn();
+    /* 焦點交俾 Continue（實體鍵盤 Enter 由全域 handler 處理） */
+    try { document.getElementById("btn-quiz-next").focus({ preventScroll: true }); } catch (e) {}
   },
 
   _joinedAnswer() {
@@ -1378,6 +1624,45 @@ const Quiz = {
     });
     /* 播完音頻／按語音鍵後，浮標返去輸入格 */
     this._focusCurrent();
+  },
+
+  /* 答完後 🔊：圖片單字題播錄音；句子題用系統語音讀出完整句子（跟 Voice 音量） */
+  pronounce() {
+    const cur = (this.queue[0] && this.queue[0].q) || null;
+    if (!cur) return;
+    if (cur.type === "word") { this.playWordAudio(); return; }
+    try {
+      if (!window.speechSynthesis) return;
+      const full = String(cur.sentence || "").replace(/_{3,}/, String(cur.answer || "")).replace(/_{3,}/g, "");
+      const u = new SpeechSynthesisUtterance(full);
+      u.lang = "en-US";
+      u.rate = 0.9;
+      const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : null;
+      if (prefs && prefs.voice != null) u.volume = Math.max(0, Math.min(1, Number(prefs.voice)));
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  },
+
+  /* ✕：確認離開（Esc 仍然開設定） */
+  confirmQuit() {
+    App.showModal(`
+      <div class="confirm-box">
+        <p><span style="font-size:2.4rem">🥺</span><br><b>Wait, don't go!</b><br>
+          <small>You'll lose this set's progress if you quit now.</small></p>
+        <div class="confirm-row">
+          <button id="quiz-quit-stay" class="btn-big btn-primary">Keep learning</button>
+          <button id="quiz-quit-go" class="btn-big btn-plain">End session</button>
+        </div>
+      </div>`, true);
+    document.getElementById("quiz-quit-stay").onclick = () => {
+      App.closeModal();
+      setTimeout(() => this._focusCurrent(), 100);
+    };
+    document.getElementById("quiz-quit-go").onclick = () => {
+      App.closeModal();
+      this.quit();
+    };
   },
 
   /* ---------- 卡片右下角工具 / 錯誤回報 ---------- */
@@ -1600,7 +1885,11 @@ const Quiz = {
       total: this.total,
       duration: Math.floor((Date.now() - this.startTime) / 1000),
       mode: this.mode || null,
-      gymMilestone: this.gymMilestone || 0
+      gymMilestone: this.gymMilestone || 0,
+      /* 結算 v2 統計（純顯示用） */
+      bestCombo: this.bestCombo || 0,
+      wrongTries: this.wrongTries || 0,
+      hintCount: results.filter(r => r.hint).length
     };
     App.onQuizFinished(data);
   }

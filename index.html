@@ -598,13 +598,23 @@
     <!-- ============ 做題 ============ -->
     <section id="view-quiz" class="view">
       <div class="quiz-top">
-        <span class="quiz-trophy" aria-hidden="true">🏆</span>
-        <div class="quiz-top-mid">
-          <span class="quiz-progress" id="quiz-progress">1 / 10</span>
+        <button id="btn-quiz-exit" class="quiz-x-btn" type="button" aria-label="Quit this set" title="Quit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="quiz-segs" id="quiz-segs" role="progressbar" aria-label="Set progress" aria-valuemin="0">
+          <span class="bar-runner" id="quiz-bar-runner" aria-hidden="true"></span>
         </div>
-        <button id="btn-quiz-settings" class="quiz-gear-btn" aria-label="Quiz settings" title="Quiz settings">⚙</button>
+        <span class="quiz-progress sr-only" id="quiz-progress">1 / 10</span>
+        <div class="quiz-combo" id="quiz-combo" aria-live="polite"><span class="qc-flame" aria-hidden="true">🔥</span><b id="quiz-combo-n">0</b></div>
+        <button id="btn-quiz-settings" class="quiz-gear-btn" type="button" aria-label="Quiz settings" title="Quiz settings (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+        </button>
       </div>
-      <div class="progressbar"><i id="quiz-bar"></i><span class="bar-runner" id="quiz-bar-runner" aria-hidden="true"></span></div>
+      <div class="quiz-scroll" id="quiz-scroll"><div class="quiz-col">
+      <div class="quiz-head">
+        <span class="quiz-type-chip" id="quiz-type-chip"></span>
+        <h2 class="quiz-prompt" id="quiz-prompt">Fill in the blank</h2>
+      </div>
       <div class="quiz-image-box" id="quiz-image-box">
         <img id="quiz-image" class="quiz-image" alt="Question image">
       </div>
@@ -627,18 +637,28 @@
         <p class="catch-hint">🎯 Drag the right Poké Ball to the blank!</p>
         <div class="catch-balls" id="catch-balls"></div>
       </div>
-      <div class="quiz-answer-box">
-        <div class="quiz-toolbar" id="quiz-toolbar-before">
-          <button id="btn-quiz-hint" class="quiz-tool">💡 Show hint</button>
-          <button id="btn-quiz-voice" class="quiz-tool" disabled>🎤 Voice mode</button>
-        </div>
-        <div class="quiz-toolbar hidden" id="quiz-toolbar-after">
-          <button id="btn-quiz-next" class="quiz-tool">Next →</button>
-          <button id="btn-quiz-replay" class="quiz-tool" disabled>🔊 Pronounce</button>
-        </div>
-        <button id="btn-quiz-check" class="btn-big btn-primary">Submit ✔</button>
+      <div class="quiz-toolbar" id="quiz-toolbar-before">
+        <button id="btn-quiz-hint" class="quiz-tool" type="button">💡 Hint <span class="qt-count" id="quiz-hint-count" hidden></span><kbd>Ctrl H</kbd></button>
+        <button id="btn-quiz-voice" class="quiz-tool" type="button" disabled hidden>🎤 Voice mode</button>
       </div>
-      <div class="quiz-feedback" id="quiz-feedback"></div>
+      </div></div>
+      <!-- 底部行動區：回饋（綠／紅／黃）同主掣一體，固定喺拇指區 -->
+      <div class="quiz-action" id="quiz-action">
+        <div class="qa-fb"><div class="qa-fb-in" aria-live="polite">
+          <span class="qa-icon" id="quiz-fb-icon" aria-hidden="true">✓</span>
+          <div class="qa-text">
+            <div class="quiz-feedback" id="quiz-feedback"></div>
+            <div class="qa-sub" id="quiz-fb-sub"></div>
+          </div>
+          <div class="qa-side hidden" id="quiz-toolbar-after">
+            <button id="btn-quiz-replay" class="qa-icon-btn" type="button" aria-label="Pronounce" title="Pronounce">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div></div>
+        <button id="btn-quiz-check" class="qa-main" type="button" disabled><span>Check</span><kbd>Enter</kbd></button>
+        <button id="btn-quiz-next" class="qa-main hidden" type="button"><span>Continue</span><kbd>Enter</kbd></button>
+      </div>
       <!-- App 自帶虛擬鍵盤：觸控裝置先顯示（桌面用實體鍵盤） -->
       <div id="quiz-keyboard" class="quiz-keyboard" aria-label="On-screen keyboard" hidden></div>
     </section>
@@ -646,12 +666,19 @@
     <!-- ============ 結算 ============ -->
     <section id="view-settlement" class="view">
       <h2 class="settle-title" id="settle-title">Set complete!</h2>
+      <p class="settle-sub" id="settle-sub"></p>
       <div class="settle-score" id="settle-score"></div>
+      <div class="settle-stats" id="settle-stats"></div>
       <div class="settle-rewards" id="settle-rewards"></div>
+      <div class="settle-mist" id="settle-mist"></div>
       <div class="settle-buttons">
-        <button id="btn-pull-rare" class="btn-big btn-rare">Lucky Draw</button>
-        <button id="btn-review" class="btn-big btn-secondary">📖 Review Mistakes</button>
+        <button id="btn-settle-continue" class="qa-main" type="button"><span>Continue</span><kbd>Enter</kbd></button>
+        <div class="settle-btn-row">
+          <button id="btn-pull-rare" class="btn-big btn-rare">Lucky Draw</button>
+          <button id="btn-review" class="btn-big btn-secondary">📖 Review Mistakes</button>
+        </div>
       </div>
+      <div class="settle-confetti" id="settle-confetti" aria-hidden="true"></div>
     </section>
 
     <!-- ============ 錯題解釋 ============ -->

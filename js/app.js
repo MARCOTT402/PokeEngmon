@@ -1607,13 +1607,41 @@ const App = {
 
   _renderSettlement(data, rewards) {
     const perfect = data.score === data.total;
+    const great = data.score >= data.total - 2;
     document.getElementById("settle-title").textContent =
-      perfect ? "Perfect! All correct! 🎉" : "Set complete!";
+      perfect ? "Perfect lesson! 🎉" : great ? "Great work!" : "Set complete!";
+    const toPolish = data.total - data.score;
+    document.getElementById("settle-sub").textContent = perfect
+      ? "No mistakes, no hints. Legendary trainer!"
+      : `${toPolish} to polish — they'll come back for review.`;
 
-    const mm = Math.floor(data.duration / 60), ss = data.duration % 60;
+    /* 分數圈：clean 題數 / 總數，動畫填色 */
+    const R = 66, C = 2 * Math.PI * R;
     document.getElementById("settle-score").innerHTML = `
-      <div class="settle-score-big ${perfect ? "perfect" : ""}">${data.score}<small>/${data.total}</small></div>
-      <div class="settle-time">⏱ Took ${mm}:${String(ss).padStart(2, "0")}</div>`;
+      <div class="settle-ring ${perfect ? "perfect" : ""}" role="img" aria-label="${data.score} of ${data.total} correct without hints">
+        <svg viewBox="0 0 160 160" aria-hidden="true"><circle class="bg" cx="80" cy="80" r="${R}"/>
+          <circle class="fg" id="settle-ring-fg" cx="80" cy="80" r="${R}" style="stroke-dasharray:${C};stroke-dashoffset:${C}"/></svg>
+        <div class="num"><div><b id="settle-ring-n">0</b><small>/ ${data.total} clean</small></div></div>
+      </div>`;
+    const fg = document.getElementById("settle-ring-fg");
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (fg) fg.style.strokeDashoffset = String(C * (1 - (data.total ? data.score / data.total : 0)));
+    }));
+    this._countUp(document.getElementById("settle-ring-n"), data.score, 900);
+
+    /* 三格 stat：準確度（答啱提交 ÷ 全部提交）／用時／最高 combo */
+    const mm = Math.floor(data.duration / 60), ss = data.duration % 60;
+    const submits = data.total + (Number(data.wrongTries) || 0);
+    const acc = submits ? Math.round((data.total / submits) * 100) : 100;
+    document.getElementById("settle-stats").innerHTML = `
+      <div class="settle-stat s-acc"><h4>Accuracy</h4><p id="settle-acc">0%</p></div>
+      <div class="settle-stat s-time"><h4>Time</h4><p>${mm}:${String(ss).padStart(2, "0")}</p></div>
+      <div class="settle-stat s-combo"><h4>Best combo</h4><p>🔥 ${Number(data.bestCombo) || 0}</p></div>`;
+    const statEls = document.querySelectorAll("#settle-stats .settle-stat");
+    statEls.forEach((el, i) => setTimeout(() => {
+      el.classList.add("in");
+      if (i === 0) this._countUp(document.getElementById("settle-acc"), acc, 600, "%");
+    }, 500 + i * 140));
 
     const cap = this.lastCapture;
     let capHTML = "";
@@ -1641,14 +1669,41 @@ const App = {
       }
     }
 
-    const dropChips = (rewards.drops || [])
-      .map(d => `<div class="reward-chip pet-drop">${d.label}</div>`).join("");
+    const dropRows = (rewards.drops || [])
+      .map(d => `<div class="settle-rw drop"><span class="ic">🎁</span><span class="lb">${d.label}</span></div>`).join("");
 
+    /* 獎勵逐行彈入 + 數字 count-up（數值本身唔變，只係動畫） */
     document.getElementById("settle-rewards").innerHTML = capHTML + `
-      ${rewards.diamonds > 0 ? `<div class="reward-chip">💎 Diamonds +${rewards.diamonds}</div>` : ""}
-      <div class="reward-chip">⭐ EXP +${rewards.exp}</div>
-      ${rewards.fainted ? `<div class="reward-chip pet-warn">Your partner has fainted — no EXP this round. Feed it a Revival in Partner Care.</div>` : ""}
-      ${dropChips}`;
+      ${rewards.diamonds > 0 ? `<div class="settle-rw"><span class="ic">💎</span><span class="lb">Diamonds</span><span class="val">+<span data-count="${rewards.diamonds}">0</span></span></div>` : ""}
+      <div class="settle-rw"><span class="ic">⭐</span><span class="lb">Partner EXP</span><span class="val">+<span data-count="${rewards.exp}">0</span></span></div>
+      ${rewards.fainted ? `<div class="settle-rw warn"><span class="ic">💤</span><span class="lb">Your partner has fainted — no EXP this round. Feed it a Revival in Partner Care.</span></div>` : ""}
+      ${dropRows}`;
+    document.querySelectorAll("#settle-rewards .settle-rw").forEach((el, i) => setTimeout(() => {
+      el.classList.add("in");
+      const n = el.querySelector("[data-count]");
+      if (n) this._countUp(n, Number(n.dataset.count) || 0, 500);
+    }, 950 + i * 160));
+
+    /* 錯題預覽（最多 3 條）→「See all」入現有錯題回顧 */
+    const mist = document.getElementById("settle-mist");
+    const misses = (data.results || []).filter(r => !r.correct)
+      .map(r => ({ r, q: (typeof findQuestion === "function") ? findQuestion(r.qid) : null })).filter(x => x.q);
+    const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\u0022": "&quot;" };
+    const esc = (t) => String(t == null ? "" : t).replace(/[&<>\u0022]/g, ch => ESC[ch]);
+    if (misses.length) {
+      mist.innerHTML = `<h3>To review <button type="button" id="settle-see-all">See all ›</button></h3><ul>${misses.slice(0, 3).map(({ r, q }) => {
+        const ans = q.type === "word" ? q.word : q.answer;
+        const line = (q.type === "word" || !q.sentence)
+          ? `🔊 <b>${esc(ans)}</b>`
+          : esc(q.sentence).replace(/_{3,}/, `<b>${esc(ans)}</b>`);
+        return `<li>${line}<small>${r.hint ? "💡 Hint used" : "✕ Needed another try"}${q.topic ? " · " + esc(q.topic) : ""}</small></li>`;
+      }).join("")}</ul>`;
+      document.getElementById("settle-see-all").onclick = () => document.getElementById("btn-review").click();
+    } else {
+      mist.innerHTML = "";
+    }
+
+    if (data.score >= data.total - 2) this._settleConfetti();
 
     /* Capture jingle on settlement: success → "Obtained a Pokémon!", escape → "Obtained a Berry!".
        Both live in assets/bgm, so they follow the Music slider (not SFX). */
@@ -1671,6 +1726,40 @@ const App = {
     rareBtn.innerHTML = enough
       ? `${gemSvg} Lucky Draw ×${GAME_CONFIG.RARE_PULL_COST}`
       : `${gemSvg} Lucky Draw <small class="settle-btn-gap">need ${GAME_CONFIG.RARE_PULL_COST - st.diamonds} more</small>`;
+  },
+
+  /* 數字由 0 數上去（ease-out） */
+  _countUp(el, to, ms, suffix) {
+    if (!el) return;
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || !to) { el.textContent = to + (suffix || ""); return; }
+    const t0 = performance.now();
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / ms);
+      el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))) + (suffix || "");
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },
+
+  _settleConfetti() {
+    const box = document.getElementById("settle-confetti");
+    if (!box) return;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    box.innerHTML = "";
+    const cols = ["#ffcb05", "#3b5ca8", "#ee4035", "#1fa34a", "#ff7a1a", "#ab47bc"];
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement("i");
+      p.style.left = (Math.random() * 100) + "%";
+      p.style.background = cols[i % cols.length];
+      p.style.setProperty("--dx", (Math.random() * 160 - 80) + "px");
+      p.style.setProperty("--rot", (Math.random() * 900 - 450) + "deg");
+      p.style.animationDuration = (1.8 + Math.random() * 1.6) + "s";
+      p.style.animationDelay = (Math.random() * .5) + "s";
+      box.appendChild(p);
+    }
+    clearTimeout(this._confettiTimer);
+    this._confettiTimer = setTimeout(() => { box.innerHTML = ""; }, 4200);
   },
 
   /* ---------- 錯題回顧 ---------- */
@@ -3289,6 +3378,13 @@ const App = {
     document.getElementById("btn-quiz-hint").onclick = () => Quiz.hint();
     document.getElementById("btn-quiz-next").onclick = () => Quiz.next();
     document.getElementById("btn-quiz-settings").onclick = () => Quiz.openSettings();
+    document.getElementById("btn-quiz-exit").onclick = () => Quiz.confirmQuit();
+    document.getElementById("btn-quiz-replay").onclick = () => {
+      if (window.CaptureScene) { window.CaptureScene.primeAudio(); }
+      Quiz.pronounce();
+    };
+    /* 結算 Continue：同下巴精靈球同一出口（Gym conclude 掛喺 btn-pd-home，Rule 44） */
+    document.getElementById("btn-settle-continue").onclick = () => document.getElementById("btn-pd-home").click();
     document.getElementById("btn-quiz-more").onclick = () => Quiz.toggleCardDrawer();
     document.getElementById("btn-report-issue").onclick = () => Quiz.openReport();
     /* 圖片單字題：點圖聽聲（可無限重播） */
@@ -3300,8 +3396,21 @@ const App = {
     /* 答完後 Enter 亦可按 Next（輸入格已 disable，唔會再觸發 submit）*/
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
+      /* 結算頁：Enter = Continue（冇 modal 開住先算） */
+      const sv = document.getElementById("view-settlement");
+      if (sv && sv.classList.contains("active") && !e.repeat && !document.querySelector(".modal-backdrop")) {
+        const t = e.target;
+        if (!(t && t.closest && t.closest("button, input, textarea, select"))) {
+          e.preventDefault();
+          document.getElementById("btn-settle-continue").click();
+        }
+        return;
+      }
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
+      /* ✕ 確認窗開住：Enter = Keep learning */
+      const stayBtn = document.getElementById("quiz-quit-stay");
+      if (stayBtn) { e.preventDefault(); stayBtn.click(); return; }
       /* 設定彈窗開住：Enter = 確認 Quit this set（經按鈕，會一併關窗） */
       const quitBtn = document.getElementById("quiz-settings-quit");
       if (quitBtn) {
@@ -3333,6 +3442,8 @@ const App = {
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
       if (document.getElementById("report-box")) return;
+      const stay = document.getElementById("quiz-quit-stay");
+      if (stay) { e.preventDefault(); stay.click(); return; }
       const keep = document.getElementById("quiz-settings-close");
       if (keep) {
         e.preventDefault();

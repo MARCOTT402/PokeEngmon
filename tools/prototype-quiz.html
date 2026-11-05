@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quiz Prototype</title>
+<!-- 答題 UI/UX prototype（純前端假資料，唔接 app state）。計劃：.trae/documents/plan-quiz-ux-20261105.md
+     上方控制列可切換 Phone 440×956（Rule 30 基準）／Tablet 820×1180／Desktop 1280×800。
+     喺真手機（闊 < 700）開會自動用全螢幕 Native 模式。 -->
+<style>
+  @font-face { font-family: "Inter"; font-weight: 100 900; font-display: swap; src: url("../assets/fonts/inter-latin-var.woff2") format("woff2"); }
+  :root {
+    --brand: #3b5ca8; --brand-d: #2a4380; --brand-l: #e7eefc;
+    --yellow: #ffcb05; --yellow-d: #d9a900;
+    --ok: #1fa34a; --ok-d: #147a36; --ok-l: #dcf6e3; --ok-ink: #0f5a28;
+    --bad: #e5484d; --bad-d: #b8343a; --bad-l: #ffe5e4; --bad-ink: #8c1d22;
+    --hint: #f5a524; --hint-d: #c47f0e; --hint-l: #fff1d6; --hint-ink: #7a4b00;
+    --ink: #1d2433; --muted: #6b7489; --line: #e3e7ef; --soft: #f3f5f9; --bg: #ffffff;
+    --r-lg: 20px; --r-md: 14px; --r-sm: 10px;
+    --ease: cubic-bezier(.22, 1, .36, 1); --spring: cubic-bezier(.34, 1.56, .64, 1);
+    --fast: 120ms; --base: 220ms; --slow: 420ms;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { font-family: "Inter", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; color: var(--ink);
+    background: #262a33; overflow: hidden; -webkit-user-select: none; user-select: none; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  img { -webkit-user-drag: none; }
+
+  /* ---------- prototype 控制列（唔屬於 app） ---------- */
+  .proto-bar { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 99; display: flex; gap: 6px;
+    flex-wrap: wrap; justify-content: center; align-items: center; color: #c9ced8; font-size: 12px; max-width: calc(100vw - 16px); }
+  .proto-bar button { border: 1px solid #4d5462; background: #353a46; color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+  .proto-bar button.on { background: var(--brand); border-color: #6d8ad0; }
+  .proto-bar .sep { width: 1px; height: 20px; background: #4d5462; }
+  .proto-toggle { display: none; }
+  body.native .proto-bar { display: none; top: 56px; background: rgba(30,34,44,.94); padding: 8px; border-radius: 12px; }
+  body.native.proto-open .proto-bar { display: flex; }
+  body.native .proto-toggle { display: block; position: fixed; z-index: 100; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(30,34,44,.35); color: #fff; font-size: 14px; }
+  body.native .proto-bar [data-dev] { display: none; }
+  #viewport { position: fixed; inset: 46px 0 0 0; display: grid; place-items: center; }
+  body.native #viewport { inset: 0; }
+  #frame-wrap { position: relative; }
+  #frame { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--bg); overflow: hidden;
+    border-radius: 34px; box-shadow: 0 0 0 10px #111, 0 30px 80px rgba(0,0,0,.55); }
+  #frame.dev-desktop { border-radius: 12px; box-shadow: 0 0 0 1px #000, 0 30px 80px rgba(0,0,0,.55); }
+  #frame.dev-tablet { border-radius: 26px; box-shadow: 0 0 0 14px #111, 0 30px 80px rgba(0,0,0,.55); }
+  body.native #frame { border-radius: 0; box-shadow: none; }
+
+  /* ================= APP ================= */
+  .app { position: absolute; inset: 0; container: app / inline-size; background: var(--bg); }
+  .scr { position: absolute; inset: 0; display: none; }
+  .scr.on { display: grid; }
+  .col { width: 100%; max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- Quiz 版面：頂欄 / 內容 / 底部行動 / 鍵盤 ---------- */
+  .quiz { grid-template-rows: auto 1fr auto auto; padding-top: max(env(safe-area-inset-top), var(--safe-top, 0px)); }
+  .top { padding: 12px 0 6px; }
+  .top .col { display: flex; align-items: center; gap: 12px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #8a93a6; flex: none;
+    transition: background var(--fast), transform var(--fast); }
+  .icon-btn:hover { background: var(--soft); } .icon-btn:active { transform: scale(.9); }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  .segs { flex: 1; display: flex; gap: 4px; height: 14px; align-items: center; }
+  .seg { flex: 1; height: 12px; border-radius: 99px; background: var(--line); position: relative; overflow: hidden;
+    transition: flex var(--slow) var(--ease), background var(--base); }
+  .seg::after { content: ""; position: absolute; inset: 0; border-radius: inherit; transform: scaleX(0); transform-origin: left;
+    background: var(--ok); transition: transform var(--slow) var(--ease); }
+  .seg.done::after { transform: scaleX(1); }
+  .seg.done::before { content: ""; position: absolute; z-index: 1; left: 3px; right: 3px; top: 2px; height: 3px; border-radius: 9px; background: rgba(255,255,255,.45); }
+  .seg.hinted::after { background: var(--hint); }
+  .seg.cur { background: #cfd6e4; box-shadow: inset 0 0 0 2px var(--brand); }
+  .seg.re { background: repeating-linear-gradient(90deg, #f6d8a2 0 4px, transparent 4px 7px); }
+  .seg.re.cur { box-shadow: inset 0 0 0 2px var(--hint); }
+  .seg.pop { animation: seg-pop var(--slow) var(--spring); }
+  .seg.new { animation: seg-in var(--slow) var(--spring); }
+  @keyframes seg-pop { 40% { transform: scaleY(1.7); } }
+  @keyframes seg-in { from { flex: .001; opacity: 0; } }
+
+  .combo { display: flex; align-items: center; gap: 2px; font-weight: 900; font-size: 15px; color: #ff7a1a; min-width: 44px;
+    justify-content: flex-end; opacity: 0; transform: scale(.6); transition: opacity var(--base), transform var(--base) var(--spring); }
+  .combo.on { opacity: 1; transform: none; }
+  .combo.bump { animation: combo-bump .5s var(--spring); }
+  .combo .flame { font-size: 20px; filter: drop-shadow(0 2px 4px rgba(255,122,26,.4)); }
+  @keyframes combo-bump { 30% { transform: scale(1.45) rotate(-8deg); } }
+
+  /* ---------- 內容 ---------- */
+  .body { overflow-y: auto; overscroll-behavior: contain; }
+  .body .col { min-height: 100%; display: flex; flex-direction: column; padding-top: 10px; padding-bottom: 16px; gap: 14px; }
+  .q-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; letter-spacing: .02em;
+    padding: 5px 10px; border-radius: 99px; background: var(--brand-l); color: var(--brand); }
+  .chip.new { background: #fff3cd; color: #8a6100; }
+  .chip.seen { background: var(--soft); color: var(--muted); }
+  .chip.re { background: var(--hint-l); color: var(--hint-ink); }
+  .prompt { font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+
+  .stage { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+  .card { border: 2px solid var(--line); border-bottom-width: 4px; border-radius: var(--r-lg); padding: 22px 18px; background: #fff;
+    transition: border-color var(--base), background var(--base); position: relative; }
+  .card.shake { animation: shake .42s var(--ease); border-color: var(--bad); background: #fff8f8; }
+  .card.win { border-color: #9fe0b2; background: #f6fdf8; }
+  @keyframes shake { 15%, 55% { transform: translateX(-8px); } 35%, 75% { transform: translateX(7px); } 90% { transform: translateX(-2px); } }
+  .sentence { font-size: 22px; line-height: 2.05; font-weight: 600; text-align: left; }
+  .sentence.word-only { text-align: center; }
+
+  .cell { display: inline-flex; align-items: baseline; justify-content: center; position: relative; vertical-align: baseline;
+    min-width: calc(var(--len, 3) * .62em + 18px); margin: 0 3px; padding: 0 6px; height: 1.6em; line-height: 1.6em;
+    border-bottom: 3px solid #c3cad8; border-radius: 6px 6px 2px 2px; color: var(--brand); font-weight: 800;
+    transition: border-color var(--base), background var(--base), color var(--base); cursor: text; }
+  .cell.cur { border-color: var(--brand); background: var(--brand-l); }
+  .cell.cur::after { content: ""; width: 2px; height: 1.05em; background: var(--brand); align-self: center; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  .cell.cur.has-ghost::after { display: none; }
+  .cell .ghost { color: #b3bccd; font-weight: 700; }
+  .cell.good { border-color: var(--ok); background: var(--ok-l); color: var(--ok-ink); animation: cell-pop var(--slow) var(--spring); }
+  .cell.good::before { content: "✓"; position: absolute; top: -9px; right: -9px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ok); color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-weight: 900; animation: cell-pop var(--slow) var(--spring); }
+  .cell.badc { border-color: var(--bad); background: var(--bad-l); color: var(--bad-ink); }
+  @keyframes cell-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.12); } }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .pic { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .pic-img { width: min(62cqw, 260px); aspect-ratio: 1; border-radius: var(--r-lg); background: var(--soft) center/contain no-repeat; border: 2px solid var(--line); }
+  .audio-row { display: flex; gap: 12px; }
+  .audio-btn { width: 64px; height: 64px; border-radius: 18px; background: var(--brand); color: #fff; display: grid; place-items: center;
+    box-shadow: 0 4px 0 var(--brand-d); transition: transform var(--fast), box-shadow var(--fast); position: relative; }
+  .audio-btn.slow { width: 48px; height: 48px; border-radius: 14px; align-self: flex-end; background: var(--brand-l); color: var(--brand); box-shadow: 0 4px 0 #c5d3f1; }
+  .audio-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--brand-d); }
+  .audio-btn svg { width: 30px; height: 30px; } .audio-btn.slow svg { width: 22px; height: 22px; }
+  .audio-btn.playing::before { content: ""; position: absolute; inset: -6px; border-radius: 22px; border: 3px solid var(--brand); opacity: 0; animation: ring 1s var(--ease) infinite; }
+  @keyframes ring { 0% { opacity: .7; transform: scale(.92); } 100% { opacity: 0; transform: scale(1.18); } }
+
+  .tools { display: flex; gap: 10px; justify-content: center; }
+  .ghost-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 99px; border: 2px solid var(--line);
+    font-weight: 800; font-size: 14px; color: var(--muted); background: #fff; transition: transform var(--fast), border-color var(--fast), color var(--fast); }
+  .ghost-btn:hover { border-color: #c9d0dd; color: var(--ink); } .ghost-btn:active { transform: scale(.95); }
+  .ghost-btn[disabled] { opacity: .4; pointer-events: none; }
+  .ghost-btn .count { font-size: 11px; background: var(--hint-l); color: var(--hint-ink); border-radius: 99px; padding: 1px 6px; }
+  kbd { display: none; font: 700 11px/1 "Inter", sans-serif; padding: 3px 6px; border-radius: 5px; border: 1px solid currentColor; opacity: .6; }
+
+  /* ---------- 底部行動區（feedback 狀態同主掣一體） ---------- */
+  .action { border-top: 2px solid var(--line); background: #fff; transition: background var(--base), border-color var(--base);
+    padding-bottom: 12px; }
+  .action .col { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; }
+  .fb { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--base) var(--ease); }
+  .fb > div { overflow: hidden; display: flex; gap: 12px; align-items: center; }
+  .action.show-fb .fb { grid-template-rows: 1fr; }
+  .fb-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #fff; flex: none; font-size: 22px; font-weight: 900; }
+  .fb-text { flex: 1; min-width: 0; }
+  .fb-title { font-size: 20px; font-weight: 900; }
+  .fb-sub { font-size: 13.5px; font-weight: 600; margin-top: 2px; opacity: .9; }
+  .fb-side { display: flex; gap: 6px; }
+  .fb-side .icon-btn { color: inherit; background: rgba(255,255,255,.6); }
+  .action.ok { background: var(--ok-l); border-color: transparent; color: var(--ok-ink); }
+  .action.ok .fb-icon { color: var(--ok); }
+  .action.bad { background: var(--bad-l); border-color: transparent; color: var(--bad-ink); }
+  .action.bad .fb-icon { color: var(--bad); }
+  .action.hinted { background: var(--hint-l); border-color: transparent; color: var(--hint-ink); }
+  .action.hinted .fb-icon { color: var(--hint); }
+  .action.show-fb .fb-icon { animation: cell-pop var(--slow) var(--spring); }
+
+  .main-btn { height: 54px; border-radius: 16px; width: 100%; font-size: 17px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase;
+    color: #fff; background: var(--brand); box-shadow: 0 4px 0 var(--brand-d); display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: transform var(--fast), box-shadow var(--fast), background var(--base), color var(--base); }
+  .main-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--brand-d); }
+  .main-btn[disabled] { background: #e3e7ef; color: #a5adbd; box-shadow: 0 4px 0 #cfd5e0; pointer-events: none; }
+  .action.ok .main-btn { background: var(--ok); box-shadow: 0 4px 0 var(--ok-d); }
+  .action.hinted .main-btn { background: var(--hint); box-shadow: 0 4px 0 var(--hint-d); }
+
+  /* ---------- App 鍵盤 ---------- */
+  .kbwrap { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--base) var(--ease); background: #d5d9e1; }
+  .kbwrap.hide { grid-template-rows: 0fr; }
+  .kb { overflow: hidden; }
+  .kb-in { padding: 8px 4px calc(6px + max(env(safe-area-inset-bottom), var(--safe-bottom, 0px))); display: flex; flex-direction: column; gap: 9px;
+    max-width: 760px; margin: 0 auto; }
+  .kr { display: flex; gap: 5px; justify-content: center; }
+  .k { flex: 1; max-width: 44px; height: 46px; border-radius: 7px; background: #fff; box-shadow: 0 1.5px 0 #8a909c; font-size: 21px; font-weight: 500;
+    display: grid; place-items: center; position: relative; touch-action: manipulation; color: #111; }
+  .k.fn { background: #aeb4c0; max-width: 62px; flex: 1.5; font-size: 16px; font-weight: 700; }
+  .k.go { background: var(--brand); color: #fff; max-width: 92px; flex: 2.2; font-size: 15px; font-weight: 800; box-shadow: 0 1.5px 0 var(--brand-d); }
+  .k.go[disabled] { background: #aeb4c0; color: #e9ecf1; }
+  .k.space { max-width: none; flex: 5; font-size: 14px; color: #666; }
+  .k.down { background: #c9ced8; }
+  .k .bubble { position: absolute; bottom: calc(100% + 4px); left: 50%; translate: -50% 0; width: 52px; height: 58px; border-radius: 10px;
+    background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.25); display: grid; place-items: center; font-size: 30px; pointer-events: none; z-index: 3; }
+  .kb-spacer { flex: .5; max-width: 22px; }
+
+  /* ---------- 結算 ---------- */
+  .result { overflow-y: auto; padding-top: max(env(safe-area-inset-top), var(--safe-top, 0px)); background: linear-gradient(180deg, #eef4ff 0%, #fff 46%); }
+  .result .col { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-top: 28px; padding-bottom: 24px; min-height: 100%; }
+  .r-mascot { width: 104px; height: 104px; image-rendering: pixelated; animation: float 2.6s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-8px); } }
+  .r-title { font-size: 28px; font-weight: 900; text-align: center; letter-spacing: -.02em; }
+  .r-sub { color: var(--muted); font-weight: 600; margin-top: -10px; text-align: center; }
+  .ring { width: 150px; height: 150px; position: relative; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 13; stroke-linecap: round; }
+  .ring .bg { stroke: var(--line); } .ring .fg { stroke: var(--ok); transition: stroke-dashoffset 1.1s var(--ease); }
+  .ring .num { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring b { font-size: 40px; font-weight: 900; line-height: 1; } .ring small { display: block; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
+  .stat { border: 2px solid var(--line); border-radius: var(--r-md); overflow: hidden; text-align: center; background: #fff;
+    opacity: 0; transform: translateY(12px); transition: opacity var(--base), transform var(--slow) var(--spring); }
+  .stat.in { opacity: 1; transform: none; }
+  .stat h4 { font-size: 11px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: #fff; padding: 5px 0; }
+  .stat p { font-size: 20px; font-weight: 900; padding: 10px 0 12px; }
+  .stat.a { border-color: var(--ok); } .stat.a h4 { background: var(--ok); } .stat.a p { color: var(--ok); }
+  .stat.t { border-color: var(--brand); } .stat.t h4 { background: var(--brand); } .stat.t p { color: var(--brand); }
+  .stat.c { border-color: #ff7a1a; } .stat.c h4 { background: #ff7a1a; } .stat.c p { color: #ff7a1a; }
+  .rewards { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .rw { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-md); background: var(--soft);
+    opacity: 0; transform: translateX(-14px); transition: opacity var(--base), transform var(--slow) var(--spring); }
+  .rw.in { opacity: 1; transform: none; }
+  .rw .ic { font-size: 24px; width: 32px; text-align: center; } .rw .lb { flex: 1; font-weight: 700; } .rw .val { font-weight: 900; font-size: 18px; }
+  .mist { width: 100%; }
+  .mist h3 { font-size: 15px; font-weight: 900; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .mist h3 a { font-size: 13px; color: var(--brand); text-decoration: none; }
+  .mist li { list-style: none; padding: 10px 12px; border-radius: var(--r-sm); border: 2px solid var(--line); margin-bottom: 6px; font-size: 14px; font-weight: 600; line-height: 1.5; }
+  .mist li b { color: var(--ok-ink); background: var(--ok-l); padding: 0 5px; border-radius: 4px; }
+  .mist li small { display: block; color: var(--muted); font-weight: 600; font-size: 12px; }
+  .r-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: auto; position: sticky; bottom: 0; z-index: 2;
+    padding: 22px 0 calc(4px + max(env(safe-area-inset-bottom), var(--safe-bottom, 0px))); background: linear-gradient(rgba(255,255,255,0), #fff 30%); }
+  .result .col { padding-bottom: 0 !important; }
+  .sec-btn { height: 50px; border-radius: 16px; width: 100%; font-size: 15px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--brand); background: #fff; border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); transition: transform var(--fast), box-shadow var(--fast); }
+  .sec-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+  .confetti i { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translate3d(var(--dx), 110cqh, 0) rotate(var(--rot)); } }
+
+  /* ---------- 離開確認 ---------- */
+  .dlg { position: absolute; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(20,24,34,.45);
+    opacity: 0; pointer-events: none; transition: opacity var(--base); }
+  .dlg.on { opacity: 1; pointer-events: auto; }
+  .dlg-box { width: 100%; max-width: 520px; background: #fff; border-radius: 24px 24px 0 0; padding: 24px 20px calc(18px + max(env(safe-area-inset-bottom), var(--safe-bottom, 0px)));
+    text-align: center; transform: translateY(100%); transition: transform var(--slow) var(--ease); display: flex; flex-direction: column; gap: 12px; }
+  .dlg.on .dlg-box { transform: none; }
+  .dlg-box .em { font-size: 44px; } .dlg-box h3 { font-size: 20px; font-weight: 900; } .dlg-box p { color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .link-btn { color: var(--bad); font-weight: 900; letter-spacing: .04em; text-transform: uppercase; padding: 12px; font-size: 15px; }
+
+  [hidden] { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* ================= 平板（≥600） ================= */
+  @container app (min-width: 600px) {
+    .col { max-width: 660px; padding: 0 24px; }
+    .top { padding-top: 22px; }
+    .segs { height: 16px; } .seg { height: 14px; }
+    .prompt { font-size: 28px; }
+    .card { padding: 34px 30px; }
+    .sentence { font-size: 30px; }
+    .chip { font-size: 13px; padding: 6px 12px; }
+    .main-btn { height: 60px; font-size: 18px; }
+    .fb-title { font-size: 24px; } .fb-sub { font-size: 15px; }
+    .k { max-width: 64px; height: 58px; font-size: 25px; border-radius: 9px; } .k.fn { max-width: 90px; } .k.go { max-width: 140px; font-size: 17px; }
+    .kr { gap: 7px; } .kb-in { gap: 11px; padding-top: 12px; }
+    .pic-img { width: 280px; }
+    .r-title { font-size: 34px; } .ring { width: 180px; height: 180px; } .ring b { font-size: 48px; }
+    .dlg { align-items: center; } .dlg-box { border-radius: 24px; transform: scale(.92); opacity: 0; transition: transform var(--base) var(--spring), opacity var(--base); padding-bottom: 20px; max-width: 420px; }
+    .dlg.on .dlg-box { opacity: 1; }
+  }
+  /* ================= 電腦（≥1024）：實體鍵盤，冇 app 鍵盤 ================= */
+  @container app (min-width: 1024px) {
+    .col { max-width: 760px; }
+    .kbwrap { display: none; }
+    kbd { display: inline-block; }
+    .action { padding-bottom: 24px; }
+    .action .col { flex-direction: row; align-items: center; justify-content: space-between; padding-top: 22px; }
+    .fb { flex: 1; grid-template-rows: 1fr; opacity: 0; transition: opacity var(--base); }
+    .action.show-fb .fb { opacity: 1; }
+    .main-btn { width: auto; min-width: 180px; padding: 0 28px; flex: none; }
+    .sentence { font-size: 32px; }
+    .result .col { padding-top: 48px; }
+    .r-actions { flex-direction: row-reverse; max-width: 520px; } .r-actions > * { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+    .confetti { display: none; }
+  }
+</style>
+</head>
+<body>
+  <button class="proto-toggle" id="proto-toggle" aria-label="Prototype controls">⚙</button>
+  <div class="proto-bar" id="proto-bar">
+    <button data-dev="phone" class="on">📱 Phone</button>
+    <button data-dev="tablet">Tablet</button>
+    <button data-dev="desktop">💻 Desktop</button>
+    <span class="sep"></span>
+    <button id="pb-junior">Junior: off</button>
+    <button id="pb-restart">↻ Restart</button>
+    <button id="pb-result">⏭ Results</button>
+  </div>
+
+  <div id="viewport"><div id="frame-wrap"><div id="frame" class="dev-phone"><div class="app" id="app">
+
+    <!-- ===== 答題 ===== -->
+    <section class="scr quiz on" id="scr-quiz" aria-label="Quiz">
+      <header class="top"><div class="col">
+        <button class="icon-btn" id="btn-exit" aria-label="Quit lesson" title="Quit (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="segs" id="segs" role="progressbar" aria-label="Lesson progress"></div>
+        <div class="combo" id="combo" aria-live="polite"><span class="flame">🔥</span><span id="combo-n">0</span></div>
+      </div></header>
+
+      <main class="body" id="body"><div class="col">
+        <div class="q-head"><span class="chip" id="chip-type"></span><span class="chip" id="chip-status"></span></div>
+        <h1 class="prompt" id="prompt"></h1>
+        <div class="stage">
+          <div class="pic" id="pic" hidden>
+            <div class="pic-img" id="pic-img"></div>
+            <div class="audio-row">
+              <button class="audio-btn" id="btn-say" aria-label="Play the word"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+              <button class="audio-btn slow" id="btn-say-slow" aria-label="Play slowly">🐢</button>
+            </div>
+          </div>
+          <div class="card" id="card"><p class="sentence" id="sentence"></p></div>
+          <div class="tools">
+            <button class="ghost-btn" id="btn-hint">💡 Hint <span class="count" id="hint-count" hidden></span> <kbd>Tab</kbd></button>
+          </div>
+        </div>
+      </div></main>
+
+      <footer class="action" id="action"><div class="col">
+        <div class="fb" aria-live="polite"><div>
+          <div class="fb-icon" id="fb-icon">✓</div>
+          <div class="fb-text"><div class="fb-title" id="fb-title"></div><div class="fb-sub" id="fb-sub"></div></div>
+          <div class="fb-side" id="fb-side" hidden>
+            <button class="icon-btn" id="btn-pron" aria-label="Pronounce"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+            <button class="icon-btn" id="btn-report" aria-label="Report a problem" title="Report a problem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></button>
+          </div>
+        </div></div>
+        <button class="main-btn" id="btn-main" disabled><span id="main-label">Check</span> <kbd>Enter</kbd></button>
+      </div></footer>
+
+      <div class="kbwrap" id="kbwrap"><div class="kb"><div class="kb-in" id="kb"></div></div></div>
+    </section>
+
+    <!-- ===== 結算 ===== -->
+    <section class="scr result" id="scr-result" aria-label="Results"><div class="col">
+      <img class="r-mascot" src="../assets/animated/25.gif" alt="">
+      <h2 class="r-title" id="r-title">Lesson complete!</h2>
+      <p class="r-sub" id="r-sub"></p>
+      <div class="ring"><svg viewBox="0 0 160 160"><circle class="bg" cx="80" cy="80" r="66"/><circle class="fg" id="ring-fg" cx="80" cy="80" r="66"/></svg>
+        <div class="num"><div><b id="ring-n">0</b><small id="ring-t">/ 10 clean</small></div></div></div>
+      <div class="stats">
+        <div class="stat a"><h4>Accuracy</h4><p id="st-acc">0%</p></div>
+        <div class="stat t"><h4>Time</h4><p id="st-time">0:00</p></div>
+        <div class="stat c"><h4>Best combo</h4><p id="st-combo">0</p></div>
+      </div>
+      <div class="rewards" id="rewards"></div>
+      <div class="mist" id="mist"></div>
+      <div class="r-actions">
+        <button class="main-btn" id="btn-continue">Continue</button>
+        <button class="sec-btn" id="btn-draw">💎 Lucky Draw</button>
+      </div>
+    </div><div class="confetti" id="confetti"></div></section>
+
+    <!-- ===== 離開確認 ===== -->
+    <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-h"><div class="dlg-box">
+      <div class="em">🥺</div>
+      <h3 id="dlg-h">Wait, don't go!</h3>
+      <p>You'll lose your progress in this set if you quit now.</p>
+      <button class="main-btn" id="dlg-stay">Keep learning</button>
+      <button class="link-btn" id="dlg-quit">End session</button>
+    </div></div>
+
+  </div></div></div></div>
+
+<script>
+/* ---------------- 假資料（取自 Q_folder） ---------------- */
+const IMG = "../Q_folder/vocab/vocab_images/", AUD = "../Q_folder/vocab/vocab_audio/";
+const BANK = [
+  { type: "s", topic: "Articles: Basics", sentence: "This is ___ apple. It is sweet and red.", answer: "an", seen: 0 },
+  { type: "w", topic: "Dictation · Stationery", word: "pencil", seen: 3 },
+  { type: "s", topic: "Present Continuous", sentence: "Be quiet! The baby ___ ___ now.", answer: "is sleeping", seen: 0 },
+  { type: "s", topic: "Articles: Basics", sentence: "___ moon looks very beautiful tonight.", answer: "The", seen: 6 },
+  { type: "w", topic: "Dictation · Food", word: "apple", seen: 0 },
+  { type: "s", topic: "Prepositions", sentence: "The cat is sleeping ___ the sofa.", answer: "on", seen: 1 },
+  { type: "s", topic: "Simple Past", sentence: "Yesterday we ___ to the beach by bus.", answer: "went", seen: 0 },
+  { type: "w", topic: "Dictation · Stationery", word: "ruler", seen: 2 },
+  { type: "s", topic: "Articles: Basics", sentence: "He has ___ umbrella because it is raining.", answer: "an", seen: 0 },
+  { type: "s", topic: "Comparatives", sentence: "An elephant is ___ than a horse.", answer: "bigger", seen: 4 }
+];
+const PRAISE = ["Nice one!", "Great job!", "Perfect!", "Exactly right!", "Awesome!"];
+const COMBO_PRAISE = { 3: "3 in a row! 🔥", 5: "5 in a row — on fire!", 10: "Perfect streak!" };
+
+/* ---------------- 狀態 ---------------- */
+const S = { queue: [], segs: [], cells: [], cur: 0, answered: false, hint: 0, wrongs: 0, combo: 0, best: 0, start: 0, log: new Map(), junior: false };
+const $ = (id) => document.getElementById(id);
+const norm = (s) => String(s || "").trim().toLowerCase();
+const isDesktop = () => $("app").clientWidth >= 1024;
+
+/* ---------------- 聲音／震動 ---------------- */
+let AC = null;
+function tone(seq) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    let t = AC.currentTime;
+    seq.forEach(([f, d, type = "sine", v = .12]) => {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = type; o.frequency.value = f; o.connect(g); g.connect(AC.destination);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + d);
+      o.start(t); o.stop(t + d + .02); t += d * .7;
+    });
+  } catch (e) {}
+}
+const SFX = {
+  tick: () => tone([[880, .06, "triangle", .05]]),
+  cell: () => tone([[784, .09, "triangle", .08], [1046, .12, "triangle", .08]]),
+  ok: () => tone([[659, .1], [880, .1], [1318, .22]]),
+  bad: () => tone([[220, .16, "square", .05], [185, .22, "square", .05]]),
+  combo: () => tone([[880, .07], [1108, .07], [1318, .07], [1760, .2]]),
+  done: () => tone([[523, .12], [659, .12], [784, .12], [1046, .35]])
+};
+const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+function say(word, slow) {
+  const btn = slow ? $("btn-say-slow") : $("btn-say");
+  btn.classList.add("playing");
+  const stop = () => btn.classList.remove("playing");
+  if (!slow) {
+    const a = new Audio(AUD + word + ".mp3");
+    a.onended = stop; a.onerror = () => { stop(); tts(word, 1); };
+    a.play().catch(() => { stop(); tts(word, 1); });
+  } else tts(word, .55, stop);
+}
+function tts(text, rate, done) {
+  try { const u = new SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = rate; u.onend = done; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+  catch (e) { done && done(); }
+}
+
+/* ---------------- 開始 ---------------- */
+function start() {
+  S.queue = BANK.map((q, i) => ({ q, id: i, re: false }));
+  S.segs = BANK.map((q, i) => ({ id: i, re: false, state: "" }));
+  S.combo = 0; S.best = 0; S.start = Date.now(); S.log = new Map();
+  showScr("scr-quiz");
+  renderSegs(); render();
+}
+function showScr(id) { document.querySelectorAll(".scr").forEach(s => s.classList.toggle("on", s.id === id)); }
+
+function renderSegs() {
+  const host = $("segs");
+  const existing = host.children.length;
+  S.segs.forEach((s, i) => {
+    let el = host.children[i];
+    if (!el) { el = document.createElement("div"); host.appendChild(el); if (i >= existing && existing) el.classList.add("new"); }
+    const curIdx = S.segs.findIndex(x => !x.state);
+    el.className = "seg" + (s.re ? " re" : "") + (s.state ? " done" : "") + (s.state === "hint" ? " hinted" : "") + (i === curIdx ? " cur" : "") + (el.classList.contains("new") ? " new" : "");
+  });
+  const done = S.segs.filter(s => s.state).length;
+  host.setAttribute("aria-valuenow", done); host.setAttribute("aria-valuemax", S.segs.length);
+}
+
+/* ---------------- 渲染題目 ---------------- */
+function render() {
+  const item = S.queue[0];
+  if (!item) return finish();
+  const q = item.q;
+  S.answered = false; S.cur = 0; S.hint = 0; S.wrongs = 0;
+  const ans = q.type === "w" ? q.word : q.answer;
+  S.cells = ans.split(/\s+/).map(t => ({ ans: t, val: "", green: false, ghost: "" }));
+
+  $("chip-type").textContent = q.topic;
+  const st = $("chip-status");
+  if (item.re) { st.className = "chip re"; st.textContent = "↻ Try again"; }
+  else if (!q.seen) { st.className = "chip new"; st.textContent = "✨ New"; }
+  else { st.className = "chip seen"; st.textContent = `Seen ${q.seen} day${q.seen > 1 ? "s" : ""} ago`; }
+
+  $("prompt").textContent = q.type === "w" ? "Type what you hear" : (S.cells.length > 1 ? "Fill in the blanks" : "Fill in the blank");
+  $("pic").hidden = q.type !== "w";
+  const sen = $("sentence");
+  sen.innerHTML = "";
+  sen.classList.toggle("word-only", q.type === "w");
+  if (q.type === "w") {
+    $("pic-img").style.backgroundImage = `url("${IMG + q.word}.webp")`;
+    S.cells.forEach((c, i) => sen.appendChild(mkCell(c, i)));
+    setTimeout(() => say(q.word), 350);
+  } else {
+    const [pre, ...rest] = q.sentence.split("___");
+    const post = rest.join("").replace(/___/g, "");
+    if (pre) sen.appendChild(document.createTextNode(pre));
+    S.cells.forEach((c, i) => { sen.appendChild(mkCell(c, i)); if (i < S.cells.length - 1) sen.appendChild(document.createTextNode(" ")); });
+    if (post) sen.appendChild(document.createTextNode(post));
+  }
+  const card = $("card"); card.classList.remove("shake", "win");
+  setAction("");
+  $("hint-count").hidden = true; $("btn-hint").disabled = false;
+  $("kbwrap").classList.remove("hide");
+  $("body").scrollTop = 0;
+  paint();
+}
+function mkCell(c, i) {
+  const el = document.createElement("span");
+  el.className = "cell"; el.style.setProperty("--len", Math.max(2, c.ans.length));
+  el.setAttribute("role", "textbox"); el.setAttribute("aria-label", `Blank ${i + 1}`);
+  el.onclick = () => { if (!S.answered && !c.green) { S.cur = i; paint(); } };
+  c.el = el; return el;
+}
+function paint() {
+  S.cells.forEach((c, i) => {
+    const isCur = !S.answered && i === S.cur && !c.green;
+    c.el.classList.toggle("cur", isCur);
+    c.el.classList.toggle("good", c.green);
+    c.el.classList.toggle("has-ghost", !!c.ghost && !c.val);
+    c.el.innerHTML = "";
+    c.el.append(document.createTextNode(c.val));
+    if (c.ghost && !c.green) {
+      const g = document.createElement("span"); g.className = "ghost";
+      g.textContent = c.ghost.slice(c.val.length) || ""; if (g.textContent) c.el.append(g);
+    }
+  });
+  const c = S.cells[S.cur];
+  const can = !S.answered && c && c.val.length > 0;
+  $("btn-main").disabled = !S.answered && !can;
+  const go = $("k-go"); if (go) go.disabled = !can;
+}
+
+/* ---------------- 輸入 ---------------- */
+function type(ch) {
+  if (S.answered) return;
+  const c = S.cells[S.cur]; if (!c || c.green) return;
+  c.val += ch; c.el.classList.remove("badc");
+  if (S.wrongs && $("action").classList.contains("bad")) setAction("");   // 一打字就收返紅色回饋
+  SFX.tick();
+  if (norm(c.val) === norm(c.ans)) { greenCell(); return; }
+  paint();
+}
+function back() {
+  if (S.answered) return;
+  const c = S.cells[S.cur]; if (!c || c.green) return;
+  c.val = c.val.slice(0, -1); c.el.classList.remove("badc"); paint();
+}
+function greenCell() {
+  const c = S.cells[S.cur]; c.green = true; c.val = c.ans; SFX.cell(); buzz(8);
+  const nxt = S.cells.findIndex(x => !x.green);
+  if (nxt === -1) { paint(); return complete(); }
+  S.cur = nxt; paint();
+}
+
+/* ---------------- Check（錯先會用到；啱會自動轉綠） ---------------- */
+function check() {
+  if (S.answered) return next();
+  const c = S.cells[S.cur]; if (!c || !c.val) return;
+  if (norm(c.val) === norm(c.ans)) return greenCell();
+  S.wrongs++; S.combo = 0; updateCombo();
+  logQ().wrong++;
+  SFX.bad(); buzz([30, 40, 30]);
+  const card = $("card"); card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+  c.el.classList.add("badc");
+  if (S.junior && S.wrongs === 2) { doHint(true); }
+  else if (S.junior && S.wrongs >= 4) { S.hint = 1; doHint(true); }
+  const msgs = S.junior
+    ? ["Almost! Try once more 💪", "Here's a little help ↑", "Keep going — you can do it!", "Copy the grey letters ↑"]
+    : ["Not quite — try again", "Still not right. Need a hint?"];
+  setAction("bad", "✕", msgs[Math.min(S.wrongs, msgs.length) - 1], S.junior ? "" : "Tip: check spelling and capital letters.");
+  paint();
+}
+
+/* ---------------- 提示 L1 → L2 ---------------- */
+function doHint(auto) {
+  if (S.answered) return;
+  const c = S.cells[S.cur]; if (!c) return;
+  S.hint = Math.min(2, S.hint + 1);
+  c.ghost = S.hint === 1 ? c.ans.slice(0, Math.max(1, Math.ceil(c.ans.length / 2))) : c.ans;
+  if (c.val && c.ghost.toLowerCase().indexOf(c.val.toLowerCase()) !== 0) c.val = "";
+  $("hint-count").hidden = false; $("hint-count").textContent = S.hint === 1 ? "1/2" : "2/2";
+  $("btn-hint").disabled = S.hint >= 2;
+  if (!auto) { SFX.tick(); setAction("hinted", "💡", S.hint === 1 ? "Here's the first part" : "Here's the full answer", "Type it in — this one will come back later."); }
+  S.combo = 0; updateCombo();
+  paint();
+}
+
+/* ---------------- 完成 ---------------- */
+function logQ() {
+  const id = S.queue[0].id;
+  if (!S.log.has(id)) S.log.set(id, { wrong: 0, hint: false, clean: false });
+  return S.log.get(id);
+}
+function complete() {
+  S.answered = true;
+  const item = S.queue[0], L = logQ();
+  const used = S.hint > 0;
+  if (used) L.hint = true;
+  if (!used && !S.wrongs && !item.re) L.clean = true;
+  $("card").classList.add("win");
+  $("kbwrap").classList.add("hide");
+  $("btn-hint").disabled = true;
+
+  let comboMsg = "";
+  if (!used && !S.wrongs) {
+    S.combo++; S.best = Math.max(S.best, S.combo);
+    comboMsg = COMBO_PRAISE[S.combo] || "";
+  }
+  updateCombo(true);
+
+  /* 進度：用咗提示 → 重排（尾加一格虛線） */
+  const seg = S.segs.find(s => s.id === item.id && !s.state);
+  if (used) {
+    if (seg) seg.state = "hint";
+    S.queue.push({ q: item.q, id: item.id, re: true });
+    S.segs.push({ id: item.id, re: true, state: "" });
+  } else if (seg) seg.state = "ok";
+  renderSegs();
+  const segEls = $("segs").children; const idx = S.segs.indexOf(seg);
+  if (segEls[idx]) { segEls[idx].classList.remove("pop"); void segEls[idx].offsetWidth; segEls[idx].classList.add("pop"); }
+
+  if (comboMsg) { SFX.combo(); buzz([10, 30, 10]); } else { SFX.ok(); buzz(15); }
+  const nextTxt = used ? "Review in 5 minutes" : (S.wrongs ? "Review in 1 day" : ["Review in 3 days", "Review in 6 days", "Review in 2 weeks"][Math.floor(Math.random() * 3)]);
+  if (used) setAction("hinted", "✓", "Correct — hint used", "↻ " + nextTxt);
+  else setAction("ok", "✓", comboMsg || PRAISE[Math.floor(Math.random() * PRAISE.length)], "📅 " + nextTxt);
+  $("fb-side").hidden = false;
+  $("main-label").textContent = "Continue";
+  paint();
+}
+function next() {
+  if (!S.answered) return;
+  S.queue.shift();
+  if (!S.queue.length) return finish();
+  render();
+}
+function updateCombo(bump) {
+  const el = $("combo");
+  el.classList.toggle("on", S.combo >= 2);
+  $("combo-n").textContent = S.combo;
+  if (bump && S.combo >= 2) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+}
+function setAction(kind, icon, title, sub) {
+  const a = $("action");
+  a.className = "action" + (kind ? " " + kind + " show-fb" : "");
+  if (kind) { $("fb-icon").textContent = icon; $("fb-title").textContent = title; $("fb-sub").textContent = sub || ""; }
+  $("fb-side").hidden = true;
+  $("main-label").textContent = "Check";
+}
+
+/* ---------------- 結算 ---------------- */
+function finish(demo) {
+  if (demo) {
+    S.log = new Map(BANK.map((q, i) => [i, { wrong: i === 2 ? 2 : 0, hint: i === 4, clean: i !== 2 && i !== 4 }]));
+    S.best = 6; S.start = Date.now() - 154000;
+  }
+  showScr("scr-result");
+  const total = BANK.length;
+  const clean = [...S.log.values()].filter(x => x.clean).length;
+  const attempts = [...S.log.values()].reduce((n, x) => n + 1 + x.wrong, 0) || 1;
+  const acc = Math.round((total / Math.max(total, attempts)) * 100 * (clean / total * .4 + .6));
+  const secs = Math.round((Date.now() - S.start) / 1000);
+  const perfect = clean === total;
+  const dia = clean >= 10 ? 3 : clean >= 8 ? 2 : clean >= 7 ? 1 : 0;
+  $("r-title").textContent = perfect ? "Perfect lesson!" : clean >= 7 ? "Great work!" : "Lesson complete!";
+  $("r-sub").textContent = perfect ? "No mistakes, no hints. Legendary trainer!" : `${total - clean} to polish — they'll come back for review.`;
+  $("ring-t").textContent = `/ ${total} clean`;
+  const C = 2 * Math.PI * 66, fg = $("ring-fg");
+  fg.style.strokeDasharray = C; fg.style.strokeDashoffset = C;
+  fg.style.stroke = perfect ? "var(--yellow-d)" : "var(--ok)";
+  requestAnimationFrame(() => requestAnimationFrame(() => { fg.style.strokeDashoffset = C * (1 - clean / total); }));
+  countUp($("ring-n"), clean, 1000);
+  document.querySelectorAll(".stat").forEach(s => s.classList.remove("in"));
+  const stats = [...document.querySelectorAll(".stat")];
+  setTimeout(() => { stats[0].classList.add("in"); countUp($("st-acc"), acc, 600, "%"); }, 700);
+  setTimeout(() => { stats[1].classList.add("in"); $("st-time").textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`; }, 850);
+  setTimeout(() => { stats[2].classList.add("in"); countUp($("st-combo"), S.best, 500, "", "🔥 "); }, 1000);
+
+  const rw = $("rewards"); rw.innerHTML = "";
+  [["💎", "Diamonds", dia, "+"], ["⭐", "Partner EXP", clean * 12 + 8, "+"], ["🍓", "Berry for Pikachu", 1, "×"]].forEach(([ic, lb, v, p], i) => {
+    const d = document.createElement("div"); d.className = "rw";
+    d.innerHTML = `<span class="ic">${ic}</span><span class="lb">${lb}</span><span class="val">${p}<span>0</span></span>`;
+    rw.appendChild(d);
+    setTimeout(() => { d.classList.add("in"); countUp(d.querySelector(".val span"), v, 500); SFX.tick(); }, 1250 + i * 180);
+  });
+
+  const mist = $("mist"); mist.innerHTML = "";
+  const miss = BANK.map((q, i) => [q, S.log.get(i)]).filter(([, l]) => l && !l.clean);
+  if (miss.length) {
+    mist.innerHTML = `<h3>To review <a href="#" onclick="return false">See all ›</a></h3><ul>${miss.slice(0, 3).map(([q, l]) =>
+      `<li>${q.type === "w" ? `🔊 <b>${q.word}</b>` : q.sentence.replace("___ ___", `<b>${q.answer}</b>`).replace("___", `<b>${q.answer}</b>`)}
+       <small>${l.hint ? "💡 Hint used" : `✕ ${l.wrong} wrong attempt${l.wrong > 1 ? "s" : ""}`} · ${q.topic}</small></li>`).join("")}</ul>`;
+  }
+  $("btn-draw").innerHTML = dia ? "💎 Lucky Draw" : "💎 Lucky Draw <small style='opacity:.6'>· need 3</small>";
+  SFX.done();
+  if (clean >= 8) confetti();
+}
+function countUp(el, to, ms, suf = "", pre = "") {
+  const t0 = performance.now();
+  const step = (t) => { const p = Math.min(1, (t - t0) / ms); el.textContent = pre + Math.round(to * (1 - Math.pow(1 - p, 3))) + suf; if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function confetti() {
+  const box = $("confetti"); box.innerHTML = "";
+  const cols = ["#ffcb05", "#3b5ca8", "#ee4035", "#1fa34a", "#ff7a1a", "#ab47bc"];
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement("i");
+    p.style.left = Math.random() * 100 + "%"; p.style.background = cols[i % cols.length];
+    p.style.setProperty("--dx", (Math.random() * 160 - 80) + "px"); p.style.setProperty("--rot", (Math.random() * 900 - 450) + "deg");
+    p.style.animationDuration = (1.8 + Math.random() * 1.6) + "s"; p.style.animationDelay = (Math.random() * .5) + "s";
+    box.appendChild(p);
+  }
+  setTimeout(() => { box.innerHTML = ""; }, 4200);
+}
+
+/* ---------------- App 鍵盤 ---------------- */
+function buildKb() {
+  const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+  const kb = $("kb"); kb.innerHTML = "";
+  rows.forEach((r, ri) => {
+    const row = document.createElement("div"); row.className = "kr";
+    if (ri === 1) row.appendChild(Object.assign(document.createElement("span"), { className: "kb-spacer" }));
+    if (ri === 2) row.appendChild(key("⇧", "fn", "shift"));
+    [...r].forEach(ch => row.appendChild(key(ch)));
+    if (ri === 1) row.appendChild(Object.assign(document.createElement("span"), { className: "kb-spacer" }));
+    if (ri === 2) row.appendChild(key("⌫", "fn", "back"));
+    kb.appendChild(row);
+  });
+  const last = document.createElement("div"); last.className = "kr";
+  last.append(key("'", "fn"), key("space", "space", "space"), key("-", "fn"));
+  kb.appendChild(last);
+}
+let SHIFT = false;
+function key(label, cls, act) {
+  const b = document.createElement("button"); b.type = "button"; b.className = "k" + (cls ? " " + cls : ""); b.textContent = label;
+  b.dataset.act = act || ""; b.dataset.ch = act ? "" : label;
+  b.setAttribute("aria-label", act === "back" ? "Delete" : act === "go" ? "Check" : label);
+  const down = (e) => {
+    e.preventDefault(); b.classList.add("down");
+    if (!act && !cls) { const bub = document.createElement("span"); bub.className = "bubble"; bub.textContent = SHIFT ? label.toUpperCase() : label; b.appendChild(bub); }
+    buzz(4);
+  };
+  const up = () => { b.classList.remove("down"); const bub = b.querySelector(".bubble"); if (bub) bub.remove(); };
+  b.addEventListener("pointerdown", down);
+  b.addEventListener("pointerup", () => { up(); press(b); });
+  b.addEventListener("pointerleave", up); b.addEventListener("pointercancel", up);
+  return b;
+}
+function press(b) {
+  const act = b.dataset.act;
+  if (act === "back") return back();
+  if (act === "go") return check();
+  if (act === "space") return type(" ");
+  if (act === "shift") { SHIFT = !SHIFT; b.style.background = SHIFT ? "#fff" : ""; document.querySelectorAll(".k").forEach(k => { if (k.dataset.ch && k.dataset.ch.length === 1 && /[a-z]/i.test(k.dataset.ch)) k.textContent = SHIFT ? k.dataset.ch.toUpperCase() : k.dataset.ch; }); return; }
+  type(SHIFT ? b.dataset.ch.toUpperCase() : b.dataset.ch);
+  if (SHIFT) press(document.querySelector('[data-act="shift"]'));
+}
+
+/* ---------------- 實體鍵盤（電腦） ---------------- */
+document.addEventListener("keydown", (e) => {
+  if ($("dlg").classList.contains("on")) { if (e.key === "Escape") closeDlg(); return; }
+  if (!$("scr-quiz").classList.contains("on")) { if (e.key === "Enter") start(); return; }
+  if (e.key === "Escape") return openDlg();
+  if (e.key === "Enter") { e.preventDefault(); return S.answered ? next() : check(); }
+  if (e.key === "Tab") { e.preventDefault(); return doHint(); }
+  if (e.key === "Backspace") { e.preventDefault(); return back(); }
+  if (e.key.length === 1 && /[a-zA-Z' \-]/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); type(e.key); }
+});
+
+/* ---------------- 綁定 ---------------- */
+$("btn-main").onclick = () => (S.answered ? next() : check());
+$("btn-hint").onclick = () => doHint();
+$("btn-say").onclick = () => say(S.queue[0].q.word);
+$("btn-say-slow").onclick = () => say(S.queue[0].q.word, true);
+$("btn-pron").onclick = () => { const q = S.queue[0].q; tts(q.type === "w" ? q.word : q.sentence.replace(/___( ___)?/, q.answer), .9); };
+$("btn-report").onclick = () => alert("(Prototype) Report sheet opens here.");
+const openDlg = () => $("dlg").classList.add("on"), closeDlg = () => $("dlg").classList.remove("on");
+$("btn-exit").onclick = openDlg; $("dlg-stay").onclick = closeDlg;
+$("dlg-quit").onclick = () => { closeDlg(); alert("(Prototype) Back to Home."); start(); };
+$("dlg").onclick = (e) => { if (e.target.id === "dlg") closeDlg(); };
+$("btn-continue").onclick = start;
+$("btn-draw").onclick = () => alert("(Prototype) Opens Lucky Draw.");
+
+/* ---------------- Prototype 控制：裝置尺寸 ---------------- */
+const DEV = { phone: [440, 956, 62, 34], tablet: [820, 1180, 24, 20], desktop: [1280, 800, 0, 0] };
+let dev = "phone";
+function fit() {
+  const native = window.innerWidth < 700;
+  document.body.classList.toggle("native", native);
+  const f = $("frame"), w = $("frame-wrap");
+  if (native) {
+    f.style.width = innerWidth + "px"; f.style.height = innerHeight + "px"; f.style.transform = "none";
+    f.style.removeProperty("--safe-top"); w.style.width = innerWidth + "px"; w.style.height = innerHeight + "px"; return;
+  }
+  const [W, H, st, sb] = DEV[dev];
+  const s = Math.min((innerWidth - 40) / W, (innerHeight - 76) / H, 1);
+  f.className = "dev-" + dev; f.style.width = W + "px"; f.style.height = H + "px"; f.style.transform = `scale(${s})`;
+  f.style.setProperty("--safe-top", st + "px"); f.style.setProperty("--safe-bottom", sb + "px");
+  w.style.width = W * s + "px"; w.style.height = H * s + "px";
+}
+document.querySelectorAll("[data-dev]").forEach(b => b.onclick = () => {
+  dev = b.dataset.dev; document.querySelectorAll("[data-dev]").forEach(x => x.classList.toggle("on", x === b)); fit();
+});
+$("pb-restart").onclick = start;
+$("pb-result").onclick = () => finish(true);
+$("pb-junior").onclick = (e) => { S.junior = !S.junior; e.target.textContent = "Junior: " + (S.junior ? "on" : "off"); e.target.classList.toggle("on", S.junior); };
+addEventListener("resize", fit);
+$("proto-toggle").onclick = () => document.body.classList.toggle("proto-open");
+
+buildKb(); fit(); start();
+</script>
+</body>
+</html>

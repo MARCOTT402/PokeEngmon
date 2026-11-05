@@ -5,7 +5,9 @@
 | 功能 | 主要檔案 |
 |------|----------|
 | 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`, `sw.js` |
-| 題庫 / 答題 / feedback | `js/quiz.js`, `Q_folder/` |
+| 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
+| 結算畫面（分數圈／stat／錯題預覽） | `js/app.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
+| 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session | `js/sm2.js` |
 | Power Up 改錯 | `js/powerup.js` |

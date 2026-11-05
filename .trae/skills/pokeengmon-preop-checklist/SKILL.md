@@ -710,3 +710,15 @@ Incident (2026-11-05，背包第 4c 段)：(1) 同另一個 session 共用 `js/a
 - 由工作檔抽出嚟嘅片段，插入 repo blob 前一律將 CRLF 轉 LF；commit 前逐個檔 `git cat-file -p :<file>` 數 CRLF，應該係 0（混合或者全 CRLF 都唔准 commit）。
 - 要寫入反斜線字樣（例如 `\r\n`）嘅文字，用 Write 工具寫獨立檔再拼接，唔好經 bash heredoc + Python 字串（雙重 escape 會變真控制字元）。
 - autostash 還原衝突：唔好 `git reset --hard`。stash 會保留；將 ours（stash）／base（stash^1）／theirs（HEAD）三份統一 LF 再 `git merge-file`，寫返工作檔，`git reset -q` 取消 staging，再對 stash 做 `git diff --ignore-cr-at-eol` 確認淨係版本號唔同先 `git stash drop`。
+
+## Rule 71 — 答題 App 鍵盤版面係用戶指定：提示左上、Voice mode 右上、Submit／Next 右下
+
+Incident (2026-11-05，Quiz v2)：第一版將 Check／Continue 放喺鍵盤上面嘅全寬主掣，答完仲會收起鍵盤。用戶畀截圖要求手機／平板鍵盤跟固定版面：鍵盤頂部白色工具列（左＝查看提示、右＝語音模式），3 行 QWERTY（第 3 行左 `'`、右 ⌫），底行 `123`／space／右下 ✓ Submit（答完變 → Next）。
+
+- 觸控（`pointer: coarse`）顯示 App 鍵盤時，`#view-quiz` 加 `kb-on`：內容區 `#quiz-toolbar-before` 同底部 `.qa-main` 全部收起，提交／下一題只靠鍵盤右下 `#qk-go`；回饋條（綠／紅／黃）仍然喺鍵盤上方。
+- 答完**唔好**收起鍵盤（右下鍵變 Next），否則用戶要搵另一粒掣。
+- 鍵盤嘅提示鍵／Submit 鍵狀態要喺 `_syncCheckBtn()` 同步（disabled、Next 字樣、提示次數），新增會改提示／答題狀態嘅路徑都要 call 佢。
+- 桌面（`pointer: fine`）冇 App 鍵盤，用內容區 Hint 掣＋底部 Check／Continue 主掣（顯示 `Enter`／`Ctrl H` 提示）。
+- 驗證：用 mobile preset（會模擬 coarse pointer）試鍵盤；自訂闊度 ≥768 會變 fine pointer，鍵盤會消失係正常。
+
+Skill: Rule 71 added
