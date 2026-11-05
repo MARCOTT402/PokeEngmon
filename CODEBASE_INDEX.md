@@ -16,6 +16,8 @@
 | 捕捉（Three.js） | `js/capture.js` |
 | 扭蛋 | `js/gacha.js` |
 | 圖鑑 | `js/pokedex.js` |
+| 育成（飽肚值／拍檔／道具） | `js/pet.js` |
+| HP／狀態／用藥規則（server RPC + guest 本地） | `js/care.js`, `tools/_test_care.js`, `supabase/migrations/supabase-migrate-20261105c-care-status-phase1.sql` |
 | 數值 / 進化 / moves | `js/pokemon.js`, `js/data.js`, `js/gens-data.js` |
 | GenPack | `js/genpack.js` |
 | Streak / Gym | `js/gym.js` |

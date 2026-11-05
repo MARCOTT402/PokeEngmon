@@ -20,7 +20,9 @@ const Pet = (() => {
   const MS_PER_HP = (DECAY_HOURS * 3600 * 1000) / DECAY_HP;  // 每 1 HP 所需毫秒（15 分鐘）
   const DEFAULT_HEALTH = 100;
   const MAX_SETTLE_DAYS = 60;     // 防止離線超久時無限補扣
-  const ITEM_KINDS = ["food", "premium", "revive", ...STONE_KINDS];
+  /* 狀態系統第一期：7 種藥（同 Care.MED_KINDS 一致；pet.js 先載入，所以喺度寫死） */
+  const MED_KINDS = ["potion", "super_potion", "antidote", "burn_heal", "paralyze_heal", "awakening", "ice_heal"];
+  const ITEM_KINDS = ["food", "premium", "revive", ...STONE_KINDS, ...MED_KINDS];
 
   /* 結算時區：固定 UTC+8。HKT 無夏令時間，所以恆定 +8h。 */
   const HKT_MS = 8 * 3600 * 1000;
@@ -141,6 +143,7 @@ const Pet = (() => {
     if (typeof p.decayDay !== "string" || !p.decayDay) p.decayDay = dayKey();
     /* 消耗錨點：舊存檔冇 updatedAt 就由而家起計，唔追溯補扣 */
     if (typeof p.updatedAt !== "string" || !p.updatedAt) touch(p);
+    if (window.Care) Care.ensure(p);   /* HP／狀態欄位（舊存檔：飽肚值 0 → Faint） */
     return p;
   }
 
@@ -150,6 +153,7 @@ const Pet = (() => {
     if (!p) return null;
     p.settledDay = dayKey();
     touch(p);
+    p.careAt = p.updatedAt;   /* HP 流失（燒傷／中毒）都由而家起計 */
     saveState();
     return p;
   }
@@ -159,8 +163,10 @@ const Pet = (() => {
     return p ? p.health : DEFAULT_HEALTH;
   }
 
+  /* Faint = HP 0（飽肚值 0 會令 HP 0） */
   function isFaint(entry) {
-    return healthOf(entry) <= 0;
+    const p = ensure(entry);
+    return !!p && (window.Care ? Care.isFaint(entry) : p.health <= 0);
   }
 
   /* 今日第一次餵食就會累積 Streak */
@@ -173,13 +179,12 @@ const Pet = (() => {
   function status(entry) {
     const p = ensure(entry);
     const frozen = clockSuspicious();
-    if (!p) return { health: DEFAULT_HEALTH, faint: false, hungry: false, fed: false, streak: 0, frozen };
+    if (!p) return { health: DEFAULT_HEALTH, faint: false, hungry: false, frozen, status: null };
     return {
-      health: p.health,
-      faint: p.health <= 0,
-      fed: p.lastFedDay === dayKey(),
+      health: p.health,                       /* 飽肚值 */
+      faint: isFaint(entry),
       hungry: p.health < 100,
-      streak: p.streak,
+      status: window.Care ? Care.statusKey(p) : null,
       frozen
     };
   }
@@ -198,36 +203,17 @@ const Pet = (() => {
       if (fresh) { ensure(entry); saveState(); }
       return false;
     }
-    const p = ensure(entry);
-    const today = dayKey(now);
-    let changed = false;
-
-    /* 逐日補算已完結嘅日子（離線／多日冇開 App）：只負責 streak */
-    let key = shiftDay(p.settledDay, 1);
-    for (let i = 0; i < MAX_SETTLE_DAYS && key < today; i++) {
-      if (p.lastFedDay !== key) {                        // 該日冇餵 → 斷 streak
-        p.streak = 0;
-      }
-      p.settledDay = key;
-      changed = true;
-      key = shiftDay(key, 1);
-    }
-
-    /* 連續自然消耗（整數扣、餘數累積） */
+    st.entries.forEach(e => ensure(e));
+    /* 餵食 streak 已取消；飽肚值／HP／狀態一律交 Care 規則（同 server care_settle 一致） */
     const nowMs = (now !== undefined) ? _tsOf(now) : nowTs();
-    if (_applyDecay(p, nowMs)) changed = true;
-
+    const changed = window.Care ? Care.settleAll(st.entries, st.activeUid, nowMs) : _applyDecay(ensure(entry), nowMs);
     if (changed || fresh) saveState();
     return changed;
   }
 
-  /* 距離下一次 −1 HP 仲有幾多毫秒（排程用，唔需要輪詢） */
+  /* 狀態系統：HP 每分鐘變（燒傷／中毒）、睡眠倒數 → 頁面開住時每分鐘更新一次 */
   function msUntilNextDecay() {
-    const entry = getActiveEntry();
-    const p = entry ? ensure(entry) : null;
-    if (!p || p.health <= 0) return MS_PER_HP;
-    const waited = nowTs() - _anchorMs(p);
-    return MS_PER_HP - (waited % MS_PER_HP);
+    return 60 * 1000 - (nowTs() % (60 * 1000));
   }
 
   /* ---------- 背包 ---------- */
@@ -256,9 +242,11 @@ const Pet = (() => {
     const p = ensure(entry);
     if (!p || countOf(kind) <= 0) return false;
     if (STONE_KINDS.includes(kind)) return canStoneEvolve(entry, kind).ok;
-    if (kind === "revive") return p.health <= 0;
-    if (p.health <= 0) return false;           // 食物救唔到 Faint
-    return p.health < 100;                     // 血滿停餵
+    if (kind === "revive") return isFaint(entry);
+    if (isFaint(entry)) return false;          // Faint 只可以用 Revival
+    if (MED_KINDS.includes(kind)) return true; // 藥：HP 滿都照用（計入過量）
+    /* 食物：麻痹／睡眠／冰凍唔可以食；飽肚值 100 都可以餵（會嘔吐） */
+    return !["par", "slp", "frz"].includes(p.status);
   }
 
   /* 回傳 { ok, msg, heal }；進化石成功時另有 evolvedFrom / evolvedTo / branch / stone */
@@ -283,27 +271,17 @@ const Pet = (() => {
         stone: kind
       };
     }
-    if (kind === "revive") {
-      if (p.health > 0) return { ok: false, msg: "Revival only works when fainted" };
-      addItem("revive", -1);
-      p.health = DEFAULT_HEALTH;
-      if (p.lastFedDay !== dayKey()) { p.lastFedDay = dayKey(); p.streak++; }
-      touch(p);
-      saveState();
-      return { ok: true, msg: "Revived!", heal: DEFAULT_HEALTH };
-    }
-    /* 餵前先結算錨點起計嘅消耗，避免餵食動作重置錨點而蝕扣 */
-    _applyDecay(p, (now !== undefined) ? _tsOf(now) : nowTs());
-    if (p.health <= 0) return { ok: false, msg: "Food cannot wake a fainted Pokémon" };
-    if (p.health >= 100) return { ok: false, msg: "Health is full — no need to feed" };
-
-    const heal = kind === "premium" ? 50 : 25;
+    const nowMs = (now !== undefined) ? _tsOf(now) : nowTs();
+    runDailyCheck(now);
+    const name = entryCurrentSpecies(entry)[1];
+    const res = (kind === "food" || kind === "premium")
+      ? Care.feedRule(p, kind)
+      : Care.useRule(p, kind, nowMs);
+    if (!res.ok) return { ok: false, msg: Care.REASON_TEXT[res.reason] || "Can't use that now" };
     addItem(kind, -1);
-    p.health = Math.min(100, p.health + heal);
-    if (p.lastFedDay !== dayKey()) { p.lastFedDay = dayKey(); p.streak++; }
-    touch(p);
     saveState();
-    return { ok: true, msg: `+${heal} HP`, heal };
+    const label = Care.MED_INFO[kind] ? Care.MED_INFO[kind].name : (kind === "premium" ? "Premium Food" : "Food");
+    return { ok: true, event: res.event, msg: Care.eventText(res.event, name, label) };
   }
 
   /* ---------- 回合掉落 ---------- */
@@ -338,7 +316,7 @@ const Pet = (() => {
   return {
     ensure, adoptActive, healthOf, isFaint, fedToday, status,
     runDailyCheck, msUntilNextDecay, items, addItem, countOf, canUse, useItem, rollDrops,
-    dayKey, minuteOfDay,
+    dayKey, minuteOfDay, nowTs, MED_KINDS,
     setClockOffset, clockOffset, clockSuspicious,
     ITEM_KINDS,
     LIMITS: { DECAY_HP, DECAY_HOURS, MS_PER_HP, DEFAULT_HEALTH, HKT_MS }

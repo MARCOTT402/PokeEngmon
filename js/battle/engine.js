@@ -199,10 +199,13 @@ const Battle = (() => {
       types: speciesTypes(dexId),
       stats,
       maxHp: stats.hp,
-      hp: stats.hp,
+      /* 狀態系統第一期：玩家隊伍帶住育成嘅 HP（千分比）同主要狀態入場；AI 隊伍冇呢啲欄位 = 滿血 */
+      hp: careHp(entry, stats.hp),
       moves,
-      status: null,          /* burn/paralyze/poison/toxic/sleep/freeze/confusion */
-      statusTimer: 0,        /* sleep/freeze/toxic 計數 */
+      status: careStatus(entry),   /* burn/paralyze/poison/toxic/sleep/freeze */
+      statusTimer: careSleepTurns(entry),   /* sleep 剩餘回合（帶睡眠入場重新抽 1–3）/ toxic 計數 */
+      severePoison: entry.battleStatus === "psn" && Number(entry.battlePoison) >= 2,   /* 嚴重中毒：毒傷 ×2 */
+      odTurns: [], odCount: 0, odHits: 0,   /* 戰鬥內用藥過量追蹤 */
       statStages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
       volatile: { flinch: false, confusion: 0, substitute: 0, flashFire: false },
       /* 特性：entry 已經 roll 咗嘅就用嗰個；未 roll（舊存檔／新捕捉）先用 slot 1 */
@@ -210,6 +213,22 @@ const Battle = (() => {
         ? entry.ability
         : ((typeof abilityOf === "function") ? abilityOf(dexId) : null)
     };
+  }
+
+  /* 育成狀態 → 戰鬥：HP 千分比換實數（未 Faint 最少 1） */
+  function careHp(entry, maxHp) {
+    if (entry.battleHp == null) return maxHp;
+    const pm = Math.max(0, Math.min(1000, Number(entry.battleHp)));
+    if (pm <= 0) return 0;
+    return Math.max(1, Math.round(maxHp * pm / 1000));
+  }
+  function careStatus(entry) {
+    return { brn: "burn", par: "paralyze", slp: "sleep", frz: "freeze", psn: "poison" }[entry.battleStatus] || null;
+  }
+  /* 帶睡眠入場：1–3 回合。唔用 BattleRng（PvP 兩邊建隊次序唔同會亂 RNG），用 entry 資料決定，兩邊一致 */
+  function careSleepTurns(entry) {
+    if (entry.battleStatus !== "slp") return 0;
+    return 1 + ((Number(entry.dexId) || 0) + (Number(entry.level) || 0)) % 3;
   }
 
   return {

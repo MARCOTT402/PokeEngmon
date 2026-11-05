@@ -2870,6 +2870,25 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pc-hpbar.mid > i{background:linear-gradient(90deg,#ffb340,#ffd98a)}
 .pc-hpbar.low > i{background:linear-gradient(90deg,#ff5c6c,#ff9aa6)}
 .pc-hptext{font-size:10px;color:#7a8299;margin-top:3px}
+/* 狀態系統第一期：HP + 飽肚值兩行（標籤｜棒｜數值）、狀態 pill、連續答題閃電、7 種藥 */
+.pc-pills{justify-content:flex-start;right:auto}
+.pc-pill.status{display:inline-flex;align-items:center;gap:4px;border:0;font:inherit;font-weight:800;background:#fff3e0;color:#a85a00;cursor:pointer}
+.pc-pill.status img{height:9px;image-rendering:pixelated}
+.pc-pill.streak{display:inline-flex;align-items:center;gap:3px;font-weight:800}
+.pc-bolt{width:12px;height:12px}
+.pc-hprow{display:grid;grid-template-columns:52px 1fr 54px;align-items:center;gap:6px;margin-top:3px}
+.pc-hpk{font-size:10px;font-weight:900;color:#4a4a52;text-transform:uppercase;letter-spacing:.02em}
+.pc-hpv{font-size:10px;font-weight:900;color:#4a4a52;text-align:right;font-variant-numeric:tabular-nums}
+.pc-hprow .pc-hpbar{background:#fff;border:1.5px solid #4a4a52}
+.pc-battlehp > i{background:linear-gradient(90deg,#22a55a,#59d67f)}
+.pc-battlehp.mid > i{background:#f5a524}
+.pc-battlehp.low > i{background:#e5383b}
+.pc-battlehp.faint{background:#e4e4e8}
+.pc-battlehp.faint > i{background:#9a9aa2}
+.pc-items.meds{flex-wrap:wrap;margin-top:8px;gap:6px}
+.pc-item.med{width:70px;padding:6px 3px 5px}
+.pc-item.med img{width:30px;height:30px;image-rendering:pixelated}
+.pc-meds-note{font-size:10px;color:#8a93a8;text-align:center;margin-top:4px}
 .pc-decay{position:absolute;right:10px;top:8px;font-size:10px;font-weight:700;color:#8a93a8;letter-spacing:.02em}
 
 .pc-floatwrap{
@@ -4474,6 +4493,9 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sign-hpbar.low > i { background: #e5383b; }
 .ph-sign-hpbar.faint > i { background: #9a9aa2; }
 .ph-sign-hpbar.faint { background: #e4e4e8; }
+/* HP 旁狀態 icon（燒傷／麻痹／睡眠／冰凍／中毒／嚴重中毒）：撳落去睇說明／倒數 */
+.ph-sign-status { border: 0; background: none; padding: 0; margin-left: 2px; cursor: pointer; vertical-align: middle; line-height: 0; }
+.ph-sign-status img { height: 11px; image-rendering: pixelated; }
 .ph-sign-stat-v {
   flex: none; min-width: 48px; text-align: right;
   font-size: 11px; font-weight: 900; color: #4a4a52; font-variant-numeric: tabular-nums;

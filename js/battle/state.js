@@ -90,6 +90,12 @@ const BattleState = (() => {
     ailment = AILMENT_ALIAS[ailment] || ailment;
     /* 特性免疫（Insomnia/Limber/Immunity 等） */
     if ((STATUS_IMMUNE[defender.ability] || []).includes(ailment)) return false;
+    /* 混亂 = 臨時效果（2–5 回合，換走／戰鬥完就消失），唔佔主要狀態 */
+    if (ailment === "confusion") {
+      if (defender.volatile.confusion > 0) return false;
+      defender.volatile.confusion = 2 + Math.floor(BattleRng.next() * 4);
+      return true;
+    }
     /* 已有 status 唔再覆蓋（除咗 toxic 覆蓋 poison） */
     if (defender.status) {
       if (ailment === "toxic" && defender.status === "poison") { defender.status = "toxic"; defender.statusTimer = 0; return true; }
@@ -392,7 +398,8 @@ const BattleState = (() => {
       p.hp = Math.max(0, p.hp - dmg);
       log(state, `${p.name} is hurt by its burn!`);
     } else if (p.status === "poison") {
-      const dmg = Math.floor(p.maxHp / 8);
+      /* 嚴重中毒（用藥過量）：現有中毒數值 ×2 */
+      const dmg = Math.floor(p.maxHp / 8) * (p.severePoison ? 2 : 1);
       p.hp = Math.max(0, p.hp - dmg);
       log(state, `${p.name} is hurt by poison!`);
     } else if (p.status === "toxic") {
@@ -528,24 +535,85 @@ const BattleState = (() => {
     }[stat] || stat;
   }
 
-  /* ---------- 道具（Inferno AI 用 Potion ×1） ---------- */
+  /* ---------- 道具（狀態系統第一期：玩家背包 7 種藥 + Revival） ----------
+     效果同育成一樣；一回合一件（佔回合）；回復藥只回 HP 唔解狀態；HP 滿照用照扣。
+     雙方客戶端各自模擬，所以呢度寫嘅 log 對手畫面都會見到（PvP）。 */
   const ITEMS = {
-    "potion": { heal: 20, label: "Potion" },
-    "full-restore": { heal: 999, cure: true, label: "Full Restore" }
+    potion:        { label: "Potion",        healPct: 25, med: true },
+    super_potion:  { label: "Super Potion",  healPct: 50, med: true },
+    antidote:      { label: "Antidote",      cures: ["poison", "toxic"], med: true },
+    burn_heal:     { label: "Burn Heal",     cures: ["burn"], med: true },
+    paralyze_heal: { label: "Paralyze Heal", cures: ["paralyze"], med: true },
+    awakening:     { label: "Awakening",     cures: ["sleep"], med: true },
+    ice_heal:      { label: "Ice Heal",      cures: ["freeze"], med: true },
+    revive:        { label: "Revival",       revive: true }
   };
+  const CURE_LOG = {
+    poison: n => `${n} was cured of its poisoning!`, toxic: n => `${n} was cured of its poisoning!`,
+    burn: n => `${n}'s burn was healed!`, paralyze: n => `${n} was cured of paralysis!`,
+    sleep: n => `${n} woke up!`, freeze: n => `${n} thawed out!`
+  };
+  const aOrAn = w => /^[AEIOU]/i.test(w) ? "an" : "a";
 
-  function useItem(state, side, itemId, actorName) {
-    const p = active(state, side);
+  /* targetIdx：Revival 用（救後備嘅 Faint 隊員）；其他藥一律用喺出場中嗰隻 */
+  function useItem(state, side, itemId, actorName, targetIdx) {
     const it = ITEMS[itemId];
-    if (!it || !p || p.hp <= 0) return false;
-    /* 先講邊個用咗咩道具，再講回復幾多 */
-    if (actorName) log(state, `${actorName} used a ${it.label}!`);
-    const before = p.hp;
-    p.hp = Math.min(p.maxHp, p.hp + it.heal);
-    const healed = p.hp - before;
-    if (it.cure && p.status) p.status = null;
-    log(state, `${p.name} recovered ${healed} HP!`);
+    if (!it) return false;
+    const team = state[side].team;
+    const p = it.revive ? team[targetIdx] : active(state, side);
+    if (!p) return false;
+    if (it.revive ? p.hp > 0 : p.hp <= 0) return false;
+    /* 先講邊個用咗咩道具，再講效果 */
+    if (actorName) log(state, `${actorName} used ${aOrAn(it.label)} ${it.label}!`);
+    if (it.revive) {
+      Object.assign(p, { hp: p.maxHp, status: null, statusTimer: 0, severePoison: false, odTurns: [], odCount: 0, odHits: 0 });
+      log(state, `${p.name} was revived!`);
+      return true;
+    }
+    let effect = false;
+    if (it.healPct) {
+      const before = p.hp;
+      p.hp = Math.min(p.maxHp, p.hp + Math.max(1, Math.round(p.maxHp * it.healPct / 100)));
+      if (p.hp > before) { log(state, `${p.name} recovered ${p.hp - before} HP!`); effect = true; }
+    }
+    if (it.cures && it.cures.includes(p.status)) {
+      const old = p.status;
+      p.status = null; p.statusTimer = 0; p.severePoison = false; p.odCount = 0;
+      log(state, CURE_LOG[old](p.name));
+      effect = true;
+    }
+    if (!effect) log(state, "But it had no effect...");
+    if (it.med) overdose(state, p);
     return true;
+  }
+
+  /* 戰鬥內用藥過量：5 回合內 3 次 →
+     冇主要狀態：中毒 → 中毒期間再 3 次：嚴重中毒 → 再 3 次：Faint
+     已有燒傷／麻痹／睡眠／冰凍：唔覆蓋，改為一次性扣血（−25% → −25% → Faint） */
+  function overdose(state, p) {
+    const t = state.turn;
+    p.odTurns = (p.odTurns || []).concat(t).filter(x => x > t - 5).slice(-3);
+    const poisoned = p.status === "poison" || p.status === "toxic";
+    if (poisoned) {
+      p.odCount = (p.odCount || 0) + 1;
+      if (p.odCount < 3) return;
+      p.odCount = 0; p.odTurns = [];
+      if (p.severePoison) { p.hp = 0; log(state, `${p.name} took too much medicine and fainted!`); }
+      else { p.status = "poison"; p.statusTimer = 0; p.severePoison = true; log(state, `${p.name} is badly poisoned from too much medicine!`); }
+      return;
+    }
+    if (p.odTurns.length < 3) return;
+    p.odTurns = [];
+    if (p.status) {
+      p.odHits = (p.odHits || 0) + 1;
+      if (p.odHits >= 3) { p.hp = 0; log(state, `${p.name} took too much medicine and fainted!`); return; }
+      p.hp = Math.max(0, p.hp - Math.floor(p.maxHp / 4));
+      log(state, `${p.name} was hurt by too much medicine!`);
+      if (p.hp <= 0) log(state, `${p.name} fainted!`);
+    } else {
+      p.status = "poison"; p.statusTimer = 0; p.severePoison = false; p.odCount = 0;
+      log(state, `${p.name} was poisoned by too much medicine!`);
+    }
   }
 
   return {

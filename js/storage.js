@@ -511,22 +511,31 @@ function localEntryFromServer(e) {
     ability: (typeof e.ability === "string" && e.ability) ? e.ability : undefined,
     obtainedAt: e.obtained_at
   });
-  /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0 */
-  out.pet = (e.pet_health == null) ? null : {
-    health: Number(e.pet_health) || 0,
-    streak: Number(e.pet_streak) || 0,
-    lastFedDay: e.pet_last_fed_day || "",
+  /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0
+     狀態系統第一期：pet_health = 飽肚值；HP／狀態全部由 server（care RPC）寫 */
+  out.pet = (e.pet_health == null && e.hp_permille == null) ? null : {
+    health: e.pet_health == null ? 100 : (Number(e.pet_health) || 0),
     settledDay: e.pet_settled_day || "",
     decayDay: e.pet_decay_day || "",
-    updatedAt: e.pet_updated_at || null
+    updatedAt: e.pet_updated_at || null,
+    hp: e.hp_permille == null ? ((Number(e.pet_health) || 0) <= 0 && e.pet_health != null ? 0 : 1000) : Number(e.hp_permille),
+    status: e.status || null,
+    poison: Number(e.poison_level) || 0,
+    statusSince: e.status_since || null,
+    careAt: e.care_at || null,
+    medLog: Array.isArray(e.med_log) ? e.med_log : [],
+    od: Number(e.od_count) || 0,
+    vomit: Number(e.vomit_count) || 0
   };
   return out;
 }
 
-/* 合併 pet：較新 updatedAt 為準；decayDay 只可前進（防倒撥重扣） */
+/* 合併 pet：狀態系統第一期起 server 權威 —— 雲端有 HP 欄位就直接用雲端；
+   舊 row（未跑 migration）先沿用「較新 updatedAt 為準」 */
 function mergePet(localPet, serverPet) {
   if (!serverPet) return localPet || null;
   if (!localPet) return serverPet;
+  if (serverPet.hp != null) return serverPet;
   const lt = localPet.updatedAt ? Date.parse(localPet.updatedAt) : 0;
   const st = serverPet.updatedAt ? Date.parse(serverPet.updatedAt) : 0;
   const base = (lt && lt > st) ? localPet : serverPet;
@@ -541,9 +550,14 @@ function mergePet(localPet, serverPet) {
    玩家自訂配招存 st.moveLoadouts[uid]，因為 pull 重推 moves 會還原預設，
    要喺重推後 apply 返。 */
 
-/* pull / adopt 重推後還原玩家配招（配招唔合法 → 保留預設） */
-function applyMoveLoadout(entry) {
+/* pull / adopt 重推後還原玩家配招（配招唔合法 → 保留預設）
+   serverPref：雲端 user_entries.move_loadout（有就以雲端為準，並寫返本地 cache） */
+function applyMoveLoadout(entry, serverPref) {
   const st = loadState();
+  if (Array.isArray(serverPref) && serverPref.length) {
+    st.moveLoadouts = st.moveLoadouts || {};
+    st.moveLoadouts[entry.uid] = serverPref.slice(0, 4);
+  }
   const pref = st.moveLoadouts && st.moveLoadouts[entry.uid];
   const pool = new Set(entry.knownMoves || entry.moves || []);
   if (Array.isArray(pref) && pref.length && pref.every(m => pool.has(m))) {
@@ -562,6 +576,10 @@ function setEntryMoves(entry, slugs) {
   st.moveLoadouts = st.moveLoadouts || {};
   st.moveLoadouts[entry.uid] = clean;
   saveState();
+  /* 上雲：log out／換機都保留自訂配招 */
+  if (typeof Sync !== "undefined" && Sync.patchEntry && Sync.isEnabled && Sync.isEnabled()) {
+    try { Sync.patchEntry(entry.uid, { move_loadout: clean }); } catch (e) {}
+  }
   return { ok: true };
 }
 
@@ -569,7 +587,7 @@ function setEntryMoves(entry, slugs) {
    server id 先係 RPC 認嘅），唔存在就新加。activeUid 指向舊 uid 會一併修正。 */
 function adoptServerEntry(serverRow) {
   const st = loadState();
-  const mapped = applyMoveLoadout(localEntryFromServer(serverRow));
+  const mapped = applyMoveLoadout(localEntryFromServer(serverRow), serverRow && serverRow.move_loadout);
   /* 一條鏈可以有多個 entry（完全進化後可再收集）：
      先用 uid 精準對；對唔到先喺同鏈入面揀最近獲得嗰隻（即啱啱 obtain 嗰個） */
   let idx = st.entries.findIndex(e => e.uid === mapped.uid);

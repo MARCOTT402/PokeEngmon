@@ -248,8 +248,7 @@ const App = {
       /* 電子寵物狀態：只跟當前拍檔，其他寶可夢唔受影響 */
       const petSt = window.Pet ? Pet.status(entry) : null;
 
-      /* HP：上限 = 戰鬥引擎 stats.hp（跟等級／個體值／努力值／性格）。
-         狀態系統（hp_permille）未落地前：飽肚值 0 = Faint → 0，否則滿血 */
+      /* HP：上限 = 戰鬥引擎 stats.hp；現值 = hp_permille（狀態系統第一期） */
       this._renderHeroBattleHp(entry, cur[0], level, petSt);
       const hpBar = document.getElementById("hero-hpbar");
       const hpNote = document.getElementById("hero-pet-note");
@@ -264,7 +263,7 @@ const App = {
           if (petSt.frozen) {
             hpNote.textContent = "Time check needed — reconnect to sync";
           } else if (petSt.faint) {
-            hpNote.textContent = "Fainted — open Partner Care to use a Revival";
+            hpNote.textContent = "Fainted";   /* spec：Faint 唔顯示復活提示 */
           } else if (petSt.health >= 100) {
             hpNote.textContent = "Full";
           } else {
@@ -401,14 +400,14 @@ const App = {
           <div class="pc-ground"></div>
           <div class="pc-walker"><img id="pc-sprite" alt="partner"></div>
           <div class="pc-pills">
-            <span class="pc-pill" id="pc-fed">Not fed today</span>
-            <span class="pc-pill streak" id="pc-streak">🔥 0</span>
+            <button type="button" class="pc-pill status" id="pc-status" hidden></button>
+            <span class="pc-pill streak" id="pc-streak" title="Practice streak"><svg class="pc-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 L7.5 11.5 L11 12 L8 22 L16.5 10.5 L12 10.8 L14.5 2 Z" fill="#ffd54f" stroke="#3d1f00" stroke-width="1.4" stroke-linejoin="round"/></svg><b>0</b></span>
           </div>
           <div class="pc-hpwrap">
-            <div class="pc-hpbar" id="pc-hpbar"><i id="pc-hpfill"></i></div>
-            <div class="pc-hptext" id="pc-hptext">Health 100 / 100</div>
+            <div class="pc-hprow"><span class="pc-hpk">HP</span><div class="pc-hpbar pc-battlehp" id="pc-battlehp"><i id="pc-battlehpfill"></i></div><span class="pc-hpv" id="pc-battlehptext">—</span></div>
+            <div class="pc-hprow"><span class="pc-hpk">Fullness</span><div class="pc-hpbar" id="pc-hpbar"><i id="pc-hpfill"></i></div><span class="pc-hpv" id="pc-hptext">100/100</span></div>
           </div>
-          <div class="pc-decay">Continuous decay −100 per 25h</div>
+          <div class="pc-decay">Fullness −4% per hour</div>
           <div class="pc-floatwrap" id="pc-float"></div>
         </div>
         <div class="pc-state" id="pc-state"></div>
@@ -427,6 +426,14 @@ const App = {
             <b class="pc-count" data-count="revive">0</b>
           </div>
         </div>
+        <div class="pc-items meds" id="pc-meds">
+          ${Care.MED_KINDS.map(kind => `
+          <div class="pc-item med" data-kind="${kind}" title="${Care.MED_INFO[kind].effect}">
+            <img src="${Care.ITEM_SPRITE(Care.MED_INFO[kind].sprite)}" alt="${Care.MED_INFO[kind].name}"><span>${Care.MED_INFO[kind].name}</span>
+            <b class="pc-count" data-count="${kind}">0</b>
+          </div>`).join("")}
+        </div>
+        <div class="pc-meds-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon.</div>
         <div class="pc-items stones" id="pc-stones">
           ${STONE_KINDS.map(kind => `
           <div class="pc-item stone" data-kind="${kind}">
@@ -500,15 +507,11 @@ const App = {
 
     this._syncPetCare();
 
-    /* 開啟時即時結算：補扣錨點起計嘅連續消耗，並顯示扣血浮字 */
-    const before = Pet.healthOf(getActiveEntry());
+    /* 開啟時即時結算（登入：server care_settle；guest：本地） */
     Pet.runDailyCheck();
     this._syncPetCare();
-    if (Pet.healthOf(getActiveEntry()) < before) {
-      this._pcFloat("−50", "decay");
-      this._syncPetCloud();
-    }
     this.renderHome();
+    if (window.Care) Care.settle().then(() => { this._syncPetCare(); this.renderHome(); }).catch(() => {});
   },
 
   _pcFloat(text, cls) {
@@ -518,12 +521,25 @@ const App = {
     setTimeout(() => { box.innerHTML = ""; }, 1200);
   },
 
-  _pcUse(kind) {
+  async _pcUse(kind) {
     const entry = getActiveEntry();
-    const res = Pet.useItem(kind, entry);
     this._pcSel = null;
+    if (window.Care && !STONE_KINDS.includes(kind) && Care.online()) {
+      if (this._pcBusy) return;
+      this._pcBusy = true;
+      const name = entryCurrentSpecies(entry)[1];
+      const out = (kind === "food" || kind === "premium") ? await Care.feed(entry, kind) : await Care.use(entry, kind);
+      this._pcBusy = false;
+      const label = Care.MED_INFO[kind] ? Care.MED_INFO[kind].name : (kind === "premium" ? "Premium Food" : (kind === "revive" ? "Revival" : "Food"));
+      if (out && out.ok) this._pcFloat(Care.eventText(out.event, name, label), /^(vomit|faint|od_)/.test(out.event) ? "bad" : "good");
+      else this._pcToast(Care.REASON_TEXT[out && out.reason] || "Can't use that now");
+      this._syncPetCare();
+      this.renderHome();
+      return;
+    }
+    const res = Pet.useItem(kind, entry);
     if (res.ok) {
-      this._pcFloat(res.msg, "good");
+      this._pcFloat(res.msg, /^(vomit|faint|od_)/.test(res.event || "") ? "bad" : "good");
       this.renderHome();
       this._syncPetCloud();
       /* 石進化：branch / stone_used 要上雲，否則 pull 重推會退化 */
@@ -581,19 +597,36 @@ const App = {
       wrap.classList.remove("mid", "low", "faint");
       return;
     }
-    let max = 0;
-    try {
-      const st = (typeof calcStats === "function") ? calcStats(dexId, level, entry.ivs, entry.evs, entry.nature) : null;
-      max = st && st.hp ? st.hp : 0;
-    } catch (e) { max = 0; }
-    const faint = !!(petSt && petSt.faint);
-    const cur = faint ? 0 : max;
-    const pct = max > 0 ? (cur / max) * 100 : 0;
+    const hp = window.Care ? Care.hpOf(entry) : { cur: 0, max: 0, pct: 0, faint: false };
+    const faint = hp.faint;
+    const pct = hp.max > 0 ? hp.pct : 0;
     fill.style.width = pct + "%";
-    val.textContent = max > 0 ? `${cur}/${max}` : "—";
+    val.textContent = hp.max > 0 ? `${hp.cur}/${hp.max}` : "—";
     wrap.classList.toggle("faint", faint);
     wrap.classList.toggle("mid", !faint && pct >= 20 && pct <= 50);
     wrap.classList.toggle("low", !faint && pct < 20);
+    /* 狀態 icon：撳落去 → 睡眠／冰凍顯示倒數，其他顯示「持續中，需用藥解除」 */
+    const stBtn = document.getElementById("hero-status");
+    if (stBtn) {
+      const key = window.Care && entry.pet ? Care.statusKey(entry.pet) : null;
+      stBtn.hidden = !key || faint;
+      if (key) {
+        stBtn.querySelector("img").src = `assets/battle/ui/status-${Care.STATUS_INFO[key].icon}.png`;
+        stBtn.onclick = (ev) => { ev.stopPropagation(); this.toast(this._statusInfoText(entry)); };
+      }
+    }
+  },
+
+  /* 狀態說明（主頁 icon／Partner Care 共用） */
+  _statusInfoText(entry) {
+    const p = entry && entry.pet; if (!p || !window.Care) return "";
+    const key = Care.statusKey(p); if (!key) return "";
+    const info = Care.STATUS_INFO[key];
+    if (key === "slp" || key === "frz") {
+      const left = Math.ceil(Care.sleepLeftMs(p) / 60000);
+      return `${info.label} — ${key === "slp" ? "wakes up" : "thaws"} in ${left} min. ${key === "slp" ? "Awakening" : "Ice Heal"} fixes it now.`;
+    }
+    return `${info.label} — lasts until cured. ${info.note}`;
   },
 
   /* 同步育成彈窗三層內容（唔重建 DOM，避免動畫閃） */
@@ -614,9 +647,11 @@ const App = {
         sprite.src = want;
       }
     }
+    const faint = Pet.isFaint(entry);
     const stage = document.getElementById("pc-stage");
-    if (stage) stage.classList.toggle("faint", p.health <= 0);
+    if (stage) stage.classList.toggle("faint", faint);
 
+    /* 飽肚值條 */
     const bar = document.getElementById("pc-hpbar");
     if (bar) {
       bar.classList.toggle("mid", p.health > 25 && p.health <= 50);
@@ -625,26 +660,51 @@ const App = {
     const fill = document.getElementById("pc-hpfill");
     if (fill) fill.style.width = Math.max(0, p.health) + "%";
     const hpText = document.getElementById("pc-hptext");
-    if (hpText) hpText.textContent = `Health ${Math.max(0, p.health)} / 100`;
+    if (hpText) hpText.textContent = `${Math.max(0, p.health)}/100`;
 
-    const fed = document.getElementById("pc-fed");
-    if (fed) fed.textContent = p.lastFedDay === dayQ ? "Fed today" : "Not fed today";
-    const streak = document.getElementById("pc-streak");
-    if (streak) streak.textContent = "🔥 " + p.streak;
+    /* HP 條：>50% 綠、20–50% 黃、<20% 紅、Faint 灰 */
+    const hp = Care.hpOf(entry);
+    const hbar = document.getElementById("pc-battlehp");
+    if (hbar) {
+      hbar.classList.toggle("faint", hp.faint);
+      hbar.classList.toggle("mid", !hp.faint && hp.pct >= 20 && hp.pct <= 50);
+      hbar.classList.toggle("low", !hp.faint && hp.pct < 20);
+    }
+    const hfill = document.getElementById("pc-battlehpfill");
+    if (hfill) hfill.style.width = hp.pct + "%";
+    const htext = document.getElementById("pc-battlehptext");
+    if (htext) htext.textContent = hp.max ? `${hp.cur}/${hp.max}` : "—";
+
+    /* 狀態 pill（撳落去睇說明／倒數） */
+    const key = Care.statusKey(p);
+    const stPill = document.getElementById("pc-status");
+    if (stPill) {
+      stPill.hidden = !key || faint;
+      if (key) {
+        stPill.innerHTML = `<img src="assets/battle/ui/status-${Care.STATUS_INFO[key].icon}.png" alt=""> ${Care.STATUS_INFO[key].label}`;
+        stPill.onclick = () => this._pcToast(this._statusInfoText(entry));
+      }
+    }
+    /* 連續答題日數（餵食 streak 已取消） */
+    const streak = document.querySelector("#pc-streak b");
+    if (streak) streak.textContent = typeof calcStreak === "function" ? calcStreak() : 0;
 
     /* 狀態文案 */
     const state = document.getElementById("pc-state");
     if (state) {
       state.className = "pc-state";
-      if (p.health <= 0) {
+      if (faint) {
         state.classList.add("faint");
-        state.textContent = `${cur[1]} has fainted — answers still count but earn 0 EXP. Use a Revival to wake it.`;
+        state.textContent = `${cur[1]} has fainted — answers still count but earn 0 EXP, and it can't battle.`;
+      } else if (key) {
+        state.classList.add("hungry");
+        state.textContent = this._statusInfoText(entry);
       } else if (p.health >= 100) {
         state.classList.add("full");
-        state.textContent = "Health is full — health slowly decays over time (−100 per 25h).";
+        state.textContent = "Full! Feeding more now will make it throw up.";
       } else {
         state.classList.add("hungry");
-        state.textContent = `${cur[1]} is hungry — feed anytime to restore health. Decay −100 per 25h.`;
+        state.textContent = `${cur[1]} is hungry — fullness drops 4% per hour.`;
       }
     }
 
@@ -723,7 +783,11 @@ const App = {
           const nextEntry = st2.entries.find(x => x.uid === uid);
           if (nextEntry && window.Pet) Pet.adoptActive(nextEntry);
           saveState();
-          if (window.Sync && Sync.isEnabled()) Sync.pushActive(uid);
+          if (window.Sync && Sync.isEnabled()) {
+            /* 先用舊拍檔結算到而家，再換 active（新拍檔由而家起計） */
+            const settle = (window.Care && Care.online()) ? Care.settle() : Promise.resolve();
+            settle.catch(() => {}).then(() => Sync.pushActive(uid));
+          }
           /* 換走嘅拍檔：佢嘅 pet 狀態要保持上雲（否則首次 backfill 會漏） */
           const prevEntry = st2.entries.find(x => x.uid === prevUid);
           if (prevEntry && prevEntry.pet && window.Sync && Sync.pushPet) {
@@ -1442,6 +1506,13 @@ const App = {
     /* 電子寵物掉落：10/10 → 復活藥 1 + 高級食物 1（另有 10% 額外復活藥）；
        1–9 題 → 普通食物 1（另有 10% 復活藥） */
     rewards.drops = window.Pet ? Pet.rollDrops(data.score === data.total) : [];
+    /* 狀態系統：答題掉藥（全對穩掉 1 隻、1–9 題 10%；登入由 server 抽） */
+    if (window.Care) {
+      try {
+        const med = await Care.awardMeds(data.score === data.total);
+        if (med && Care.MED_INFO[med]) rewards.drops.push({ kind: med, label: `💊 ${Care.MED_INFO[med].name} +1` });
+      } catch (e) {}
+    }
     /* 掉落即時備份上雲（換機／清 cache 都唔會失去道具） */
     if (window.Pet && window.Sync && Sync.isEnabled && Sync.isEnabled() && Sync.pushItems) {
       Sync.pushItems(Pet.items());
@@ -3355,28 +3426,34 @@ const App = {
         this.renderHome();
       }).catch(() => {});
     }
-    /* 連續消耗即時更新：單一 timer（零輪詢）＋切返頁面補位 */
-    if (window.Pet && !this._petTimerBound) {
+    /* 狀態系統：頁面開住時每分鐘本地推算一次（HP 流失／睡眠倒數）；
+       每 5 分鐘＋切返頁面時 server 結算（登入）校正；離線期間 Faint → 開 app 提示 */
+    if (window.Pet && window.Care && !this._petTimerBound) {
       this._petTimerBound = true;
-      const tickPet = () => {
-        const before = Pet.healthOf(getActiveEntry());
-        Pet.runDailyCheck();
+      const refreshCare = () => {
         this.renderHome();
-        const entry = getActiveEntry();
-        if (entry && Pet.healthOf(entry) < before && document.getElementById("pc-stage")) {
-          this._pcFloat("−50", "decay");
-          this._syncPetCare();
+        if (document.getElementById("pc-stage")) this._syncPetCare();
+      };
+      const serverSettle = (announce) => Care.settle().then(res => {
+        refreshCare();
+        if (announce && res && res.faintedNow && res.faintedNow.length) {
+          this.toast(`${res.faintedNow.join(", ")} fainted while you were away. Use a Revival to bring ${res.faintedNow.length > 1 ? "them" : "it"} back.`);
         }
-        if (entry && Pet.healthOf(entry) < before) this._syncPetCloud();
+      }).catch(() => {});
+      const tickPet = () => {
+        Pet.runDailyCheck();
+        refreshCare();
         schedulePetDecay();
       };
       const schedulePetDecay = () => {
         clearTimeout(this._petTimer);
-        this._petTimer = setTimeout(tickPet, Math.max(1000, Pet.msUntilNextDecay() + 1000));
+        this._petTimer = setTimeout(tickPet, Math.max(1000, Pet.msUntilNextDecay() + 200));
       };
       schedulePetDecay();
+      serverSettle(true);
+      setInterval(() => { if (document.visibilityState === "visible") serverSettle(false); }, 5 * 60 * 1000);
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") tickPet();
+        if (document.visibilityState === "visible") { tickPet(); serverSettle(true); }
       });
     }
     /* 背景補下未完嘅世代資料包（斷點續傳） */

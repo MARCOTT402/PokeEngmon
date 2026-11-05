@@ -40,8 +40,10 @@ const BattleUI = (() => {
   /* ---------- 能量點 EP（結算先扣，開戰唔扣） ---------- */
   let aiTier = "normal";       /* 目前挑戰嘅難度 */
   let levelSyncLevel = null;   /* Inferno：玩家隊伍臨時同步等級 */
-  let aiPotions = 0;           /* Inferno：AI 得 1 支 Potion */
-  let myFullRestores = 0;      /* Inferno：玩家得 1 支 Full Restore */
+  let aiPotions = 0;           /* 狀態系統第一期：Inferno AI Potion 已拎走，恆為 0 */
+  let myFullRestores = 0;      /* 舊 Inferno Full Restore（已拎走，保留變數免舊路徑出錯） */
+  let battleUsed = {};         /* 今場用咗嘅背包道具 { potion: n, ... }，戰鬥完一次過扣 */
+  const BAG_ITEMS = ["potion", "super_potion", "antidote", "burn_heal", "paralyze_heal", "awakening", "ice_heal", "revive"];
 
   function gateStatus() {
     return Energy.status(loadState());
@@ -509,8 +511,8 @@ const BattleUI = (() => {
       return;
     }
     levelSyncLevel = aiTier === "inferno" ? infernoSyncLevel(trainer) : null;
-    aiPotions = aiTier === "inferno" ? 1 : 0;
-    myFullRestores = aiTier === "inferno" ? 1 : 0;
+    aiPotions = 0;
+    myFullRestores = 0;
     foeTeamEntries = buildFoeTeam(trainer, aiTier);
     /* Gen 2-5 訓練家：先確保對應世代圖鑑資料載入（failed 就照開，唔好卡死揀隊） */
     const gens = gensForTeam(foeTeamEntries);
@@ -617,7 +619,7 @@ const BattleUI = (() => {
   /* 可出戰數：狀態系統落地後要排除 Faint */
   function pvpUsableCount() {
     const st = loadState();
-    return st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length).length;
+    return st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length && !(window.Pet && Pet.isFaint(e))).length;
   }
 
   /* 人數 1–6，唔超過自己可出戰數 */
@@ -798,7 +800,10 @@ const BattleUI = (() => {
 
   function openTeamSelect(cb, fixedSize) {
     const st = loadState();
-    const pool = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length);
+    if (window.Pet) Pet.runDailyCheck();   /* 用最新 HP／狀態揀隊 */
+    /* Faint（HP 0）唔可以揀入出戰隊伍 */
+    const pool = st.entries.filter(e => Array.isArray(e.ownedSpecies) && e.ownedSpecies.length && !(window.Pet && Pet.isFaint(e)));
+    if (!pool.length) { toast("All your Pokémon have fainted — use a Revival first."); openMenu(); return; }
     /* PvP 用抽中嘅場制；AI 依難度決定出戰數（Easy +1、Normal 同數、Hard/Inferno −1） */
     const want = (mode === "ai" && aiTrainer && !fixedSize)
       ? playerSlots(foeTeamEntries.length, aiTier)
@@ -925,9 +930,9 @@ const BattleUI = (() => {
     mySide = "p1"; foeSide = "p2";
     /* Inferno Level Sync：只降唔升（玩家 Pokemon 本身低過 target 就保持不變）；
        sync 前真實等級存入 expLevel，供 grantKOExp 以弱勝強加成計算用 */
-    const myTeam = levelSyncLevel
+    const myTeam = (levelSyncLevel
       ? teamEntries.map(e => ({ ...e, level: Math.min(e.level, levelSyncLevel), expLevel: e.level }))
-      : teamEntries;
+      : teamEntries).map(withCare);
     state = BattleState.create(myTeam, foeTeamEntries, { seed: (Math.random() * 0xFFFFFFFF) >>> 0 });
     afterLaunch();
   }
@@ -936,7 +941,7 @@ const BattleUI = (() => {
   async function launchPvpBattle() {
     narrate("");
     try {
-      await PvpNet.submitTeam(pvpBattle.id, pvpSide, teamEntries.map(serializeEntry));
+      await PvpNet.submitTeam(pvpBattle.id, pvpSide, teamEntries.map(withCare).map(serializeEntry));
       toast("Waiting for opponent's team…");
       const w = PvpNet.waitForTeams(pvpBattle.id);
       const b = await raceTimeout(w, PvpNet.ACTION_TIMEOUT_MS);
@@ -954,8 +959,9 @@ const BattleUI = (() => {
       foeTeamEntries = foeTeam;
       mySide = pvpSide; foeSide = pvpSide === "p1" ? "p2" : "p1";
       /* 注意：state 嘅 p1/p2 要跟 row（唔係跟我邊邊），兩邊客戶端先會一致 */
-      const p1T = pvpSide === "p1" ? teamEntries : foeTeamEntries;
-      const p2T = pvpSide === "p1" ? foeTeamEntries : teamEntries;
+      const myCare = teamEntries.map(withCare);
+      const p1T = pvpSide === "p1" ? myCare : foeTeamEntries;
+      const p2T = pvpSide === "p1" ? foeTeamEntries : myCare;
       state = BattleState.create(p1T, p2T, { seed: Number(b.seed) >>> 0 });
       afterLaunch();
     } catch (e) {
@@ -977,14 +983,45 @@ const BattleUI = (() => {
       level: e.level, ivs: e.ivs || {}, evs: e.evs || {},
       nature: e.nature || "hardy", moves: (e.moves || []).filter(Boolean).slice(0, 4),
       /* 特性要一齊過去，否則 PvP 兩邊特性唔同 → 即時 desync */
-      ability: (typeof e.ability === "string" && e.ability) ? e.ability : null
+      ability: (typeof e.ability === "string" && e.ability) ? e.ability : null,
+      /* 育成 HP／狀態：對手部機要用同一個數值建隊，否則 desync */
+      battleHp: e.battleHp == null ? null : e.battleHp,
+      battleStatus: e.battleStatus || null,
+      battlePoison: e.battlePoison || 0
     };
+  }
+
+  /* 玩家 entry → 帶育成 HP（千分比）同主要狀態入場 */
+  function withCare(e) {
+    const p = e.pet || {};
+    if (window.Care) Care.ensure(p);
+    return { ...e, battleHp: typeof p.hp === "number" ? p.hp : 1000, battleStatus: p.status || null, battlePoison: p.poison || 0 };
+  }
+
+  /* 戰鬥正常完結：寫返出戰隊伍 HP／狀態（混亂唔保留；劇毒 → 普通中毒），扣用咗嘅藥。中途斷線唔會行到呢度 */
+  function saveTeamCare() {
+    if (!window.Care || !state || !me()) return;
+    const toCare = { burn: "brn", paralyze: "par", sleep: "slp", freeze: "frz", poison: "psn", toxic: "psn" };
+    const team = me().team.filter(p => p.uid).map(p => ({
+      uid: p.uid,
+      hp: p.hp <= 0 ? 0 : Math.max(1, Math.round(p.hp / p.maxHp * 1000)),
+      status: p.hp > 0 ? (toCare[p.status] || null) : null,
+      poison: p.status === "poison" && p.severePoison ? 2 : 1
+    }));
+    const used = battleUsed; battleUsed = {};
+    Care.settleBattle(team, used).catch(e => console.warn("[Battle] settle team failed:", e && e.message));
+  }
+
+  /* 背包數量（扣埋今場已用） */
+  function bagLeft(id) {
+    return window.Pet ? Math.max(0, (Pet.countOf(id) || 0) - (battleUsed[id] || 0)) : 0;
   }
 
   function afterLaunch() {
     acting = true;   /* intro 期間鎖住操作 */
     forfeited = false;
-    refreshBagButton();   /* BAG 只有 Inferno 先會亮起 */
+    battleUsed = {};
+    refreshBagButton();
     /* 速度切換只限 AI 對戰；結算畫面重設 */
     battleSpeed = (mode === "ai" && localStorage.getItem("pokeengmon_battle_speed") === "2") ? 2 : 1;
     syncSpeedButton();
@@ -1735,29 +1772,42 @@ const BattleUI = (() => {
     resolveTurn(action);
   }
 
-  /* ---------- BAG：Inferno 限定，1 支 Full Restore ---------- */
+  /* ---------- BAG：玩家背包（7 種藥 + Revival），一回合一件、佔回合 ---------- */
   function refreshBagButton() {
     const btn = document.getElementById("btn-battle-bag");
     if (!btn) return;
-    /* PvP：戰前投票准用藥先有機會亮（背包藥物系統落地前 myFullRestores 恆為 0） */
+    /* PvP：戰前投票准用藥先開 */
     const allowed = mode === "ai" || (mode === "pvp" && pvpRules && pvpRules.items);
-    btn.disabled = !(allowed && myFullRestores > 0);
+    btn.disabled = !(allowed && BAG_ITEMS.some(id => bagLeft(id) > 0));
   }
 
-  function showBagMenu() {
-    if (myFullRestores <= 0) { toast("Your bag is empty for this battle."); return; }
+  function bagInfoHTML(id) {
+    const it = BattleState.ITEMS[id];
+    const eff = it.revive ? "Revives a fainted teammate (full HP)" : it.healPct ? `Restores ${it.healPct}% HP` : `Cures ${it.cures[0]}`;
+    return `<div class="bmp-info-head"><span class="bmp-cat">ITEM</span></div>
+      <div class="bmp-info-row"><b>${it.label}</b><span>×${bagLeft(id)}</span></div>
+      <div class="bmp-info-row"><span>${eff}</span></div>
+      <div class="bmp-info-row"><span>${it.med ? "Uses your turn · counts toward overdose" : "Uses your turn"}</span></div>`;
+  }
+
+  function showBagMenu(reviveList) {
     const list = document.getElementById("bbp-list");
-    list.innerHTML = `<button class="bmp-move-btn" data-item="full-restore">
-        Full Restore ×${myFullRestores}
-      </button>`;
-    list.querySelector(".bmp-move-btn").onclick = () => chooseItem("full-restore");
     const info = document.getElementById("bbp-info");
-    info.innerHTML = `
-      <div class="bmp-info-head"><span class="bmp-cat">ITEM</span></div>
-      <div class="bmp-info-row"><b>Full Restore</b><span>×${myFullRestores}</span></div>
-      <div class="bmp-info-row"><b>HEAL</b><span>FULL</span></div>
-      <div class="bmp-info-row"><b>STATUS</b><span>CURE</span></div>
-      <div class="bmp-info-row"><b>TIER</b><span>INFERNO</span></div>`;
+    if (reviveList) {
+      /* Revival：揀邊隻 Faint 隊員 */
+      list.innerHTML = reviveList.map(i => `<button class="bmp-move-btn" data-target="${i}">${me().team[i].name}</button>`).join("");
+      list.querySelectorAll("[data-target]").forEach(b => b.onclick = () => chooseItem("revive", +b.dataset.target));
+      info.innerHTML = `<div class="bmp-info-head"><span class="bmp-cat">REVIVAL</span></div><div class="bmp-info-row"><span>Pick a fainted Pokémon</span></div>`;
+    } else {
+      const have = BAG_ITEMS.filter(id => bagLeft(id) > 0);
+      if (!have.length) { toast("Your bag is empty."); return; }
+      list.innerHTML = have.map(id => `<button class="bmp-move-btn" data-item="${id}">${BattleState.ITEMS[id].label} ×${bagLeft(id)}</button>`).join("");
+      list.querySelectorAll("[data-item]").forEach(b => {
+        b.onclick = () => chooseItem(b.dataset.item);
+        b.onmouseenter = () => { info.innerHTML = bagInfoHTML(b.dataset.item); };
+      });
+      info.innerHTML = bagInfoHTML(have[0]);
+    }
     document.getElementById("battle-action-menu").style.display = "none";
     document.getElementById("battle-move-menu").style.display = "none";
     document.getElementById("battle-bag-menu").style.display = "flex";
@@ -1768,18 +1818,21 @@ const BattleUI = (() => {
     back.onclick = () => { showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`); };
   }
 
-  function chooseItem(itemId) {
+  function chooseItem(itemId, target) {
     if (acting) return;
-    if (myFullRestores <= 0) return;
-    const me = myActive();
-    if (me.hp <= 0) { toast("This Pokémon can't use an item."); return; }
-    /* 滿血又冇異常狀態：唔好浪費唯一一支 */
-    if (me.hp >= me.maxHp && !me.status) { toast("It won't have any effect."); return; }
+    if (bagLeft(itemId) <= 0) return;
+    if (itemId === "revive" && target === undefined) {
+      const fainted = me().team.map((p, i) => p.hp <= 0 ? i : -1).filter(i => i >= 0);
+      if (!fainted.length) { toast("No fainted Pokémon to revive."); return; }
+      if (fainted.length === 1) target = fainted[0];
+      else { showBagMenu(fainted); return; }
+    }
+    if (itemId !== "revive" && myActive().hp <= 0) { toast("This Pokémon can't use an item."); return; }
     acting = true;
-    myFullRestores -= 1;
+    battleUsed[itemId] = (battleUsed[itemId] || 0) + 1;   /* 用咗就扣（HP 滿都照扣，計入過量） */
     hideActionMenus();
     refreshBagButton();
-    resolveTurn({ kind: "item", itemId });
+    resolveTurn({ kind: "item", itemId, target });
   }
 
   /* ---------- 回合 resolve ---------- */
@@ -1826,7 +1879,7 @@ const BattleUI = (() => {
       const foeAction = raw.kind === "switch" ? { kind: "switch", idx: raw.idx }
         /* 用藥：只限戰前投票准用藥，而且係引擎認得嘅道具；否則當冇效 → 出第一招 */
         : (raw.kind === "item" && pvpRules && pvpRules.items && BattleState.ITEMS[raw.itemId])
-          ? { kind: "item", itemId: raw.itemId }
+          ? { kind: "item", itemId: raw.itemId, target: raw.target }
           : { kind: "move", moveIdx: raw.moveIdx || 0 };
       runTurnResolution(playerAction, foeAction);
     } catch (e) {
@@ -1863,7 +1916,7 @@ const BattleUI = (() => {
         } else if (act.action.kind === "item") {
           const logStart = state.log.length;
           const who = side === mySide ? "You" : (aiTrainer ? aiTrainer.name : (pvpFoeName || "The foe"));
-          BattleState.useItem(state, side, act.action.itemId, who);
+          BattleState.useItem(state, side, act.action.itemId, who, act.action.target);
           render();
           for (const l of state.log.slice(logStart)) await say(l.msg);
           await sleep(320);
@@ -1990,6 +2043,7 @@ const BattleUI = (() => {
       PvpNet.finishBattleRow(pvpBattle.id, w);
     }
     const won = state.winner === mySide;
+    saveTeamCare();   /* 正常完結（包括投降）先寫；中途斷線／關 app 唔會行到呢度 */
     (async () => {
       await say(forfeited ? "You gave up and ran away..." : won ? "You won the battle!" : "You lost...");
       /* 對戰完：淡出 battle BGM，恢復全域 town BGM */
@@ -2223,10 +2277,7 @@ const BattleUI = (() => {
     document.getElementById("btn-battle-fight").onclick = showMoveMenu;
     document.getElementById("btn-battle-bag").onclick = () => {
       if (mode === "pvp" && !(pvpRules && pvpRules.items)) { toast("Medicine is off for this battle."); return; }
-      if (myFullRestores <= 0) {
-        toast(mode === "pvp" ? "Your bag is empty." : "BAG is empty — only Inferno battles give you an item.");
-        return;
-      }
+      if (!BAG_ITEMS.some(id => bagLeft(id) > 0)) { toast("Your bag is empty."); return; }
       showBagMenu();
     };
     document.getElementById("btn-battle-pokemon").onclick = () => {

@@ -201,6 +201,10 @@ window.Sync = (() => {
           if (acct.items_food != null) bag.food = Math.max(0, Number(acct.items_food) || 0);
           if (acct.items_premium != null) bag.premium = Math.max(0, Number(acct.items_premium) || 0);
           if (acct.items_revive != null) bag.revive = Math.max(0, Number(acct.items_revive) || 0);
+          /* 7 種藥：只經 RPC 寫，雲端數量就係權威 */
+          if (acct.items_meds && typeof acct.items_meds === "object" && window.Pet && Pet.MED_KINDS) {
+            Pet.MED_KINDS.forEach(k => { bag[k] = Math.max(0, Number(acct.items_meds[k]) || 0); });
+          }
           const cloudStones = acct.items_stones;
           if (cloudStones && typeof cloudStones === "object") {
             STONE_KINDS.forEach(k => {
@@ -265,8 +269,17 @@ window.Sync = (() => {
         }
         const st = loadState();
         st.entries = normalized.map(e => localEntryFromServer(e));
-        /* 玩家自訂配招（moveLoadouts）喺重推後還原 */
-        st.entries.forEach(ent => { try { applyMoveLoadout(ent); } catch (e) {} });
+        /* 玩家自訂配招：雲端 move_loadout 優先；雲端未有但本地有（上雲前嘅舊配招）→ 補推上雲 */
+        st.entries.forEach((ent, i) => {
+          const cloudPref = normalized[i] && normalized[i].move_loadout;
+          try { applyMoveLoadout(ent, cloudPref); } catch (e) {}
+          if (!(Array.isArray(cloudPref) && cloudPref.length)) {
+            const localPref = st.moveLoadouts && st.moveLoadouts[ent.uid];
+            if (Array.isArray(localPref) && localPref.length && localPref.every(m => (ent.moves || []).includes(m))) {
+              try { patchEntry(ent.uid, { move_loadout: localPref }); } catch (e) {}
+            }
+          }
+        });
         /* activeUid：邊個 entry.active = true（用未 map 前 id，同 server row） */
         const activeEntry = normalized.find(e => e.active === true);
         st.activeUid = activeEntry ? activeEntry.id : (st.entries.length > 0 ? st.entries[0].uid : null);
@@ -413,6 +426,10 @@ window.Sync = (() => {
     if (typeof fields.stone_used === "string" && fields.stone_used) body.stone_used = fields.stone_used;
     /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */
     if (typeof fields.is_final === "boolean") body.is_final = fields.is_final;
+    /* 自訂配招（1–4 個招式 slug）：非經濟數值，column-level grant 開放直寫 */
+    if (Array.isArray(fields.move_loadout) && fields.move_loadout.length) {
+      body.move_loadout = fields.move_loadout.slice(0, 4).map(String);
+    }
     try {
       await _api("PATCH", `/user_entries?id=eq.${entryId}`, body);
     } catch (e) { console.warn("[Sync] patchEntry failed:", e.message); }
@@ -464,14 +481,8 @@ window.Sync = (() => {
     };
   }
 
-  async function pushPet(entryId, pet) {
-    const ref = _accountRef();
-    if (!ref.isAuth || !entryId || !pet) return false;
-    try {
-      await _api("PATCH", `/user_entries?id=eq.${entryId}`, petPayload(pet));
-      return true;
-    } catch (e) { console.warn("[Sync] pushPet failed:", e.message); return false; }
-  }
+  /* 狀態系統第一期：飽肚值／HP／狀態改由 care RPC 寫（client 冇 update 權），呢個 push 停用 */
+  async function pushPet() { return false; }
 
   async function pushItems(items) {
     const ref = _accountRef();
