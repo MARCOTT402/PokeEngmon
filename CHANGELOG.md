@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.62.0...v1.63.0) (2026-11-05)
+
+
+### Features
+
+* **bag:** held items follow the original games (item 5) ([c491583](https://github.com/MARCOTT402/PokeEngmon/commit/c491583aa0f7f585f544208fa49d1e3c4e008aed))
+
 # [1.62.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.61.0...v1.62.0) (2026-11-05)
 
 
