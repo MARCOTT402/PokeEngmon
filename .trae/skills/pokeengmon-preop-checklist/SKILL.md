@@ -702,3 +702,14 @@ Incident (2026-11-05，背包第 4c 段)：用 PokéAPI `item.held_by_pokemon`�
 - script 一定 print 每條 skip 同原因，完成後逐條睇：係真係唔應該有（例如 Rayquaza 冇 Mega 石），定係配對漏咗。
 - 每個欄位都要預咗會空（空 array／null）：有 fallback 就標記（例如 `abilityGuess: true`），冇就 skip 並 print。
 - 新加嘅 overlay 掣（例如 FIGHT 頁 MEGA）要用最長嘅文字截圖睇有冇壓住隔籬內容，有就預留 padding。
+
+## Rule 70 — 手砌 staged blob（HEAD + 我嘅改動）：行尾要跟 repo blob（LF），唔好由工作檔抄 CRLF
+
+Incident (2026-11-05，背包第 4c 段)：同另一個 session 共用 `js/app.js`，我用 `git show HEAD:` 攞 repo 版本（LF），再由工作檔（`core.autocrlf=true` → CRLF）抽 7 行插入，commit 咗個 CRLF／LF 混合 blob。之後 `git pull --rebase --autostash` 還原 stash 時成個檔衝突（7000+ 行），工作樹 diff 亦變成全檔改動。
+
+- 由工作檔抽出嚟嘅片段，插入 repo blob 前一律 `replace("
+", "
+")`；repo blob 本身用 `git cat-file -p HEAD:<file>` 量 `
+` 數，應該係 0。
+- commit 前檢查：`git diff --cached --name-only` 每個檔 `git cat-file -p :<file>` 數 CRLF，0 < CRLF < LF = 混合，唔准 commit。
+- autostash 還原衝突：唔好 `git reset --hard`。stash 會保留；將 ours（stash）／base（stash^1）／theirs（HEAD）三份統一 LF 再 `git merge-file`，寫返工作檔，`git reset -q` 取消 staging，再對 stash 做 `git diff --ignore-cr-at-eol` 確認淨係版本號唔同先 `git stash drop`。
