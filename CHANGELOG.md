@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.48.0...v1.49.0) (2026-11-05)
+
+
+### Features
+
+* **pvp:** pre-battle vote for team size, medicine and switching ([4b9765a](https://github.com/MARCOTT402/PokeEngmon/commit/4b9765a57e5d0fc3e2f9dea090ecadcbb90feb59))
+
 # [1.48.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.47.1...v1.48.0) (2026-11-04)
 
 
