@@ -1,3 +1,11 @@
+## [1.58.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.58.0...v1.58.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **skill:** restore LF line endings in preop checklist ([121989e](https://github.com/MARCOTT402/PokeEngmon/commit/121989eda339399e97aab26ec3685269715a1d07))
+* **skill:** rewrite Rule 70 with LF line endings and literal escapes ([e2d2bd2](https://github.com/MARCOTT402/PokeEngmon/commit/e2d2bd2c7d3c51f754eabb0cdbcab8c17ac89496))
+
 # [1.58.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.57.0...v1.58.0) (2026-11-05)
 
 
