@@ -788,3 +788,14 @@ Incident (2026-11-05，第 5 項攜帶道具)：舊存檔攜帶進化石要退�
 - 收回欄位 grant 之前，先 grep client 所有 `patchEntry({ <col> })`／PATCH body，一併拎走，否則整個 PATCH 會 401／403 連其他欄位都寫唔到。
 
 Skill: Rule 76 added
+
+
+## Rule 77 — 揀多個單元／子單元答題：成個到期 pool 先 Fisher-Yates 洗勻再抽，唔好「過期最耐優先」或 `sort(random)`
+
+Incident (2026-11-05)：用戶反映揀咗單元／子單元後，一個 set 嘅題目集中喺某一個子單元。`SM2.buildSession` 先揀過期最耐嘅舊卡（同一課題通常一齊做，到期時間相近 → 成批來自同一子單元），再用有偏差嘅 `sort(() => Math.random() - 0.5)` 補新題（pool 按課題排序，洗唔散）；最後只 shuffle 抽出嚟嗰 10 題嘅次序。
+
+- 抽題：揀咗嘅 topic keys 入面所有到期題（過期＋全新）混埋一齊，Fisher-Yates 洗勻成個 pool，再 `slice(0, size)`。
+- 永遠唔好用 `arr.sort(() => Math.random() - 0.5)` 做 shuffle。
+- 驗收：揀 2 個以上子單元，跑 `buildSession` 幾百次統計每個子單元出現比例，要接近佢喺 pool 嘅比例。
+
+Skill: Rule 77 added

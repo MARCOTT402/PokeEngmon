@@ -451,21 +451,16 @@ window.SM2 = (() => {
        逼用戶去揀其他課題，唔俾死做一個課題重複刷啱啱做過嘅題 */
     const due = withCard.filter(x => x.card.next_review_at <= now);
 
-    /* 過期卡最耐未見優先；全新題（next_review_at=0）隨機補尾 */
-    const overdue = due.filter(x => x.card.next_review_at > 0)
-      .sort((a, b) => a.card.next_review_at - b.card.next_review_at);
-    const fresh = due.filter(x => x.card.next_review_at === 0);
-    fresh.sort(() => Math.random() - 0.5);
-
-    const picked = overdue.concat(fresh).slice(0, s);
-
-    /* Fisher-Yates 完全隨機 */
-    const arr = picked.slice(0, s);
+    /* 揀咗嘅單元／子單元入面所有到期題（過期＋全新）混埋一齊，
+       先 Fisher-Yates 洗勻成個 pool 再抽 s 題（Rule 77）：
+       唔可以「過期最耐優先」或者用 sort(random) — 同課題嘅卡到期時間相近、
+       pool 又按課題排序，會令成個 set 集中喺單一子單元 */
+    const arr = due.slice();
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return arr.map(x => x.q);
+    return arr.slice(0, s).map(x => x.q);
   }
 
   /* ============ Public API ============ */
