@@ -1,3 +1,10 @@
+# [1.60.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.59.0...v1.60.0) (2026-11-05)
+
+
+### Features
+
+* **quiz:** picture questions fit the screen with overlay audio controls ([d839441](https://github.com/MARCOTT402/PokeEngmon/commit/d83944121a444b37458b034d9836d9d19225d9a6))
+
 # [1.59.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.58.1...v1.59.0) (2026-11-05)
 
 
