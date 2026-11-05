@@ -3388,6 +3388,11 @@ const App = {
     document.getElementById("btn-quiz-more").onclick = () => Quiz.toggleCardDrawer();
     document.getElementById("btn-report-issue").onclick = () => Quiz.openReport();
     /* 圖片單字題：點圖聽聲（可無限重播） */
+    document.getElementById("btn-word-say").onclick = () => {
+      if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
+      Quiz.playWordAudio();
+    };
+    document.getElementById("btn-word-slow").onclick = () => Quiz.playWordAudio(true);
     document.getElementById("quiz-word-image-btn").onclick = () => {
       if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
       Quiz.playWordAudio();

@@ -778,9 +778,12 @@ class CaptureAudio {
      onFail 會喺檔案載入／解碼失敗時叫（例如語音檔仲未生成）。
      檔案缺失時先用 speechSynthesis 頂住（fallback，好過靜音），
      之後生成咗正式 TTS 就會自動用返錄音。 */
-  playWord(url, onFail) {
+  /* opts（可選）：{ onEnd }＝播完 callback（圖片題 🔊 掣播放狀態用） */
+  playWord(url, onFail, opts) {
     this.ensure();
+    const onEnd = (opts && typeof opts.onEnd === "function") ? opts.onEnd : null;
     const fallback = () => {
+      if (onEnd) setTimeout(onEnd, 1200);
       const word = decodeURIComponent(String(url).split("/").pop() || "")
         .replace(/\.mp3$/i, "").replace(/_/g, " ");
       if (word && this._speakFallback(word)) {
@@ -805,6 +808,7 @@ class CaptureAudio {
         src.onended = () => {
           try { src.disconnect(); g.disconnect(); } catch (e) {}
           if (this._wordSrc === src) this._wordSrc = null;
+          if (onEnd) onEnd();
         };
       } catch (e) { fallback(); }
     };

@@ -5821,3 +5821,95 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   #view-quiz .qk-key { max-width: 72px; height: 60px; font-size: 1.6rem; border-radius: 10px; }
   #view-quiz .qk-key.qk-side { max-width: 104px; }
 }
+
+/* ============ Quiz v2 圖片題（2026-11-05）============
+   原則：圖片用「剩餘高度」自動縮放（flex），輸入格同鍵盤永遠喺畫面內，唔使向上推（Rule 72）
+   🔊／🐢 疊喺圖片右下角，唔額外佔一行；狀態（系統語音／冇錄音）做圖片左上角小 pill */
+#view-quiz.is-word .quiz-col { height: 100%; min-height: 0; gap: 10px; }
+#view-quiz.is-word .quiz-head { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+#view-quiz.is-word .quiz-prompt { font-size: 1.15rem; order: -1; }
+#view-quiz.is-word .word-card.show {
+  flex: 1 1 0; min-height: 150px; display: flex; flex-direction: column; align-items: stretch; gap: 0;
+}
+.word-frame { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; max-width: 440px; margin: 0 auto; display: flex; }
+#view-quiz .word-image-btn {
+  width: 100%; height: 100%; max-width: none; padding: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--qz-line); border-bottom-width: 4px; border-radius: 20px; box-shadow: none;
+  transition: border-color .22s ease, transform .12s ease;
+}
+#view-quiz .word-image-btn:active { transform: scale(.985); }
+#view-quiz .word-image { width: 100%; height: 100%; max-height: none; object-fit: contain; background: transparent; display: block; padding: 8px 8px 8px; box-sizing: border-box; }
+#view-quiz.is-word:has(.quiz-card.win) .word-image-btn { border-color: #9fe0b2; }
+#view-quiz.is-word:has(.quiz-card.bad) .word-image-btn { border-color: var(--qz-bad); }
+#view-quiz .word-speaker { display: none; }
+
+.word-audio { position: absolute; right: 10px; bottom: 12px; display: flex; align-items: flex-end; gap: 8px; z-index: 2; }
+.word-audio-btn {
+  width: 56px; height: 56px; border: 0; border-radius: 18px; padding: 0; cursor: pointer; position: relative;
+  display: grid; place-items: center; background: var(--qz-brand); color: #fff; box-shadow: 0 4px 0 var(--qz-brand-d);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.word-audio-btn svg { width: 28px; height: 28px; }
+.word-audio-btn.slow { width: 44px; height: 44px; border-radius: 14px; background: #fff; color: var(--qz-brand); font-size: 1.25rem; box-shadow: 0 4px 0 #c5d3f1; }
+.word-audio-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--qz-brand-d); }
+.word-audio-btn.slow:active { box-shadow: 0 1px 0 #c5d3f1; }
+.word-audio-btn.playing::before {
+  content: ""; position: absolute; inset: -6px; border-radius: 22px; border: 3px solid var(--qz-brand);
+  opacity: 0; animation: word-ring 1s cubic-bezier(.22, 1, .36, 1) infinite; pointer-events: none;
+}
+.word-audio-btn.slow.playing::before { border-radius: 18px; }
+@keyframes word-ring { 0% { opacity: .7; transform: scale(.92); } 100% { opacity: 0; transform: scale(1.2); } }
+.word-audio-btn:hover { scale: none; }
+
+#view-quiz .word-status {
+  display: none; position: absolute; left: 10px; top: 10px; z-index: 2; max-width: calc(100% - 20px);
+  padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.94); box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  font-size: .74rem; font-weight: 800; color: var(--qz-muted); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#view-quiz .word-status.speech, #view-quiz .word-status.missing { display: block; }
+#view-quiz .word-status.missing { color: var(--qz-bad); }
+
+/* 輸入格：大啲、字距闊啲，似默寫格 */
+#view-quiz.is-word .quiz-card { margin-top: 4px; padding: 16px 12px 14px; }
+#view-quiz.is-word .quiz-sentence { font-size: 1.6rem; line-height: 1.6; letter-spacing: .04em; }
+#view-quiz.is-word .quiz-chip { top: -11px; }
+
+@media (min-width: 600px) {
+  #view-quiz.is-word .word-card.show { min-height: 220px; }
+  .word-frame { max-width: 560px; }
+  #view-quiz.is-word .quiz-prompt { font-size: 1.5rem; }
+  #view-quiz.is-word .quiz-sentence { font-size: 2rem; }
+  .word-audio-btn { width: 64px; height: 64px; }
+  .word-audio-btn svg { width: 32px; height: 32px; }
+  .word-audio-btn.slow { width: 50px; height: 50px; }
+}
+/* 橫向平板／電腦：左圖右答，鍵盤佔高度都唔會逼到張圖 */
+@media (min-width: 900px) and (orientation: landscape) {
+  #view-quiz.is-word .quiz-col {
+    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto; column-gap: 32px; row-gap: 14px;
+    max-width: 1040px; align-content: stretch;
+  }
+  #view-quiz.is-word .quiz-head { grid-column: 1 / -1; }
+  #view-quiz.is-word .word-card.show { grid-column: 1; grid-row: 2 / span 3; min-height: 0; }
+  #view-quiz.is-word .quiz-card { grid-column: 2; grid-row: 2; align-self: center; margin-top: 0; }
+  #view-quiz.is-word .quiz-card-drawer, #view-quiz.is-word .quiz-toolbar { grid-column: 2; }
+  .word-frame { max-width: none; }
+}
+
+/* 矮機（iPhone SE 375×667 等）：鍵盤同頂部收細，圖片題張圖先唔會被推出畫面 */
+@media (max-height: 720px) and (max-width: 599px) {
+  #view-quiz .quiz-top { padding-top: 6px; padding-bottom: 2px; }
+  .qk-tool { min-height: 44px; flex-direction: row; gap: 6px; }
+  .qk-tool-ic, .qk-tool-mic { width: 22px; height: 22px; font-size: .9rem; }
+  #view-quiz .quiz-keyboard > .qk-row { margin-top: 8px; }
+  #view-quiz .qk-key { height: 40px; font-size: 1.2rem; }
+  #view-quiz.is-word .word-card.show { min-height: 84px; }
+  #view-quiz.is-word .quiz-col { gap: 8px; padding-top: 4px; padding-bottom: 8px; }
+  #view-quiz.is-word .quiz-card { padding: 10px 12px; }
+  #view-quiz.is-word .quiz-sentence { font-size: 1.4rem; }
+  .word-audio-btn { width: 46px; height: 46px; border-radius: 15px; }
+  .word-audio-btn svg { width: 24px; height: 24px; }
+  .word-audio-btn.slow { width: 38px; height: 38px; border-radius: 12px; font-size: 1.05rem; }
+}

@@ -226,6 +226,9 @@ const Quiz = {
     const wordCard = document.getElementById("quiz-word-card");
     const isWord = q.type === "word";
     const cardEl = document.getElementById("quiz-card");
+    /* 圖片題版面（圖片自動縮放，輸入格永遠喺畫面內） */
+    const viewEl = document.getElementById("view-quiz");
+    if (viewEl) viewEl.classList.toggle("is-word", isWord);
     const imageBox = document.getElementById("quiz-image-box");
 
     /* 圖片題：清走上一題殘留嘅句子圖 */
@@ -243,7 +246,7 @@ const Quiz = {
       const img = document.getElementById("quiz-word-image");
       img.onerror = () => { img.onerror = null; img.src = "icons/icon-192.png"; };
       img.src = q.image;
-      document.getElementById("quiz-word-status").textContent = "🔊 Tap the picture to hear the word";
+      document.getElementById("quiz-word-status").textContent = "";
       document.getElementById("quiz-word-status").className = "word-status";
       this._autoPlayWord(wordToken);
     } else {
@@ -294,6 +297,12 @@ const Quiz = {
 
     this._focusCurrent();
     this._syncCheckBtn();
+    requestAnimationFrame(() => {
+      const cur = this.cells[this.currentCell];
+      if (cur && cur.cellEl && cur.cellEl.scrollIntoView) {
+        try { cur.cellEl.scrollIntoView({ block: "nearest" }); } catch (e) {}
+      }
+    });
   },
 
   /* 空格資料：primary 答案 split 空白；accept 只有同字數先納入逐格比對 */
@@ -1603,25 +1612,56 @@ const Quiz = {
     }, 350);
   },
 
-  playWordAudio() {
+  /* 圖片題播放：slow=true → 系統語音 0.5x（錄音冇慢速版）；播放中 🔊 掣有聲波動畫 */
+  playWordAudio(slow) {
     const cur = (this.queue[0] && this.queue[0].q) || null;
     if (!cur || cur.type !== "word") return;
     const status = document.getElementById("quiz-word-status");
+    const btn = document.getElementById(slow ? "btn-word-slow" : "btn-word-say");
+    const token = (this._playToken = (this._playToken || 0) + 1);
+    const setPlaying = (on) => {
+      if (token !== this._playToken && on) return;
+      ["btn-word-say", "btn-word-slow"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("playing", on && el === btn);
+      });
+    };
+    const done = () => { if (token === this._playToken) setPlaying(false); };
+    status.className = "word-status";
+    status.textContent = "";
+    setPlaying(true);
+
+    if (slow && window.speechSynthesis) {
+      try {
+        const u = new SpeechSynthesisUtterance(String(cur.word || ""));
+        u.lang = "en-US";
+        u.rate = 0.5;
+        const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : null;
+        if (prefs && prefs.voice != null) u.volume = Math.max(0, Math.min(1, Number(prefs.voice)));
+        u.onend = done; u.onerror = done;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+        setTimeout(done, 4000);
+      } catch (e) { done(); }
+      this._focusCurrent();
+      return;
+    }
+
     const audio = window.CaptureScene && CaptureScene.audio;
-    if (!audio) { status.textContent = "🔇 Audio unavailable"; return; }
+    if (!audio) { done(); status.textContent = "🔇 Audio unavailable"; status.className = "word-status missing"; return; }
     if (audio.ensure) audio.ensure();
     const url = wordAudioURL(cur.word);
-    status.textContent = "🔊 Playing… tap again to replay";
-    status.className = "word-status playing";
     audio.playWord(url, (usedSpeech) => {
       if (usedSpeech) {
-        status.textContent = "🔊 Playing (system voice — recording coming soon)";
-        status.className = "word-status playing";
+        status.textContent = "System voice";
+        status.className = "word-status speech";
       } else {
+        done();
         status.textContent = "🔇 No recording yet for \"" + cur.word + "\"";
         status.className = "word-status missing";
       }
-    });
+    }, { onEnd: done });
+    setTimeout(done, 5000);   /* 保險：callback 冇返都會停動畫 */
     /* 播完音頻／按語音鍵後，浮標返去輸入格 */
     this._focusCurrent();
   },

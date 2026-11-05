@@ -619,11 +619,19 @@
         <img id="quiz-image" class="quiz-image" alt="Question image">
       </div>
       <div class="word-card" id="quiz-word-card">
-        <button id="quiz-word-image-btn" class="word-image-btn" aria-label="Play the word again">
-          <img id="quiz-word-image" class="word-image" alt="Tap to listen">
-          <span class="word-speaker" aria-hidden="true">🔊</span>
-        </button>
-        <div id="quiz-word-status" class="word-status">🔊 Tap the picture to hear the word</div>
+        <div class="word-frame">
+          <button id="quiz-word-image-btn" class="word-image-btn" aria-label="Play the word again">
+            <img id="quiz-word-image" class="word-image" alt="Tap to listen">
+          </button>
+          <!-- 播放掣疊喺圖片右下角：唔額外佔高度，iPhone 都睇到輸入格 -->
+          <div class="word-audio">
+            <button id="btn-word-slow" class="word-audio-btn slow" type="button" aria-label="Play slowly" title="Play slowly">🐢</button>
+            <button id="btn-word-say" class="word-audio-btn" type="button" aria-label="Play the word" title="Play (Ctrl P)">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div id="quiz-word-status" class="word-status" role="status">🔊 Tap the picture to hear the word</div>
+        </div>
       </div>
       <div class="quiz-card" id="quiz-card">
         <div class="quiz-chip" id="quiz-chip"></div>

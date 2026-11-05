@@ -722,3 +722,15 @@ Incident (2026-11-05，Quiz v2)：第一版將 Check／Continue 放喺鍵盤上�
 - 驗證：用 mobile preset（會模擬 coarse pointer）試鍵盤；自訂闊度 ≥768 會變 fine pointer，鍵盤會消失係正常。
 
 Skill: Rule 71 added
+
+## Rule 72 — 圖片題：張圖要用「剩餘高度」縮放，唔可以用固定／dvh 高度；iPhone 打開就要見到輸入格
+
+Incident (2026-11-05，Quiz v2 圖片題)：`.word-image` 用 `height: clamp(170px, 28dvh, 300px)`，加上下面一行播放狀態文字同 App 鍵盤（約 290px），iPhone 要向上推先見到輸入格。
+
+- 圖片題 `#view-quiz.is-word`：`.quiz-col { height: 100% }` + `.word-card { flex: 1 1 0; min-height: … }`，張圖 `height: 100%; object-fit: contain`——圖片食剩餘高度，輸入格同鍵盤永遠喺畫面內。
+- 唔好再加獨立一行嘅控制／狀態：🔊／🐢 疊喺圖片右下角，狀態（System voice／冇錄音）做圖片左上角小 pill，平時唔顯示。
+- 矮機（`max-height: 720px`，例如 iPhone SE 375×667）要同時收細鍵盤（key 40px、工具列 44px）同圖片下限，否則張圖會被推出畫面。
+- 橫向 ≥900px：左圖右答（grid），鍵盤佔高度都唔會逼到張圖。
+- 驗收：每個尺寸（440×956、375×812、375×667、820×1180、1280×800）量 `#quiz-scroll` 嘅 `scrollHeight - clientHeight` 要 ≤ 4，同埋輸入格 `bottom` 要細過鍵盤 `top`。
+
+Skill: Rule 72 added
