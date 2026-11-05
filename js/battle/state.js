@@ -555,12 +555,12 @@ const BattleState = (() => {
   };
   const aOrAn = w => /^[AEIOU]/i.test(w) ? "an" : "a";
 
-  /* targetIdx：Revival 用（救後備嘅 Faint 隊員）；其他藥一律用喺出場中嗰隻 */
+  /* targetIdx：用喺邊隻隊員（跟原作：藥可以用喺後備；Revival 只救 Faint 嘅）；冇傳就用出場中嗰隻 */
   function useItem(state, side, itemId, actorName, targetIdx) {
     const it = ITEMS[itemId];
     if (!it) return false;
     const team = state[side].team;
-    const p = it.revive ? team[targetIdx] : active(state, side);
+    const p = (targetIdx != null && team[targetIdx]) ? team[targetIdx] : (it.revive ? null : active(state, side));
     if (!p) return false;
     if (it.revive ? p.hp > 0 : p.hp <= 0) return false;
     /* 先講邊個用咗咩道具，再講效果 */

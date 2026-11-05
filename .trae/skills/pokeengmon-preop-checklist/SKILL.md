@@ -676,3 +676,11 @@ Incident (2026-11-05，背包第 3a 段)：EV Point Unit 係共用池（= 全部
 
 - 任何「加總先係真數」嘅資源（共用 EV 池等），刪除／合併 row 之前，先將嗰 row 嘅份額轉去另一個 row（server RPC 同 client 本地兩邊都要做）。
 - 測試要對「池總數」：刪除前總數 − 退還規則 = 刪除後總數，唔好只睇單一 row。
+
+## Rule 67 — 將現有 view 搬入另一個容器（例如橫向紅框）：要清走佢原本嘅定位 CSS
+
+Incident (2026-11-05，背包第 4a 段)：`#view-battle` 搬入橫向紅框 `.bl-screen` 之後，畫面偏咗去右下（top 106px、left 397px、translateX(-50%)）。原因係 display window 版本用 `position/inset/max-width/transform` 將 view 貼落直向白螢幕，搬咗位照樣生效。
+
+- 搬 view 入新容器時，喺新容器 selector 用 `!important` 清走 `position`、`inset／top／left／right／bottom`、`transform`、`max-width／max-height`、負 margin、`100vh` min-height。
+- 第一次搬完即刻 `getComputedStyle()` 睇 position／inset／transform，再截圖，唔好淨係睇 DOM 有冇搬到。
+- 離開時一定要搬返原位（用 comment placeholder 記住位置），並用 `App.showView` 包一層確保任何出口都會搬返。

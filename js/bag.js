@@ -13,7 +13,7 @@
 const BagUI = (() => {
   const W = 956, H = 440;
   const TABS = ["pokemon", "items", "held"];
-  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, itemFilter: "all" };
+  const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, itemFilter: "all", battle: null };
   let root = null, rotateEl = null;
   const $ = sel => root.querySelector(sel);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -72,7 +72,7 @@ const BagUI = (() => {
           </div>
           <div class="bag-screen" id="bag-screen">
             <aside class="bag-team">
-              <div class="bag-colhead"><span>My Team</span><small>hold &amp; drag</small></div>
+              <div class="bag-colhead"><span id="bag-team-title">My Team</span><small id="bag-team-hint">hold &amp; drag</small></div>
               <div class="bag-slots" id="bag-slots"></div>
             </aside>
             <section class="bag-mid">
@@ -86,6 +86,7 @@ const BagUI = (() => {
               <div class="bag-banner" id="bag-banner"><span id="bag-banner-t"></span><button type="button" id="bag-banner-x">Cancel</button></div>
               <div class="bag-gridwrap" id="bag-gridwrap"><div class="bag-grid" id="bag-grid"></div></div>
               <div class="bag-dropzone" id="bag-dropzone">Drop here to remove from team</div>
+              <div class="bag-lockov" id="bag-lockov">🔒 Locked while switching<small>Pick a Pokémon on the left to send out</small></div>
             </section>
             <aside class="bag-detail" id="bag-detail"></aside>
             <div class="bag-me" id="bag-me"></div>
@@ -163,7 +164,9 @@ const BagUI = (() => {
   function open(opts) {
     if (!root) build();
     S.from = (opts && opts.from) || "home";
-    S.tab = "pokemon"; S.sel = null; S.evPick = false;
+    S.tab = "pokemon"; S.sel = null; S.evPick = false; S.battle = null;
+    root.classList.remove("in-battle", "switching");
+    $("#bag-team-title").textContent = "My Team";
     if (window.Pet) Pet.runDailyCheck();
     S.open = true;
     root.classList.add("show");
@@ -175,6 +178,11 @@ const BagUI = (() => {
     if (isPortrait()) showRotate("landscape");
   }
   function close() {
+    if (S.battle) {
+      if (S.battle.forced) { toast("Choose a Pokémon to send out"); return; }
+      const ctx = S.battle; hideBattleBag(); if (ctx.onClose) ctx.onClose();
+      return;
+    }
     flushEv(); cancelTarget();
     if (ME.uid) { $("#bag-me").classList.remove("show"); ME.uid = null; }
     const finish = () => {
@@ -208,10 +216,12 @@ const BagUI = (() => {
     const ind = $("#bag-tab-ind");
     ind.style.width = w + "px";
     ind.style.transform = `translateX(${TABS.indexOf(S.tab) * (w + 4)}px)`;
-    root.querySelectorAll(".bag-tab").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+    root.querySelectorAll(".bag-tab").forEach(b => { b.classList.toggle("on", b.dataset.tab === S.tab); b.classList.toggle("locked", tabLocked(b.dataset.tab)); });
   }
+  function tabLocked(t) { return !!S.battle && (S.battle.mode === "switch" || t !== "items"); }
   function switchTab(t) {
     if (t === S.tab) return;
+    if (tabLocked(t)) { toast(S.battle.mode === "switch" ? "Pick a Pokémon on the left" : "Only items can be used in battle"); return; }
     const dir = TABS.indexOf(t) > TABS.indexOf(S.tab) ? "in-l" : "in-r";
     flushEv(); S.evPick = false;
     if (t !== "items") S.itemFilter = "all";
@@ -292,6 +302,7 @@ const BagUI = (() => {
   /* ---------- chips：排序（再撳＝反轉）＋ ✎ 自訂次序；可以左右捲 ---------- */
   function renderChips() {
     const c = $("#bag-chips");
+    if (S.battle) { c.innerHTML = ""; return; }
     if (S.tab === "items") {
       const opts = [["all", "All"], ["medicine", "Medicine"], ["berries", "Berries"]];
       c.innerHTML = opts.map(([v, l]) => `<button type="button" class="bag-chip ${S.itemFilter === v ? "on" : ""}" data-f="${v}">${l}</button>`).join("");
@@ -406,15 +417,20 @@ const BagUI = (() => {
         Drag.bind(el, () => ({ kind: "pokemon", uid, img: animatedURL(entryCurrentSpecies(entryOf(uid))[0]) }));
       });
     } else {
-      const list = S.tab === "items" ? itemList().filter(it => S.itemFilter === "all" || it.cat === S.itemFilter || (S.itemFilter === "berries" && it.cat === "food")) : heldList();
+      const list = S.battle ? S.battle.items() : S.tab === "items" ? itemList().filter(it => S.itemFilter === "all" || it.cat === S.itemFilter || (S.itemFilter === "berries" && it.cat === "food")) : heldList();
       g.innerHTML = (list.length ? "" : `<div class="bag-empty">${S.itemFilter === "berries" ? "No berries yet — answer quiz questions to collect them." : "Nothing here yet."}</div>`) + list.map(it => `
-        <button type="button" class="bag-cell ${it.n <= 0 ? "dim" : ""} ${S.sel && S.sel.id === it.id ? "sel" : ""}" data-id="${it.id}">
+        <button type="button" class="bag-cell ${it.n <= 0 || it.usable === false ? "dim" : ""} ${S.sel && S.sel.id === it.id ? "sel" : ""}" data-id="${it.id}">
           <span class="bag-pic">${it.tier ? `<span class="bag-tier ${it.tier}">${it.tier === "super" ? "SUPER" : "FOOD"}</span>` : ""}${it.icon ? `<img class="bag-spr" src="${it.icon}" alt="" draggable="false">` : `<span class="bag-emoji">${it.emoji}</span>`}<span class="bag-cnt">×${it.n}</span></span>
           <span class="bag-cap"><b>${esc(it.name)}</b></span>
         </button>`).join("") + (S.tab === "held" ? `<div class="bag-empty small">Mega stones and other held items will appear here later.</div>` : "");
       g.querySelectorAll("[data-id]").forEach(el => {
-        el.addEventListener("click", () => { if (!Drag.justDropped) { cancelTarget(); select({ kind: S.tab, id: el.dataset.id }); } });
-        Drag.bind(el, () => { const it = itemInfo(el.dataset.id); return it && it.n > 0 ? { kind: "item", id: it.id, img: it.icon || "" , label: it.icon ? null : it.name } : null; });
+        el.addEventListener("click", () => {
+          if (Drag.justDropped) return;
+          const it = itemInfo(el.dataset.id);
+          if (S.battle && it && it.usable === false) { toast("Can't use this in battle"); return; }
+          cancelTarget(); select({ kind: S.tab, id: el.dataset.id });
+        });
+        Drag.bind(el, () => { const it = itemInfo(el.dataset.id); return it && it.n > 0 && it.usable !== false ? { kind: "item", id: it.id, img: it.icon || "" , label: it.icon ? null : it.name } : null; });
       });
     }
     restore();
@@ -439,7 +455,32 @@ const BagUI = (() => {
   }
 
   /* ---------- 左欄：我的隊伍 ---------- */
+  const B_ICON = { burn: "brn", paralyze: "par", sleep: "slp", freeze: "frz", poison: "psn", toxic: "tox" };
+  function renderBattleTeam() {
+    const box = $("#bag-slots");
+    const restore = keepSprites(box);
+    box.innerHTML = S.battle.team().map(p => {
+      const pct = p.maxHp ? Math.max(0, p.hp) / p.maxHp * 100 : 0;
+      const cls = p.fainted ? "faint" : pct < 20 ? "low" : pct <= 50 ? "mid" : "";
+      const ic = p.fainted ? "fnt" : (p.status === "poison" && p.severe) ? "tox" : B_ICON[p.status];
+      return `<div class="bag-slot fill ${p.fainted ? "fnt" : ""} ${S.sel && S.sel.bidx === p.idx ? "sel" : ""}" data-uid="bt-${p.idx}" data-slot="${p.idx}" data-drop="slot">
+        <img class="bag-spr" src="${animatedURL(p.dexId)}" alt="" draggable="false">
+        <div class="bag-slot-info"><div class="nm">${esc(p.name)}</div>
+          <div class="lv">Lv.${p.level} ${ic ? `<img src="assets/battle/ui/status-${ic}.png" alt="">` : ""}</div>
+          <div class="bag-minihp ${cls}"><i style="width:${pct}%"></i></div></div>
+        <span class="ord">${p.idx + 1}</span>
+        ${p.active ? `<span class="bag-inbattle">IN BATTLE</span>` : ""}
+      </div>`;
+    }).join("");
+    restore();
+    box.querySelectorAll(".bag-slot[data-uid]").forEach(el => el.addEventListener("click", () => {
+      if (Drag.justDropped) return;
+      if (S.target) { applyItem(S.target, el.dataset.uid); return; }
+      select({ kind: "bpoke", bidx: Number(el.dataset.slot) });
+    }));
+  }
   function renderTeam() {
+    if (S.battle) { renderBattleTeam(); return; }
     const box = $("#bag-slots");
     const restore = keepSprites(box);
     const team = getTeam();
@@ -563,7 +604,7 @@ const BagUI = (() => {
   function select(sel) {
     S.sel = sel; S.evPick = false; evPending.length = 0;
     root.querySelectorAll("#bag-grid .bag-cell, #bag-slots .bag-slot[data-uid]").forEach(c =>
-      c.classList.toggle("sel", (!!sel.uid && c.dataset.uid === sel.uid) || (!!sel.id && c.dataset.id === sel.id)));
+      c.classList.toggle("sel", (!!sel.uid && c.dataset.uid === sel.uid) || (!!sel.id && c.dataset.id === sel.id) || (sel.bidx != null && c.dataset.uid === "bt-" + sel.bidx)));
     if (ME.uid && sel.kind === "pokemon") openMoveEditor(sel.uid);
     else if (ME.uid) closeMoveEditor();
     renderDetail(true);
@@ -573,9 +614,15 @@ const BagUI = (() => {
   function renderDetail(anim) {
     const d = $("#bag-detail");
     d.classList.remove("fade"); if (anim) { void d.offsetWidth; d.classList.add("fade"); }
-    if (!S.sel) { d.innerHTML = `<div class="bag-note">Tap a Pokémon or an item to see details.<br><br>Hold and drag a Pokémon onto a team slot to build My Team. Double-tap a Pokémon to ♥ it.</div>`; return; }
+    if (!S.sel) {
+      d.innerHTML = S.battle
+        ? `<div class="bag-note">${S.battle.mode === "switch" ? "Tap a Pokémon on the left, then Send out." : "Tap an item, then a Pokémon on the left — or drag the item onto it. Using an item ends your turn."}</div>`
+        : `<div class="bag-note">Tap a Pokémon or an item to see details.<br><br>Hold and drag a Pokémon onto a team slot to build My Team. Double-tap a Pokémon to ♥ it.</div>`;
+      return;
+    }
+    if (S.sel.kind === "bpoke") { renderBattleDetail(d); return; }
     if (S.sel.kind !== "pokemon") {
-      const it = (S.sel.kind === "items" ? itemList() : heldList()).find(x => x.id === S.sel.id);
+      const it = S.battle ? itemInfo(S.sel.id) : (S.sel.kind === "items" ? itemList() : heldList()).find(x => x.id === S.sel.id);
       if (!it) { d.innerHTML = ""; return; }
       d.innerHTML = `
         <div class="bag-item-big"><span class="bag-ib">${it.icon ? `<img src="${it.icon}" alt="">` : `<span class="bag-emoji big">${it.emoji}</span>`}</span>
@@ -587,8 +634,8 @@ const BagUI = (() => {
           <div class="bag-note">Paralyzed, asleep or frozen Pokémon can't eat. Feeding when already full makes it throw up.</div>` : ""}
         ${it.cat === "medicine" ? `<div class="bag-note">Every medicine counts toward overdose — 3 within 1 minute poisons your Pokémon. Revival doesn't count.</div>` : ""}
         ${it.cat === "stones" ? `<div class="bag-kv"><span>Held by</span><b>${esc(loadState().entries.filter(x => x.heldItem === it.id).map(x => entryCurrentSpecies(x)[1]).join(", ") || "—")}</b></div><div class="bag-kv"><span>Held in battle</span><b>No effect (same as the original games)</b></div>` : ""}
-        <div class="bag-note">Tip: drag it onto a Pokémon in My Team, or tap ${verbOf(it)} then tap a Pokémon.</div>
-        <div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 ? "disabled" : ""}>${verbOf(it)}</button></div>`;
+        <div class="bag-note">${S.battle ? "Tip: drag it onto a Pokémon on the left, or tap Use then tap a Pokémon. Using an item ends your turn." : `Tip: drag it onto a Pokémon in My Team, or tap ${verbOf(it)} then tap a Pokémon.`}</div>
+        <div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-use" ${it.n <= 0 || it.usable === false ? "disabled" : ""}>${S.battle ? "Use" : verbOf(it)}</button></div>`;
       $("#bag-btn-use").addEventListener("click", () => startTarget(it.id));
       return;
     }
@@ -650,6 +697,49 @@ const BagUI = (() => {
     });
     if (S.evPick) bindEvPanel(e);
   }
+  function renderBattleDetail(d) {
+    const p = S.battle.team().find(x => x.idx === S.sel.bidx); if (!p) { d.innerHTML = ""; return; }
+    const pct = p.maxHp ? Math.max(0, p.hp) / p.maxHp * 100 : 0;
+    const cls = p.fainted ? "faint" : pct < 20 ? "low" : pct <= 50 ? "mid" : "";
+    const ic = p.fainted ? "fnt" : (p.status === "poison" && p.severe) ? "tox" : B_ICON[p.status];
+    const canSwitch = S.battle.mode === "switch" && !p.active && !p.fainted;
+    d.innerHTML = `
+      <div class="bag-dhead"><img class="bag-dspr" src="${animatedURL(p.dexId)}" alt="" style="${p.fainted ? "filter:grayscale(1) opacity(.6)" : ""}">
+        <div class="bag-dtitle"><div class="bag-dname">${esc(p.name)}</div>
+          <div class="bag-lvrow"><span class="bag-lv">Lv.<b>${p.level}</b></span>${p.active ? `<span class="bag-dsub">In battle</span>` : ""}</div>
+          <div class="bag-types">${typesOf(p.dexId).map(t => `<img src="${typeIconURL(t)}" alt="${t}">`).join("")}${ic ? `<img class="bag-stimg" src="assets/battle/ui/status-${ic}.png" alt="">` : ""}</div></div></div>
+      <div class="bag-bars"><div class="bag-bar-row"><span>HP</span><div class="bag-bar hp ${cls}"><i style="width:${pct}%"></i></div><span class="v">${Math.max(0, p.hp)}/${p.maxHp}</span></div></div>
+      <div class="bag-sec"><span>Moves</span><span>PP</span></div>
+      <div class="bag-moves">${(p.moves || []).map(m => { const mi = moveInfo(m.slug); const ci = damageClassInfo(mi.damage_class);
+        return `<div class="bag-move" style="--tc:${typeColor(mi.type)}"><span class="mcat" style="background:${ci.color}">${ci.icon}</span><span class="mname">${esc(m.name)}</span><span class="mpow">${mi.power == null ? "—" : mi.power}</span><span class="pp">${m.pp}/${m.maxPp}</span></div>`; }).join("")}</div>
+      ${S.battle.mode === "switch" ? `<div class="bag-actions"><button type="button" class="bag-btn" id="bag-btn-switch" ${canSwitch ? "" : "disabled"}>${p.active ? "Already in battle" : p.fainted ? "Fainted — can't battle" : `Send out ${esc(p.name)}`}</button></div>` : ""}`;
+    const sw = $("#bag-btn-switch");
+    if (sw) sw.addEventListener("click", () => { const ctx = S.battle; hideBattleBag(); ctx.onSwitch(p.idx); });
+  }
+
+  /* ---------- 戰鬥中開背包／換 Pokémon（背包第 4a 段） ---------- */
+  function openBattle(ctx) {
+    if (!root) build();
+    S.battle = ctx; S.from = "battle"; S.sel = null; S.evPick = false; S.target = null;
+    S.tab = ctx.mode === "switch" ? "pokemon" : "items";
+    root.classList.add("show", "in-battle");
+    root.classList.toggle("switching", ctx.mode === "switch");
+    $("#bag-home-lbl").textContent = "BATTLE";
+    $("#bag-team-title").textContent = "Battle team";
+    $("#bag-team-hint").textContent = ctx.mode === "switch" ? "tap to pick" : "drop items here";
+    $("#bag-banner").classList.remove("show");
+    fillBezel(); fit();
+    renderTabInd(); renderChips(); renderGrid("in-f"); renderBattleTeam();
+    const act = ctx.team().find(x => x.active);
+    if (ctx.mode === "switch" && act) select({ kind: "bpoke", bidx: act.idx });
+    else renderDetail();
+  }
+  function hideBattleBag() {
+    cancelTarget();
+    root.classList.remove("show", "in-battle", "switching");
+    S.battle = null; S.sel = null;
+  }
+
   function moveRowHTML(slug) {
     const m = moveInfo(slug); const ci = damageClassInfo(m.damage_class);
     return `<div class="bag-move" style="--tc:${typeColor(m.type)}" title="${esc(m.type)} · ${ci.label}"><span class="mcat" style="background:${ci.color}">${ci.icon}</span><span class="mname">${esc(m.name)}</span><span class="mpow">${m.power == null ? "—" : m.power}</span><span class="pp">${m.pp == null ? "—" : m.pp}</span></div>`;
@@ -845,15 +935,15 @@ const BagUI = (() => {
      ===================================================================== */
   const heldSprite = k => (window.Care ? Care.ITEM_SPRITE((typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(k)) ? k + "-stone" : k) : "");
   const heldName = k => (typeof STONE_LABELS !== "undefined" && STONE_LABELS[k]) || k;
-  const itemInfo = id => itemList().concat(heldList()).find(x => x.id === id);
+  const itemInfo = id => (S.battle ? S.battle.items() : itemList().concat(heldList())).find(x => x.id === id);
   function verbOf(it) { return it.cat === "stones" ? "Give" : (it.cat === "food" || it.cat === "berries") ? "Feed" : "Use"; }
 
   /* 用道具模式：撳 Use → 跳去 Pokémon tab → 撳目標（或者撳左欄隊伍） */
   function startTarget(id) {
     const it = itemInfo(id); if (!it || it.n <= 0) return;
     S.target = id;
-    if (S.tab !== "pokemon") { S.tab = "pokemon"; renderTabInd(); renderChips(); renderGrid("in-r"); }
-    $("#bag-banner-t").textContent = `${verbOf(it)} ${it.name}: tap a Pokémon`;
+    if (!S.battle && S.tab !== "pokemon") { S.tab = "pokemon"; renderTabInd(); renderChips(); renderGrid("in-r"); }
+    $("#bag-banner-t").textContent = S.battle ? `${it.name}: tap a Pokémon on the left` : `${verbOf(it)} ${it.name}: tap a Pokémon`;
     $("#bag-banner").classList.add("show");
     root.classList.add("targeting");
   }
@@ -867,6 +957,13 @@ const BagUI = (() => {
 
   async function applyItem(id, uid) {
     cancelTarget();
+    if (S.battle) {
+      const idx = Number(String(uid).replace("bt-", ""));
+      const why = S.battle.canUse(id, idx);
+      if (why !== true) { toast(why || "It won't have any effect."); return; }
+      const ctx = S.battle; hideBattleBag(); ctx.onUseItem(id, idx);
+      return;
+    }
     const e = entryOf(uid); if (!e) return;
     if (typeof STONE_KINDS !== "undefined" && STONE_KINDS.includes(id)) { giveStone(id, uid); return; }
     if (applyItem.busy) return;
@@ -1025,7 +1122,8 @@ const BagUI = (() => {
     renderTabInd(); renderChips(); renderGrid(anim); renderTeam(); renderDetail();
   }
 
-  return { open, close, isOpen: () => S.open, getTeam };
+  return { open, close, isOpen: () => S.open, getTeam, openBattle,
+    showRotate: (mode, done) => { if (!root) build(); showRotate(mode, done); } };
 })();
 
 window.BagUI = BagUI;

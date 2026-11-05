@@ -1024,13 +1024,61 @@ const BattleUI = (() => {
     return BAG_ITEMS.concat(berries);
   }
   /* 樹果跟原作：冇效果唔准用、唔扣數（Rule 63）；藥照 spec 照用照扣 */
-  function berryWouldWork(id) {
-    const it = BattleState.ITEMS[id]; const p = myActive();
+  function berryWouldWork(id, target) {
+    const it = BattleState.ITEMS[id]; const p = (target != null && me().team[target]) ? me().team[target] : myActive();
     if (!it || !it.berry || !p || p.hp <= 0) return true;
     if ((it.healPct || it.heal || it.healFrac) && p.hp < p.maxHp) return true;
     if (it.cures && (it.cures.includes(p.status) || (it.cures.includes("confusion") && p.volatile && p.volatile.confusion > 0))) return true;
     if (it.pp && (p.moves || []).some(m => m.pp < m.maxPp)) return true;
     return false;
+  }
+
+  /* ---------- 戰鬥中三欄背包（背包第 4a 段）：BAG = 用道具；POKéMON／暈咗 = 換 Pokémon（中欄鎖定） ---------- */
+  function openBattleBag(kind, forced) {
+    if (typeof BagUI === "undefined" || !BagUI.openBattle) {
+      if (kind === "bag") showBagMenu(); else showSwitchMenu(forced);
+      return;
+    }
+    hideActionMenus();
+    BagUI.openBattle({
+      mode: kind, forced: !!forced,
+      team: () => me().team.map((p, i) => ({
+        idx: i, name: p.name, dexId: p.dexId, level: p.level, hp: p.hp, maxHp: p.maxHp, status: p.status,
+        severe: !!p.severePoison, active: i === me().active, fainted: p.hp <= 0,
+        moves: (p.moves || []).map(m => ({ slug: m.slug, name: m.name, pp: m.pp, maxPp: m.maxPp }))
+      })),
+      items: () => battleBagItems(),
+      canUse: (id, idx) => {
+        const it = BattleState.ITEMS[id]; const p = me().team[idx];
+        if (!it || !p) return "Can't use this in battle";
+        if (bagLeft(id) <= 0) return "No item left";
+        if (it.revive) return p.hp <= 0 ? true : "Revival only works on a fainted Pokémon";
+        if (p.hp <= 0) return `${p.name} has fainted — use a Revival`;
+        return berryWouldWork(id, idx) ? true : "It won't have any effect.";
+      },
+      onUseItem: (id, idx) => chooseItem(id, idx),
+      onSwitch: idx => chooseSwitch(idx),
+      onClose: () => { showMainMenu(); narrate(`What will ${myActive().name.toUpperCase()} do?`); }
+    });
+  }
+  /* 戰鬥 BAG 清單：用得嘅（藥／Revival／有戰鬥效果嘅樹果）+ 用唔到嘅樹果灰色（spec §10：全部列出、用唔到變灰） */
+  function battleBagItems() {
+    const out = [];
+    const sprite = id => (window.Care && Care.MED_INFO[id]) ? Care.ITEM_SPRITE(Care.MED_INFO[id].sprite)
+      : id === "revive" ? "assets/items/revive.png" : (window.Care ? Care.ITEM_SPRITE(id) : "");
+    bagIds().forEach(id => {
+      const n = bagLeft(id); if (n <= 0) return;
+      const it = BattleState.ITEMS[id];
+      const eff = it.revive ? "Revives a fainted teammate with full HP." : it.healPct ? `Restores ${it.healPct}% HP.` : it.heal ? `Restores ${it.heal} HP.`
+        : it.healFrac ? `Restores 1/${it.healFrac} of max HP.` : it.pp ? `Restores ${it.pp} PP to a move.` : `Cures ${it.cures.length > 2 ? "any status" : it.cures[0]}.`;
+      out.push({ id, name: it.label, icon: sprite(id), n, cat: it.berry ? "berries" : "medicine", usable: true,
+        desc: eff + (it.med ? " Counts toward overdose (3 within 5 turns)." : "") });
+    });
+    if (window.Care && Care.ownedBerries) Care.ownedBerries().filter(k => !BattleState.ITEMS[k]).forEach(k => {
+      out.push({ id: k, name: Care.BERRIES[k].name, icon: Care.ITEM_SPRITE(k), n: Care.berryCount(k), cat: "berries", usable: false,
+        desc: "Can't be used from the Bag in battle." });
+    });
+    return out;
   }
 
   /* 背包數量（扣埋今場已用） */
@@ -1058,6 +1106,8 @@ const BattleUI = (() => {
       b.style.transform = "translateX(0)";
     });
     App.showView("view-battle");
+    /* 背包第 4a 段：戰鬥畫面轉橫（打直會先出轉手機提示） */
+    if (typeof BattleLand !== "undefined") BattleLand.enter();
     render();
     /* 對戰 BGM（Battle! Wild Pokémon）：接管 town BGM，完場先交返 */
     try { if (window.CaptureScene) CaptureScene.audio.startBGM(); } catch (e) {}
@@ -1850,8 +1900,9 @@ const BattleUI = (() => {
       if (fainted.length === 1) target = fainted[0];
       else { showBagMenu(fainted); return; }
     }
-    if (itemId !== "revive" && myActive().hp <= 0) { toast("This Pokémon can't use an item."); return; }
-    if (!berryWouldWork(itemId)) { toast("It won't have any effect."); return; }
+    const tgt = (target != null && me().team[target]) ? me().team[target] : myActive();
+    if (itemId !== "revive" && tgt.hp <= 0) { toast("This Pokémon can't use an item."); return; }
+    if (!berryWouldWork(itemId, target)) { toast("It won't have any effect."); return; }
     acting = true;
     battleUsed[itemId] = (battleUsed[itemId] || 0) + 1;   /* 用咗就扣（HP 滿都照扣，計入過量） */
     hideActionMenus();
@@ -2006,7 +2057,7 @@ const BattleUI = (() => {
       /* 我方暈咗要強制換 */
       if (myActive().hp <= 0 && BattleState.hasUsable(me().team)) {
         await say(`${myActive().name} fainted! Choose your next Pokémon.`);
-        showSwitchMenu(true);
+        openBattleBag("switch", true);
         acting = false;
         return;
       }
@@ -2302,12 +2353,12 @@ const BattleUI = (() => {
     document.getElementById("btn-battle-bag").onclick = () => {
       if (mode === "pvp" && !(pvpRules && pvpRules.items)) { toast("Medicine is off for this battle."); return; }
       if (!bagIds().some(id => bagLeft(id) > 0)) { toast("Your bag is empty."); return; }
-      showBagMenu();
+      openBattleBag("bag", false);
     };
     document.getElementById("btn-battle-pokemon").onclick = () => {
       /* 戰前投票唔准自願換：只可以喺暈咗時強制換（showSwitchMenu(true) 另一條路） */
       if (mode === "pvp" && pvpRules && !pvpRules.switch) { toast("Switching is off for this battle."); return; }
-      showSwitchMenu(false);
+      openBattleBag("switch", false);
     };
     /* RUN：撳一下彈確認窗（modal 唔可以撳外面關），再撳 RUN 先算投降認輸 */
     document.getElementById("btn-battle-run").onclick = () => {

@@ -5416,3 +5416,40 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pc-item.berry.super { background: #fff8e6; border-color: #f0d58a; }
 .pc-items { flex-wrap: wrap; }
 .pc-berry-empty { font-size: 11px; color: #8a93a8; text-align: center; padding: 8px 4px; }
+
+/* =====================================================================
+   背包第 4a 段：戰鬥畫面轉橫（BattleLand）— 同背包同款紅框
+   body 級 overlay：z 2400（低過背包 2500；Rule 46）
+   ===================================================================== */
+.battle-land { position: fixed; inset: 0; z-index: 2400; display: none; align-items: center; justify-content: center; background: #1b1d24; overflow: hidden; }
+.battle-land.show { display: flex; }
+.battle-land .bl-frame { flex: none; transform-origin: center center; }
+.battle-land .bag-bezel, .battle-land .bl-home { cursor: default; }
+.battle-land .bl-home { opacity: .45; filter: saturate(.5); }
+.bl-screen {
+  margin: 6px; min-width: 0; min-height: 0; position: relative; overflow: hidden;
+  background: #285068; border: 3px solid #111; border-radius: 16px; box-shadow: inset 0 0 0 2px #1d3a4c;
+  display: flex; align-items: center; justify-content: center;
+}
+/* #view-battle 喺紅框入面：取消原本為直向 display window 而設嘅負 margin／100vh */
+.bl-screen > #view-battle {
+  /* display window 版本用 fixed／inset／translateX 定位，喺紅框入面一律清走 */
+  position: relative !important; inset: auto !important; top: 0 !important; left: 0 !important; right: auto !important; bottom: auto !important;
+  transform: none !important; max-width: none !important; max-height: none !important;
+  margin: 0; padding: 0; min-height: 0; height: 100%; width: 100%;
+  display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden;
+}
+.bl-screen .battle-stage, .bl-screen .battle-bottom { width: var(--bl-w, 100%); max-width: none; flex: none; }
+.bl-screen .party-frame { max-width: none; width: min(100%, calc(var(--bl-w, 100%) * .62)); }
+/* 戰鬥中三欄背包：tab 鎖定、中欄鎖定（換 Pokémon）、出場中標記 */
+.bag-tab.locked { color: #bcb7a8; cursor: not-allowed; }
+.bag-tab.locked::after { content: " 🔒"; font-size: 9px; }
+.bag-lockov {
+  position: absolute; inset: 4px; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: repeating-linear-gradient(135deg, rgba(239,234,223,.94) 0 10px, rgba(229,224,212,.94) 10px 20px); border-radius: 10px;
+  color: #7d786c; font-weight: 900; font-size: 13px; text-align: center;
+}
+.bag-lockov small { font-weight: 700; font-size: 11px; }
+.bag-root.switching .bag-lockov { display: flex; }
+.bag-root.in-battle .bag-colhead span { color: #e03a32; }
+.bag-inbattle { position: absolute; right: 4px; top: -7px; font-size: 8px; font-weight: 900; background: #e03a32; color: #fff; border-radius: 4px; padding: 1px 4px; }
