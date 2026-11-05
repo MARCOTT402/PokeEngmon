@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.53.0...v1.54.0) (2026-11-05)
+
+
+### Features
+
+* **bag:** use items, held evolution stones and Prof. Oak release (stage 3a) ([af1bf92](https://github.com/MARCOTT402/PokeEngmon/commit/af1bf929c5140c3ba53ff952e8f005fa14debad9))
+
 # [1.53.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.52.0...v1.53.0) (2026-11-05)
 
 
