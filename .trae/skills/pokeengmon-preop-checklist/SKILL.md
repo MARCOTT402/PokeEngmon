@@ -633,3 +633,13 @@ Incident (2026-11-04)：結算畫面顯示「獲得 EXP」但實際冇加。根�
 - 改 EXP 相關流程後，跑 `node tools/_test_battle.js`（應 97 PASS）。
 
 
+
+## Rule 62 — 喺 Browser pane 跑會改 state 嘅 JS 之前，一定要 assert `location.host` 係 localhost
+
+Incident (2026-11-05)：用 `obtainPokemon()` + 改 `pet.health`／`exp` 喺本地預覽造測試資料，但用戶之前已經將同一個 preview tab 導航去正式站 `marcott402.github.io`。Script 直接寫咗用戶真存檔（加咗隻 Bulbasaur、改咗拍檔飽肚值同 EXP）。好彩未同步上雲，靠 Supabase `user_entries` 對返原值手動還原。
+
+- 任何會寫 localStorage／`saveState()`／打 RPC 嘅 debug script，第一行：
+  `if (location.host !== "localhost:8080") throw new Error("ABORT: not localhost " + location.href);`
+- Tab Context 顯示嘅 URL 唔係 localhost（或者見到「user clicked … since an earlier tool call」提示）→ 先 `navigate` 返 localhost 再做。
+- 純讀（screenshot、`get_page_text`、讀 state）先可以喺正式站做。
+- 真係誤改咗：即刻停手，用 Supabase 雲端資料對返原值還原，並如實話畀用戶知。

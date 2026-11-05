@@ -228,10 +228,18 @@
               <span class="ph-sign-lv" id="hero-lv">Lv.1</span>
               <span class="ph-sign-star" aria-hidden="true">★</span>
             </div>
-            <div class="ph-sign-hpbar" aria-hidden="true"><i id="hero-hpbar"></i></div>
+            <!-- 兩條棒：Fullness（飽肚值，舊 id hero-hpbar）／HP（戰鬥 HP）；等級顯示喺稀有度旁邊 -->
+            <div class="ph-sign-stat">
+              <span class="ph-sign-stat-k">Fullness</span>
+              <div class="ph-sign-hpbar" aria-hidden="true"><i id="hero-hpbar"></i></div>
+              <span class="ph-sign-stat-v" id="hero-full-val">—</span>
+            </div>
             <span class="ph-sign-note" id="hero-pet-note"></span>
-            <div class="ph-sign-expbar" aria-hidden="true"><i id="hero-expbar"></i></div>
-            <span class="ph-sign-explabel" id="hero-exp-text"></span>
+            <div class="ph-sign-stat">
+              <span class="ph-sign-stat-k">HP</span>
+              <div class="ph-sign-hpbar ph-sign-battlehp" aria-hidden="true"><i id="hero-battlehp"></i></div>
+              <span class="ph-sign-stat-v" id="hero-battlehp-val">—</span>
+            </div>
           </div>
 
           <!-- TodayStrip 44 -->

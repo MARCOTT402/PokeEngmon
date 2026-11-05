@@ -225,8 +225,7 @@ const App = {
     const nameEl = document.getElementById("hero-name");
     const rarityEl = document.getElementById("hero-rarity");
     const lvEl = document.getElementById("hero-lv");
-    const bar = document.getElementById("hero-expbar");
-    const expText = document.getElementById("hero-exp-text");
+    const fullVal = document.getElementById("hero-full-val");
 
     /* Hero HP/EXP bar 位置已遷到 Signature 卡；舊 label/stage 元素由新 ID 取代 */
     if (entry) {
@@ -244,15 +243,20 @@ const App = {
       rarityEl.textContent = rz.label;
       rarityEl.style.background = rz.bg;
       rarityEl.style.color = rz.color;
-      lvEl.textContent = "Lv." + level;
+      if (lvEl) lvEl.textContent = "Lv." + level;
 
       /* 電子寵物狀態：只跟當前拍檔，其他寶可夢唔受影響 */
       const petSt = window.Pet ? Pet.status(entry) : null;
+
+      /* HP：上限 = 戰鬥引擎 stats.hp（跟等級／個體值／努力值／性格）。
+         狀態系統（hp_permille）未落地前：飽肚值 0 = Faint → 0，否則滿血 */
+      this._renderHeroBattleHp(entry, cur[0], level, petSt);
       const hpBar = document.getElementById("hero-hpbar");
       const hpNote = document.getElementById("hero-pet-note");
       if (hpBar && hpNote) {
         if (petSt) {
           hpBar.style.width = Math.max(0, petSt.health) + "%";
+          if (fullVal) fullVal.textContent = `${Math.max(0, petSt.health)}/100`;
           const wrap = hpBar.parentElement;
           wrap.classList.toggle("mid", petSt.health > 25 && petSt.health <= 50);
           wrap.classList.toggle("low", petSt.health <= 25);
@@ -262,24 +266,14 @@ const App = {
           } else if (petSt.faint) {
             hpNote.textContent = "Fainted — open Partner Care to use a Revival";
           } else if (petSt.health >= 100) {
-            hpNote.textContent = `Health ${petSt.health}/100 ・ Decay −100 per 25h${petSt.streak ? ` ・ 🔥 ${petSt.streak}` : ""}`;
+            hpNote.textContent = "Full";
           } else {
-            hpNote.textContent = `Health ${petSt.health}/100 ・ Hungry — tap to feed`;
+            hpNote.textContent = "Hungry — tap to feed";
           }
         } else {
           hpBar.style.width = "0%";
           hpNote.textContent = "";
         }
-      }
-      if (level >= MAX_LEVEL) {
-        bar.style.width = "100%";
-        expText.textContent = `Fully evolved 🎉`;
-      } else {
-        const base = expAtLevel(cur[0], level);
-        const span = levelSpan(cur[0], level);
-        const into = Math.max(0, entry.exp - base);
-        bar.style.width = Math.min(100, (into / span) * 100) + "%";
-        expText.textContent = `Lv. ${level} ・ EXP ${into} / ${span} to next Lv.`;
       }
     } else {
       sprite.style.visibility = "hidden";
@@ -288,17 +282,17 @@ const App = {
       nameEl.textContent = "No Pokémon yet";
       rarityEl.textContent = "—";
       rarityEl.style.background = ""; rarityEl.style.color = "";
-      lvEl.textContent = "Lv 1";
-      bar.style.width = "0%";
-      expText.textContent = "Answer questions → pull a Pokémon!";
+      if (lvEl) lvEl.textContent = "";
+      if (fullVal) fullVal.textContent = "—";
       /* 冇拍檔時清空健康條 */
+      this._renderHeroBattleHp(null);
       const hpBar0 = document.getElementById("hero-hpbar");
       const hpNote0 = document.getElementById("hero-pet-note");
       if (hpBar0) {
         hpBar0.style.width = "0%";
         hpBar0.parentElement.classList.remove("mid", "low");
       }
-      if (hpNote0) hpNote0.textContent = "";
+      if (hpNote0) hpNote0.textContent = "Answer questions → pull a Pokémon!";
     }
 
     /* 點拍檔 → Partner Care（育成 / 餵食 / 換拍檔都可以喺彈窗做） */
@@ -573,6 +567,33 @@ const App = {
     if (!box) return;
     box.innerHTML = `<div class="pc-float bad">${escapeHTML(msg)}</div>`;
     setTimeout(() => { box.innerHTML = ""; }, 1200);
+  },
+
+  /* 主頁 HP 條：顯示實數 cur/max；>50% 綠、20–50% 黃、<20% 紅、Faint 灰 */
+  _renderHeroBattleHp(entry, dexId, level, petSt) {
+    const fill = document.getElementById("hero-battlehp");
+    const val = document.getElementById("hero-battlehp-val");
+    if (!fill || !val) return;
+    const wrap = fill.parentElement;
+    if (!entry) {
+      fill.style.width = "0%";
+      val.textContent = "—";
+      wrap.classList.remove("mid", "low", "faint");
+      return;
+    }
+    let max = 0;
+    try {
+      const st = (typeof calcStats === "function") ? calcStats(dexId, level, entry.ivs, entry.evs, entry.nature) : null;
+      max = st && st.hp ? st.hp : 0;
+    } catch (e) { max = 0; }
+    const faint = !!(petSt && petSt.faint);
+    const cur = faint ? 0 : max;
+    const pct = max > 0 ? (cur / max) * 100 : 0;
+    fill.style.width = pct + "%";
+    val.textContent = max > 0 ? `${cur}/${max}` : "—";
+    wrap.classList.toggle("faint", faint);
+    wrap.classList.toggle("mid", !faint && pct >= 20 && pct <= 50);
+    wrap.classList.toggle("low", !faint && pct < 20);
   },
 
   /* 同步育成彈窗三層內容（唔重建 DOM，避免動畫閃） */
