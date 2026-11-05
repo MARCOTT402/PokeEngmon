@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.58.1...v1.59.0) (2026-11-05)
+
+
+### Features
+
+* **quiz:** commercial-grade quiz UI with focus mode, segmented progress and new keyboard ([1793633](https://github.com/MARCOTT402/PokeEngmon/commit/1793633938c7f7cdba4bf81bfd42db5b829482f0))
+
 ## [1.58.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.58.0...v1.58.1) (2026-11-05)
 
 
