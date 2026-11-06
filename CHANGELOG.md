@@ -1,3 +1,10 @@
+## [1.63.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.1...v1.63.2) (2026-11-06)
+
+
+### Bug Fixes
+
+* **security:** server-side stones, verified random PvP results and locked battles table ([61536bc](https://github.com/MARCOTT402/PokeEngmon/commit/61536bcde2d87cc03316c0d9daa0301d2dee289c))
+
 ## [1.63.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.0...v1.63.1) (2026-11-05)
 
 
