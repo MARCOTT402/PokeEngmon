@@ -1,3 +1,10 @@
+## [1.65.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.0...v1.65.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **capture:** fill tablet and desktop screen area ([7aa7c5d](https://github.com/MARCOTT402/PokeEngmon/commit/7aa7c5d3337c881cfa4f77dc9f723b7767a00079)), closes [#view-capture](https://github.com/MARCOTT402/PokeEngmon/issues/view-capture)
+
 # [1.65.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.64.0...v1.65.0) (2026-11-06)
 
 
