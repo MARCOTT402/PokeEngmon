@@ -169,6 +169,8 @@ const Battle = (() => {
     /* Multiscale：滿 HP 受傷減半；Filter：效果絕佳嘅傷害 ×0.75 */
     if (defender.ability === "multiscale" && defender.hp >= defender.maxHp) base = Math.floor(base * 0.5);
     if (defender.ability === "filter" && mult > 1) base = Math.floor(base * 0.75);
+    /* Aura Guard（Mega Lucario Z，Pokémon Champions）：受接觸類招式傷害減半 */
+    if (defender.ability === "aura-guard" && isContact(move, opts.slug || move.slug)) base = Math.floor(base * 0.5);
 
     /* 天氣倍率（Gen 5）：日照火×1.5／水×0.5；下雨水×1.5／火×0.5 */
     if (weather === "sun") {

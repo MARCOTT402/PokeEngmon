@@ -153,6 +153,30 @@ const emberTotal = ab => { let t = 0; for (let i = 1; i <= 40; i++) { const x = 
 const e0 = emberTotal("pressure"), e1 = emberTotal("mega-sol");
 T(`Mega Sol: Fire moves powered as if sunny (${e0} -> ${e1})`, e1 > e0 * 1.3);
 
+/* Aura Guard：接觸招傷害減半，非接觸唔受影響；Mold Breaker 無視 */
+st = mk({}, {}); base = avg(st, "p1", "scratch"); withAb(st, "p2", "aura-guard");
+T("Aura Guard halves contact damage (Scratch)", avg(st, "p1", "scratch") < base * 0.6);
+st = mk({}, {}); base = avg(st, "p1", "ember"); withAb(st, "p2", "aura-guard");
+T("Aura Guard ignores non-contact (Ember)", Math.abs(avg(st, "p1", "ember") - base) < base * 0.08);
+st = mk({ ability: "mold-breaker", moves: ["scratch"] }, { chainKey: "snorlax", dexId: 143, ability: "aura-guard", level: 100 }, 3);
+const agHit = ab => { let t = 0; for (let i = 1; i <= 40; i++) { const x = mk({ ability: ab, moves: ["scratch"] }, { chainKey: "snorlax", dexId: 143, ability: "aura-guard", level: 100 }, i); x.turn = 1; BattleState.executeMove(x, "p1", 0); const l = x.log.find(y => /took \d+/.test(y.msg)); if (l) t += +l.msg.match(/took (\d+)/)[1]; } return t; };
+T("Mold Breaker ignores Aura Guard", agHit("mold-breaker") > agHit("pressure") * 1.6);
+
+/* Eelevate：Ground 招無效、Spikes 無效；擊倒後最高能力 +1 */
+st = mk({ moves: ["earthquake"] }, { ability: "eelevate" });
+st.turn = 1; BattleState.executeMove(st, "p1", 0);
+T("Eelevate: immune to Ground moves", has(st, /doesn't affect/) && BattleState.active(st, "p2").hp === BattleState.active(st, "p2").maxHp);
+st = mk({}, { ability: "eelevate" }); st.p2.side.spikes = 3;
+const eHp = BattleState.active(st, "p2").hp; BattleState.applyEntryHazards(st, "p2");
+T("Eelevate: immune to Spikes", BattleState.active(st, "p2").hp === eHp);
+st = mk({ ability: "eelevate", moves: ["tackle"], level: 100 }, { level: 2 });
+const eel = BattleState.active(st, "p1"); eel.stats.spa = 999;   /* 最高 = SpA */
+st.turn = 1; BattleState.executeMove(st, "p1", 0);
+T("Eelevate: KO raises highest stat (Sp. Atk) +1", BattleState.active(st, "p2").hp === 0 && eel.statStages.spa === 1 && eel.statStages.atk === 0 && has(st, /Eelevate raised its Sp\. Atk/));
+st = mk({ ability: "eelevate", moves: ["tackle"], level: 5 }, { chainKey: "snorlax", dexId: 143, level: 100 });
+st.turn = 1; BattleState.executeMove(st, "p1", 0);
+T("Eelevate: no boost without KO", Object.values(BattleState.active(st, "p1").statStages).every(v => v === 0));
+
 /* PvP 一致性：全套特性都唔會令兩邊 log 唔同 */
 const sim = () => {
   const s = BattleState.create([mon({ ability: "parental-bond", moves: ["tackle", "fury-swipes"] })], [mon({ uid: "f", chainKey: "bulbasaur", dexId: 1, ability: "magic-bounce", moves: ["growl", "tackle"] })], { seed: 77 });

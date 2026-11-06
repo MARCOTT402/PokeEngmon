@@ -813,3 +813,14 @@ Incident (2026-11-06，進化石／隨機 PvP／battles 收權)：(1) 進化石�
 - 驗證：未登入路徑喺 localhost 跑（Rule 62，試完還原存檔並 reload）；登入路徑要等用戶跑完 migration，再用 RPC 呼叫 + `information_schema.role_column_grants` 核對。
 
 Skill: Rule 78 added
+
+## Rule 79 — 新 Mega 特性：去 Pokémon Champions 資料搵效果；`statLabel` 只收 PokeAPI stat 名
+
+Incident (2026-11-06，Aura Guard／Eelevate)：上一輪將 Mega Lucario Z 嘅 Aura Guard 同 Mega Eelektross 嘅 Eelevate 當「效果不明」做 no-op。原因係淨係喺 Legends Z-A 搵資料，但 Z-A 本身冇特性系統；呢啲新特性係 Pokémon Champions 先定義（Serebii `pokemonchampions/newabilities.shtml`）。另外寫 Eelevate log 時用 `statLabel("spa")`，但 `statLabel` 只認 `special-attack` 呢類 PokeAPI 名，會顯示 raw key。
+
+- 新 Mega／新特性效果：先睇 Serebii Pokémon Champions 新特性頁；Z-A 搵唔到唔等於冇效果。
+- 寫完用 `tools/_test_mega_abilities.js` 嘅 Node 腳本列出 `MEGA_STONES` 特性有邊啲未出現喺 `state.js`／`engine.js`，逐個確認係「單打本來冇效果」（Stalwart、Healer；本 engine 冇 Protect → Piercing Drill、Unseen Fist）定真係漏咗。
+- 防守方特性要諗埋 Mold Breaker：加入 `BREAKABLE`。Levitate 類用 `LEVITATING` set／`grounded()`，唔好再寫死 `=== "levitate"`。
+- Log 能力名：engine key（atk/def/spa/spd/spe）要先轉做 PokeAPI 名再 call `statLabel`。
+
+Skill: Rule 79 added

@@ -79,7 +79,7 @@ const BattleState = (() => {
   /* 特性擋招（屬性免疫）：absorb 類回復 1/4 HP；flash-fire 儲起强化火招；
      lightning-rod 吸收並 SpA+1；levitate 純免疫 */
   const ABIL_IMMUNE_TYPE = {
-    levitate: "ground", "volt-absorb": "electric", "water-absorb": "water",
+    levitate: "ground", eelevate: "ground", "volt-absorb": "electric", "water-absorb": "water",
     "flash-fire": "fire", "lightning-rod": "electric"
   };
   function abilityLabel(a) {
@@ -129,12 +129,19 @@ const BattleState = (() => {
   const ATE_ABILITY = { aerilate: "flying", pixilate: "fairy", refrigerate: "ice", dragonize: "dragon" };
   const MOLD_BREAKERS = new Set(["mold-breaker", "teravolt", "turboblaze"]);
   /* 被 Mold Breaker 無視嘅（防守方）特性 */
-  const BREAKABLE = new Set(["levitate", "volt-absorb", "water-absorb", "flash-fire", "lightning-rod", "sturdy", "battle-armor",
+  const BREAKABLE = new Set(["levitate", "eelevate", "aura-guard", "volt-absorb", "water-absorb", "flash-fire", "lightning-rod", "sturdy", "battle-armor",
     "shell-armor", "thick-fat", "multiscale", "filter", "insomnia", "vital-spirit", "limber", "immunity", "own-tempo",
     "hyper-cutter", "keen-eye", "inner-focus", "contrary", "magic-bounce", "sand-veil", "snow-cloak", "unaware"]);
   const UNTRACEABLE = new Set(["trace", "multitype", "illusion", "stance-change", "zen-mode", "imposter"]);
   const INTIMIDATE_IMMUNE = new Set(["hyper-cutter", "inner-focus", "own-tempo", "oblivious", "scrappy"]);
-  function grounded(p) { return !p.types.includes("flying") && p.ability !== "levitate"; }
+  /* Eelevate（Mega Eelektross，Pokémon Champions）= Levitate + 擊倒後最高能力 +1 */
+  const LEVITATING = new Set(["levitate", "eelevate"]);
+  function grounded(p) { return !p.types.includes("flying") && !LEVITATING.has(p.ability); }
+  /* Beast Boost 式：最高實數能力（唔計 HP、唔計能力階級），同分按 atk→def→spa→spd→spe */
+  function highestStatKey(p) {
+    const keys = ["atk", "def", "spa", "spd", "spe"];
+    return keys.reduce((best, k) => ((p.stats[k] || 0) > (p.stats[best] || 0) ? k : best), keys[0]);
+  }
   /* 特性帶天氣（Gen 6+：5 回合）；已經係同一天氣就冇嘢發生 */
   function abilityWeather(state, p, msgs) {
     const w = WEATHER_ABILITY[p.ability];
@@ -202,8 +209,7 @@ const BattleState = (() => {
     if (!p || p.hp <= 0) return msgs;
     /* Spikes：飛行屬性同 Levitate 免疫（Gen 5） */
     if (sd.spikes > 0) {
-      const grounded = !p.types.includes("flying") && p.ability !== "levitate";
-      if (grounded) {
+      if (grounded(p)) {
         const frac = [0, 1 / 8, 1 / 6, 1 / 4][sd.spikes];
         const dmg = Math.max(1, Math.floor(p.maxHp * frac));
         p.hp = Math.max(0, p.hp - dmg);
@@ -615,6 +621,15 @@ const BattleState = (() => {
         if (actor.ability === "moxie" && (actor.statStages.atk || 0) < 6) {
           actor.statStages.atk = (actor.statStages.atk || 0) + 1;
           log(state, `${actor.name}'s Moxie raised its Attack!`);
+        }
+        /* Eelevate：擊倒對手後最高能力 +1 */
+        if (actor.ability === "eelevate" && actor.hp > 0 && target !== actor) {
+          const k = highestStatKey(actor);
+          if ((actor.statStages[k] || 0) < 6) {
+            actor.statStages[k] = (actor.statStages[k] || 0) + 1;
+            const lbl = { atk: "attack", def: "defense", spa: "special-attack", spd: "special-defense", spe: "speed" }[k];
+            log(state, `${actor.name}'s Eelevate raised its ${statLabel(lbl)}!`);
+          }
         }
         break;
       }
