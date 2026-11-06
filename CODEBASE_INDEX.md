@@ -13,10 +13,10 @@
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
 | Power Up 改錯 | `js/powerup.js` |
-| 本地存檔 | `js/storage.js` |
-| 雲端 sync | `js/sync.js` |
+| 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98） | `js/storage.js` |
+| 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tools/_test_sync_queue.js` |
 | Auth + RPC（鑽石/捕捉/扭蛋/exp；`authedFetch`、single-flight token 續期，Rule 96） | `js/supabase-auth.js` |
-| 網絡層（timeout／離線／錯誤分類／連線 toast） | `js/core/net.js`（`Net.request`、`NetError`），Rule 96 |
+| 網絡層（timeout／離線／錯誤分類／連線 toast／離線 pill `#net-offline`） | `js/core/net.js`（`Net.request`、`NetError`、`syncPill`），Rule 96／98 |
 | Schema / RPC SQL | `supabase/supabase-schema.sql`, `supabase/migrations/` |
 | 捕捉（Three.js） | `js/capture.js` |
 | 扭蛋 | `js/gacha.js` |

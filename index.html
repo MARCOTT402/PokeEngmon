@@ -115,6 +115,17 @@
       background: rgba(0, 0, 0, .45); font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
     }
     #guard-recover .fatal-btn { margin-bottom: 10px; }
+    /* 離線提示（Net，Rule 98）：白螢幕區右上角細 pill；唔擋操作；z 2550（低過 bag-rotate 2600／toast 3000，高過 battle-land 2400；Rule 46／81） */
+    #net-offline {
+      position: fixed; z-index: 2550; pointer-events: none;
+      top: calc(var(--frame-screen-top, 0px) + 6px);
+      left: calc(var(--frame-screen-left, 0px) + var(--frame-screen-w, 100vw) - 8px);
+      transform: translateX(-100%);
+      padding: 3px 10px; border-radius: 999px; border: 2px solid #1a1a1a; white-space: nowrap;
+      background: #fff3cd; color: #7a5c00; box-shadow: 0 2px 0 rgba(0, 0, 0, .18);
+      font: 800 12px/1.3 "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif; letter-spacing: .02em;
+    }
+    #net-offline[hidden] { display: none !important; }
   </style>
   <!-- Guard 一定要第一個 script（喺 style.css／supabase-config 之前），先捉得到其他檔案嘅錯（Rule 94） -->
   <script src="js/core/guard.js?v=1.67.0"></script>
@@ -143,6 +154,8 @@
     </div>
   </div>
   <!-- 恢復卡（Guard.report）：答題／捕捉／對戰中出錯，保證可以返主頁 -->
+  <!-- 離線 pill（Net 控制；Rule 98） -->
+  <div id="net-offline" role="status" aria-live="polite" title="You're offline — progress is saved on this device" hidden>● Offline</div>
   <div id="guard-recover" role="alertdialog" aria-modal="true" aria-labelledby="guard-recover-title" hidden>
     <div class="fatal-card">
       <h1 id="guard-recover-title">Something went wrong</h1>

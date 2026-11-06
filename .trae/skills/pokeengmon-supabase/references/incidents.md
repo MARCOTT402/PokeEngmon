@@ -138,3 +138,12 @@ Skill: Rule 78 added
 - 驗證：browser stub fetch 六個場景全過（見 SKILL.md 驗收）；boot 冇新 Guard 錯誤。
 
 Skill: Rule 96 added
+
+### Rule 98 — 本機資料唔准靜靜冇咗：sync queue 要持久化＋backoff＋毒批丟棄＋keepalive；存檔讀唔到要先備份；寫唔落要話用戶知；離線用 pill 提示
+
+- 背景：stability-performance plan §3.4–3.7。審查發現：sync queue 只喺記憶體、靠 `beforeunload` flush（iOS 唔 fire）→ 殺 App 就冇咗；失敗每 1 秒無限重試（斷網狂 retry 食電，4xx 毒批永遠卡住）；`loadState()` parse 失敗直接 `defaultState()`，下一次 `saveState()` 覆蓋玩家進度；`saveState()` quota 滿靜靜失敗。
+- 修正：`js/sync.js` queue 重寫（持久化、per-account、去重、backoff、毒批、keepalive、`pendingCount()`）；`js/storage.js` `_backupCorruptState`＋`saveState` 失敗提示；`js/core/net.js` `syncPill`＋`index.html` `#net-offline`。
+- 撞板：pill 第一版喺 phone 斷成兩行（41px 高）→ 加 `white-space: nowrap`。Rule 97 已被另一個 session 嘅 `js/keys.js` 引用 → 改用 98。
+- 驗證：Node 18/18；browser 壞存檔重開；headless phone／wide 斷網／返線上；sm2 15/15；overlay-switch 10/10；sheets 28/29（P9b 已知）。
+
+Skill: Rule 98 added

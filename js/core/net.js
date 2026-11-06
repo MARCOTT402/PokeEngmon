@@ -87,8 +87,14 @@
     return res;
   }
 
-  window.addEventListener("offline", () => { _last.online = 0; toast("offline"); });
-  window.addEventListener("online", () => { _last.offline = 0; toast("online"); });
+  /* 離線 pill（#net-offline，index.html；Rule 98）：離線期間常駐右上角，返回線上收起 */
+  function syncPill() {
+    const el = document.getElementById("net-offline");
+    if (el) el.hidden = !isOffline();
+  }
+  window.addEventListener("offline", () => { _last.online = 0; syncPill(); toast("offline"); });
+  window.addEventListener("online", () => { _last.offline = 0; syncPill(); toast("online"); });
+  document.addEventListener("DOMContentLoaded", syncPill);
 
-  window.Net = { request, NetError, isOffline, notify, MSG };
+  window.Net = { request, NetError, isOffline, notify, syncPill, MSG };
 })();

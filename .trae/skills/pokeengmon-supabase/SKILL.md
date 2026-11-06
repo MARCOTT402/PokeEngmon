@@ -111,3 +111,14 @@ The `_api()` helper in `js/sync.js` auto-adds this header when the path contains
 - `Net.request` timeout 預設 12 秒（auth 15、sync 20、PvP 10、登出 8）；離線即刻 throw `NetError(kind: offline)`；`NetError.message` 以 "Network" 開頭 → `App._authError` 對應 `net`。5xx 彈「Server is busy」、timeout／斷線彈「Connection problem」（同類 20 秒一次）；4xx 唔彈（業務錯誤由 caller 處理）；離線中唔逐個彈，只喺 offline／online 事件各彈一次。背景請求（sync、PvP、refresh、report）用 `quiet: true`。
 - 唔做自動重試 POST／RPC（Rule 5：會重複發獎勵）；冪等 GET 先用 `Guard.fetchGet` 重試（Rule 94）。
 - 驗收（唔好用真帳號，stub `window.fetch`）：過期 session＋5 個並行 `_rpc` → refresh 只 call 1 次、全部用新 token；401 一次 → 第二次成功；refresh 回 400 → 兩個 RPC 都 null、仍然 `isLoggedIn()`、expired toast 1 次；冇 session 嘅 `_rpcTable` 用 anon key；`navigator.onLine=false` → 0 toast；timeout 300ms 準時 throw `kind: timeout`。驗完要還原 `pokeengmon_auth_session`。
+
+### Rule 98 — 本機資料唔准靜靜冇咗：sync queue 要持久化＋backoff＋毒批丟棄＋keepalive；存檔讀唔到要先備份；寫唔落要話用戶知；離線用 pill 提示
+
+- `Sync` queue 存 `pokeengmon_sync_queue_v1`（每次入隊／送完即寫）；開 App 自動補送（3 秒後）。每行帶 `account_id`，flush 只送目前登入帳戶嘅行；卡按 `card_id` 去重，history 上限 2000。
+- 失敗 backoff：1s → 2 → 4 … 上限 60s（`_failures` 最多 6）；離線唔試，`online` 事件即刻試。**4xx（除 401／408／429）＝毒批**：丟棄＋`Guard.report`，唔好無限重試卡住後面嘅資料。
+- 頁面隱藏（`visibilitychange: hidden`／`pagehide`）用 `keepalive: true` 送——iOS PWA 唔會 fire `beforeunload`。`_api(method, path, body, { keepalive })`。
+- 已知限制：`user_history` POST 冇 on_conflict，response 超時但 server 已寫入時重試會重複一行（`SM2.mergeHistory` 本地按 ts＋card_id 去重；server 端未處理）。
+- `loadState()`：JSON 壞咗或者唔係 object → 先將原文寫去 `pokeengmon_state_corrupt_<ts>`（留 3 份）、`Guard.report`、`window.__stateRecovered = true`、toast 話用戶知，**先至**用 `defaultState()`。唔准直接 default（下一次 `saveState()` 會覆蓋玩家進度）。
+- `saveState()` 寫唔落（quota／私密模式）→ `Guard.report`＋toast「Couldn't save on this device — storage may be full.」（5 分鐘一次），唔准 `catch (e) {}` 吞咗。
+- 離線：`#net-offline` pill（`index.html` 內聯樣式，右上角、`pointer-events: none`、z 2550、`white-space: nowrap`、位置用 `--frame-screen-*`，Rule 81／46），由 `Net.syncPill()` 跟 `online`／`offline` 事件同步；toast 只喺轉離線／返線上各彈一次。舊 `.sync-banner`（`top: 0; translateX(-50%)`）唔好再用。
+- 驗收：`node tools/_test_sync_queue.js`（18 項：持久化、重開還原、離線唔送、2s／4s backoff、成功清空、400 丟棄、401 保留、換帳戶唔送、hidden → keepalive、clearQueue、壞存檔備份原文）；headless `Network.emulateNetworkConditions offline` → pill 出、RPC 即刻 null、返線上 pill 收；壞 JSON 存檔重開 → App 正常、有備份、有 toast。

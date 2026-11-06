@@ -81,13 +81,41 @@ function defaultState() {
 
 let _state = null;
 
+/* 存檔讀唔到（JSON 壞咗／唔係 object）：先將原文備份，先至用預設值（Rule 98）。
+   舊做法直接 defaultState()，下一次 saveState() 就會覆蓋玩家進度，冇得救。
+   備份 key：pokeengmon_state_corrupt_<ts>（最多留 3 份）；登入用戶開機 Sync.pull 會由雲端還原。 */
+function _backupCorruptState(raw, err) {
+  try {
+    const ts = Date.now();
+    localStorage.setItem("pokeengmon_state_corrupt_" + ts, raw);
+    const keys = Object.keys(localStorage).filter(k => k.indexOf("pokeengmon_state_corrupt_") === 0).sort();
+    keys.slice(0, Math.max(0, keys.length - 3)).forEach(k => localStorage.removeItem(k));
+  } catch (e) { /* quota 滿都唔可以 throw */ }
+  try { if (window.Guard) Guard.report(err || new Error("State not an object"), { where: "loadState", kind: "boot", silent: true }); } catch (e) {}
+  window.__stateRecovered = true;
+  /* 首屏之後話用戶知（App.toast 未 ready 就等） */
+  const say = () => {
+    if (window.App && App.toast) App.toast("Your saved data couldn't be read — a backup was kept. Signed-in progress will restore from the cloud.");
+    else setTimeout(say, 1500);
+  };
+  setTimeout(say, 2500);
+}
+
 function loadState() {
   if (_state) return _state;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    _state = raw ? Object.assign(defaultState(), JSON.parse(raw)) : defaultState();
-  } catch (e) {
+  let raw = null;
+  try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { raw = null; }
+  if (!raw) {
     _state = defaultState();
+  } else {
+    let parsed = null, err = null;
+    try { parsed = JSON.parse(raw); } catch (e) { err = e; }
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      _state = Object.assign(defaultState(), parsed);
+    } else {
+      _backupCorruptState(raw, err);
+      _state = defaultState();
+    }
   }
   /* Migration: 舊 entries 嘅 uid 唔係 valid UUID，要換成 UUID 先 push 到 Supabase */
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -123,11 +151,20 @@ function loadState() {
   return _state;
 }
 
+let _saveFailToastAt = 0;
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
     if (window.SM2 && SM2.setMode) SM2.setMode(_state.curveMode || "standard");
-  } catch (e) {}
+  } catch (e) {
+    /* 寫唔落（多數係 quota 滿／私密模式）：唔可以靜靜失敗，話用戶知（5 分鐘一次；Rule 98） */
+    try { if (window.Guard) Guard.report(e, { where: "saveState", silent: true }); } catch (x) {}
+    const now = Date.now();
+    if (now - _saveFailToastAt > 5 * 60 * 1000 && window.App && App.toast) {
+      _saveFailToastAt = now;
+      App.toast("Couldn't save on this device — storage may be full.");
+    }
+  }
 }
 
 function getCurveMode() {

@@ -22,7 +22,7 @@ window.Sync = (() => {
   }
 
   /* ---------- 通用 fetch wrapper ---------- */
-  async function _api(method, path, body) {
+  async function _api(method, path, body, extra) {
     const c = cfg();
     if (!c || !c.anonKey) throw new Error("Supabase config missing");
     const url = c.restUrl + path;
@@ -40,6 +40,7 @@ window.Sync = (() => {
     };
     const opts = { method, headers };
     if (body !== undefined) opts.body = JSON.stringify(body);
+    if (extra && extra.keepalive) opts.keepalive = true;   /* 頁面隱藏時送（body 上限 64 KB） */
     const res = await send(url, opts);
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
@@ -48,10 +49,35 @@ window.Sync = (() => {
     return res.json().catch(() => []);
   }
 
-  /* ---------- 背景 queue ---------- */
+  /* ---------- 背景 queue（Rule 98）----------
+     - 持久化：寫入 localStorage（pokeengmon_sync_queue_v1），iOS 殺 App／斷網都唔會唔見；開 App 自動補送
+     - 每行帶 account_id；flush 只送目前登入帳戶嘅行（其他帳戶嘅留低，等返佢登入）
+     - 卡片按 card_id 去重（新嘅蓋舊）；history 上限 2000
+     - 失敗 exponential backoff 1s → 2 → 4 … 上限 60s；離線唔試，online 事件即刻試
+     - 4xx（除 401／408／429）＝資料本身有問題：成批丟棄＋Guard.report，唔好無限重試卡住後面
+     - 頁面隱藏（visibilitychange hidden／pagehide）用 keepalive 送（iOS PWA 唯一可靠時機；beforeunload 唔 fire） */
+  const QUEUE_KEY = "pokeengmon_sync_queue_v1";
+  const MAX_HIST = 2000;
   let _pendingCards = [];
   let _pendingHistory = [];
   let _flushTimer = null;
+  let _flushing = false;
+  let _failures = 0;
+
+  function _saveQueue() {
+    try {
+      if (!_pendingCards.length && !_pendingHistory.length) localStorage.removeItem(QUEUE_KEY);
+      else localStorage.setItem(QUEUE_KEY, JSON.stringify({ cards: _pendingCards, history: _pendingHistory }));
+    } catch (e) {}
+  }
+  function _loadQueue() {
+    try {
+      const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "null");
+      if (q && Array.isArray(q.cards)) _pendingCards = q.cards.filter(r => r && r.account_id && r.card_id);
+      if (q && Array.isArray(q.history)) _pendingHistory = q.history.filter(r => r && r.account_id && r.card_id).slice(-MAX_HIST);
+    } catch (e) { _pendingCards = []; _pendingHistory = []; }
+  }
+  _loadQueue();
 
   /* Reset Progress：丟棄未發送嘅卡片／歷史，避免 reset 後又被 queue 寫返上雲 */
   function clearQueue() {
@@ -59,12 +85,14 @@ window.Sync = (() => {
     _pendingHistory = [];
     clearTimeout(_flushTimer);
     _flushTimer = null;
+    _failures = 0;
+    _saveQueue();
   }
 
   function queueUpsert(card) {
     const ref = _accountRef();
     if (!ref.isAuth) { console.log("[Sync] queueUpsert skipped — not auth"); return; }
-    _pendingCards.push({
+    const row = {
       account_id: ref.account_id,
       card_id: card.card_id,
       card_type: card.card_type,
@@ -76,7 +104,11 @@ window.Sync = (() => {
       is_mastered: card.is_mastered,
       last_review_at: card.last_review_at || 0,
       updated_at: card.updated_at
-    });
+    };
+    /* 同一帳戶同一張卡只留最新（舊行仲未送都唔使送） */
+    _pendingCards = _pendingCards.filter(r => !(r.account_id === row.account_id && r.card_id === row.card_id));
+    _pendingCards.push(row);
+    _saveQueue();
     console.log("[Sync] queueUpsert — card:", card.card_id, "pending:", _pendingCards.length);
     _scheduleFlush();
   }
@@ -93,24 +125,42 @@ window.Sync = (() => {
       levenshtein_distance: rec.levenshtein_distance,
       is_typo: rec.is_typo
     });
+    if (_pendingHistory.length > MAX_HIST) _pendingHistory = _pendingHistory.slice(-MAX_HIST);
+    _saveQueue();
     console.log("[Sync] queueHistory — card:", rec.card_id, "pending:", _pendingHistory.length);
     _scheduleFlush();
   }
 
-  function _scheduleFlush() {
+  function _scheduleFlush(delay) {
     if (_flushTimer) return;
-    _flushTimer = setTimeout(() => _flush(), 1000);
+    const ms = delay != null ? delay : (_failures ? Math.min(60000, 1000 * Math.pow(2, _failures)) : 1000);
+    _flushTimer = setTimeout(() => _flush(), ms);
   }
 
-  async function _flush() {
+  /* 錯誤 message 由 _api 嘅 `${status}: …` 開頭；4xx 業務錯誤（除 401／408／429）重試都冇用 */
+  function _isPoison(e) {
+    const m = /^(\d{3}):/.exec((e && e.message) || "");
+    const s = m ? Number(m[1]) : 0;
+    return s >= 400 && s < 500 && s !== 401 && s !== 408 && s !== 429;
+  }
+
+  async function _flush(keepalive) {
+    clearTimeout(_flushTimer);
     _flushTimer = null;
-    if (_pendingCards.length === 0 && _pendingHistory.length === 0) return;
+    if (_flushing) return;
+    const ref = _accountRef();
+    if (!ref.isAuth) return;                                   /* 未登入：留低，等登入再送 */
+    if (navigator.onLine === false) return;                    /* 離線：等 online 事件 */
+    const mine = r => r.account_id === ref.account_id;
+    const cards = _pendingCards.filter(mine);
+    const hist = _pendingHistory.filter(mine);
+    if (cards.length === 0 && hist.length === 0) return;
 
-    const cards = _pendingCards.splice(0, _pendingCards.length);
-    const hist  = _pendingHistory.splice(0, _pendingHistory.length);
+    _flushing = true;
+    let failed = false;
+    console.log("[Sync] _flush — cards:", cards.length, "history:", hist.length, keepalive ? "(keepalive)" : "");
 
-    console.log("[Sync] _flush — cards:", cards.length, "history:", hist.length);
-
+    const drop = (list, sent) => list.filter(r => !sent.includes(r));
     if (cards.length > 0) {
       try {
         /* 用 on_conflict 做 upsert，避免重複 card 導致成批失敗 */
@@ -119,32 +169,48 @@ window.Sync = (() => {
           interval_days: Number(c.interval_days),
           ease_factor: Number(c.ease_factor),
           last_review_at: Number(c.last_review_at || 0)
-        })));
+        })), { keepalive });
+        _pendingCards = drop(_pendingCards, cards);
         console.log("[Sync] ✅ flush cards ok:", cards.length);
       } catch (e) {
-        console.warn("[Sync] ❌ flush cards failed (retry):", e.message);
-        _pendingCards.unshift(...cards);
-        _scheduleFlush();
+        if (_isPoison(e)) {
+          _pendingCards = drop(_pendingCards, cards);
+          if (window.Guard) Guard.report(e, { where: "sync/cards", kind: "net", silent: true });
+        } else failed = true;
+        console.warn("[Sync] ❌ flush cards failed:", e.message);
       }
     }
     if (hist.length > 0) {
       try {
-        await _api("POST", "/user_history", hist);
+        await _api("POST", "/user_history", hist, { keepalive });
+        _pendingHistory = drop(_pendingHistory, hist);
         console.log("[Sync] ✅ flush history ok:", hist.length);
       } catch (e) {
-        console.warn("[Sync] ❌ flush history failed (retry):", e.message);
-        _pendingHistory.unshift(...hist);
-        _scheduleFlush();
+        if (_isPoison(e)) {
+          _pendingHistory = drop(_pendingHistory, hist);
+          if (window.Guard) Guard.report(e, { where: "sync/history", kind: "net", silent: true });
+        } else failed = true;
+        console.warn("[Sync] ❌ flush history failed:", e.message);
       }
     }
+    _saveQueue();
+    _flushing = false;
+    _failures = failed ? Math.min(_failures + 1, 6) : 0;
+    if (failed || _pendingCards.some(mine) || _pendingHistory.some(mine)) _scheduleFlush();
   }
 
-  /* 頁面卸載前 flush（避免 1 秒內轉頁遺失數據） */
-  window.addEventListener("beforeunload", () => {
-    if (_pendingCards.length > 0 || _pendingHistory.length > 0) {
-      _flush();
-    }
+  function pendingCount() {
+    return { cards: _pendingCards.length, history: _pendingHistory.length, failures: _failures };
+  }
+
+  /* 返回線上即刻補送；頁面隱藏用 keepalive 送（取代 beforeunload，iOS 唔會 fire） */
+  window.addEventListener("online", () => { _failures = 0; _scheduleFlush(300); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") _flush(true);
   });
+  window.addEventListener("pagehide", () => _flush(true));
+  /* 開 App 時有上次未送完嘅（等 auth init 完先試） */
+  if (_pendingCards.length || _pendingHistory.length) _scheduleFlush(3000);
 
   /* ---------- Pull（App 啟動時 / 登入後）---------- */
   async function pull() {
@@ -523,6 +589,7 @@ window.Sync = (() => {
     pushItems,
     patchAccount,
     flush: () => _flush(),
+    pendingCount,
     isEnabled: () => !!(cfg() && cfg().anonKey && (window.SupabaseAuth ? SupabaseAuth.isEnabled() : true))
   };
 })();
