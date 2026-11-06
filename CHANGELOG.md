@@ -1,3 +1,10 @@
+## [1.65.4](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.3...v1.65.4) (2026-11-06)
+
+
+### Bug Fixes
+
+* **battle:** free replacement turn in PvP ([3dd979c](https://github.com/MARCOTT402/PokeEngmon/commit/3dd979c4575113e8426f494ee315eff1b11afdb9))
+
 ## [1.65.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.2...v1.65.3) (2026-11-06)
 
 
