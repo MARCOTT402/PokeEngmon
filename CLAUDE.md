@@ -20,6 +20,15 @@
 
 跟 `.trae/skills/post-fix-lesson-capture/SKILL.md`：每次修正／被用戶糾正／第二次先做啱，同一輪就要喺 preop checklist 尾加新 `Rule N`（或引用已有 Rule），回覆結尾寫 `Skill: Rule N added` 或 `Skill: already covered by Rule N`。
 
+## Superpowers 用法（本段優先於 Superpowers skills）
+
+- **觸發範圍**：只有新功能／大改動先行 brainstorm → spec → plan 全流程；bug fix、小改動、文案／樣式微調直接做，唔使 brainstorm。
+- **文件位置**：spec／design 寫入 `.trae/specs/`，plan／task 寫入 `.trae/documents/`（檔名 `YYYYMMDD-<topic>.md`）；唔好開 `docs/superpowers/`。
+- **Commit**：plan 入面唔好有自動 commit 步驟；只喺用戶要求時用 `python tools/git_commit_push.py` commit，唔好手動 bump 版本（semantic-release 負責）。
+- **Worktree／分支**：預設直接喺 `main` 工作，唔開 worktree；只有用戶要求或大型實驗性改動先開。
+- **TDD／驗證**：project 冇 `npm test`，唔好為咗 TDD 起 test framework。驗證用 preop checklist 指定嘅方法（瀏覽器 preview 檢查、console 冇 error、必要時一次性 Node script）；verification-before-completion 照用，證據就係呢啲檢查結果。
+- **同現有規則嘅次序**：改碼前照讀 preop checklist 相關 Rule；修完 bug 照做 post-fix lesson capture（加 Rule N）。Superpowers 指引同本檔或 `.cursor/rules/*` 衝突時，以本檔為準。
+
 ## 常用指令
 
 - 本地 iPhone 外框預覽：`npm run preview:iphone`（`tools/device-preview.html`，基準 iPhone 17 Pro Max 440×956，見 Rule 30）
