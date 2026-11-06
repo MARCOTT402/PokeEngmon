@@ -1,3 +1,10 @@
+# [1.67.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.66.0...v1.67.0) (2026-11-06)
+
+
+### Features
+
+* **net:** request timeouts and single-flight token refresh ([e12ac35](https://github.com/MARCOTT402/PokeEngmon/commit/e12ac35d35602ffe0ab8903c93a8365105b2d55b))
+
 # [1.66.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.5...v1.66.0) (2026-11-06)
 
 
