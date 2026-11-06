@@ -266,6 +266,13 @@ const App = {
     const topDiamonds = document.getElementById("topbar-diamonds");
     if (topDiamonds) topDiamonds.textContent = st.diamonds;
 
+    /* Settings sheet「Name」行：所有改名路徑（rename／註冊暱稱／雲端 pull）之後都會 renderHome（Rule 91） */
+    const settingName = document.getElementById("setting-name");
+    if (settingName) {
+      settingName.textContent = st.playerName || "The PokéEngmon Trainer";
+      settingName.title = settingName.textContent;
+    }
+
     /* 連續天數 x1 格式 */
     const streakEl = document.getElementById("home-streak-label");
     if (streakEl) streakEl.textContent = "x" + calcStreak();

@@ -4860,7 +4860,11 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-sitem + .ph-sitem { margin-top: 2px; }
 .ph-sitem:active { background: #ffe9e7; }
 .ph-sitem-t { flex: 1; }
-.ph-sitem-v { font-size: 12px; color: #6b675d; font-weight: 700; }
+.ph-sitem-v {
+  font-size: 12px; color: #6b675d; font-weight: 700;
+  min-width: 0; max-width: 60%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .ph-s-arrow { color: #6b675d; font-size: 16px; font-weight: 700; }
 .ph-sitem-col {
   flex-direction: column; align-items: stretch; gap: 6px;

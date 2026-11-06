@@ -171,3 +171,10 @@ if (hasFixedOverlay || curSheet) {
 - overlay 入面嘅拖放／拖捲／撳住連加：`window.addEventListener("pointermove"|"pointerup"|"pointercancel", h, true)`（capture 階段，喺 overlay 截停之前已經收到）。
 - 唔好掛 `document` bubble；亦唔好為咗拖放拎走 Rule 60 嘅 stopPropagation（會令 sheet 外部點擊 handler 誤關）。
 - 驗收一定要用真滑鼠拖（`left_click_drag`）一次，唔好只 call JS 函數。
+
+### Rule 91 — 重構拆 DOM 時，被保留／搬去 sheet 嘅元素，佢嘅 render 寫入要一齊搬；唔好沿用舊 id 而冇人寫
+
+- 拆舊容器（例如舊頂 dock）之前，先 Grep 每個被保留或搬走嘅 `id`，睇 JS 有冇 `getElementById("<id>")` 寫入；寫入要同元素一齊搬，唔好跟舊容器一齊刪。
+- 搬去新位置嘅元素要改用反映新位置嘅 id（例如 `setting-name`），唔好沿用舊名（`topbar-name`），否則 Grep 會以為仲有人用緊。
+- HTML 預設佔位字（`—`、`0`）要當成「未 render」嘅訊號：驗收時打開該 sheet，確認顯示嘅係真資料，唔係佔位字。
+- 顯示用戶輸入（名、email）嘅值欄位要有 `min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap`，用最長允許長度（名字 24 字）測一次。
