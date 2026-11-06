@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.64.0...v1.65.0) (2026-11-06)
+
+
+### Features
+
+* **layout:** responsive layout for tablet and desktop ([4efcb4b](https://github.com/MARCOTT402/PokeEngmon/commit/4efcb4b2adf7bf038bf0f7e62df48ae0599a6e3b))
+
 # [1.64.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.3...v1.64.0) (2026-11-06)
 
 
