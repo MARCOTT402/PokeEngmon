@@ -1,3 +1,10 @@
+# [1.69.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.68.0...v1.69.0) (2026-11-06)
+
+
+### Features
+
+* animation speed setting and full keyboard control ([633e1d2](https://github.com/MARCOTT402/PokeEngmon/commit/633e1d28e9fe8aefeb3c75cfeaa90321ab7fb5f9))
+
 # [1.68.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.67.0...v1.68.0) (2026-11-06)
 
 
