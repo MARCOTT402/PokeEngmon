@@ -7,7 +7,7 @@
      settle_battle_team），server 結果覆蓋本地；本地規則只做兩次結算之間嘅顯示。
    - 未登入（guest）：本地規則就係權威。
    entry.pet 欄位：
-     health   飽肚值 0–100（舊名沿用；DB = pet_health）   updatedAt 飽肚值錨點
+     health   飽肚值 0–100（client 欄位名沿用 health；DB = user_entries.fullness）   updatedAt 飽肚值錨點
      hp       HP 千分比 0–1000（0 = Faint）               careAt    HP 流失錨點
      status   null|brn|par|slp|frz|psn                     poison    psn 時 1 中毒／2 嚴重中毒
      statusSince 睡眠／冰凍開始（30 分鐘自然解除）          medLog    最近用藥時間戳（1 分鐘窗口）

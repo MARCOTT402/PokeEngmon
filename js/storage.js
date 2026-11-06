@@ -519,13 +519,15 @@ function localEntryFromServer(e) {
   out.favorite = e.favorite === true;   /* 我的最愛（心心） */
   out.heldItem = (typeof e.held_item === "string" && e.held_item) ? e.held_item : null;   /* 攜帶道具 */
   /* 寵物狀態（v1.7.x 上雲）：雲端 null = 未上過雲，唔可以當 0
-     狀態系統第一期：pet_health = 飽肚值；HP／狀態全部由 server（care RPC）寫 */
-  out.pet = (e.pet_health == null && e.hp_permille == null) ? null : {
-    health: e.pet_health == null ? 100 : (Number(e.pet_health) || 0),
+     狀態系統第一期：fullness = 飽肚值；HP／狀態全部由 server（care RPC）寫
+     migration 20261106c：pet_health → fullness、pet_updated_at → fullness_at（舊名留做 fallback） */
+  const full = e.fullness != null ? e.fullness : e.pet_health;
+  out.pet = (full == null && e.hp_permille == null) ? null : {
+    health: full == null ? 100 : (Number(full) || 0),
     settledDay: e.pet_settled_day || "",
     decayDay: e.pet_decay_day || "",
-    updatedAt: e.pet_updated_at || null,
-    hp: e.hp_permille == null ? ((Number(e.pet_health) || 0) <= 0 && e.pet_health != null ? 0 : 1000) : Number(e.hp_permille),
+    updatedAt: e.fullness_at || e.pet_updated_at || null,
+    hp: e.hp_permille == null ? ((Number(full) || 0) <= 0 && full != null ? 0 : 1000) : Number(e.hp_permille),
     status: e.status || null,
     poison: Number(e.poison_level) || 0,
     statusSince: e.status_since || null,

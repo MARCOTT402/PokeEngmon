@@ -17,7 +17,7 @@
 
 | 欄位 | 用途 |
 |---|---|
-| `pet_health`（沿用） | **= 飽肚值** 0–100（避免大改名；JS 內部 `pet.health` 亦 = 飽肚值，UI 叫 Fullness） |
+| `fullness`（2026-11-06 由 `pet_health` 改名，migration 20261106c；錨點 `pet_updated_at` → `fullness_at`） | **= 飽肚值** 0–100（JS 內部 `pet.health` 亦 = 飽肚值，UI 叫 Fullness） |
 | `hp_permille` smallint | HP 千分比 0–1000；0 = Faint |
 | `status` text | null／`brn`／`par`／`slp`／`frz`／`psn`（Faint 用 hp=0 表示，唔係 status） |
 | `poison_level` smallint | `psn` 時 1 = 中毒、2 = 嚴重中毒 |
