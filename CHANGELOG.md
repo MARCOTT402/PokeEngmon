@@ -1,3 +1,11 @@
+## [1.65.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.2...v1.65.3) (2026-11-06)
+
+
+### Bug Fixes
+
+* **battle:** free replacement after own faint in AI battles ([5f0d883](https://github.com/MARCOTT402/PokeEngmon/commit/5f0d883f8b9f8f94f873c3ffc72b449af0330726))
+* **settings:** show trainer name in settings sheet ([294d1a3](https://github.com/MARCOTT402/PokeEngmon/commit/294d1a3ddbf07144f5c89aaab31838048282f8a0)), closes [#topbar-name](https://github.com/MARCOTT402/PokeEngmon/issues/topbar-name) [#setting-name](https://github.com/MARCOTT402/PokeEngmon/issues/setting-name)
+
 ## [1.65.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.1...v1.65.2) (2026-11-06)
 
 
