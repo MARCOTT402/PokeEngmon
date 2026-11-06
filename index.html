@@ -673,12 +673,17 @@
 
     <!-- ============ 結算 ============ -->
     <section id="view-settlement" class="view">
-      <h2 class="settle-title" id="settle-title">Set complete!</h2>
-      <p class="settle-sub" id="settle-sub"></p>
-      <div class="settle-score" id="settle-score"></div>
-      <div class="settle-stats" id="settle-stats"></div>
-      <div class="settle-rewards" id="settle-rewards"></div>
-      <div class="settle-mist" id="settle-mist"></div>
+      <!-- settle-col：phone／tablet 係 display:contents（等於冇呢層）；wide 變左右兩欄（Responsive P1 Task 8） -->
+      <div class="settle-col settle-col-a">
+        <h2 class="settle-title" id="settle-title">Set complete!</h2>
+        <p class="settle-sub" id="settle-sub"></p>
+        <div class="settle-score" id="settle-score"></div>
+        <div class="settle-stats" id="settle-stats"></div>
+      </div>
+      <div class="settle-col settle-col-b">
+        <div class="settle-rewards" id="settle-rewards"></div>
+        <div class="settle-mist" id="settle-mist"></div>
+      </div>
       <div class="settle-buttons">
         <button id="btn-settle-continue" class="qa-main" type="button"><span>Continue</span><kbd>Enter</kbd></button>
         <div class="settle-btn-row">

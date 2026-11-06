@@ -2,6 +2,15 @@
    PokeEngmon - 樣式（兒童友善 · 大按鈕 · 明亮）
    ============================================================ */
 
+/* ---------- LAYOUT BREAKPOINTS（同 js/app.js App.layout() 一致，改一邊要改另一邊） ----------
+   spec: .trae/specs/20261106-responsive-layout.md
+   phone-land : @media (orientation: landscape) and (max-height: 499px) and (pointer: coarse)
+   wide       : @media (min-width: 900px) and (min-height: 560px)
+   tablet     : @media (min-width: 700px)            （wide 條件唔成立時）
+   phone      : 其餘（基礎規則；440 基準，Rule 30）
+   樣式一律用以上 @media；<html data-layout> 只畀 JS 同少量 state 相關規則用。
+   phone 基礎規則唔准改：新規則全部包喺 min-width: 700px 或以上嘅 @media 入面。 */
+
 /* Inter（拉丁字，SIL OFL 1.1，本機自帶 woff2 以支援離線） */
 @font-face {
   font-family: "Inter";
@@ -2069,7 +2078,8 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .evolve-name { font-size: 1.4rem; font-weight: 900; }
 
 .toast {
-  position: fixed; left: 50%; top: calc(var(--frame-screen-top) + 12px); bottom: auto;
+  /* 置中於白螢幕區（phone = viewport 中心；wide 跟 --frame-screen-dx 去右欄） */
+  position: fixed; left: calc(var(--frame-screen-left) + var(--frame-screen-w) / 2); top: calc(var(--frame-screen-top) + 12px); bottom: auto;
   transform: translateX(-50%) translateY(-12px);
   max-width: min(420px, calc(100vw - 24px)); text-align: center;
   background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 999px;
@@ -2475,8 +2485,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   position: fixed;
   top: var(--frame-screen-top);
   bottom: var(--frame-screen-bottom);
-  left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 428px;
+  left: var(--frame-screen-left); transform: none; /* 定位只用 --frame-screen-*（Task 2） */
+  width: var(--frame-screen-w);
   min-height: 0;
   margin: 0;
   padding: 12px 12px 10px;
@@ -2492,7 +2502,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   transition: transform .4s cubic-bezier(.25,1,.5,1);
 }
 #view-friends.fixed-overlay-exit, #view-leaderboard.fixed-overlay-exit, #view-battle-menu.fixed-overlay-exit {
-  transform: translateX(-50%) scaleY(0);  /* 由底部向上壓縮至零，視覺效果同 Settings sheet close 一致 */
+  transform: scaleY(0);  /* 由底部向上壓縮至零，視覺效果同 Settings sheet close 一致（定位唔再靠 translateX） */
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -4365,7 +4375,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .ph-shell-parent {
   position: fixed; inset: 0;
   height: 100dvh;
-  max-width: 440px; margin: 0 auto;
+  max-width: var(--frame-w); margin: 0 auto;
   padding: 0;
 }
 .ph-shell-parent #app { padding: 0; }
@@ -4380,7 +4390,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   /* 頂部讓出 --frame-inset-top，令紅框頂邊完整可見；螢幕列（1fr）自動吸收呢段空間 */
   position: fixed; top: var(--frame-inset-top); left: 0; right: 0; bottom: 0;
   height: calc(100dvh - var(--frame-inset-top));
-  max-width: 440px; margin: 0 auto;
+  max-width: var(--frame-w); margin: 0 auto;
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);
   display: grid;
   grid-template-rows: var(--frame-deco-h) 48px 1fr 46px;
@@ -4505,7 +4515,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: #fffdf7;
   border: 3px solid #111;
   border-radius: 16px;
-  margin: 6px;
+  margin: var(--frame-screen-m);
   padding: 10px 10px 0;
   display: flex; flex-direction: column; gap: 8px;
   overflow: hidden;
@@ -4749,15 +4759,29 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   --frame-inset-top: 0px;
   /* 機頂裝飾列高度：螢幕列自動讓出呢段空間 */
   --frame-deco-h: 44px;
-  /* 白螢幕區 .pd-screen2 有 margin:6px，overlay 要貼實白區就要計埋 */
-  --frame-screen-top: calc(var(--frame-inset-top) + var(--frame-deco-h) + 48px + 6px + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px));
-  --frame-screen-bottom: calc(46px + 6px + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
+  /* ---- 外殼幾何（Responsive P1 Task 2）：所有 display-window overlay／toast 只准用呢組變數定位 ----
+     --frame-w        紅框（.pd-shell）最大闊度；tablet／wide 喺 @media 覆寫
+     --frame-screen-m 白螢幕區 .pd-screen2 嘅 margin（≤380px 係 5px）
+     --frame-screen-w overlay 闊度 = 紅框實際闊度 − 兩邊 margin（% 喺 position:fixed 元素上 = viewport 闊）
+     --frame-screen-dx overlay 中心相對 viewport 中心嘅位移（wide 對齊右欄用；phone／tablet = 0）
+     --frame-screen-left overlay 左邊（唔用 translateX(-50%)，exit 動畫先可以淨係 scaleY） */
+  --frame-w: 440px;
+  --frame-screen-m: 6px;
+  --frame-screen-w: calc(min(var(--frame-w), 100%) - 2 * var(--frame-screen-m));
+  --frame-screen-dx: 0px;
+  --frame-screen-left: calc(50% - var(--frame-screen-w) / 2 + var(--frame-screen-dx));
+  /* 白螢幕區 .pd-screen2 有 margin，overlay 要貼實白區就要計埋（Rule 43） */
+  --frame-screen-top: calc(var(--frame-inset-top) + var(--frame-deco-h) + 48px + var(--frame-screen-m) + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px));
+  --frame-screen-bottom: calc(46px + var(--frame-screen-m) + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
+}
+@media (max-width: 380px) {
+  :root { --frame-screen-m: 5px; }
 }
 #gacha-scene-b, #gacha-inspect {
   top: var(--frame-screen-top);
   bottom: var(--frame-screen-bottom);
-  left: 50%; right: auto; transform: translateX(-50%);
-  width: 100%; max-width: 428px; /* 同其他 display-window overlay 一致：殼 440 - 2×6px */
+  left: var(--frame-screen-left); right: auto; transform: none;
+  width: var(--frame-screen-w); /* 同其他 display-window overlay 一致 */
   height: auto;
   border-radius: 14px; /* 貼合白螢幕區圓角 */
 }
@@ -4902,11 +4926,170 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   .pd-deco-lens { width: 28px; height: 28px; }
   .pd-deco-brand { font-size: 9px; right: 44px; }
   .pd-deco .pd-deco-ball { width: 20px; height: 20px; }
-  .pd-screen2 { padding: 8px 8px 0; margin: 5px; }
+  .pd-screen2 { padding: 8px 8px 0; } /* margin 跟 --frame-screen-m（5px） */
   .ph-sign-sprite { width: 160px; height: 160px; }
   .ph-sign-name { font-size: 15px; }
   .ph-td { padding: 4px; font-size: 11px; }
   .ph-cta { height: 56px; font-size: 14px; }
+}
+
+/* ---- 17b. tablet（≥700px，Responsive P1 Task 3）：放大直向 Pokédex ----
+   iPad 直向 744–834、矮桌面視窗（wide 條件唔成立）都用呢個。wide 喺之後嘅 @media 覆寫 --frame-w。
+   紅框列高（deco 44／bezel 48／chin 46）唔變，--frame-screen-top/bottom 算式毋須改。 */
+@media (min-width: 700px) {
+  :root { --frame-w: 640px; }
+  .pd-bezel { padding: 0 14px; }
+  .pd-stats { gap: 8px; }
+  .pd-stat { min-width: 48px; min-height: 48px; }
+  .pd-icon { width: 24px; height: 24px; }
+  .pd-num { font-size: 14px; padding: 4px 10px; }
+  .pd-deco-brand { font-size: 12px; }
+  .pd-screen2 { padding: 14px 14px 0; gap: 12px; }
+  /* 拍檔卡可以縮：矮視窗（例如 1000×500 桌面窗）時 sprite 先縮細，CTA／dock 永遠見到。
+     刻意違反 Rule 42 嘅 flex:none：呢度要縮嘅係 sprite，其他兄弟（CTA／dock／today）仍然 flex:none。 */
+  .ph-sign { padding: 16px 24px 18px; gap: 7px; flex: 0 1 auto; min-height: 0; overflow: hidden; }
+  .ph-sign-sprite { width: 320px; height: 320px; flex: 0 1 320px; min-height: 56px; }
+  .ph-sign-name { font-size: 26px; }
+  .ph-sign-rarity, .ph-sign-lv, .ph-sign-star { font-size: 13px; }
+  .ph-sign-note { font-size: 12px; }
+  .ph-sign-stat-k { width: 70px; font-size: 12px; }
+  .ph-sign-stat-v, .ph-ssec-t { font-size: 12px; }          /* Task 10：tablet／wide 字級最細 12px */
+  .pd-topdiamond { font-size: 12px; top: -10px; }
+  .ph-sign-hpbar { height: 11px; }
+  .ph-cta { height: 64px; font-size: 17px; }
+  .ph-cta span { font-size: 13px; }
+  .ph-bottomdock { padding: 5px; gap: 5px; }
+  .ph-bd { min-height: 52px; }
+  .ph-bd svg { width: 28px; height: 28px; }
+  .ph-sheet-t { font-size: 18px; }
+  .ph-sheet-x { width: 40px; height: 40px; }
+}
+/* ---- 17c. wide（≥900×560，Responsive P1 Task 4）：橫向 Pokédex 雙欄 ----
+   紅框唔再貼死 viewport：四邊留白、垂直置中、高度封頂 900、闊度封頂 1240。
+   .pd-screen2 唔改 DOM：佢變透明容器，::before 畫左欄白螢幕；.ph-sheets 變右欄白螢幕。
+   左欄闊 --pane-l 用固定分段（唔用 %），因為 overlay 嘅 --frame-screen-w 喺 position:fixed 元素上計，
+   % 會指 viewport 而唔係 .pd-screen2，兩邊會對唔齊。 */
+@media (min-width: 900px) and (min-height: 560px) {
+  :root {
+    --frame-w: min(1240px, calc(100% - 48px));
+    --frame-h: min(calc(100dvh - 48px), 900px);
+    --frame-top: max(24px, calc((100dvh - var(--frame-h)) / 2));
+    --pane-l: 360px;
+    --pane-gap: 10px;
+    /* overlay 對齊右欄：闊度扣走左欄＋間隔；中心向右移（左欄＋間隔）／2 */
+    --frame-screen-w: calc(min(var(--frame-w), 100%) - 2 * var(--frame-screen-m) - var(--pane-l) - var(--pane-gap));
+    --frame-screen-dx: calc((var(--pane-l) + var(--pane-gap)) / 2);
+    --frame-screen-top: calc(var(--frame-top) + var(--frame-deco-h) + 48px + var(--frame-screen-m) + max(env(safe-area-inset-top, 0px), var(--sim-safe-top, 0px), 8px));
+    --frame-screen-bottom: calc(100dvh - var(--frame-top) - var(--frame-h) + 46px + var(--frame-screen-m) + max(env(safe-area-inset-bottom, 0px), var(--sim-safe-bottom, 0px)));
+  }
+  .pd-shell {
+    top: var(--frame-top); bottom: auto;
+    height: var(--frame-h);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(40, 10, 8, .28), 0 4px 0 #8a1712;
+  }
+  .pd-chin { border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; }
+
+  /* 透明容器：左欄白底由 ::before 畫，右欄白底係 .ph-sheets */
+  .pd-screen2 {
+    background: transparent; border: 0; border-radius: 0; box-shadow: none; /* 原本有 inset 2px 灰框，透明容器會露出一圈白線 */
+    padding: 14px; overflow: visible;
+  }
+  .pd-screen2::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--pane-l);
+    background: #fffdf7; border: 3px solid #111; border-radius: 16px; box-sizing: border-box;
+    z-index: -1;
+  }
+  .pd-screen2 > :not(.ph-sheets) { width: calc(var(--pane-l) - 28px); align-self: flex-start; box-sizing: border-box; }
+  .ph-sheets {
+    left: calc(var(--pane-l) + var(--pane-gap)); right: 0; top: 0; bottom: 0;
+    background: #fffdf7; border: 3px solid #111; border-radius: 16px; box-sizing: border-box;
+  }
+  .ph-sign { padding: 14px 18px 16px; }
+  .ph-sign-sprite { width: 100%; max-width: 260px; height: 260px; flex-basis: 260px; }
+
+  /* Task 5：sheet 填滿右欄，唔再上落滑入；切換用 150ms 淡入。
+     !important 係要壓過 expandArrow 寫落 inline 嘅 height／max-height 同 ph-sheet-down/up 嘅 translateY */
+  .ph-sheet, .ph-sheet-down, .ph-sheet-up {
+    top: 0; bottom: 0; left: 0; right: 0;
+    height: auto !important; max-height: none !important; transform: none !important;
+    border: 0; border-radius: 13px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .15s ease;
+  }
+  .ph-sheet.ph-open { opacity: 1; pointer-events: auto; }
+  .ph-backdrop { display: none !important; }        /* 右欄係常駐面板，唔係 modal */
+  .ph-sheet-expand, .ph-sheet-grip { display: none !important; } /* wide 直接 full 內容 */
+  .ph-sheet[data-wide-default] .ph-sheet-x { display: none; }   /* 預設 Daily Quests 冇得關 */
+
+  /* Task 6：捕捉／Gym 結算時左欄仍然見到，鎖住要睇得出（JS 同時加 inert，見 App._applyPaneLock） */
+  .pd-shell.frame-locked .pd-screen2 > :not(.ph-sheets),
+  .pd-shell.settle-locked .pd-screen2 > :not(.ph-sheets) { opacity: .45; filter: saturate(.5); }
+
+  /* Task 7：modal 置中於成部機（唔再貼右欄頂）——桌面冇「蓋住下巴 Home」嘅問題（Rule 46 係手機用）。
+     toast 已經跟 --frame-screen-* 置中喺右欄頂，唔使改。 */
+  .modal-backdrop { align-items: center; padding: 24px; }
+  .modal-card { max-width: 480px; max-height: calc(100dvh - 48px); }
+  .modal-card:has(> .au) { max-width: 420px; }
+
+  /* Task 8：結算喺右欄（≥750 闊）分兩欄 —— 左：標題／分數圈／stat；右：獎勵／錯題預覽；底：按鈕。
+     1440×900 一屏睇晒；1366×640 矮 laptop 見到 Continue 上半，其餘可以 scroll。 */
+  /* 兩個 .settle-col 各自係 flex column，左右高度互不拉扯（grid areas 會令標題同副標題之間出現大空位） */
+  #view-settlement.active {
+    display: grid; align-content: start;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "a b" "buttons buttons";
+    column-gap: 22px; row-gap: 14px; padding: 16px 20px 14px;
+  }
+  /* 用 .active 加 specificity：呢段喺檔案前面，「結算 v2」嘅 .settle-col { display: contents } 喺後面，同分會輸 */
+  #view-settlement.active .settle-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  #view-settlement.active .settle-col-a { grid-area: a; }
+  #view-settlement.active .settle-col-b { grid-area: b; }
+  #view-settlement.active .settle-sub { margin: -6px 0 0; }
+  #view-settlement.active .settle-buttons { grid-area: buttons; flex-direction: row; align-items: stretch; }
+  #view-settlement.active .settle-buttons > #btn-settle-continue { flex: 1 1 0; }
+  #view-settlement.active .settle-buttons > .settle-btn-row { flex: 1 1 0; }
+}
+/* Gym 結算鎖：bezel 4 個 stat 同 frame-locked 一樣變灰（下巴 Home 唔鎖，佢係唯一出口） */
+.pd-shell.settle-locked .pd-stat { pointer-events: none; opacity: .38; filter: saturate(.5); cursor: default; }
+@media (min-width: 900px) and (min-height: 560px) and (prefers-reduced-motion: reduce) {
+  .ph-sheet { transition: none; }
+}
+@media (min-width: 1280px) and (min-height: 560px) {
+  :root { --pane-l: 400px; }
+}
+
+/* tablet 矮視窗（例如 1000×500 桌面窗）：收埋 stat 條同 note，卡唔會喺棒中間被切開 */
+@media (min-width: 700px) and (max-height: 620px) {
+  .ph-sign { padding: 10px 16px 12px; gap: 4px; }
+  .ph-sign-stat, .ph-sign-note { display: none; }
+  .ph-sign-name { font-size: 20px; }
+  .ph-cta { height: 56px; }
+  .ph-bd { min-height: 46px; }
+}
+
+/* ---- 17d. 鍵盤焦點＋滑鼠 hover（Responsive P1 Task 10）----
+   :focus-visible 只喺鍵盤操作先出（觸控／滑鼠撳唔會出），所以手機截圖零變化。
+   瀏覽器預設藍框喺紅機身同黃 CTA 上睇唔清：白底區用「黑框＋黃光環」，紅機身上用「奶白框＋黑光環」。 */
+:where(#view-home, .view, .modal-card, .bag-rotate) :where(button, [role="button"], a[href], select, summary, input[type="range"], input[type="checkbox"]):focus-visible {
+  outline: 3px solid #1b1b22; outline-offset: 2px;
+  box-shadow: 0 0 0 6px #ffd93b;
+}
+.pd-bezel .pd-stat:focus-visible, .pd-chin button:focus-visible {
+  outline: 3px solid #fff8e1; outline-offset: 2px; box-shadow: 0 0 0 6px #1b1b22; border-radius: 12px;
+}
+.pd-chin .pd-home-ball:focus-visible { border-radius: 50%; }
+/* 觸控目標：✕ 外觀 34px（tablet 40px），用透明 ::after 擴大可撳範圍到 46／52px，唔改外觀（Task 10）。
+   下巴 Home 球有 overflow:hidden（::after 會被裁走、點唔到），改由 JS 將下巴球附近嘅點擊轉交（見 App.init）。 */
+.ph-sheet-x { position: relative; }
+.ph-sheet-x::after { content: ""; position: absolute; inset: -6px; }
+@media (hover: hover) and (pointer: fine) {
+  .pd-stat:hover:not(:disabled) { background: rgba(255, 255, 255, .14); }
+  .ph-cta:hover:not(:disabled) { filter: brightness(1.04); transform: translateY(-1px); box-shadow: 0 4px 0 #a07800; }
+  .ph-bd:hover:not(.active) { background: #fff3f1; }
+  .ph-sheet-x:hover { background: #f3efe2; }
+  .ph-sitem:hover { background: #fffbe7; }
+  .pd-stat, .ph-cta, .ph-bd, .ph-sheet-x, .ph-sitem { cursor: pointer; }
 }
 
 /* ---- 18. Reduced motion ---- */
@@ -5384,9 +5567,19 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   #view-quiz .qa-main { width: auto; min-width: 190px; padding: 0 28px; }
 }
 
+/* 矮桌面視窗（≥600 闊但 ≤560 高，例如 1000×500）：文字題卡同頂部收細，Hint 唔會被底部 Check 列切開（Responsive P1 Task 8） */
+@media (min-width: 600px) and (max-height: 560px) {
+  #view-quiz .quiz-top { padding-top: 10px; padding-bottom: 4px; }
+  .quiz-col { padding-top: 6px; padding-bottom: 12px; gap: 8px; }
+  #view-quiz .quiz-card { padding: 18px 22px; }
+  #view-quiz .quiz-sentence { font-size: 1.55rem; }
+  .quiz-prompt { font-size: 1.35rem; }
+  .quiz-action { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+}
 /* ============ 結算 v2 ============ */
 #view-settlement.active { gap: 14px; background: linear-gradient(180deg, #eef4ff 0%, #fffdf7 42%); }
-#view-settlement.active > * { flex: none; }
+#view-settlement.active > *, #view-settlement .settle-col > * { flex: none; } /* settle-col 入面嘅子項都要（Rule 42） */
+#view-settlement .settle-col { display: contents; } /* phone／tablet 等於冇呢層；wide 先變兩欄 */
 #view-settlement .settle-title { font-size: 1.6rem; font-weight: 900; letter-spacing: -.02em; margin: 6px 0 0; }
 .settle-sub { text-align: center; color: #6b7489; font-weight: 600; font-size: .9rem; margin: -8px 0 0; }
 .settle-sub:empty { display: none; }

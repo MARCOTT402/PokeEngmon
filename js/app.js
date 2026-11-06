@@ -11,6 +11,52 @@ const App = {
   selectedTopics: new Set(),   // 題型選擇
   _sheetSwitching: false,       /* 上框 sheet 切換中（close→open timer 期間 block 重複 click） */
 
+  /* ---------- 響應式版面（spec .trae/specs/20261106-responsive-layout.md） ----------
+   * 斷點同 css/style.css 頂部「LAYOUT BREAKPOINTS」註解一致，改一邊就要改另一邊：
+   *   phone-land : landscape 且 height < 500 且 pointer: coarse（桌面矮視窗唔算）
+   *   wide       : width ≥ 900 且 height ≥ 560
+   *   tablet     : width ≥ 700
+   *   phone      : 其餘
+   * 只按可用闊／高度同輸入能力決定，唔睇 UA／裝置型號。 */
+  _layoutMQ: null,
+  layout() {
+    if (!this._layoutMQ) {
+      const mq = (q) => window.matchMedia(q);
+      this._layoutMQ = {
+        phoneLand: mq("(orientation: landscape) and (max-height: 499px) and (pointer: coarse)"),
+        wide: mq("(min-width: 900px) and (min-height: 560px)"),
+        tablet: mq("(min-width: 700px)")
+      };
+    }
+    const m = this._layoutMQ;
+    if (m.phoneLand.matches) return "phone-land";
+    if (m.wide.matches) return "wide";
+    if (m.tablet.matches) return "tablet";
+    return "phone";
+  },
+  /* 寫入 <html data-layout>；layout 改變時 dispatch document 事件 "pe:layout"（detail: {from, to}） */
+  _initLayout() {
+    if (this._layoutBound) return;
+    this._layoutBound = true;
+    const apply = () => {
+      const to = this.layout();
+      const root = document.documentElement;
+      const from = root.dataset.layout || null;
+      if (from === to) return;
+      root.dataset.layout = to;
+      if (from) document.dispatchEvent(new CustomEvent("pe:layout", { detail: { from, to } }));
+    };
+    apply();
+    /* matchMedia change 只喺 render frame 先派發（背景分頁／部分模擬器唔會 fire），
+       所以同時聽 resize／orientationchange；apply() 冇變就即刻 return，好平。 */
+    Object.values(this._layoutMQ).forEach(q => {
+      if (q.addEventListener) q.addEventListener("change", apply);
+      else q.addListener(apply);
+    });
+    window.addEventListener("resize", apply, { passive: true });
+    window.addEventListener("orientationchange", apply);
+  },
+
   /* ---------- 路由 ---------- */
   showView(id) {
     /* 如果目前有 fixed overlay view（Friends/Leaderboard/Battle Menu），
@@ -59,6 +105,8 @@ const App = {
     }
     /* 答題 / 捕捉 / 對戰期間鎖住紅框功能鍵（防誤觸） */
     this._setFrameLock(id === "view-quiz" || id === "view-capture" || id === "view-battle");
+    /* Gym 結算鎖：返結算（例如由錯題回顧返嚟）仍然要鎖；離開結算即解 */
+    this._setSettleLock(id === "view-settlement" && !!this._gymSettleData);
     document.body.classList.toggle("capture-mode", id === "view-capture");
     /* 捕捉 canvas 尺寸跟隨白螢幕區（唔再等 window resize） */
     if (id === "view-capture") {
@@ -71,6 +119,10 @@ const App = {
     if (appEl) appEl.classList.toggle("app-wide", id === "view-quests");
     /* 離開任務板就停倒數 timer */
     if (id !== "view-quests" && typeof Quests !== "undefined" && Quests.stopTimer) Quests.stopTimer();
+    /* wide：返主頁時右欄 Daily Quests 仍然開住 → 重新 render＋開返倒數（上一行已經停咗） */
+    if (id === "view-home" && typeof Quests !== "undefined" && Quests.resume &&
+        document.querySelector("#sheet-quests.ph-open[data-wide-default]")) Quests.resume();
+    this._syncRotateHint(); /* 入／出捕捉要更新手機橫向提示 */
     window.scrollTo(0, 0);
   },
 
@@ -78,6 +130,7 @@ const App = {
   _setFrameLock(locked) {
     const shell = document.getElementById("pd-shell");
     if (!shell) return;
+    this._frameLocked = !!locked;
     shell.classList.toggle("frame-locked", locked);
     ["btn-bezel-streak", "btn-bezel-diamond", "btn-bezel-dex", "btn-bezel-energy", "btn-pd-home"]
       .forEach(id => {
@@ -86,6 +139,31 @@ const App = {
         el.disabled = locked;
         el.setAttribute("aria-disabled", locked ? "true" : "false");
       });
+    this._applyPaneLock();
+  },
+  /* Gym 結算（Rule 44）：badge 判定只喺下巴 Home 做，所以結算期間鎖 bezel＋左欄，下巴 Home 保持可撳 */
+  _setSettleLock(locked) {
+    const shell = document.getElementById("pd-shell");
+    if (!shell) return;
+    this._settleLocked = !!locked;
+    shell.classList.toggle("settle-locked", !!locked);
+    if (!this._frameLocked) {
+      ["btn-bezel-streak", "btn-bezel-diamond", "btn-bezel-dex", "btn-bezel-energy"].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = !!locked;
+        el.setAttribute("aria-disabled", locked ? "true" : "false");
+      });
+    }
+    this._applyPaneLock();
+  },
+  /* wide 左欄（拍檔卡／CTA／dock）喺 overlay 開住時仍然見到：鎖嘅時候要 inert（滑鼠＋鍵盤都撳唔到）。
+     phone／tablet 左欄本身被 overlay 蓋住，inert 冇副作用。 */
+  _applyPaneLock() {
+    const lock = !!(this._frameLocked || this._settleLocked);
+    document.querySelectorAll("#view-home .pd-screen2 > :not(.ph-sheets)").forEach(el => {
+      if (lock) el.setAttribute("inert", ""); else el.removeAttribute("inert");
+    });
   },
 
   /* 已解鎖物種數：ownership 聯集（唔以 entry 數計，避免進化形態灌水） */
@@ -1608,6 +1686,8 @@ const App = {
     } else {
       this._gymSettleData = null;
     }
+    /* showView("view-settlement") 早過呢度 set _gymSettleData，所以要喺度補鎖（Rule 44） */
+    this._setSettleLock(document.getElementById("view-settlement").classList.contains("active") && !!this._gymSettleData);
   },
 
   _renderSettlement(data, rewards) {
@@ -2870,6 +2950,17 @@ const App = {
       this.showView("view-home");
     }
     if (id === "sheet-setting") { this._syncAudioSliders(); this._syncCurveMode(); }
+    delete sheet.dataset.wideDefault; /* 用戶主動開 = 唔再係 wide 預設 */
+    /* wide：開任何 sheet 都要先收起右欄預設 Daily Quests。
+       _closeAllSheets 喺 wide 刻意保留預設 sheet，所以經 fixed overlay（Friends／Leaderboard／Battle Menu）
+       嘅原本 410ms 路徑開 sheet 時，唔喺度收就會兩個 sheet 同時開住（Rule 84） */
+    document.querySelectorAll("#view-home .ph-sheet[data-wide-default]").forEach(s => {
+      if (s === sheet) return;
+      s.classList.remove("ph-open");
+      delete s.dataset.wideDefault;
+      s.hidden = true;
+      this._unmountSheetView(s);
+    });
     this._unmountSheetView(sheet); /* 上次 full 模式搬咗舊 view 入嚟 → 搬返原位 */
     /* 永遠重置 full 模式 + height style + arrow 方向（確保每次開都由 compact 開始） */
     sheet.classList.remove("ph-sheet-full");
@@ -2901,7 +2992,14 @@ const App = {
       backdrop.classList.add("ph-open");
     }
     sheet.hidden = false;
-    requestAnimationFrame(() => { sheet.classList.add("ph-open"); });
+    if (this.layout() === "wide") {
+      /* wide 冇 translateY 動畫：即刻 ph-open，下一個 click 嘅 _wideHideSheets 先睇到佢 */
+      void sheet.offsetWidth;
+      sheet.classList.add("ph-open");
+    } else {
+      /* rAF 期間如果已經被收起（hidden），唔好補返 ph-open（否則會出現「hidden 但 ph-open」嘅殭屍 sheet） */
+      requestAnimationFrame(() => { if (!sheet.hidden) sheet.classList.add("ph-open"); });
+    }
   },
   /* ====== Sheet 系統 ======
    * 所有 close 路徑共享同一規則：
@@ -2914,6 +3012,7 @@ const App = {
     const sheet = document.getElementById(id);
     if (!sheet) return;
     if (id === "sheet-gacha" && typeof Gacha !== "undefined") Gacha.abort();
+    delete sheet.dataset.wideDefault;
     sheet.classList.remove("ph-open");
     /* remove 自己後即刻檢查：如果冇其他 sheet 仲開住 → 一併 remove backdrop */
     const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
@@ -2935,11 +3034,15 @@ const App = {
             this._unmountSheetView(s);
           }
         });
+        this._showWideDefault(); /* wide：右欄唔留空，返 Daily Quests */
       }));
     }, 430);
   },
   _closeAllSheets() {
-    const sheets = document.querySelectorAll("#view-home .ph-sheet");
+    /* wide：Daily Quests 預設 sheet 係右欄常駐內容，「關晒」唔包佢（切 overlay 返嚟唔會閃空白） */
+    const keepDefault = this.layout() === "wide";
+    const sheets = [...document.querySelectorAll("#view-home .ph-sheet")]
+      .filter(s => !(keepDefault && s.dataset.wideDefault));
     /* 同 _closeSheet 一致：gacha sheet 關閉前要 abort（收埋結算卡／場景 overlay、恢復 BGM） */
     if (typeof Gacha !== "undefined" && document.getElementById("sheet-gacha")?.classList.contains("ph-open")) Gacha.abort();
     sheets.forEach(s => s.classList.remove("ph-open"));
@@ -2947,7 +3050,9 @@ const App = {
     if (bd) bd.classList.remove("ph-open");
     setTimeout(() => {
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
+        /* wide 預設 sheet 開住唔算「新 sheet」，其他已關嘅照樣收 */
+        const stillOpen = [...document.querySelectorAll("#view-home .ph-sheet.ph-open")]
+          .some(s => !(keepDefault && s.dataset.wideDefault));
         if (stillOpen) return; /* binder 410ms 後開咗新 sheet → skip */
         sheets.forEach(s => {
           if (!s.classList.contains("ph-open")) {
@@ -2956,8 +3061,114 @@ const App = {
           }
         });
         if (bd) bd.hidden = true;
+        this._showWideDefault();
       }));
     }, 430);
+  },
+
+  /* ---------- wide 右欄（Responsive P1 Task 5） ----------
+   * 右欄冇其他 sheet 時顯示 Daily Quests（sheet-quests 嘅 full 模式），用 data-wide-default 標記。
+   * 一定唔可以經 _openSheet：佢會 showView("view-home")，殺咗正喺右欄嘅 overlay（選題／結算等）。 */
+  _showWideDefault() {
+    if (this.layout() !== "wide" || App._sheetSwitching) return;
+    if (document.querySelector("#view-home .ph-sheet.ph-open")) return;
+    const sheet = document.getElementById("sheet-quests");
+    if (!sheet || typeof sheet._peFull !== "function") return;
+    this._unmountSheetView(sheet);
+    sheet.classList.remove("ph-sheet-full");
+    sheet.style.height = ""; sheet.style.maxHeight = ""; sheet.style.transition = "";
+    sheet.dataset.wideDefault = "1";
+    sheet.hidden = false;
+    sheet._peFull();
+    void sheet.offsetWidth; /* 確保 opacity 淡入有起點（唔靠 rAF：背景分頁唔會 fire） */
+    sheet.classList.add("ph-open");
+  },
+  /* wide：開咗 sheet 之後直接用 full 內容（右欄夠大，唔使 compact／展開箭咀） */
+  _wideFull(sheetId) {
+    if (this.layout() !== "wide" || !sheetId) return;
+    const sheet = document.getElementById(sheetId);
+    if (sheet && typeof sheet._peFull === "function") sheet._peFull();
+  },
+  /* wide：即時收起所有已開 sheet（冇上落動畫，唔使等 430ms），等新 sheet 直接頂上 */
+  _wideHideSheets() {
+    const gacha = document.getElementById("sheet-gacha");
+    if (gacha && gacha.classList.contains("ph-open") && typeof Gacha !== "undefined") Gacha.abort();
+    document.querySelectorAll("#view-home .ph-sheet").forEach(s => {
+      s.classList.remove("ph-open");
+      delete s.dataset.wideDefault;
+      s.hidden = true;
+      this._unmountSheetView(s);
+    });
+  },
+  /* wide 嘅 binder／dockBinder 路徑。回傳 true = 已處理；false = 行返原本（phone／tablet 或有 fixed overlay）路徑 */
+  _wideSwitch(sheetId, openFn, overlayViewId) {
+    if (this.layout() !== "wide") return false;
+    /* Friends／Leaderboard／Battle Menu 有 400ms exit 動畫＋token 機制（Rule 47／52）：交返原本路徑 */
+    const fixedOverlay = document.querySelector("#view-friends.active, #view-leaderboard.active, #view-battle-menu.active");
+    if (fixedOverlay) {
+      /* 再撳同一個 dock 掣 = 返右欄預設 */
+      if (overlayViewId && fixedOverlay.id === overlayViewId) { this.showView("view-home"); return true; }
+      return false;
+    }
+    if (!sheetId) { openFn(); return true; } /* overlay 類（Leaderboard／Friends）：預設 sheet 留喺底，overlay 蓋住右欄 */
+    const cur = document.querySelector("#view-home .ph-sheet.ph-open");
+    const overlayUp = document.querySelector(".view.active:not(#view-home)");
+    if (cur && cur.id === sheetId && !overlayUp) {
+      /* toggle：再撳 = 返預設（預設本身就係 sheet-quests 時唔使郁） */
+      if (!cur.dataset.wideDefault) this._closeSheet(sheetId);
+      return true;
+    }
+    this._wideHideSheets();
+    if (sheetId === "sheet-quests") { this._showWideDefault(); return true; }
+    openFn();
+    this._wideFull(sheetId);
+    return true;
+  },
+  /* layout 改變：入 wide 補預設／full；離開 wide 收起預設 sheet */
+  _onLayoutChange(from, to) {
+    if (to === "wide") {
+      const open = document.querySelector("#view-home .ph-sheet.ph-open");
+      if (open) this._wideFull(open.id); else this._showWideDefault();
+    } else if (from === "wide") {
+      const def = document.querySelector("#view-home .ph-sheet[data-wide-default]");
+      if (def) this._closeSheet(def.id);
+    }
+    this._syncRotateHint();
+  },
+
+  /* ---------- 手機橫向「請轉返直向」（Responsive P1 Task 9） ----------
+   * layout = phone-land（手機打橫）時，除咗戰鬥／背包／捕捉，其他畫面蓋一層提示。
+   * 唔中斷任何 state（答題中轉橫，轉返直就繼續）；「Continue anyway」可以收起，直到離開 phone-land。
+   * 視覺沿用 .bag-rotate.back；z-index 2600 < toast 3000（Rule 46）；掛 body 要 stopPropagation（Rule 60）。 */
+  _syncRotateHint() {
+    const land = this.layout() === "phone-land";
+    if (!land) this._rotateDismissed = false;
+    const body = document.body;
+    const exempt = body.classList.contains("bag-open") || body.classList.contains("battle-landscape") ||
+      !!document.querySelector("#view-capture.active");
+    const show = land && !exempt && !this._rotateDismissed;
+    let el = document.getElementById("rotate-portrait");
+    if (!el) {
+      if (!show) return;
+      el = document.createElement("div");
+      el.id = "rotate-portrait";
+      el.className = "bag-rotate back";
+      el.setAttribute("role", "dialog");
+      el.setAttribute("aria-modal", "true");
+      el.setAttribute("aria-labelledby", "rotate-portrait-title");
+      el.innerHTML = `
+        <div class="bag-rot-art" aria-hidden="true">
+          <svg class="bag-rot-arrow" viewBox="0 0 80 44"><path d="M8 38 C 14 10, 50 4, 66 22" fill="none" stroke="#111" stroke-width="10" stroke-linecap="round"/><path d="M8 38 C 14 10, 50 4, 66 22" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M56 14 L72 28 L74 10 Z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/></svg>
+          <div class="bag-rot-phone"></div>
+        </div>
+        <h2 class="bag-rot-title" id="rotate-portrait-title">Turn your phone upright</h2>
+        <p class="bag-rot-msg">PokeEngmon works best in portrait</p>
+        <button type="button" class="bag-rot-btn">Continue anyway</button>`;
+      ["pointerdown", "pointerup", "click", "touchstart"].forEach(t => el.addEventListener(t, e => e.stopPropagation()));
+      el.querySelector(".bag-rot-btn").onclick = () => { this._rotateDismissed = true; this._syncRotateHint(); };
+      document.body.appendChild(el);
+    }
+    el.classList.toggle("show", show);
   },
   /* full sheet 模式：暫時將舊 view 頁面嘅 DOM 搬入 sheet body，關閉／收起時搬返原位。
      topIds：呢啲 element 由 compact 到 full 都留在 sheet 頂部（同一個 unit），其餘內容展開時才加入 */
@@ -3149,6 +3360,7 @@ const App = {
       if (!el) return;
       el.onclick = () => {
         if (App._sheetSwitching) return; /* 捲動中，忽略重複點擊 */
+        if (this._wideSwitch(sheetId, openFn)) return; /* wide 右欄：即時切換（Task 5） */
 
         /* 先 close 任何 position:fixed overlay views（Friends / Leaderboard / Battle Menu）
            呢啲 view 嘅 stacking context 高過 sheet，會蓋住開出嚟嘅 sheet */
@@ -3295,6 +3507,14 @@ const App = {
       };
 
       const toggle = () => { if (isFull()) collapse(); else expand(); };
+      /* wide 右欄：直接入 full 內容（冇高度動畫；CSS 喺 wide 已經令 sheet 填滿右欄） */
+      sheet._peFull = () => {
+        if (isFull()) return;
+        renderFull();
+        sheet.classList.add("ph-sheet-full");
+        sheet.style.height = ""; sheet.style.maxHeight = ""; sheet.style.transition = "";
+        setIcon(true);
+      };
 
       /* tap 切換（拖曳後 suppress，避免誤觸） */
       let suppressClick = false;
@@ -3421,11 +3641,12 @@ const App = {
     );
 
     /* 底部 dockbar 按鈕：同樣用「先捲回再執行」+ toggle + token cancel + fixed overlay 處理 */
-    const dockBinder = (id, sheetId, fn) => {
+    const dockBinder = (id, sheetId, fn, overlayViewId) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.onclick = () => {
         if (App._sheetSwitching) return;
+        if (this._wideSwitch(sheetId, fn, overlayViewId)) return; /* wide 右欄：即時切換（Task 5） */
 
         /* 檢查 fixed overlay views */
         const fixedOverlays = document.querySelectorAll(
@@ -3455,8 +3676,8 @@ const App = {
       };
     };
     dockBinder("btn-bd-battle", "sheet-battle", () => this._openSheet("sheet-battle"));
-    dockBinder("btn-bd-leaderboard", null, () => { if (typeof Leaderboard !== "undefined") Leaderboard.open(); });
-    dockBinder("btn-bd-friends", null, () => { if (typeof Friends !== "undefined") Friends.open(); });
+    dockBinder("btn-bd-leaderboard", null, () => { if (typeof Leaderboard !== "undefined") Leaderboard.open(); }, "view-leaderboard");
+    dockBinder("btn-bd-friends", null, () => { if (typeof Friends !== "undefined") Friends.open(); }, "view-friends");
     dockBinder("btn-bd-setting", "sheet-setting", () => this._openSheet("sheet-setting"));
 
     /* Battle sheet 內容按鈕 */
@@ -3526,6 +3747,18 @@ const App = {
     document.getElementById("btn-cal-back").onclick = () => { this.renderHome(); this.showView("view-home"); };
     /* 下巴精靈球 = Home 鍵：任何畫面一撳返主頁；順手收埋對戰 BGM、恢復城鎮音樂
        Gym 模式：結算頁離開（包括呢粒掣）時判 badge（Hint／錯題已計入 results） */
+    /* 下巴 Home 球外觀 40px（< 44px 觸控標準），又有 overflow:hidden 唔可以用 ::after 擴大：
+       撳中下巴、而且喺球中心左右 24px 內 → 當撳咗球（disabled 時 click() 本身冇效，frame lock 照樣生效） */
+    const chin = document.querySelector(".pd-chin");
+    if (chin && !chin._homeHitBound) {
+      chin._homeHitBound = true;
+      chin.addEventListener("click", (e) => {
+        const ball = document.getElementById("btn-pd-home");
+        if (!ball || e.target !== chin) return;
+        const b = ball.getBoundingClientRect();
+        if (Math.abs(e.clientX - (b.left + b.width / 2)) <= 24) ball.click();
+      });
+    }
     document.getElementById("btn-pd-home").onclick = () => {
       if (this._gymSettleData && typeof Gym !== "undefined") {
         const d = this._gymSettleData;
@@ -3622,12 +3855,27 @@ const App = {
     /* Esc：答題頁開設定；設定彈窗開住時 Esc = Keep going */
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      /* Home P1 sheet 優先：任何 ph-sheet 開住 → 先關 */
-      const openSheets = document.querySelectorAll("#view-home .ph-sheet.ph-open");
+      /* Home P1 sheet 優先：任何 ph-sheet 開住 → 先關。
+         wide 嘅 Daily Quests 預設 sheet 長開，唔計（否則答題時 Esc 會變咗關 sheet，開唔到答題設定） */
+      const openSheets = [...document.querySelectorAll("#view-home .ph-sheet.ph-open")]
+        .filter(s => !s.dataset.wideDefault);
       if (openSheets.length) {
         e.preventDefault();
         App._closeAllSheets();
         return;
+      }
+      /* wide：右欄 overlay（選題／結算／Friends／Leaderboard／Battle Menu）Esc = 返主頁。
+         經下巴 Home 掣行：Gym 結算 badge 判定（Rule 44）同 frame lock（disabled）照樣生效。
+         有 modal／彈窗開住就唔處理（Esc 唔好穿過 modal 關後面嘅頁）。 */
+      if (App.layout() === "wide") {
+        const popupOpen = [...document.querySelectorAll(".modal-backdrop, .lb-login-modal, .team-select-modal, .tier-select-modal, .pvp-match-panel, .update-modal:not(.hidden)")]
+          .some(m => getComputedStyle(m).display !== "none");
+        const overlay = document.querySelector("#view-quiz-setup.active, #view-settlement.active, #view-friends.active, #view-leaderboard.active, #view-battle-menu.active");
+        if (overlay && !popupOpen) {
+          e.preventDefault();
+          document.getElementById("btn-pd-home").click();
+          return;
+        }
       }
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
@@ -3662,6 +3910,12 @@ const App = {
       const anyOpen = document.querySelector("#view-home .ph-sheet.ph-open");
       if (!anyOpen) return;
       const hit = e.__peHit || {};
+
+      /* wide：右欄係常駐面板唔係 modal —— 點左欄／外面唔關；只有 ✕ 會關（返 Daily Quests） */
+      if (App.layout() === "wide") {
+        if (hit.closeBtn && hit.sheet) App._closeSheet(hit.sheet.id);
+        return;
+      }
 
       if (hit.backdrop) { App._closeAllSheets(); return; }
 
@@ -3780,6 +4034,14 @@ const App = {
       setTimeout(() => { this._postLogin(st); }, 600);
     }
 
+    /* wide 右欄：首屏顯示 Daily Quests；之後 layout 改變（拉闊／收窄視窗、轉 iPad）跟住補／收 */
+    this._showWideDefault();
+    this._syncRotateHint(); /* 一開就打橫嘅手機 */
+    if (!this._layoutChangeBound) {
+      this._layoutChangeBound = true;
+      document.addEventListener("pe:layout", (e) => this._onLayoutChange(e.detail.from, e.detail.to));
+    }
+
     /* Login Gate：未登入 → 自動彈 Login Hub modal 擋住畫面 */
     const loggedIn = window.SupabaseAuth && SupabaseAuth.isLoggedIn();
     if (!loggedIn) {
@@ -3887,6 +4149,7 @@ function armLoadingWatchdog() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  App._initLayout(); /* 最早標記 data-layout，init 期間嘅 render 已經可以讀 */
   armLoadingWatchdog();
   App.init().then(dismissLoading).catch((err) => {
     console.error("[boot] init failed", err);

@@ -46,9 +46,12 @@ const BattleLand = (() => {
   function fit() {
     if (!active) return;
     const W = window.innerWidth, H = window.innerHeight;
-    const portrait = H > W;
+    /* 只有手機直向先轉 90°；iPad 直向（tablet）唔轉，紅框用全闊、高度 ≈ 闊 × 0.62 置中（Responsive P1 Task 9） */
+    const phone = !(window.App && App.layout) || App.layout() === "phone";
+    const portrait = H > W && phone;
+    const tallTablet = H > W && !phone;
     frame.style.width = (portrait ? H : W) + "px";
-    frame.style.height = (portrait ? W : H) + "px";
+    frame.style.height = (portrait ? W : (tallTablet ? Math.min(H, Math.round(W * 0.62)) : H)) + "px";
     frame.style.transform = portrait ? "rotate(90deg)" : "none";
     requestAnimationFrame(() => {
       const sw = screen.clientWidth, sh = screen.clientHeight;
@@ -72,7 +75,9 @@ const BattleLand = (() => {
     root.classList.add("show");
     document.body.classList.add("battle-landscape");
     fit();
-    if (window.innerHeight > window.innerWidth && typeof BagUI !== "undefined" && BagUI.showRotate) BagUI.showRotate("landscape");
+    const phone = !(window.App && App.layout) || App.layout() === "phone";
+    if (phone && window.innerHeight > window.innerWidth && typeof BagUI !== "undefined" && BagUI.showRotate) BagUI.showRotate("landscape");
+    if (window.App && App._syncRotateHint) App._syncRotateHint(); /* 戰鬥豁免「請轉返直向」 */
   }
 
   function exit() {
@@ -82,8 +87,8 @@ const BattleLand = (() => {
     if (v && holder && holder.parentNode) { holder.replaceWith(v); holder = null; }
     root.classList.remove("show");
     document.body.classList.remove("battle-landscape");
-    /* 返直向頁面：仲係打橫就提示轉返直 */
-    if (window.innerWidth > window.innerHeight && window.innerWidth <= 1000 && typeof BagUI !== "undefined" && BagUI.showRotate) BagUI.showRotate("portrait");
+    /* 返直向頁面：手機仲係打橫 → 全域「請轉返直向」（條件 = phone-land；舊做法 innerWidth <= 1000 會誤中桌面窄窗） */
+    if (window.App && App._syncRotateHint) App._syncRotateHint();
   }
 
   /* 任何切去戰鬥以外嘅 view → 搬返原位（戰鬥完 → Battle Menu／訓練家列表／主頁） */

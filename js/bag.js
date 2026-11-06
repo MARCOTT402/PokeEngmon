@@ -135,8 +135,9 @@ const BagUI = (() => {
   /* ---------- 縮放：956×440 等比塞入視窗 ---------- */
   function fit() {
     if (!root) return;
-    /* 直向「Play like this anyway」：成個橫向畫面轉 90° 填滿屏幕（玩家逆時針轉手機就變正） */
-    const portrait = window.innerHeight > window.innerWidth;
+    /* 直向「Play like this anyway」：成個橫向畫面轉 90° 填滿屏幕（玩家逆時針轉手機就變正）。
+       只限手機（layout = phone）；iPad 直向等 tablet 夠闊，直接等比縮放唔轉（Responsive P1 Task 9） */
+    const portrait = window.innerHeight > window.innerWidth && isPhone();
     const s = portrait
       ? Math.min(window.innerWidth / H, window.innerHeight / W)
       : Math.min(window.innerWidth / W, window.innerHeight / H);
@@ -146,6 +147,8 @@ const BagUI = (() => {
 
   /* ---------- 轉手機提示 ---------- */
   const isPortrait = () => window.matchMedia("(orientation: portrait)").matches;
+  /* 「要轉機」只係手機嘅事：tablet／wide 唔叫用戶轉（App.layout 未有時當手機，保持舊行為） */
+  const isPhone = () => !(window.App && App.layout) || App.layout() === "phone";
   const isLandscape = () => window.matchMedia("(orientation: landscape)").matches;
   let rotateMode = null, rotateDone = null;
   function showRotate(mode, done) {
@@ -184,7 +187,8 @@ const BagUI = (() => {
     fillBezel();
     fit();
     renderAll("in-f");
-    if (isPortrait()) showRotate("landscape");
+    if (isPortrait() && isPhone()) showRotate("landscape");
+    if (window.App && App._syncRotateHint) App._syncRotateHint(); /* 背包豁免「請轉返直向」 */
   }
   function close() {
     if (S.battle) {
@@ -201,9 +205,10 @@ const BagUI = (() => {
       if (S.from === "battle" && typeof BattleUI !== "undefined") BattleUI.openMenu();
       else if (window.App) App.renderHome();
     };
-    /* 返直向頁面前：仲係打橫就提示轉返直（已直向唔提示） */
-    if (isLandscape() && window.innerWidth <= 1000) showRotate("portrait", finish);
-    else finish();
+    finish();
+    /* 返直向頁面：手機仲係打橫 → 全域「請轉返直向」提示（App._syncRotateHint，條件 = phone-land）。
+       舊做法用 innerWidth <= 1000 判斷，桌面窄橫窗都會彈。 */
+    if (window.App && App._syncRotateHint) App._syncRotateHint();
   }
 
   /* 紅框數據列（顯示用，鎖定唔可以撳） */

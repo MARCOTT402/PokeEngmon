@@ -65,7 +65,11 @@ const Quests = (() => {
     const v = document.querySelector(".view.active");
     return v ? v.id : null;
   }
-  function boardOpen() { return activeView() === "view-quests"; }
+  /* 任務板「開住」= 獨立 view，或者已經搬入 home sheet（phone full 模式／wide 右欄預設）。
+     之前只認 view-quests，sheet 入面嘅倒數第一下 tick 就停、領獎後唔 re-render。 */
+  function boardOpen() {
+    return activeView() === "view-quests" || !!document.querySelector("#sheet-quests.ph-open .sheet-view-host");
+  }
   function questions() {
     try {
       if (typeof questionsToday === "function" && typeof dateKey === "function") {
@@ -445,5 +449,12 @@ const Quests = (() => {
     syncFromServer();
   }
 
-  return { open, mount, refresh, refreshBadge, claim, claimAll, render, stopTimer };
+  /* wide 右欄：overlay 離開後恢復已 mount 嘅任務板（唔再 sync server，避免每次切頁都 call） */
+  function resume() {
+    render();
+    renderDefs();
+    startTimer();
+  }
+
+  return { open, mount, resume, refresh, refreshBadge, claim, claimAll, render, stopTimer };
 })();
