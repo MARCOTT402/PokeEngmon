@@ -76,3 +76,11 @@ Incident (2026-11-06，用戶回報)：我方 Pokémon 被打暈 → 強制換�
 - 跟進（同日，用戶確認）：「強制換寵可以免費，但唔係戰死而換寵就唔免費」；PvP 都要免費、Shift 維持免費。PvP 加補位回合：冇暈嗰邊自動交 `pass`，回合只做換寵、唔計殘餘。Rule 22 原本「唔好畀強制換寵免費回合」嘅寫法同步改為「經補位回合實現，唔好搬出回合 loop」。未做真機 PvP 測試（要兩個帳號）。
 
 Skill: Rule 92 added
+
+### Rule 99 — 數值兜底：NaN 同任何數比較都係 false — 傷害／HP／比例／幾何／存檔計數一定要喺入口夾成有限值；`Math.max(1, NaN)` 都係 NaN
+
+- 背景：stability-performance plan §4。審查：`computeDamage` 任何 stat 係 undefined → 傷害 NaN（`Math.max(1, NaN)` 仍然 NaN）→ HP NaN → 戰鬥永遠唔完；`battle.js` 上 server 嘅 per-mille HP 可以係 NaN；iOS 轉機瞬間視窗 0 → 背包 `scale(0)`；精靈球座標 NaN 永遠夾唔返；`app.js`／`gacha.js` `st.diamonds = r.balance` 冇檢查。
+- 修正：`engine.js` `_fin`＋出口檢查；`state.js` `sanitizeHp`（`checkFinished` 第一步，亦 export）；`battle.js` `hpRatio`；`bag.js`／`landscape.js` fit 重試＋夾值；`quiz.js` 球 NaN 修復；`storage.js` `_sanitizeStateNumbers`（避開另一個 session 正改緊嘅 `app.js`／`gacha.js`，喺存檔層一次過兜）。
+- 驗證：新 `tools/_test_numeric_guards.js` 30/30；battle 97 PASS、battle_care／care／held_berries／mega／mega_abilities 全過；test-rotate 18/18、test-battle-fit 7/7；browser 答題＋返主頁＋即時 diamonds undefined → 0 有記錄。
+
+Skill: Rule 99 added

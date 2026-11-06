@@ -57,10 +57,16 @@ const App = {
     window.addEventListener("orientationchange", apply);
   },
 
+  /* 轉場時間（Rule 100）：sheet 捲入／出 = CSS .ph-sheet transform 時長；改一邊要同步另一邊。
+     舊做法係「收完 400ms → 等 410ms → 先開」，用戶要等約 0.8 秒先見到新內容 */
+  SHEET_MS: 220,
+  SHEET_SWAP_MS: 60,        /* 切換 sheet：舊 sheet 開始收之後幾耐開新 sheet（同時進行嘅錯開） */
+  OVERLAY_EXIT_MS: 200,     /* Friends／Leaderboard／Battle Menu exit 動畫；CSS 同步 */
+
   /* ---------- 路由 ---------- */
   showView(id) {
     /* 如果目前有 fixed overlay view（Friends/Leaderboard/Battle Menu），
-       且目標係 view-home，先加 exit 動畫 class，延遲 400ms 再切 active */
+       且目標係 view-home，先加 exit 動畫 class，OVERLAY_EXIT_MS（200ms，舊 400ms）後再切 active（Rule 100） */
     const fixedExitTargets = ["view-home"]; /* 邊啲 target 觸發 fixed overlay exit */
     const fixedOverlayActive = document.querySelector(
       "#view-friends.active, #view-leaderboard.active, #view-battle-menu.active"
@@ -74,11 +80,12 @@ const App = {
 
     if (needsFixedExit) {
       fixedOverlayActive.classList.add("fixed-overlay-exit");
-      /* 等 400ms 動畫跑完先真正切 view */
+      /* 等 exit 動畫（OVERLAY_EXIT_MS，舊 400ms）跑完先真正切 view。
+         唔可以即刻切：overlay 嘅定位／display 全部掛喺 .active，冇咗 .active 就即刻消失冇動畫 */
       setTimeout(() => {
         fixedOverlayActive.classList.remove("fixed-overlay-exit");
         this._doShowView(id);
-      }, 400);
+      }, this.OVERLAY_EXIT_MS);
       return; /* 即時 return，延遲執行 */
     }
     this._doShowView(id);
@@ -3011,12 +3018,27 @@ const App = {
     }
   },
   /* ====== Sheet 系統 ======
-   * 所有 close 路徑共享同一規則：
-   *   1. 只 remove ph-open class（transition 0.4s 自然播放）
-   *   2. setTimeout 430ms（比 transition + binder open 嘅 410ms 遲 20ms）
-   *   3. timer 執行時先檢查有冇新 ph-open（stillOpen guard）→ 有就 skip hidden
+   * 所有 close 路徑共享同一規則（Rule 31／41／100）：
+   *   1. 只 remove ph-open class（transition SHEET_MS 自然播放）
+   *   2. SHEET_MS + 30ms 後 _cleanupClosedSheets()
+   *   3. cleanup 只收「冇 ph-open」嘅 sheet（hidden + unmount）；開緊嘅一律唔掂。
+   *      切換 sheet 而家係同時進行（新 sheet 開緊時舊 sheet 仍要收），所以唔可以再用「有任何 sheet 開住就成個 skip」
    *   4. 絕對唔好 remove class 同時設 hidden（跳過 transform 動畫）
    */
+  _cleanupClosedSheets(sheets, keepDefault) {
+    const isReal = s => !(keepDefault && s.dataset.wideDefault);
+    (sheets || [...document.querySelectorAll("#view-home .ph-sheet")]).forEach(s => {
+      if (!s.classList.contains("ph-open") && !s.hidden) {
+        s.hidden = true;
+        this._unmountSheetView(s);
+      }
+    });
+    const anyOpen = [...document.querySelectorAll("#view-home .ph-sheet.ph-open")].some(isReal);
+    if (anyOpen) return;               /* 有合法 sheet 開住：backdrop／wide 預設照留 */
+    const bd = document.querySelector("#view-home .ph-backdrop");
+    if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+    this._showWideDefault();           /* wide：右欄唔留空，返 Daily Quests */
+  },
   _closeSheet(id) {
     const sheet = document.getElementById(id);
     if (!sheet) return;
@@ -3031,21 +3053,8 @@ const App = {
     }
     setTimeout(() => {
       /* 雙重 rAF 確保 _openSheet 嘅 rAF ph-open 已跑完 */
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const stillOpen = document.querySelector("#view-home .ph-sheet.ph-open");
-        if (stillOpen) return; /* 合法 sheet 開住（user 真係想睇）→ skip，唔好 force close */
-        /* 真係冇任何 sheet 開住 → 清理所有已關閉 sheet + backdrop */
-        const bd = document.querySelector("#view-home .ph-backdrop");
-        if (bd) bd.hidden = true;
-        document.querySelectorAll("#view-home .ph-sheet").forEach(s => {
-          if (!s.classList.contains("ph-open")) {
-            s.hidden = true;
-            this._unmountSheetView(s);
-          }
-        });
-        this._showWideDefault(); /* wide：右欄唔留空，返 Daily Quests */
-      }));
-    }, 430);
+      requestAnimationFrame(() => requestAnimationFrame(() => this._cleanupClosedSheets(null, false)));
+    }, this.SHEET_MS + 30);
   },
   _closeAllSheets() {
     /* wide：Daily Quests 預設 sheet 係右欄常駐內容，「關晒」唔包佢（切 overlay 返嚟唔會閃空白） */
@@ -3058,21 +3067,9 @@ const App = {
     const bd = document.querySelector("#view-home .ph-backdrop");
     if (bd) bd.classList.remove("ph-open");
     setTimeout(() => {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        /* wide 預設 sheet 開住唔算「新 sheet」，其他已關嘅照樣收 */
-        const stillOpen = [...document.querySelectorAll("#view-home .ph-sheet.ph-open")]
-          .some(s => !(keepDefault && s.dataset.wideDefault));
-        if (stillOpen) return; /* binder 410ms 後開咗新 sheet → skip */
-        sheets.forEach(s => {
-          if (!s.classList.contains("ph-open")) {
-            s.hidden = true;
-            this._unmountSheetView(s);
-          }
-        });
-        if (bd) bd.hidden = true;
-        this._showWideDefault();
-      }));
-    }, 430);
+      /* wide 預設 sheet 開住唔算「新 sheet」；其他已關嘅照樣收（新 sheet 開緊都唔阻） */
+      requestAnimationFrame(() => requestAnimationFrame(() => this._cleanupClosedSheets(sheets, keepDefault)));
+    }, this.SHEET_MS + 30);
   },
 
   /* ---------- wide 右欄（Responsive P1 Task 5） ----------
@@ -3410,7 +3407,9 @@ const App = {
             if (App._sheetSwitchToken !== token) return; /* 真係有外部切 view → cancel */
             App._sheetSwitching = false;
             openFn();
-          }, 410);
+          }, hasFixedOverlay ? App.OVERLAY_EXIT_MS + 20 : App.SHEET_SWAP_MS);
+          /* Rule 100：sheet→sheet 同時進行（舊 410ms 串行）；overlay→sheet 要等 overlay exit 完先開，
+             否則 showView 延後嘅 _doShowView → _closeAllSheets 會收埋啱啱開嘅 sheet */
         } else {
           /* 冇 sheet 冇 overlay → 直接開 */
           openFn();
@@ -3692,7 +3691,9 @@ const App = {
             if (App._sheetSwitchToken !== token) return;
             App._sheetSwitching = false;
             fn();
-          }, 410);
+          }, hasFixedOverlay ? App.OVERLAY_EXIT_MS + 20 : App.SHEET_SWAP_MS);
+          /* Rule 100：sheet→sheet 同時進行（舊 410ms 串行）；overlay→sheet 要等 overlay exit 完先開，
+             否則 showView 延後嘅 _doShowView → _closeAllSheets 會收埋啱啱開嘅 sheet */
         } else {
           fn();
         }
@@ -4111,11 +4112,24 @@ const App = {
     const unlockAudio = () => {
       if (window.CaptureScene && CaptureScene.audio) {
         CaptureScene.audio.ensure();
-        CaptureScene.audio.bgmPrime();       /* 預先解鎖 + decode 戰鬥 BGM */
+        /* 戰鬥 BGM（2 MB mp3）唔再喺入場一刻 fetch＋decode（Rule 101）：入場掣撳完會卡一下。
+           改為主頁 idle 時預載；答題 submit／Battle Menu 仍然會 bgmPrime，startBGM 自己亦會補載＋重試 */
         CaptureScene.audio.startTownBGM();
       }
     };
+    let _bgmIdleQueued = false;
+    const preloadBattleBGM = () => {
+      if (_bgmIdleQueued) return;
+      _bgmIdleQueued = true;
+      setTimeout(() => {
+        const run = () => {
+          try { if (window.CaptureScene && CaptureScene.audio && CaptureScene.audio._loadBGMBuffer) CaptureScene.audio._loadBGMBuffer(); } catch (e) {}
+        };
+        if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 8000 }); else run();
+      }, 6000);
+    };
     unlockAudio();  /* 開頁即試（可能被 suspend） */
+    preloadBattleBGM();
     const audioCtx = window.CaptureScene && CaptureScene.audio ? CaptureScene.audio.ctx : null;
     if (audioCtx && audioCtx.state === "running") {
       entryGate.classList.add("hidden");     /* 已獲授權，唔使彈窗 */

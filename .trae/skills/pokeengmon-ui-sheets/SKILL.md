@@ -53,9 +53,9 @@ description: PokeEngmon UI interaction rules: home sheets (open/close paths, bin
 - **移除 retry + force-close loop！** 如果 `stillOpen` 存在，代表有合法 sheet 開緊 → 直接 skip，唔好 retry 唔好 force close
 - 兩條 close 路徑（`_closeSheet` / `_closeAllSheets`）**完全一致**：
   1. 只 remove `ph-open` class（動畫自然播）
-  2. setTimeout 430ms（比 transition 400ms + binder open 410ms 遲 20ms）
+  2. setTimeout `App.SHEET_MS + 30`（舊 430ms；Rule 100 起 transition 220ms、binder 同時開）
   3. 雙重 `requestAnimationFrame(() => requestAnimationFrame(...))` 確保 `_openSheet` 嘅 rAF 已經跑完
-  4. 檢查 **`sheet.ph-open`** → 有 → `return`（skip，唔好 force close）；冇 → 清理所有 `.ph-open=false` 嘅 sheet + backdrop hidden
+  4. **（Rule 100 更新）** 經 `_cleanupClosedSheets()`：只清冇 `ph-open` 嘅 sheet；開緊嘅唔掂、唔 force close；冇合法 sheet 開住先 hidden backdrop
 - `_closeSheet` remove 自己後即刻檢查 `anyOpen` → 冇其他 sheet 開住就一併 remove backdrop.ph-open
 - 移除 `_checkCloseAllSheets()`（舊時單獨 close 完再 call closeAll → 雙 timer race）
 - Binder pattern：`_sheetSwitching` debounce flag（cross-button path 先設，toggle path 唔設）
@@ -187,3 +187,12 @@ if (hasFixedOverlay || curSheet) {
 - 用戶互動手感唔跟倍速：拉 arm、充電喺 `begin` 之前；捕捉 tap 嘅 tween 用 `.timeScale(1 / spd)` 抵銷。
 - 閃動類效果加速時設下限（進化閃動 ≥150ms），閃少啲次，唔好閃密啲。
 - 驗收：每個場景 1×／3× 量時間；完結同中途關閉之後 `gsap.globalTimeline.timeScale() === 1`、`--anim-spd` 係 1；連住「捕捉 → 扭蛋」確認冇殘留加速。
+
+### Rule 100 — Sheet 切換同時進行（220ms）、overlay exit 200ms：時長集中喺 `App.SHEET_MS／SHEET_SWAP_MS／OVERLAY_EXIT_MS`；close cleanup 只收冇 `ph-open` 嘅 sheet
+
+- 時長常數（`js/app.js` 頂）：`SHEET_MS = 220`（= CSS `.ph-sheet` transform `.22s`）、`SHEET_SWAP_MS = 60`、`OVERLAY_EXIT_MS = 200`（= CSS `#view-friends／#view-leaderboard／#view-battle-menu` transition `.2s`）。改一邊一定要同步另一邊；`.ph-sheet` 嘅 `height .4s`（compact↔full 拖拉磁吸）唔屬呢組，唔好一齊改。
+- sheet → sheet：binder／dockBinder 收舊 sheet 之後 `SHEET_SWAP_MS` 就開新 sheet（舊做法收完 400ms 再等 410ms ≈ 0.8 秒）。4× CPU bench：836 → 315ms。
+- overlay → sheet：一定要等 overlay exit 完先開（`OVERLAY_EXIT_MS + 20`）。因為 `showView("view-home")` 延後執行嘅 `_doShowView` 會 call `_closeAllSheets()`，早開嘅 sheet 會即刻被收埋。
+- overlay 返主頁**唔可以**即刻拎走 `.active` 再背景播 exit：overlay 嘅定位同 `display` 全部掛喺 `.active`，冇咗即刻消失冇動畫；保留 `.active` 又會令所有「有冇 overlay 開住」嘅判斷出錯。做法係保留「exit 完先切 view」，只係縮短時間。
+- 兩條 close 路徑（`_closeSheet`／`_closeAllSheets`，Rule 41）都經 `_cleanupClosedSheets(sheets, keepDefault)`，喺 `SHEET_MS + 30` 後雙 rAF 執行：**只**將冇 `ph-open` 嘅 sheet `hidden`＋`_unmountSheetView`；開緊嘅唔掂；冇合法 sheet 開住先 hidden backdrop＋`_showWideDefault()`。取代 Rule 31「有任何 sheet 開住就成個 skip」——同時切換時新 sheet 開緊，舊 sheet 仍然要收。
+- 驗收：`tools/perf/bench.mjs --cpu 4` 嘅 `sheetSwitchMs`；`tools/responsive/test-sheets.mjs`、`test-overlay-switch.mjs`、`test-pane-locks.mjs`、`test-rotate.mjs`（已知 fail：P9b、W2、W4，改之前一樣）；headless phone＋wide 跑：開 A → 撳 B（只得 B visible、backdrop open）→ 再撳 B（全部 hidden、backdrop hidden／wide 返 Daily Quests）→ A→B→A 90ms 連撳（只得 A）→ Leaderboard → 撳 sheet（overlay 收、sheet 開）。**唔好用隱藏咗嘅 Browser pane 驗 cleanup**：rAF 唔會 fire，會見到假嘅殘留 sheet。

@@ -133,14 +133,24 @@ const BagUI = (() => {
   }
 
   /* ---------- 縮放：956×440 等比塞入視窗 ---------- */
+  let _fitRetry = 0;
   function fit() {
     if (!root) return;
+    /* 數值兜底（Rule 99）：iOS 轉機瞬間 innerWidth／innerHeight 可能係 0 → scale(0) 背包消失；
+       尺寸未 ready 就 100ms 後再試（最多 10 次），唔寫入無效 transform */
+    if (!(window.innerWidth > 0 && window.innerHeight > 0)) {
+      if (_fitRetry++ < 10) setTimeout(fit, 100);
+      return;
+    }
+    _fitRetry = 0;
     /* 直向「Play like this anyway」：成個橫向畫面轉 90° 填滿屏幕（玩家逆時針轉手機就變正）。
        只限手機（layout = phone）；iPad 直向等 tablet 夠闊，直接等比縮放唔轉（Responsive P1 Task 9） */
     const portrait = window.innerHeight > window.innerWidth && isPhone();
-    const s = portrait
+    let s = portrait
       ? Math.min(window.innerWidth / H, window.innerHeight / W)
       : Math.min(window.innerWidth / W, window.innerHeight / H);
+    if (!Number.isFinite(s) || s <= 0) s = 1;
+    s = Math.min(4, Math.max(0.2, s));
     $("#bag-stage").style.transform = portrait ? `rotate(90deg) scale(${s})` : `scale(${s})`;
     renderTabInd();
   }

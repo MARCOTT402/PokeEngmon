@@ -90,3 +90,11 @@ Incident (2026-11-05，背包第 4c 段)：(1) 同另一個 session 共用 `js/a
 
 Skill: Rule 94 added
 
+### Rule 101 — 開機唔載用唔著嘅大檔：戰鬥 BGM idle 預載、隱藏 sheet 嘅大圖 `loading=lazy`、題目圖片用 `index.json` 清單唔好逐個副檔名試
+
+- 背景：stability-performance plan §5.4／§5.6。首次開 App 未入場已經 decoded 8 MB：wild-battle.mp3 2 MB（入場 `bgmPrime` fetch＋decode）、flat-water.mp3 2.2 MB（主頁 BGM，要即刻用）、three.js 1.2 MB、dragonite.png 325 KB（隱藏 gacha sheet）。答題時每題 probe 5 個副檔名，console 一堆 404。
+- 修正：`app.js` 入場唔再 `bgmPrime`、加 `preloadBattleBGM()`；`index.html` dragonite `loading=lazy`；`data.js` `_loadImageIndex`＋`_probeQuestionImage` fallback；新 `tools/gen_grammar_image_index.py`＋`Q_folder/grammar/grammar_images/index.json`；`sw.js` precache 清單。
+- 結果：入場前 decoded 8,036 → 5,776 KB；入場 handler 7ms；題目圖片 404 由每題最多 5 個 → 0。
+- 未做：three.js 延後（要先將 audio 拆出 capture.js；另一個 session 當時改緊 capture.js）。
+
+Skill: Rule 101 added

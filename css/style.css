@@ -2515,7 +2515,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   z-index: 120;
   /* exit 動畫：由底部向上壓縮（唔用 translateY 移動，避免穿過 display window 邊界）*/
   transform-origin: bottom center;
-  transition: transform .4s cubic-bezier(.25,1,.5,1);
+  transition: transform .2s cubic-bezier(.25,1,.5,1);   /* = App.OVERLAY_EXIT_MS（Rule 100） */
 }
 #view-friends.fixed-overlay-exit, #view-leaderboard.fixed-overlay-exit, #view-battle-menu.fixed-overlay-exit {
   transform: scaleY(0);  /* 由底部向上壓縮至零，視覺效果同 Settings sheet close 一致（定位唔再靠 translateX） */
@@ -4752,7 +4752,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: #fff; border: 2.5px solid #1b1b22;
   overflow: hidden;
   display: flex; flex-direction: column;
-  transition: transform .4s cubic-bezier(.25,1,.5,1), height .4s cubic-bezier(.25,1,.5,1);
+  /* transform 時長 = App.SHEET_MS（Rule 100）；height 係 compact↔full 拖拉磁吸，唔郁 */
+  transition: transform .22s cubic-bezier(.25,1,.5,1), height .4s cubic-bezier(.25,1,.5,1);
 }
 .ph-sheet-down { top: 0; border-top: 0; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; transform: translateY(-100%); z-index: 2; }
 .ph-sheet-up { bottom: 0; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom: 0; transform: translateY(100%); z-index: 2; }

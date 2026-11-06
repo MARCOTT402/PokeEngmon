@@ -113,19 +113,26 @@ const Battle = (() => {
   /* 夾擊系特性（Overgrow/Blaze/Torrent/Swarm）：HP ≤ 1/3 時對應屬性招 ×1.5 */
   const PINCH_ABILITY = { overgrow: "grass", blaze: "fire", torrent: "water", swarm: "bug" };
 
+  /* 數值兜底（Rule 99）：任何一個 stat／level／power 係 undefined／NaN，傷害就變 NaN，
+     HP 變 NaN 之後 `hp <= 0` 永遠唔成立 → 戰鬥卡死。只修正輸入值，唔改 BattleRng 抽數次序（PvP 兩邊要算到一樣） */
+  const _fin = (v, d) => { const n = typeof v === "number" ? v : Number(v); return Number.isFinite(n) ? n : d; };
+  function _numReport(where, detail) {
+    try { if (typeof window !== "undefined" && window.Guard) Guard.report(new Error("Battle NaN guard: " + where + " " + detail), { where: "battle/" + where, silent: true }); } catch (e) {}
+  }
+
   /* ---------- 傷害公式（Gen 5） ---------- */
   function computeDamage(attacker, defender, move, opts) {
     opts = opts || {};
-    const level = attacker.level;
+    const level = Math.min(100, Math.max(1, _fin(attacker.level, 1)));
     const isPhysical = move.damage_class === "physical";
     const atkKey = isPhysical ? "atk" : "spa";
     const defKey = isPhysical ? "def" : "spd";
     /* Unaware：攻方無視防方 stage；防方無視攻方 stage（其餘倍率照計） */
-    const atk = effectiveStat(attacker, atkKey, defender.ability === "unaware");
-    const def = Math.max(1, effectiveStat(defender, defKey, attacker.ability === "unaware"));
+    const atk = Math.max(1, _fin(effectiveStat(attacker, atkKey, defender.ability === "unaware"), 1));
+    const def = Math.max(1, _fin(effectiveStat(defender, defKey, attacker.ability === "unaware"), 1));
     /* Solar Beam：雨／沙暴／雹 下威力減半（Gen 5） */
     const weather = opts.weather || null;
-    let power = move.power || 0;
+    let power = Math.max(0, _fin(move.power, 0));
     if ((opts.slug === "solar-beam" || move.slug === "solar-beam") &&
         (weather === "rain" || weather === "sandstorm" || weather === "hail")) {
       power = Math.floor(power / 2);
@@ -197,8 +204,13 @@ const Battle = (() => {
     /* 隨機 0.85 - 1.0 */
     const rand = 0.85 + BattleRng.next() * 0.15;
     base = Math.max(1, Math.floor(base * rand));
+    /* Math.max(1, NaN) 都係 NaN：最後一道防線（例如 typeMultiplier 回 undefined） */
+    if (!Number.isFinite(base)) {
+      _numReport("computeDamage", (attacker.name || "?") + "→" + (defender.name || "?") + " " + (opts.slug || move.slug || ""));
+      base = 1;
+    }
 
-    return { damage: base, effectiveness: mult };
+    return { damage: base, effectiveness: Number.isFinite(mult) ? mult : 1 };
   }
 
   /* ---------- 行動順序 ---------- */

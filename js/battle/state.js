@@ -847,7 +847,30 @@ const BattleState = (() => {
   /* ---------- 檢查勝負 ---------- */
   function hasUsable(team) { return team.some(p => p.hp > 0); }
 
+  /* HP 兜底（Rule 99）：每次判勝負前將 NaN／Infinity／越界 HP 夾返 0–maxHp。
+     NaN HP 會令 `hp > 0` 同 `hp <= 0` 都唔成立 → 戰鬥永遠唔完。NaN 當 0（暈）：兩邊 PvP 算法一樣，結果一致 */
+  function sanitizeHp(state) {
+    [state.p1, state.p2].forEach(side => {
+      (side && side.team || []).forEach(p => {
+        if (!p) return;
+        let fixed = false;
+        if (!Number.isFinite(p.maxHp) || p.maxHp < 1) {
+          const s = p.stats && Number(p.stats.hp);
+          p.maxHp = Number.isFinite(s) && s >= 1 ? Math.round(s) : 1;
+          fixed = true;
+        }
+        if (!Number.isFinite(p.hp)) { p.hp = 0; fixed = true; }
+        else if (p.hp < 0) p.hp = 0;
+        else if (p.hp > p.maxHp) p.hp = p.maxHp;
+        if (fixed) {
+          try { if (typeof window !== "undefined" && window.Guard) Guard.report(new Error("Battle HP NaN guard: " + (p.name || "?")), { where: "battle/sanitizeHp", silent: true }); } catch (e) {}
+        }
+      });
+    });
+  }
+
   function checkFinished(state) {
+    sanitizeHp(state);
     const p1Alive = hasUsable(state.p1.team);
     const p2Alive = hasUsable(state.p2.team);
     if (!p1Alive) { state.finished = true; state.winner = "p2"; }
@@ -967,7 +990,7 @@ const BattleState = (() => {
   return {
     create, active, otherSide, log,
     executeMove, endTurnResidual, endTurnField, switchTo, onSwitchIn,
-    applyEntryHazards, hasUsable, checkFinished, statusLabel, useItem, ITEMS,
+    applyEntryHazards, hasUsable, checkFinished, sanitizeHp, statusLabel, useItem, ITEMS,
     HELD, checkHeld, custapCheck, berryLabel,
     megaOf, canMega, megaEvolve, priorityOf, trappedBy
   };

@@ -9,13 +9,13 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 | 做緊咩 | 讀邊份 | Rule |
 |---|---|---|
-| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94 |
+| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94、101 |
 | SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊、網絡請求／token、sync queue／本機存檔防損 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78、96、98 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
-| 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92 |
+| 戰鬥、EXP、道具效果、特性、戰鬥測試、數值兜底（NaN） | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92、99 |
 | 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77、93 |
-| home sheet、binder、overlay 點擊、手勢、按鈕、icon、場景動畫倍速 | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91、95 |
+| home sheet、binder、overlay 點擊、手勢、按鈕、icon、場景動畫倍速 | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91、95、100 |
 | 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具、全鍵盤操作 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90、97 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
@@ -414,3 +414,15 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 98 — 本機資料唔准靜靜冇咗：sync queue 要持久化＋backoff＋毒批丟棄＋keepalive；存檔讀唔到要先備份；寫唔落要話用戶知；離線用 pill 提示
 
 → `.trae/skills/pokeengmon-supabase/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-supabase/references/incidents.md`。
+
+## Rule 99 — 數值兜底：NaN 同任何數比較都係 false — 傷害／HP／比例／幾何／存檔計數一定要喺入口夾成有限值；`Math.max(1, NaN)` 都係 NaN
+
+→ `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。
+
+## Rule 100 — Sheet 切換同時進行（220ms）、overlay exit 200ms：時長集中喺 `App.SHEET_MS／SHEET_SWAP_MS／OVERLAY_EXIT_MS`；close cleanup 只收冇 `ph-open` 嘅 sheet
+
+→ `.trae/skills/pokeengmon-ui-sheets/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-ui-sheets/references/incidents.md`。
+
+## Rule 101 — 開機唔載用唔著嘅大檔：戰鬥 BGM idle 預載、隱藏 sheet 嘅大圖 `loading=lazy`、題目圖片用 `index.json` 清單唔好逐個副檔名試
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

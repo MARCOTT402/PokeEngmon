@@ -21,6 +21,7 @@ const ASSETS = [
   "./index.html",
   "./Q_folder/grammar/grammar.csv",
   "./Q_folder/vocab/vocab.csv",
+  "./Q_folder/grammar/grammar_images/index.json",
   "./js/core/guard.js",
   "./js/core/net.js",
   "./js/supabase-auth.js",

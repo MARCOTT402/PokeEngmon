@@ -1048,6 +1048,13 @@ const Quiz = {
       b.x += b.vx;
       b.y += b.vy;
       b.rx += b.vx * (b.flying ? 2 : 1.2);
+      /* 數值兜底（Rule 99）：NaN 同任何數比較都係 false，邊界反彈夾唔返 → 球永遠消失。
+         變咗 NaN／Infinity 就放返精靈球框中間、速度歸零 */
+      if (!Number.isFinite(b.x) || !Number.isFinite(b.y) || !Number.isFinite(b.vx) || !Number.isFinite(b.vy)) {
+        b.x = (this._physW || 380) / 2; b.y = (this._physH || 260) / 2;
+        b.vx = 0; b.vy = 0; b.rx = 0; b.flying = false;
+      }
+      if (!Number.isFinite(b.rx)) b.rx = 0;
 
       /* 邊界反彈：
          自由彈跳 → 只限精靈球框內（唔會彈高過框頂）

@@ -222,3 +222,14 @@ Incident (2026-11-06，Settings sheet → Trainer → Name)：Name 行一直顯�
 - 背景（2026-11-06）：用戶要求捕捉加 2×／3× 倍速，之後擴展到扭蛋同進化動畫。捕捉動畫係 GSAP timeline + 十幾個 `setTimeout` + Three.js `dt` + CSS keyframes 混用，淨改一種會令音效同畫面對唔上。
 - 做法：共用 `AnimSpeed`（`begin` 設 `gsap.globalTimeline.timeScale(spd)` 同 `--anim-spd`；`end` 還原），各場景計時 wrapper 除以倍速，CSS 一次性動畫用 `calc(… / var(--anim-spd, 1))`。
 - 風險：`globalTimeline` 係全 app 共用，`end` 漏一條路徑（例如扭蛋中途離開、進化等用戶撳外面、程式錯誤經 Guard 返主頁）就會令之後所有 GSAP 動畫變快，好難追。所以要列晒出口逐個加 `end`，並喺驗收量「完結後 timeScale === 1」。
+
+### Rule 100 — Sheet 切換同時進行（220ms）、overlay exit 200ms：時長集中喺 `App.SHEET_MS／SHEET_SWAP_MS／OVERLAY_EXIT_MS`；close cleanup 只收冇 `ph-open` 嘅 sheet
+
+- 背景：用戶話「介面與介面之間轉換慢」。stability-performance plan §5.3：sheet 切換串行（收 400ms → 等 410ms → 開 400ms），overlay 返主頁要等 400ms 先切 view。
+- 撞板 1：本來想 overlay 即刻切 view、exit 喺背景播 —— 但 overlay 樣式全部掛 `.active`，拎走即刻消失；改為保留延後切換、縮到 200ms。
+- 撞板 2：overlay → sheet 如果 60ms 就開新 sheet，`showView` 延後嘅 `_doShowView` → `_closeAllSheets` 會收埋佢 → overlay 情況要等 exit 完。
+- 撞板 3：舊 cleanup「有任何 sheet 開住就 skip」，同時切換時舊 sheet 永遠唔會 hidden／unmount → 改 `_cleanupClosedSheets` 只收冇 `ph-open` 嘅。
+- 撞板 4：喺隱藏 Browser pane 驗證見到殘留 sheet —— 係 rAF 唔 fire 嘅假象，headless 先準。
+- 結果：bench sheetSwitchMs 836 → 315ms；suites 同 baseline 一樣（P9b／W2／W4 已知）；headless phone／wide 五個情境全部正確。
+
+Skill: Rule 100 added

@@ -12,6 +12,8 @@
 | 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
+| 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
+| 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`） | `js/app.js`（entry gate `unlockAudio`）, `js/capture.js`（`_loadBGMBuffer`）, Rule 101 |
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98） | `js/storage.js` |
 | 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tools/_test_sync_queue.js` |
@@ -37,6 +39,7 @@
 | 背包（橫向紅框、三欄、轉手機提示） | `js/bag.js`, `tools/prototype-bag.html`（設計稿） |
 | HP／狀態／用藥規則（server RPC + guest 本地） | `js/care.js`, `tools/_test_care.js`, `supabase/migrations/supabase-migrate-20261105c-care-status-phase1.sql` |
 | 數值 / 進化 / moves | `js/pokemon.js`, `js/data.js`, `js/gens-data.js` |
+| 數值兜底（傷害 `_fin`、`sanitizeHp`、`hpRatio`、fit 重試、存檔計數 `_sanitizeStateNumbers`） | `js/battle/engine.js`, `js/battle/state.js`, `js/battle/battle.js`, `js/bag.js`, `js/battle/landscape.js`, `js/quiz.js`, `js/storage.js`, `tools/_test_numeric_guards.js`, Rule 99 |
 | GenPack | `js/genpack.js` |
 | Streak / Gym | `js/gym.js` |
 | Leaderboard | `js/leaderboard.js` |

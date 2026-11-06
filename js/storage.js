@@ -145,14 +145,35 @@ function loadState() {
       }
     });
   }
+  _sanitizeStateNumbers(_state, "loadState");
   if (needSave) saveState();
   /* 套用遺忘曲線模式到 SM-2 */
   try { if (window.SM2 && SM2.setMode) SM2.setMode(_state.curveMode || "standard"); } catch (e) {}
   return _state;
 }
 
+/* 數值兜底（Rule 99）：頂層計數（鑽石、總題數…）由好多地方直接寫入 server 回傳值
+   （例如 `st.diamonds = r.balance`）。RPC 回應少咗欄位／變咗 null／字串時會變 undefined／NaN，
+   之後所有加減、比較、顯示都壞晒。每次讀／寫存檔都檢查：唔係有限數 → 還原上一次好嘅值（冇就 0）並記錄 */
+const _NUMERIC_STATE_KEYS = ["diamonds", "normalPulls", "totalSets", "totalCorrect", "totalQuestions", "bestStreak"];
+const _lastGoodNums = {};
+function _sanitizeStateNumbers(st, where) {
+  if (!st) return;
+  _NUMERIC_STATE_KEYS.forEach(k => {
+    if (!(k in st)) return;
+    const v = st[k];
+    if (typeof v === "number" && Number.isFinite(v)) { _lastGoodNums[k] = v; return; }
+    const n = typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+    const fixed = Number.isFinite(n) ? n : (Number.isFinite(_lastGoodNums[k]) ? _lastGoodNums[k] : 0);
+    st[k] = fixed;
+    _lastGoodNums[k] = fixed;
+    try { if (window.Guard) Guard.report(new Error("State number guard: " + k + "=" + String(v)), { where, silent: true }); } catch (e) {}
+  });
+}
+
 let _saveFailToastAt = 0;
 function saveState() {
+  _sanitizeStateNumbers(_state, "saveState");
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
     if (window.SM2 && SM2.setMode) SM2.setMode(_state.curveMode || "standard");

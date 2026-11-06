@@ -46,9 +46,16 @@ const BattleLand = (() => {
   }
 
   /* 橫向：紅框 = 視窗大小；直向（Play anyway）：紅框轉 90° 填滿 */
+  let _fitRetry = 0;
   function fit() {
     if (!active) return;
     const W = window.innerWidth, H = window.innerHeight;
+    /* 數值兜底（Rule 99）：轉機瞬間視窗尺寸可能係 0 → 紅框 0px；未 ready 就 100ms 後再試（最多 10 次） */
+    if (!(W > 0 && H > 0)) {
+      if (_fitRetry++ < 10) setTimeout(fit, 100);
+      return;
+    }
+    _fitRetry = 0;
     /* 只有手機直向先轉 90°；iPad 直向（tablet）唔轉，紅框用全闊、高度 ≈ 闊 × 0.62 置中（Responsive P1 Task 9） */
     const phone = !(window.App && App.layout) || App.layout() === "phone";
     const portrait = H > W && phone;
@@ -62,13 +69,15 @@ const BattleLand = (() => {
       const sw = screen.clientWidth, sh = screen.clientHeight;
       if (scaled) {
         screen.style.setProperty("--bl-w", DESIGN_STAGE_W + "px");
-        screen.style.setProperty("--bl-s", Math.max(0.5, Math.min(sw / BOX_W, sh / BOX_H)).toFixed(4));
+        /* NaN 寫入 CSS 變數會令成條 transform 規則失效（Rule 99） */
+        const s = Math.min(sw / BOX_W, sh / BOX_H);
+        screen.style.setProperty("--bl-s", Math.max(0.5, Number.isFinite(s) ? s : 1).toFixed(4));
         return;
       }
       screen.style.removeProperty("--bl-s");
       /* 舞台 240:112 + 底部選單（FIGHT 打開時最高約 106px）要一齊塞得落 */
       const w = Math.max(240, Math.min(sw - 8, (sh - 112) * 240 / 112));
-      screen.style.setProperty("--bl-w", Math.floor(w) + "px");
+      screen.style.setProperty("--bl-w", Math.floor(Number.isFinite(w) ? w : 240) + "px");
     });
   }
 

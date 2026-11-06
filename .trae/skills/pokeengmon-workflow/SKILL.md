@@ -83,3 +83,10 @@ if (!e.request.url.startsWith("http")) return;
 - 數值兜底：`Guard.num／clamp／posDim／safeJSON`。
 - 驗收：錯誤注入（答題中 click handler `null.x()` → 恢復卡＋Home 可撳；`Promise.reject(new TypeError())` → toast；`NotAllowedError` 唔記錄）、headless `Network.setBlockedURLs` 封 `js/pokemon.js`／`js/app.js` → fatal 畫面、封 `js/core/guard.js` → App 照開。
 
+### Rule 101 — 開機唔載用唔著嘅大檔：戰鬥 BGM idle 預載、隱藏 sheet 嘅大圖 `loading=lazy`、題目圖片用 `index.json` 清單唔好逐個副檔名試
+
+- 入場掣（entry gate）只解鎖 AudioContext＋播主頁 BGM；**唔好**喺入場一刻 `bgmPrime()`（2 MB wild-battle.mp3 fetch＋`decodeAudioData` 會令撳完卡一下）。戰鬥 BGM 由 `preloadBattleBGM()` 喺開頁 6 秒後 `requestIdleCallback` 預載；答題 submit（`quiz.js`）同 Battle Menu（`app.js`）照舊 `bgmPrime()`，`startBGM()` 未載好會自己補載＋900ms 重試。
+- 擺喺隱藏 sheet／overlay 入面嘅大圖（例如 gacha `assets/gacha/dragonite.png` 325 KB）加 `loading="lazy" decoding="async"`：`display:none` 嘅 lazy 圖要顯示先下載。會被 JS 量度尺寸嘅圖唔好加。
+- 題目圖片：`Q_folder/grammar/grammar_images/index.json` 由 `python tools/gen_grammar_image_index.py` 產生；`findQuestionImage()` 讀一次清單直接查，清單載唔到先退返逐個副檔名 probe。**加／刪／改名題目圖片之後一定要重跑個 script 再 commit 個 json**，否則新圖唔會出。舊做法 570 題得 1 張圖，每題最多 5 個 404。
+- `three.js`（1.2 MB）未延後：`js/capture.js` 同時係 3D 場景**同**成個音效引擎（主頁 BGM、SFX），延後載會連聲都冇。要做先將 audio 拆出獨立檔（例如 `js/audio.js`），再按需 `import()` 捕捉場景。module script 本身唔阻塞 parse，SW 會 cache。
+- 驗收：headless 4× CPU 開頁 6 秒內 resource 冇 `wild-battle`／`dragonite`；撳入場 < 20ms；10 秒後 `CaptureScene.audio._bgmBuf` 已載；做 10 題 `grammar_images` 404 = 0、`index.json` request 1 次；`test-capture-fit`、`test-quiz-fit` 照舊。

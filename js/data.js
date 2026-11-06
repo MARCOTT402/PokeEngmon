@@ -683,10 +683,41 @@ function probeImage(url) {
   });
 }
 
+/* 圖片清單（Rule 101）：grammar_images/index.json 由 tools/gen_grammar_image_index.py 產生。
+   有清單就直接查（570 題只得幾張圖，舊做法每題最多 5 個 404 request）；清單載唔到先退返逐個副檔名試 */
+let _imageIndexPromise = null;
+function _loadImageIndex() {
+  if (_imageIndexPromise) return _imageIndexPromise;
+  _imageIndexPromise = fetch(`${IMAGE_DIR}/index.json`, { cache: "no-cache" })
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => {
+      if (!j || !Array.isArray(j.files)) return null;
+      const map = new Map();
+      j.files.forEach(f => {
+        const m = /^(.+)\.(png|jpe?g|webp|gif)$/i.exec(String(f));
+        if (m && !map.has(m[1])) map.set(m[1], `${IMAGE_DIR}/${f}`);
+      });
+      return map;
+    })
+    .catch(() => null);
+  return _imageIndexPromise;
+}
+
 /* 回傳圖片路徑；冇圖片回傳 null */
 function findQuestionImage(no) {
   if (!no) return Promise.resolve(null);
   if (_imageCache.has(no)) return Promise.resolve(_imageCache.get(no));
+  return _loadImageIndex().then(index => {
+    if (index) {
+      const url = index.get(no) || null;
+      _imageCache.set(no, url);
+      return url;
+    }
+    return _probeQuestionImage(no);
+  });
+}
+
+function _probeQuestionImage(no) {
   let chain = Promise.resolve(null);
   IMAGE_EXTS.forEach(ext => {
     chain = chain.then(found => found || probeImage(`${IMAGE_DIR}/${no}.${ext}`));

@@ -1060,7 +1060,8 @@ const BattleUI = (() => {
     const toCare = { burn: "brn", paralyze: "par", sleep: "slp", freeze: "frz", poison: "psn", toxic: "psn" };
     const team = me().team.filter(p => p.uid).map(p => ({
       uid: p.uid,
-      hp: p.hp <= 0 ? 0 : Math.max(1, Math.round(p.hp / p.maxHp * 1000)),
+      /* 上 server 結算：NaN 唔准送出去（Rule 99） */
+      hp: !(p.hp > 0) ? 0 : Math.min(1000, Math.max(1, Math.round(hpRatio(p) * 1000))),
       status: p.hp > 0 ? (toCare[p.status] || null) : null,
       poison: p.status === "poison" && p.severePoison ? 2 : 1,
       /* 攜帶樹果食咗 → server 清 held_item（只清同一粒） */
@@ -1611,6 +1612,13 @@ const BattleUI = (() => {
   }
 
   /* FRLG HP 條顏色：綠 → 黃 → 紅 */
+  /* HP 比例 0–1（Rule 99）：maxHp 0／NaN、hp NaN 都回有限值，HP 條唔會因為 NaN 寫唔落 */
+  function hpRatio(p) {
+    const max = Number(p && p.maxHp), hp = Number(p && p.hp);
+    if (!(max > 0) || !Number.isFinite(hp)) return 0;
+    return Math.min(1, Math.max(0, hp / max));
+  }
+
   function hpColor(pct) { return pct > 50 ? "#58d080" : pct > 20 ? "#f8c038" : "#f84040"; }
 
   /* 對戰精靈圖：Gen 1-5（≤649）有本地動態 GIF；其餘用 PokeAPI 靜態圖 fallback */
@@ -1623,7 +1631,7 @@ const BattleUI = (() => {
     /* 敵方 HP box */
     document.getElementById("foe-name").textContent = foe.name;
     document.getElementById("foe-level").textContent = foe.level;
-    const foePct = Math.max(0, (foe.hp / foe.maxHp) * 100);
+    const foePct = hpRatio(foe) * 100;
     const foeBar = document.getElementById("foe-hpbar");
     foeBar.style.width = foePct + "%";
     foeBar.style.background = hpColor(foePct);
@@ -1633,7 +1641,7 @@ const BattleUI = (() => {
     /* 我方 HP box */
     document.getElementById("my-name").textContent = mine.name;
     document.getElementById("my-level").textContent = mine.level;
-    const myPct = Math.max(0, (mine.hp / mine.maxHp) * 100);
+    const myPct = hpRatio(mine) * 100;
     const myBar = document.getElementById("my-hpbar");
     myBar.style.width = myPct + "%";
     myBar.style.background = hpColor(myPct);
@@ -1847,7 +1855,7 @@ const BattleUI = (() => {
     slots.innerHTML = order.map((ti, pos) => {
       const p = team[ti];
       const fainted = p.hp <= 0;
-      const ratio = Math.max(0, p.hp / p.maxHp);
+      const ratio = hpRatio(p);
       const st = statusBadge(p.status);
       const inner = `
         <span class="ps-icon"><img src="${battleSprite(p.dexId)}" alt=""></span>
