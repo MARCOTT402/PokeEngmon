@@ -1,3 +1,10 @@
+## [1.65.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.1...v1.65.2) (2026-11-06)
+
+
+### Bug Fixes
+
+* **battle:** scale fixed design canvas on tablet and desktop ([507a5d3](https://github.com/MARCOTT402/PokeEngmon/commit/507a5d33da4b3d97076594a426b0402ebb7b75a1))
+
 ## [1.65.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.0...v1.65.1) (2026-11-06)
 
 
