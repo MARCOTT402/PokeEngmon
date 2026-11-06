@@ -1,3 +1,10 @@
+# [1.64.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.3...v1.64.0) (2026-11-06)
+
+
+### Features
+
+* **battle:** Aura Guard and Eelevate Mega abilities ([47a8f59](https://github.com/MARCOTT402/PokeEngmon/commit/47a8f599c314bb80345673da5445070822aa1f3b))
+
 ## [1.63.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.2...v1.63.3) (2026-11-06)
 
 
