@@ -43,3 +43,14 @@ Incident (2026-11-05)：用戶反映揀咗單元／子單元後，一個 set 嘅
 - 驗收：揀 2 個以上子單元，跑 `buildSession` 幾百次統計每個子單元出現比例，要接近佢喺 pool 嘅比例。
 
 Skill: Rule 77 added
+
+### Rule 93 — SM-2 storage 逐題 parse 令入題卡幾秒
+
+- 症狀：揀全部課題撳 Start，手機要等幾秒先出第一題；介面似卡死。
+- 根因：`SM2.buildSession` 對 pool 每一題 call `getOrCreateCard`，而 `getOrCreateCard` 每次 `JSON.parse(localStorage)` 成個 cards blob（1,380 題 → 359 KB），新卡仲要 `JSON.stringify`＋`setItem` 成個 blob＝O(N²)。
+- 實測（headless Chrome、CPU 4× 降速、1,380 題）：全新用戶 4,586 ms → 31 ms；已有卡 3,575 ms → 30 ms；每答一題寫入 10.2 ms → 1 ms。
+- 修正：`js/sm2.js` 原始字串 key 解析快取＋`buildSession` 只讀一次、唔為 pool 建卡（見 SKILL.md Rule 93）。
+- 測試：`tools/_test_sm2_cache.js`（15 項）、`tools/perf/bench.mjs`。
+- 計劃：`.trae/documents/20261106-stability-performance.md` §5.1。
+
+Skill: Rule 93 added

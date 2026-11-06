@@ -38,3 +38,10 @@ description: PokeEngmon quiz rules: SM-2 due-card sessions, settlement exits and
 - 抽題：揀咗嘅 topic keys 入面所有到期題（過期＋全新）混埋一齊，Fisher-Yates 洗勻成個 pool，再 `slice(0, size)`。
 - 永遠唔好用 `arr.sort(() => Math.random() - 0.5)` 做 shuffle。
 - 驗收：揀 2 個以上子單元，跑 `buildSession` 幾百次統計每個子單元出現比例，要接近佢喺 pool 嘅比例。
+
+### Rule 93 — SM-2 storage：唔好逐題 parse／寫成個 cards blob；buildSession 讀一次快取，唔好為成個 pool 建卡
+
+- `_loadCards()`／`_loadHistory()` 用「localStorage 原始字串做 key」嘅解析快取：字串一樣就重用上次 `JSON.parse` 結果；sync pull、reset 直接寫 localStorage 會令字串唔同 → 自動重新 parse，唔使加 invalidate。
+- 快取 object 係共用：內部改完一定經 `_saveCards`／`_saveHistory` 寫返；對外（`listAll`／`listDue`／`listNew`／`listHistory`）一律回傳 copy。
+- `buildSession` 只讀一次 cards；未有 card 嘅題當全新（到期）；張 card 等 `Quiz._renderQuestion` 出題先建。**唔好**喺 loop 入面 call `getOrCreateCard`（每次 parse＋寫 359 KB → O(N²)，手機入題等幾秒）。
+- 驗收：`node tools/_test_sm2_cache.js`（Rule 7／77 行為＋快取失效）；`node tools/perf/bench.mjs --cpu 4` 嘅 `freshQuizStartMs`／`warmQuizStartMs` < 200。

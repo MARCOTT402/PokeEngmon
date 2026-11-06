@@ -260,19 +260,44 @@ window.SM2 = (() => {
     return `${prefix}${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
   }
 
+  /* 解析快取（Rule 93）：getItem 好平，JSON.parse 359 KB 先貴。
+     以 localStorage 原始字串做 key —— 字串一樣就重用上次 parse 結果；
+     sync pull／reset 等外部直接寫 localStorage 會令字串唔同 → 自動重新 parse，唔使逐個 caller invalidate。
+     回傳嘅 object 係共用快取：內部改完一定要經 _saveCards／_saveHistory 寫返，對外一律回傳 copy。 */
+  const _cache = { cardsRaw: null, cards: null, histRaw: null, hist: null };
   function _loadCards() {
-    try { return JSON.parse(localStorage.getItem(LS_CARDS)) || {}; }
-    catch (e) { return {}; }
+    let raw = null;
+    try { raw = localStorage.getItem(LS_CARDS); } catch (e) {}
+    if (_cache.cards && raw === _cache.cardsRaw) return _cache.cards;
+    let obj = {};
+    try { obj = (raw && JSON.parse(raw)) || {}; } catch (e) { obj = {}; }
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) obj = {};
+    _cache.cardsRaw = raw; _cache.cards = obj;
+    return obj;
   }
   function _saveCards(obj) {
-    try { localStorage.setItem(LS_CARDS, JSON.stringify(obj)); } catch (e) {}
+    let raw = null;
+    try { raw = JSON.stringify(obj); localStorage.setItem(LS_CARDS, raw); }
+    catch (e) { raw = null; }
+    /* 寫唔落（例如 quota 滿）：快取作廢，下次照 localStorage 實際內容讀，唔好令記憶體同存檔分岔 */
+    _cache.cardsRaw = raw; _cache.cards = raw === null ? null : obj;
   }
   function _loadHistory() {
-    try { return JSON.parse(localStorage.getItem(LS_HIST)) || []; }
-    catch (e) { return []; }
+    let raw = null;
+    try { raw = localStorage.getItem(LS_HIST); } catch (e) {}
+    if (_cache.hist && raw === _cache.histRaw) return _cache.hist;
+    let arr = [];
+    try { arr = (raw && JSON.parse(raw)) || []; } catch (e) { arr = []; }
+    if (!Array.isArray(arr)) arr = [];
+    _cache.histRaw = raw; _cache.hist = arr;
+    return arr;
   }
   function _saveHistory(arr) {
-    try { localStorage.setItem(LS_HIST, JSON.stringify(arr.slice(-2000))); } catch (e) {}
+    const kept = arr.length > 2000 ? arr.slice(-2000) : arr;
+    let raw = null;
+    try { raw = JSON.stringify(kept); localStorage.setItem(LS_HIST, raw); }
+    catch (e) { raw = null; }
+    _cache.histRaw = raw; _cache.hist = raw === null ? null : kept;
   }
 
   /* 獲取卡片；冇就 create 新卡 */
@@ -309,27 +334,29 @@ window.SM2 = (() => {
     return { ...clean, _key: key };
   }
 
+  /* 對外回傳 copy：caller 改咗都唔會污染快取 */
   function listDue(now) {
     const t = now || Date.now();
     return Object.values(_loadCards())
       .filter(c => c.next_review_at <= t)
-      .sort((a, b) => a.next_review_at - b.next_review_at);
+      .sort((a, b) => a.next_review_at - b.next_review_at)
+      .map(c => ({ ...c }));
   }
 
   function listNew() {
-    return Object.values(_loadCards()).filter(c => c.repetition === 0);
+    return Object.values(_loadCards()).filter(c => c.repetition === 0).map(c => ({ ...c }));
   }
 
   function listAll() {
-    return Object.values(_loadCards());
+    return Object.values(_loadCards()).map(c => ({ ...c }));
   }
 
   function listHistory() {
-    return _loadHistory();
+    return _loadHistory().map(h => ({ ...h }));
   }
 
   function appendHistory(rec) {
-    const hist = _loadHistory();
+    const hist = _loadHistory().slice();
     hist.push(rec);
     _saveHistory(hist);
     /* 背景同步去 Supabase */
@@ -339,7 +366,7 @@ window.SM2 = (() => {
   /* 由雲端還原答題歷史：以 ts + card_id 去重；唔會再 queue 返上 server（避免回音） */
   function mergeHistory(rows) {
     if (!Array.isArray(rows) || !rows.length) return 0;
-    const hist = _loadHistory();
+    const hist = _loadHistory().slice();
     const seen = new Set(hist.map(h => Number(h.ts) + "|" + h.card_id));
     let added = 0;
     rows.forEach(r => {
@@ -440,16 +467,18 @@ window.SM2 = (() => {
     }
     if (pool.length === 0) return [];
 
-    /* 先確保每題都有對應 card（lazy create，repetition=0）*/
-    const withCard = pool.map(q => {
-      const card = getOrCreateCard(q);
-      return { q, card };
-    });
-
+    /* 讀一次快取（Rule 93）：唔好逐題 getOrCreateCard —— 舊做法每題 parse／寫成個 cards blob，
+       1,380 題 = O(N²)，手機入題要等幾秒。未有 card 嘅題＝全新題（next_review_at 0，即到期）；
+       張 card 等真係出題（Quiz._renderQuestion → getOrCreateCard）先建。 */
+    const cards = _loadCards();
     const now = Date.now();
     /* 只抽到期的卡，未到期嘅（無論新舊）一律唔抽：唔夠 10 題就出細 set，
        逼用戶去揀其他課題，唔俾死做一個課題重複刷啱啱做過嘅題 */
-    const due = withCard.filter(x => x.card.next_review_at <= now);
+    const due = [];
+    pool.forEach(q => {
+      const c = cards[_cardId(q)];
+      if ((c ? c.next_review_at : 0) <= now) due.push({ q });   /* 同舊行為一致：壞卡（冇 next_review_at）唔抽 */
+    });
 
     /* 揀咗嘅單元／子單元入面所有到期題（過期＋全新）混埋一齊，
        先 Fisher-Yates 洗勻成個 pool 再抽 s 題（Rule 77）：

@@ -14,7 +14,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
 | 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92 |
-| 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77 |
+| 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77、93 |
 | home sheet、binder、overlay 點擊、手勢、按鈕、icon | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91 |
 | 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90 |
 
@@ -390,3 +390,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 92 — 暈咗之後嘅強制換寵係免費（對手唔可以白打一下）；自己揀換寵照計回合；Shift 免費
 
 → 已整合入 `.trae/skills/pokeengmon-battle/SKILL.md`；完整事故原文見 `.trae/skills/pokeengmon-battle/references/incidents.md`（Rule 92）。
+
+## Rule 93 — SM-2 storage：唔好逐題 parse／寫成個 cards blob；buildSession 讀一次快取，唔好為成個 pool 建卡
+
+→ `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。
