@@ -442,3 +442,14 @@ Incident (2026-11-06，用戶截圖)：wide（1440×900 等）開捕捉畫面，
 - 驗收：`tools/responsive/test-capture-fit.mjs`，7 尺寸 overlay 同 `.ph-sheets`／`.pd-screen2` 左右差 0、canvas = overlay − 邊框；440×956、375×667 rect 同之前一樣。
 
 Skill: Rule 89 added
+
+### Rule 90 — 固定 px 設計嘅遊戲畫面（戰鬥）喺大屏要「固定畫布＋等比例 scale」，唔好拉闊舞台；JS 座標用 offset
+
+Incident (2026-11-06，用戶截圖)：電腦（1440×900、1920×1080）同平板橫向（1180×820）開戰，舞台跟紅框拉到 1270–1750 闊、精靈跟住放大（273–376px），但 HP 框（max 240px）、文字（max 22px）、訓練家（148px）、拋球終點（`rect.width - 28 - 55` 等固定 px）冇放大 → 人物、精靈球、資料框、文字框比例全部走樣，拋球位置錯。
+
+- `BattleLand.fit()`：layout 係 tablet／wide → `.battle-land.bl-scaled`，`--bl-w: 664px`、`--bl-s = min(screenW/680, screenH/430)`；CSS `#view-battle` 680×430、`transform: scale(var(--bl-s))`、清走 display-window 黑邊圓角。phone／phone-land 唔郁（量度數值同改動前完全一樣）。
+- 因為 vw clamp 喺 ≥ 約 700px viewport 全部到頂，設計畫布同手機橫向（956×440）嘅字級／高度一致，唔使另外凍結。
+- `throwBall`、`playMoveFx`（battle.js）、`MoveAnim.play`（moveanim.js）由 `getBoundingClientRect` 改用 offset（精靈係 `.battle-stage` 直屬子元素）：rect 會計埋 scale；手機直向「Play anyway」轉 90° 時 rect 闊高對調，拋球本來就落錯位，一併修正。
+- 驗收：`tools/responsive/test-battle-fit.mjs`；`test-rotate.mjs` 18/18。
+
+Skill: Rule 90 added

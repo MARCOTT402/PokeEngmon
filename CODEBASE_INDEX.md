@@ -37,7 +37,7 @@
 | Leaderboard | `js/leaderboard.js` |
 | 練習日曆 | `js/calendar.js` |
 | 錯題解析 | `js/explain.js` |
-| 響應式斷點（phone／tablet／wide／phone-land、`<html data-layout>`、`pe:layout` 事件、外殼幾何 `--frame-w`／`--frame-screen-*`） | `js/app.js`（`App.layout`、`_initLayout`）, `css/style.css`（頂部 LAYOUT BREAKPOINTS；`:root` 外殼變數；17b tablet／17c wide／17d 焦點＋hover）, spec `.trae/specs/20261106-responsive-layout.md`, plan `.trae/documents/20261106-responsive-layout-p1.md`, 截圖／rect 驗收 `tools/responsive/shots.mjs`、互動測試 `tools/responsive/test-*.mjs`（Rule 80–89）、改碼清單 `.trae/skills/pokeengmon-responsive/SKILL.md` |
+| 響應式斷點（phone／tablet／wide／phone-land、`<html data-layout>`、`pe:layout` 事件、外殼幾何 `--frame-w`／`--frame-screen-*`） | `js/app.js`（`App.layout`、`_initLayout`）, `css/style.css`（頂部 LAYOUT BREAKPOINTS；`:root` 外殼變數；17b tablet／17c wide／17d 焦點＋hover）, spec `.trae/specs/20261106-responsive-layout.md`, plan `.trae/documents/20261106-responsive-layout-p1.md`, 截圖／rect 驗收 `tools/responsive/shots.mjs`、互動測試 `tools/responsive/test-*.mjs`（Rule 80–90）、改碼清單 `.trae/skills/pokeengmon-responsive/SKILL.md` |
 | wide 右欄（預設 Daily Quests、sheet 即時切換、Esc、左欄鎖） | `js/app.js`（`_showWideDefault`、`_wideSwitch`、`_wideHideSheets`、`_wideFull`、`_onLayoutChange`、`_setSettleLock`、`_applyPaneLock`）, `js/quests.js`（`boardOpen` 認 sheet、`resume`）, Rule 84／85 |
 | 手機橫向「請轉返直向」／背包戰鬥轉機判斷 | `js/app.js`（`_syncRotateHint`）, `js/bag.js`（`isPhone`、`fit`）, `js/battle/landscape.js`（`fit`、`enter／exit`）, Rule 87 |
 | 結算兩欄（wide） | `index.html`（`.settle-col-a／-b` wrapper，phone 係 `display: contents`）, `css/style.css`（17c wide 區塊）, Rule 86 |

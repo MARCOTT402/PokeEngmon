@@ -104,11 +104,14 @@ const MoveAnim = (() => {
     const sheet = await loadSheet(cfg.graphic);
     if (!sheet || !sheet.naturalWidth) return 0;
 
-    const stage = stageEl.getBoundingClientRect();
+    /* 舞台座標用 offset（未縮放／未旋轉）：tablet／wide 成個戰鬥 scale、手機直向轉 90°（Rule 90） */
+    const stage = { left: 0, top: 0, width: stageEl.offsetWidth, height: stageEl.offsetHeight };
     if (!stage.width || !stage.height) return 0;
-
-    const atk = o.attackerEl ? o.attackerEl.getBoundingClientRect() : stage;
-    const def = o.defenderEl ? o.defenderEl.getBoundingClientRect() : stage;
+    const box = el => (el && el.offsetParent === stageEl)
+      ? { left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight }
+      : stage;
+    const atk = o.attackerEl ? box(o.attackerEl) : stage;
+    const def = o.defenderEl ? box(o.defenderEl) : stage;
     const user = {
       cx: atk.left - stage.left + atk.width / 2,
       by: atk.top - stage.top + atk.height

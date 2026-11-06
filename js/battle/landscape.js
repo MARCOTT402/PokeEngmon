@@ -8,6 +8,9 @@
    - body 級 overlay：z 2400（低過背包 2500，戰鬥中開背包會蓋喺上面；Rule 46）
    ============================================================ */
 const BattleLand = (() => {
+  /* tablet／wide：用手機橫向嘅設計尺寸（舞台 664 闊 + 最高底部選單 106）排版，成塊等比例 transform: scale 填滿紅框（Rule 90）。
+     唔好再用 --bl-w 拉闊舞台：HP 框、字、訓練家、拋球都係固定 px，拉闊會比例走樣 */
+  const DESIGN_STAGE_W = 664, BOX_W = 680, BOX_H = 430;
   let root = null, screen = null, frame = null, holder = null, patched = false, active = false;
 
   function build() {
@@ -53,8 +56,16 @@ const BattleLand = (() => {
     frame.style.width = (portrait ? H : W) + "px";
     frame.style.height = (portrait ? W : (tallTablet ? Math.min(H, Math.round(W * 0.62)) : H)) + "px";
     frame.style.transform = portrait ? "rotate(90deg)" : "none";
+    const scaled = !phone && App.layout() !== "phone-land";
+    root.classList.toggle("bl-scaled", scaled);
     requestAnimationFrame(() => {
       const sw = screen.clientWidth, sh = screen.clientHeight;
+      if (scaled) {
+        screen.style.setProperty("--bl-w", DESIGN_STAGE_W + "px");
+        screen.style.setProperty("--bl-s", Math.max(0.5, Math.min(sw / BOX_W, sh / BOX_H)).toFixed(4));
+        return;
+      }
+      screen.style.removeProperty("--bl-s");
       /* 舞台 240:112 + 底部選單（FIGHT 打開時最高約 106px）要一齊塞得落 */
       const w = Math.max(240, Math.min(sw - 8, (sh - 112) * 240 / 112));
       screen.style.setProperty("--bl-w", Math.floor(w) + "px");

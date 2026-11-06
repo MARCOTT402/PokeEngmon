@@ -6024,6 +6024,11 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .bl-screen .battle-stage, .bl-screen .battle-bottom { width: var(--bl-w, 100%); max-width: none; flex: none; }
 .bl-screen .party-frame { max-width: none; width: min(100%, calc(var(--bl-w, 100%) * .62)); }
+/* tablet／wide（Rule 90）：固定設計畫布（同手機橫向一樣嘅 px）等比例放大，四周留藍邊；--bl-s 由 BattleLand.fit() 計 */
+.battle-land.bl-scaled .bl-screen > #view-battle {
+  flex: none; width: 680px !important; height: 430px; transform: scale(var(--bl-s, 1)) !important; transform-origin: center center;
+  border: 0; border-radius: 0; /* display-window overlay 嘅黑邊／圓角放大後會變多餘內框 */
+}
 /* 戰鬥中三欄背包：tab 鎖定、中欄鎖定（換 Pokémon）、出場中標記 */
 .bag-tab.locked { color: #bcb7a8; cursor: not-allowed; }
 .bag-tab.locked::after { content: " 🔒"; font-size: 9px; }

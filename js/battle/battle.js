@@ -1288,7 +1288,8 @@ const BattleUI = (() => {
     return new Promise(res => {
       if (mid) introLayerOn();
       const stage = document.querySelector(".battle-stage");
-      const rect = stage.getBoundingClientRect();
+      /* 舞台座標用 offset（未縮放／未旋轉）：tablet／wide 成個戰鬥 scale、手機直向轉 90°，getBoundingClientRect 會錯（Rule 90） */
+      const rect = { width: stage.offsetWidth, height: stage.offsetHeight };
       const ball = document.getElementById("intro-ball");
       const flash = document.getElementById("intro-flash");
       /* 起點（訓練家手）→ 終點（精靈企位中央） */
@@ -1423,10 +1424,9 @@ const BattleUI = (() => {
     return new Promise(res => {
       const layer = document.getElementById("move-fx");
       const stage = document.querySelector(".battle-stage");
-      const sRect = stage.getBoundingClientRect();
-      const tRect = targetEl.getBoundingClientRect();
-      const cx = tRect.left - sRect.left + tRect.width / 2;
-      const cy = tRect.top - sRect.top + tRect.height / 2;
+      /* 舞台座標（Rule 90）：精靈係 .battle-stage 直屬子元素，用 offset 唔受 scale／rotate 影響 */
+      const cx = targetEl.offsetLeft + targetEl.offsetWidth / 2;
+      const cy = targetEl.offsetTop + targetEl.offsetHeight / 2;
       const key = fxSpriteFor(type, slug);
       const motion = FX_MOTION[key] || FX_MOTION["fx-normal"];
       const w = motion.w;
