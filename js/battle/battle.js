@@ -2309,6 +2309,21 @@ const BattleUI = (() => {
     }
     return SupabaseAuth._rpc("settle_friend_battle_v2", { p_battle: battleId, p_force: true });
   }
+  /* 隨機 PvP 結算（migration 20261106）：同好友局一樣等對手報告；等唔到就 force（計贏但只派 1💎）。
+     _rpc 出錯回 null（Rule 75），唔 throw */
+  async function settleRandomPvp(battleId, questionsTodayN) {
+    if (!battleId || !SupabaseAuth._rpc) return null;
+    if (pvpReport) await pvpReport;
+    const args = force => ({ p_battle: battleId, p_force: force, p_questions_today: questionsTodayN });
+    let res;
+    for (let i = 0; i < 8; i++) {
+      res = await SupabaseAuth._rpc("settle_pvp_battle", args(false));
+      if (res == null) return null;
+      if (!res.pending) return res;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    return SupabaseAuth._rpc("settle_pvp_battle", args(true));
+  }
 
   /* ---------- 完結 ---------- */
   function finishBattle() {
@@ -2467,17 +2482,20 @@ const BattleUI = (() => {
         if (window.App && App.toast) App.toast("Cloud sync hiccup — battle rewards not saved");
       }
     } else if (loggedIn) {
-      /* v2：server 認 (訓練家, 難度) 首通 + 扣 EP；未 migrate 就 fallback 舊 RPC */
-      let v2 = null;
-      if (SupabaseAuth.settleBattleV2) {
+      /* 隨機 PvP：server 對兩邊報告先計勝負（settle_pvp_battle）；
+         AI：settle_battle_v2 認 (訓練家, 難度) 首通 + 扣 EP。舊 settle_battle v1 已收回（migration 20261106） */
+      let res = null;
+      if (isPvp) {
+        res = await settleRandomPvp(pvpBattle && pvpBattle.id, questionsTodayN);
+        if (res && res.disputed && window.App && App.toast) App.toast("Results didn't match — this battle won't count");
+        else if (res && res.result === "win" && res.confirmed === false && window.App && App.toast) App.toast("Opponent didn't confirm — win recorded with 1 💎");
+      } else if (SupabaseAuth.settleBattleV2) {
         try {
-          v2 = await SupabaseAuth.settleBattleV2(
+          res = await SupabaseAuth.settleBattleV2(
             kind, won ? "win" : "lose", aiTrainer ? aiTrainer.id : null,
             tier, questionsTodayN, flawless, false);
         } catch (e) { console.warn("[Battle] settle_battle_v2 failed:", e.message); }
       }
-      const res = v2 || await SupabaseAuth.settleBattle(
-        kind, won ? "win" : "lose", aiTrainer ? aiTrainer.id : null, questionsTodayN);
       if (res && typeof res.balance === "number") {
         diamonds = res.allowed === false ? 0 : res.bonus;
         if (res.allowed === false) {

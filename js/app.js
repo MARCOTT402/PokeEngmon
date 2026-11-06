@@ -322,7 +322,7 @@ const App = {
       pending.push({ fromDex, toDex: res.evolvedTo.dexId });
       if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
         if (e.branch != null) Sync.patchEntry(e.uid, { branch: e.branch });
-        if (e.stone) Sync.patchEntry(e.uid, { stone_used: e.stone });
+        /* stone_used 只經 use_stone RPC 寫（migration 20261106） */
       }
     });
     if (!pending.length) return;
@@ -527,18 +527,16 @@ const App = {
       this.renderHome();
       return;
     }
-    const res = Pet.useItem(kind, entry);
+    /* 進化石：經 Care.useStone（登入 = use_stone RPC 扣石 + 記 stone_used／branch） */
+    const isStone = STONE_KINDS.includes(kind) && window.Care && Care.useStone;
+    if (isStone) { if (this._pcBusy) return; this._pcBusy = true; }
+    const res = isStone ? await Care.useStone(entry, kind) : Pet.useItem(kind, entry);
+    if (isStone) this._pcBusy = false;
     if (res.ok) {
       this._pcFloat(res.msg, /^(vomit|faint|od_)/.test(res.event || "") ? "bad" : "good");
       this.renderHome();
       this._syncPetCloud();
-      /* 石進化：branch / stone_used 要上雲，否則 pull 重推會退化 */
       if (res.evolvedTo) {
-        const current = getActiveEntry();
-        if (current && window.Sync && Sync.isEnabled && Sync.isEnabled()) {
-          if (res.branch != null) Sync.patchEntry(current.uid, { branch: res.branch });
-          if (res.stone) Sync.patchEntry(current.uid, { stone_used: res.stone });
-        }
         /* 先留住舊形態喺舞台發光（光團），完左先彈進化 hub；
            hub 關閉後重開 Partner Care 先見到新形態 */
         this._pcKeepSprite = true;
@@ -1501,6 +1499,13 @@ const App = {
       try {
         const berry = await Care.awardBerry(data.score === data.total);
         if (berry && Care.BERRIES[berry]) rewards.drops.unshift({ kind: berry, label: `🫐 ${Care.BERRIES[berry].name} +1` });
+      } catch (e) {}
+    }
+    /* 進化石：每回合 10%（登入由 server 抽，migration 20261106） */
+    if (window.Care && Care.awardStone) {
+      try {
+        const stone = await Care.awardStone();
+        if (stone && typeof STONE_LABELS !== "undefined") rewards.drops.push({ kind: stone, label: `${STONE_ICONS[stone]} ${STONE_LABELS[stone]} +1` });
       } catch (e) {}
     }
     /* 背包第 4c 段：全對 → 3% 掉 Mega 石（只會係你擁有物種嘅石；登入由 server 抽） */

@@ -28,6 +28,7 @@
 | Trainer Avatar（第 14 項；104 個原作角色全身像、揀選器、雲端同步） | `js/avatars.js`, `assets/trainers/avatars/`（`tools/fetch_trainer_avatars.py`）, `js/sync.js`（`pushAvatar`）, `js/friends.js`（頁頭）, `supabase/migrations/supabase-migrate-20261105i-trainer-avatar.sql` |
 | PvP pre-battle 頁（第 13 項；雙方頭像、隊伍、戰績、對戰紀錄） | `js/battle/battle.js`（`showPreBattle`）, RPC `get_trainer_cards` |
 | PvP 結算核對（狀態第二期；兩邊報告對勝方） | `js/battle/battle.js`（`reportPvpResult`、`settleFriendV2`）, `supabase/migrations/supabase-migrate-20261105j-pvp-crosscheck.sql`（`battle_reports`、`report_battle_result`、`settle_friend_battle_v2`） |
+| 防作弊：進化石 RPC、隨機 PvP 報告結算、battles 收權 | `js/care.js`（`awardStone`、`useStone`）, `js/battle/battle.js`（`settleRandomPvp`）, `supabase/migrations/supabase-migrate-20261106-anticheat-stones-pvp.sql`（`award_stone`、`use_stone`、`settle_pvp_battle`、`_battles_guard` trigger） |
 | 背包（橫向紅框、三欄、轉手機提示） | `js/bag.js`, `tools/prototype-bag.html`（設計稿） |
 | HP／狀態／用藥規則（server RPC + guest 本地） | `js/care.js`, `tools/_test_care.js`, `supabase/migrations/supabase-migrate-20261105c-care-status-phase1.sql` |
 | 數值 / 進化 / moves | `js/pokemon.js`, `js/data.js`, `js/gens-data.js` |

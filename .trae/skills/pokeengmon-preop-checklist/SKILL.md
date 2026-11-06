@@ -799,3 +799,17 @@ Incident (2026-11-05)：用戶反映揀咗單元／子單元後，一個 set 嘅
 - 驗收：揀 2 個以上子單元，跑 `buildSession` 幾百次統計每個子單元出現比例，要接近佢喺 pool 嘅比例。
 
 Skill: Rule 77 added
+
+## Rule 78 — 防作弊收權：新 RPC 上線要 revoke 舊版；table-level revoke 會連 column grant 一齊收
+
+Incident (2026-11-06，進化石／隨機 PvP／battles 收權)：(1) 進化石數量 `items_stones` 同 `stone_used` 由 client PATCH 直寫，改 localStorage 就可以憑空變石。(2) 隨機 PvP 用 `settle_battle_v2(p_result)` 信 client 講嘅勝負；而且舊版 `settle_battle`（v1）一直冇收 execute，v2 加咗檢查都可以行 v1 繞過。(3) `battles` 有 table-level UPDATE，p1 可以改 p2 嘅 action／winner。
+
+- 經濟數值（道具數量、勝負、鑽石）一律經 security definer RPC 寫：掉落由 server 抽（`award_*`），使用由 server 扣（`use_*`），client 只用 RPC 回傳數量覆蓋本地（`Care.applyStones`）。
+- 出新版 RPC 取代舊版時，同一份 migration `revoke execute` 舊版；用 `has_function_privilege('authenticated', oid, 'execute')` 列晒同名函數核對。
+- 要改一個長 RPC 加 guard：用 `pg_get_functiondef` + `replace` 插入再 `execute`，replace 後檢查有冇插到（anchor 唔中就 `raise`），唔好成段重抄（容易抄錯舊版本）。
+- `revoke update on table` 會連該表所有 column-level UPDATE grant 一齊收走：revoke 之後要再 `grant update (<cols>)`。
+- 多人共用一行（battles）：用 BEFORE UPDATE trigger 按 `auth.uid()` 判斷邊一方，只准寫自己嗰欄；`current_user <> 'authenticated'` 時放行（security definer RPC 係 owner 身份）。
+- 收 grant 之前照 Rule 76：grep 晒 client 所有 PATCH body，拎走相關欄位（今次：`patchEntry` 嘅 `stone_used`、`pushItems` 嘅 `items_stones`）。
+- 驗證：未登入路徑喺 localhost 跑（Rule 62，試完還原存檔並 reload）；登入路徑要等用戶跑完 migration，再用 RPC 呼叫 + `information_schema.role_column_grants` 核對。
+
+Skill: Rule 78 added

@@ -448,6 +448,53 @@ const Care = (() => {
     return slug;
   }
 
+  /* 進化石（migration 20261106）：數量只經 RPC 寫，server 回傳就係權威 */
+  function applyStones(stones) {
+    if (!stones || typeof stones !== "object" || !window.Pet || typeof STONE_KINDS === "undefined") return;
+    const bag = Pet.items();
+    STONE_KINDS.forEach(k => { bag[k] = Math.max(0, Number(stones[k]) || 0); });
+    saveState();
+  }
+
+  /* 答題掉石：每回合獨立 10%，5 種平均（登入由 server 抽；RPC 唔通就唔掉） */
+  async function awardStone() {
+    if (typeof STONE_KINDS === "undefined") return null;
+    if (online()) {
+      const res = await rpc("award_stone", {});
+      if (!res || !res.slug) return null;
+      applyStones(res.stones);
+      return res.slug;
+    }
+    if (Math.random() >= 0.10) return null;
+    const slug = STONE_KINDS[Math.floor(Math.random() * STONE_KINDS.length)];
+    Pet.addItem(slug, 1);
+    return slug;
+  }
+
+  /* 用石進化：登入先經 use_stone RPC 扣石 + 記 stone_used／branch，成功先喺本地進化。
+     回傳同 Pet.useItem 一樣嘅 { ok, msg, evolvedFrom, evolvedTo, branch, stone } */
+  const STONE_REASON = {
+    none: "No stone left",
+    already: "This Pokémon has already used a stone",
+    not_found: "Pokémon not found",
+    bad_item: "That stone can't be used"
+  };
+  async function useStone(entry, stone) {
+    const chk = canStoneEvolve(entry, stone);
+    if (!chk.ok) return { ok: false, msg: chk.msg };
+    if (online()) {
+      const res = await rpc("use_stone", {
+        p_entry: entry.uid, p_stone: stone,
+        p_branch: chk.branchIndex == null ? null : chk.branchIndex
+      });
+      if (!res || !res.ok) return { ok: false, msg: STONE_REASON[res && res.reason] || "Couldn't use it — try again" };
+      /* server 已扣：本地數量對齊 server，再 +1 俾 Pet.useItem 自己扣返 */
+      applyStones(res.stones);
+      Pet.addItem(stone, 1);
+    }
+    return Pet.useItem(stone, entry);
+  }
+
   /* 答題掉樹果（取代 food／premium）：10/10 → Super 樹果；1–9 題 → Normal 樹果 */
   async function awardBerry(perfect) {
     if (online()) {
@@ -519,7 +566,7 @@ const Care = (() => {
     MED_KINDS, MED_INFO, STATUS_INFO, REASON_TEXT, ITEM_SPRITE, SLEEP_MS,
     ensure, settleOne, settleAll, feedRule, useRule,
     maxHp, hpOf, isFaint, statusKey, sleepLeftMs, eventText,
-    online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle,
+    online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle, awardStone, useStone,
     BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry, holdBerry, holdItem,
     isMega, megaCount, addMega, ownedMegas, awardMega, MEGA_RATE
   };

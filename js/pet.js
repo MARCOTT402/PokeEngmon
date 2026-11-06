@@ -301,12 +301,7 @@ const Pet = (() => {
         drops.push({ kind: "revive", label: "💊 Revival +1" });
       }
     }
-    /* 進化石：每回合獨立 10%，掉落時 5 種各 20% */
-    if (Math.random() < 0.10) {
-      const stone = STONE_KINDS[Math.floor(Math.random() * STONE_KINDS.length)];
-      addItem(stone, 1);
-      drops.push({ kind: stone, label: `${STONE_ICONS[stone]} ${STONE_LABELS[stone]} +1` });
-    }
+    /* 進化石：改由 Care.awardStone()（登入經 award_stone RPC，migration 20261106） */
     return drops;
   }
 

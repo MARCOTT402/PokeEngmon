@@ -1020,13 +1020,12 @@ const BagUI = (() => {
     const e = entryOf(uid); if (!e) return;
     const chk = canStoneEvolve(e, stone);
     if (!chk.ok) { toast("It won't have any effect."); return; }
-    const res = Pet.useItem(stone, e);
+    if (giveStone.busy) return;
+    giveStone.busy = true;
+    /* 登入：use_stone RPC 扣石 + 記 stone_used／branch（migration 20261106）；未登入本地扣 */
+    const res = await Care.useStone(e, stone);
+    giveStone.busy = false;
     if (!res.ok) { toast(res.msg); return; }
-    if (window.Sync && Sync.isEnabled && Sync.isEnabled()) {
-      if (res.branch != null) Sync.patchEntry(e.uid, { branch: res.branch });
-      Sync.patchEntry(e.uid, { stone_used: stone });
-      if (Sync.pushItems) Sync.pushItems(Pet.items());
-    }
     /* 進化動畫：暫時收埋背包，播完再開返 */
     root.classList.remove("show");
     const reopen = () => { root.classList.add("show"); S.sel = { kind: "pokemon", uid: e.uid }; refreshAll(); };

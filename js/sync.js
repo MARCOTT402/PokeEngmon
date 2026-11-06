@@ -435,8 +435,7 @@ window.Sync = (() => {
     if (typeof fields.nature === "string" && fields.nature) body.nature = fields.nature;
     /* 特性（非經濟數值）：同 nature 一樣開放直寫 */
     if (typeof fields.ability === "string" && fields.ability) body.ability = fields.ability;
-    /* 石進化：branch 以外，記住用咗邊粒石（pull 重推 stage 嘅必要輸入） */
-    if (typeof fields.stone_used === "string" && fields.stone_used) body.stone_used = fields.stone_used;
+    /* stone_used 唔再直寫：migration 20261106 收回 grant，只經 use_stone RPC（Rule 76：唔好留喺 PATCH body） */
     /* 完全進化旗幟：server RPC 靠佢決定同鏈再獲得係 dupe 定開新 row */
     if (typeof fields.is_final === "boolean") body.is_final = fields.is_final;
     if (typeof fields.favorite === "boolean") body.favorite = fields.favorite;
@@ -514,19 +513,11 @@ window.Sync = (() => {
       items_premium: Math.max(0, Number(items.premium) || 0),
       items_revive: Math.max(0, Number(items.revive) || 0)
     };
-    const stones = {};
-    STONE_KINDS.forEach(k => { stones[k] = Math.max(0, Number(items[k]) || 0); });
+    /* items_stones 唔再由 client 寫：migration 20261106 收回 grant，只經 award_stone／use_stone RPC */
     try {
-      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`,
-        Object.assign({}, base, { items_stones: stones }));
+      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, base);
       return true;
-    } catch (e) {
-      /* migration 未跑（items_stones column 唔存在）→ 退返舊 payload，食物／復活藥照樣同步 */
-      try {
-        await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, base);
-        return true;
-      } catch (e2) { console.warn("[Sync] pushItems failed:", e2.message); return false; }
-    }
+    } catch (e) { console.warn("[Sync] pushItems failed:", e.message); return false; }
   }
 
   return {
