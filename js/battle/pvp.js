@@ -32,16 +32,20 @@ const PvpNet = (() => {
   async function api(method, path, body, extraPrefer) {
     const c = window.SUPABASE_CONFIG;
     if (!c || !c.anonKey) throw new Error("Supabase config missing");
+    /* PvP 有自己嘅等待／放棄提示，網絡層唔彈 toast；10 秒 timeout 防對戰卡死 */
+    const NET_OPT = { timeout: 10000, quiet: true, where: "pvp" + path.split("?")[0] };
+    /* 經 SupabaseAuth.authedFetch（Rule 96）：timeout、token 續期、401 重試、冇登入用 anon key；
+       舊做法 currentToken() 冇登入時會送 "Bearer null" */
+    const send = (window.SupabaseAuth && SupabaseAuth.authedFetch)
+      ? (u, o) => SupabaseAuth.authedFetch(u, o, NET_OPT)
+      : (u, o) => fetch(u, Object.assign({}, o, { headers: Object.assign({ apikey: c.anonKey, Authorization: "Bearer " + c.anonKey }, o.headers) }));
     const headers = {
-      "apikey": c.anonKey,
-      "Authorization": "Bearer " + (window.SupabaseAuth && SupabaseAuth.currentToken
-        ? SupabaseAuth.currentToken() : c.anonKey),
       "Content-Type": "application/json",
       "Prefer": extraPrefer || "return=representation"
     };
     const opts = { method, headers };
     if (body !== undefined) opts.body = JSON.stringify(body);
-    const res = await fetch(c.restUrl + path, opts);
+    const res = await send(c.restUrl + path, opts);
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
       throw new Error(`PvP API ${res.status}: ${txt.slice(0, 160)}`);

@@ -102,3 +102,12 @@ The `_api()` helper in `js/sync.js` auto-adds this header when the path contains
 - 多人共用一行（battles）：用 BEFORE UPDATE trigger 按 `auth.uid()` 判斷邊一方，只准寫自己嗰欄；`current_user <> 'authenticated'` 時放行（security definer RPC 係 owner 身份）。
 - 收 grant 之前照 Rule 76：grep 晒 client 所有 PATCH body，拎走相關欄位（今次：`patchEntry` 嘅 `stone_used`、`pushItems` 嘅 `items_stones`）。
 - 驗證：未登入路徑喺 localhost 跑（Rule 62，試完還原存檔並 reload）；登入路徑要等用戶跑完 migration，再用 RPC 呼叫 + `information_schema.role_column_grants` 核對。
+
+### Rule 96 — 網絡請求一律經 `Net.request`／`SupabaseAuth.authedFetch`：有 timeout、token 自動續期（single-flight）、401 refresh 一次再試；POST／RPC 唔自動重試
+
+- 新寫嘅 Supabase 請求唔好直接 `fetch`：RPC 用 `SupabaseAuth._rpc`／`_rpcTable`；PostgREST 用 `SupabaseAuth.authedFetch(url, init, { timeout, quiet, where })`（`Sync._api`、`PvP.api` 已經係）。佢負責：`apikey`＋`Authorization`（有登入用 token，冇就 anon key——唔好再送 `Bearer null`／`undefined`）、發之前 `ensureFreshSession()`（提前 120 秒續期）、回 401 就強制 refresh 一次再發一次。
+- `ensureFreshSession()` 係 **single-flight**：同時幾個 request 過期只會 POST 一次 refresh。Supabase refresh token 會輪換，同一粒用兩次可能當重用撤銷成個 session——唔好喺其他地方自己 call `/auth/v1/token?grant_type=refresh_token`。
+- refresh 回 400／401（refresh token 已死）→ `_onSessionExpired()`：toast 一次「Your sign-in has expired — please sign in again.」＋`pe:auth-expired` 事件；**唔清 session**（清咗會行登出流程清本機進度）。
+- `Net.request` timeout 預設 12 秒（auth 15、sync 20、PvP 10、登出 8）；離線即刻 throw `NetError(kind: offline)`；`NetError.message` 以 "Network" 開頭 → `App._authError` 對應 `net`。5xx 彈「Server is busy」、timeout／斷線彈「Connection problem」（同類 20 秒一次）；4xx 唔彈（業務錯誤由 caller 處理）；離線中唔逐個彈，只喺 offline／online 事件各彈一次。背景請求（sync、PvP、refresh、report）用 `quiet: true`。
+- 唔做自動重試 POST／RPC（Rule 5：會重複發獎勵）；冪等 GET 先用 `Guard.fetchGet` 重試（Rule 94）。
+- 驗收（唔好用真帳號，stub `window.fetch`）：過期 session＋5 個並行 `_rpc` → refresh 只 call 1 次、全部用新 token；401 一次 → 第二次成功；refresh 回 400 → 兩個 RPC 都 null、仍然 `isLoggedIn()`、expired toast 1 次；冇 session 嘅 `_rpcTable` 用 anon key；`navigator.onLine=false` → 0 toast；timeout 300ms 準時 throw `kind: timeout`。驗完要還原 `pokeengmon_auth_session`。

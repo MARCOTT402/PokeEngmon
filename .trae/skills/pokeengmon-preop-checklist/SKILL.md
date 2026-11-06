@@ -10,7 +10,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 做緊咩 | 讀邊份 | Rule |
 |---|---|---|
 | release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94 |
-| SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78 |
+| SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊、網絡請求／token | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78、96 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
 | 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92 |
@@ -398,3 +398,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 94 — Guard 全域錯誤邊界：新 code 唔准令畫面白屏或卡死；async 掣用 `Guard.asyncClick`；資料檔 GET 用 `Guard.fetchGet`；開機失敗一定落 `Guard.fatal`
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 96 — 網絡請求一律經 `Net.request`／`SupabaseAuth.authedFetch`：有 timeout、token 自動續期（single-flight）、401 refresh 一次再試；POST／RPC 唔自動重試
+
+→ `.trae/skills/pokeengmon-supabase/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-supabase/references/incidents.md`。

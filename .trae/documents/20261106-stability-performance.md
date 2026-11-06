@@ -4,7 +4,8 @@
 > 狀態（2026-11-06）：§9 四個決定已確認。
 > - ✅ §5.7 bench + §5.1 SM-2 快取（commit 253d320，Rule 93）
 > - ✅ §2 全域錯誤邊界 + 兜底畫面 + async 掣 + 題庫載入失敗提示 + `client_errors` 上報（Rule 94；migration 已 apply）
-> - ⏭ 下一步：§3.1–3.3 Net timeout + token 續期
+> - ✅ §3.1–3.3 Net timeout＋token 續期（single-flight）＋401 重試（Rule 96）
+> - ⏭ 下一步：§3.4–3.7 sync queue 持久化＋backoff、存檔防損、loading 出口、離線 banner
 > 本 project 冇 framework（冇 React／Vue Error Boundary），所以「Error Boundary」要用原生方式自己做：全域 handler + 開機邊界 + 每個 view 嘅 render 邊界。
 
 ---

@@ -101,7 +101,8 @@
   }
   /* 只記錄，唔彈 toast（例如 DOMException 類、跨域 Script error） */
   function isQuiet(n) {
-    return /^(NotSupportedError|NotFoundError|SecurityError|QuotaExceededError)$/.test(n.name) || n.message === "Script error.";
+    /* NetError：Net 層已經按類型彈過 toast（Rule 96），呢度唔再彈 */
+    return /^(NotSupportedError|NotFoundError|SecurityError|QuotaExceededError|NetError)$/.test(n.name) || n.message === "Script error.";
   }
 
   function report(err, ctx) {

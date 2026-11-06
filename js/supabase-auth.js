@@ -91,9 +91,9 @@ const SupabaseAuth = {
     const token = this._session?.access_token;
     if (!token) return;
     try {
-      const r = await fetch(`${this.URL}/auth/v1/user`, {
+      const r = await this._req(`${this.URL}/auth/v1/user`, {
         headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY }
-      });
+      }, { timeout: 15000, quiet: true, where: "auth/user" });
       if (!r.ok) return;
       const user = await r.json();
       if (user && user.id) {
@@ -103,18 +103,63 @@ const SupabaseAuth = {
     } catch (e) { /* offline — JWT 已提供 uid，可照用 */ }
   },
 
-  /* access_token 過期 → 用 refresh_token 換新（返回新 session 或 null） */
-  async ensureFreshSession() {
+  /* ---------- 網絡層（Rule 96）：timeout＋離線＋錯誤分類；冇 Net（載唔到）就退返原生 fetch ---------- */
+  _req(url, init, opt) {
+    return (window.Net && Net.request) ? Net.request(url, init, opt) : fetch(url, init);
+  },
+
+  /* 帶 auth 嘅 request（RPC／PostgREST 共用）：
+     1) 有 session 先確保 token 未過期（提前 120 秒續期）
+     2) Authorization = 用戶 token，冇就 anon key
+     3) 回 401 → 強制 refresh 一次再試一次（401 代表 server 未執行，重試安全）
+     回傳原生 Response；網絡問題 throw NetError */
+  async authedFetch(url, init, opt) {
+    init = init || {};
+    if (this._session?.access_token) await this.ensureFreshSession();
+    const send = () => this._req(url, Object.assign({}, init, {
+      headers: Object.assign({
+        apikey: this.ANON_KEY,
+        Authorization: "Bearer " + (this._session?.access_token || this.ANON_KEY)
+      }, init.headers || {})
+    }), opt);
+    let res = await send();
+    if (res.status === 401 && this._session?.refresh_token) {
+      const s = await this.ensureFreshSession(true);
+      if (s) res = await send();
+    }
+    return res;
+  },
+
+  /* refresh token 已失效（server 回 400／401）：唔清 session（唔好觸發登出清進度），提示重新登入一次 */
+  _onSessionExpired() {
+    if (this._expiredNotified) return;
+    this._expiredNotified = true;
+    try { document.dispatchEvent(new CustomEvent("pe:auth-expired")); } catch (e) {}
+    try { if (window.App && App.toast) App.toast("Your sign-in has expired — please sign in again."); } catch (e) {}
+  },
+
+  /* access_token 過期 → 用 refresh_token 換新（返回新 session 或 null）
+     single-flight：同時幾個 RPC 一齊過期只會 refresh 一次 —— Supabase refresh token 會輪換，
+     同一粒 token 用兩次可能被當重用而撤銷成個 session（Rule 96）。
+     force = true：唔理 expires_at（例如 server 已經回 401） */
+  ensureFreshSession(force) {
     const s = this._session;
-    if (!s || !s.access_token) return null;
-    if (s.expires_at && s.expires_at > this._now() + 120) return s;
-    if (!s.refresh_token) return null;
+    if (!s || !s.access_token) return Promise.resolve(null);
+    if (!force && s.expires_at && s.expires_at > this._now() + 120) return Promise.resolve(s);
+    if (!s.refresh_token) return Promise.resolve(null);
+    if (this._refreshing) return this._refreshing;
+    this._refreshing = this._doRefresh(s).finally(() => { this._refreshing = null; });
+    return this._refreshing;
+  },
+
+  async _doRefresh(s) {
     try {
-      const r = await fetch(`${this.URL}/auth/v1/token?grant_type=refresh_token`, {
+      const r = await this._req(`${this.URL}/auth/v1/token?grant_type=refresh_token`, {
         method: "POST",
         headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: s.refresh_token })
-      });
+      }, { timeout: 15000, quiet: true, where: "auth/refresh" });
+      if (r.status === 400 || r.status === 401) { this._onSessionExpired(); throw new Error("refresh " + r.status); }
       if (!r.ok) throw new Error("refresh " + r.status);
       const d = await r.json();
       const claims = this._decodeJWT(d.access_token) || {};
@@ -128,6 +173,7 @@ const SupabaseAuth = {
         }
       });
       console.log("[Auth] ✅ Token refreshed");
+      this._expiredNotified = false;
       return this._session;
     } catch (e) {
       console.warn("[Auth] ⚠️ Refresh failed:", e.message);
@@ -153,11 +199,11 @@ const SupabaseAuth = {
   async signUpWithEmail(email, password) {
     const url = `${this.URL}/auth/v1/signup`;
     try {
-      const r = await fetch(url, {
+      const r = await this._req(url, {
         method: "POST",
         headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
-      });
+      }, { timeout: 15000 });
       const d = await r.json();
       if (!r.ok) {
         /* GoTrue error msg 有時喺 msg / 有時喺 error_description */
@@ -188,11 +234,11 @@ const SupabaseAuth = {
   async signInWithEmail(email, password) {
     const url = `${this.URL}/auth/v1/token?grant_type=password`;
     try {
-      const r = await fetch(url, {
+      const r = await this._req(url, {
         method: "POST",
         headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
-      });
+      }, { timeout: 15000 });
       const d = await r.json();
       if (!r.ok) {
         const msg = d.error_description || d.msg || d.error || "Sign in failed";
@@ -222,11 +268,11 @@ const SupabaseAuth = {
     const redirectUrl = this._cleanURL();
     const url = `${this.URL}/auth/v1/recover`;
     try {
-      const r = await fetch(url, {
+      const r = await this._req(url, {
         method: "POST",
         headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ email, redirect_to: redirectUrl })
-      });
+      }, { timeout: 15000 });
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
         const msg = d.error_description || d.msg || d.error || "Failed to send reset email";
@@ -244,11 +290,11 @@ const SupabaseAuth = {
   async resendSignup(email) {
     const url = `${this.URL}/auth/v1/resend?redirect_to=${encodeURIComponent(this._cleanURL())}`;
     try {
-      const r = await fetch(url, {
+      const r = await this._req(url, {
         method: "POST",
         headers: { apikey: this.ANON_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ type: "signup", email })
-      });
+      }, { timeout: 15000 });
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
         throw new Error(d.error_description || d.msg || d.error || "Failed to resend email");
@@ -270,10 +316,10 @@ const SupabaseAuth = {
     const redirectUrl = this._cleanURL();
     const url = `${this.URL}/auth/v1/user/identities/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&scope=email+profile&prompt=select_account`;
     try {
-      const r = await fetch(url, {
+      const r = await this._req(url, {
         headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY },
         redirect: "follow"
-      });
+      }, { timeout: 15000 });
       if (r.status === 404) {
         return { ok: false, error: "manual_linking_disabled" };
       }
@@ -295,10 +341,10 @@ const SupabaseAuth = {
     const redirectUrl = this._cleanURL();
     const url = `${this.URL}/auth/v1/user/identities/authorize?provider=apple&redirect_to=${encodeURIComponent(redirectUrl)}&scope=email+name`;
     try {
-      const r = await fetch(url, {
+      const r = await this._req(url, {
         headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY },
         redirect: "follow"
-      });
+      }, { timeout: 15000 });
       const appleUrl = r.url;
       if (appleUrl && appleUrl.includes("appleid.apple.com")) {
         window.location.href = appleUrl;
@@ -319,9 +365,9 @@ const SupabaseAuth = {
     const token = this._session?.access_token;
     if (!token) return [];
     try {
-      const r = await fetch(`${this.URL}/auth/v1/user`, {
+      const r = await this._req(`${this.URL}/auth/v1/user`, {
         headers: { Authorization: `Bearer ${token}`, apikey: this.ANON_KEY }
-      });
+      }, { timeout: 15000, quiet: true, where: "auth/user" });
       if (!r.ok) return [];
       const u = await r.json();
       return u.identities || [];
@@ -358,13 +404,13 @@ const SupabaseAuth = {
   async signOut() {
     /* 通知 server 撤銷 session（fire-and-forget，唔好等網絡 reply 阻塞 UI） */
     if (this._session?.access_token) {
-      fetch(`${this.URL}/auth/v1/logout`, {
+      this._req(`${this.URL}/auth/v1/logout`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this._session.access_token}`,
           apikey: this.ANON_KEY
         }
-      }).catch(() => {});
+      }, { timeout: 8000, quiet: true }).catch(() => {});
     }
     this._session = null;
     localStorage.removeItem("pokeengmon_auth_session");
@@ -375,16 +421,11 @@ const SupabaseAuth = {
   async _rpc(name, payload) {
     if (!this._session?.access_token) return null;
     try {
-      const res = await fetch(`${this.URL}/rest/v1/rpc/${name}`, {
+      const res = await this.authedFetch(`${this.URL}/rest/v1/rpc/${name}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${this._session.access_token}`,
-          apikey: this.ANON_KEY,
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
+        headers: { "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify(payload || {})
-      });
+      }, { timeout: 12000, where: "rpc/" + name });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(name + " RPC failed: " + res.status + " " + body);
@@ -398,16 +439,12 @@ const SupabaseAuth = {
   async _rpcTable(name, payload) {
     if (!this._session?.access_token && !this.isEnabled()) return null;
     try {
-      const res = await fetch(`${this.URL}/rest/v1/rpc/${name}`, {
+      /* 冇登入用 anon key（舊版傳 Authorization: undefined，會變咗字串 "undefined"） */
+      const res = await this.authedFetch(`${this.URL}/rest/v1/rpc/${name}`, {
         method: "POST",
-        headers: {
-          Authorization: this._session?.access_token ? `Bearer ${this._session.access_token}` : undefined,
-          apikey: this.ANON_KEY,
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
+        headers: { "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify(payload || {})
-      });
+      }, { timeout: 12000, where: "rpc/" + name });
       if (!res.ok) throw new Error(name + " RPC failed: " + res.status + " " + await res.text());
       const data = await res.json();
       return data; /* 保留完整 array，唔 unwrap */
@@ -601,14 +638,9 @@ const SupabaseAuth = {
   async submitReport(report) {
     if (!this.isEnabled()) return null;
     try {
-      const res = await fetch(`${this.URL}/rest/v1/rpc/submit_report`, {
+      const res = await this.authedFetch(`${this.URL}/rest/v1/rpc/submit_report`, {
         method: "POST",
-        headers: {
-          ...(this._session?.access_token ? { Authorization: `Bearer ${this._session.access_token}` } : {}),
-          apikey: this.ANON_KEY,
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
+        headers: { "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify({
           p_device_id: report.device_id || "",
           p_qid: report.qid || "",
@@ -620,7 +652,7 @@ const SupabaseAuth = {
           p_detail: report.detail || "",
           p_client_ts: new Date(report.ts || Date.now()).toISOString()
         })
-      });
+      }, { timeout: 12000, quiet: true, where: "rpc/submit_report" });
       if (!res.ok) throw new Error("submit_report failed: " + res.status + " " + await res.text());
       return await res.json();
     } catch (e) { console.warn("[Auth RPC] submit_report failed:", e.message); return null; }
@@ -730,14 +762,7 @@ const SupabaseAuth = {
 
   /* ---------- 通用 fetch wrapper（附 auth header） ---------- */
   async fetch(path, options = {}) {
-    const headers = {
-      apikey: this.ANON_KEY,
-      ...(options.headers || {})
-    };
-    if (this._session?.access_token) {
-      headers.Authorization = `Bearer ${this._session.access_token}`;
-    }
-    return fetch(`${this.URL}${path}`, { ...options, headers });
+    return this.authedFetch(`${this.URL}${path}`, options, { timeout: 12000 });
   }
 };
 

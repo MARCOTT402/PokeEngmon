@@ -26,10 +26,13 @@ window.Sync = (() => {
     const c = cfg();
     if (!c || !c.anonKey) throw new Error("Supabase config missing");
     const url = c.restUrl + path;
+    const NET_OPT = { timeout: 20000, quiet: true, where: "sync" + path.split("?")[0] };
+    /* 經 SupabaseAuth.authedFetch（Rule 96）：timeout、token 續期、401 重試、冇登入用 anon key；
+       舊做法 currentToken() 冇登入時會送 "Bearer null" */
+    const send = (window.SupabaseAuth && SupabaseAuth.authedFetch)
+      ? (u, o) => SupabaseAuth.authedFetch(u, o, NET_OPT)
+      : (u, o) => fetch(u, Object.assign({}, o, { headers: Object.assign({ apikey: c.anonKey, Authorization: "Bearer " + c.anonKey }, o.headers) }));
     const headers = {
-      "apikey": c.anonKey,
-      "Authorization": "Bearer " + (window.SupabaseAuth && SupabaseAuth.currentToken
-        ? SupabaseAuth.currentToken() : c.anonKey),
       "Content-Type": "application/json",
       "Prefer": path.includes("on_conflict")
         ? "return=representation,resolution=merge-duplicates"
@@ -37,7 +40,7 @@ window.Sync = (() => {
     };
     const opts = { method, headers };
     if (body !== undefined) opts.body = JSON.stringify(body);
-    const res = await fetch(url, opts);
+    const res = await send(url, opts);
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
       throw new Error(`${res.status}: ${txt.slice(0, 120)}`);
@@ -465,13 +468,10 @@ window.Sync = (() => {
     const c = cfg();
     if (!c || !c.restUrl || !window.Pet) return null;
     try {
-      const res = await fetch(`${c.restUrl}/user_account?select=id&limit=1`, {
-        headers: {
-          "apikey": c.anonKey,
-          "Authorization": "Bearer " + (window.SupabaseAuth && SupabaseAuth.currentToken
-            ? SupabaseAuth.currentToken() : c.anonKey)
-        }
-      });
+      const opt = { timeout: 8000, quiet: true, where: "sync/clock" };
+      const res = (window.SupabaseAuth && SupabaseAuth.authedFetch)
+        ? await SupabaseAuth.authedFetch(`${c.restUrl}/user_account?select=id&limit=1`, {}, opt)
+        : await fetch(`${c.restUrl}/user_account?select=id&limit=1`, { headers: { apikey: c.anonKey, Authorization: "Bearer " + c.anonKey } });
       const hdr = res.headers.get("date");
       if (!hdr) return null;
       const serverTs = Date.parse(hdr);

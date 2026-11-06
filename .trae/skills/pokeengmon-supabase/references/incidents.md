@@ -129,3 +129,12 @@ Incident (2026-11-06，進化石／隨機 PvP／battles 收權)：(1) 進化石�
 - 驗證：未登入路徑喺 localhost 跑（Rule 62，試完還原存檔並 reload）；登入路徑要等用戶跑完 migration，再用 RPC 呼叫 + `information_schema.role_column_grants` 核對。
 
 Skill: Rule 78 added
+
+### Rule 96 — 網絡請求一律經 `Net.request`／`SupabaseAuth.authedFetch`：有 timeout、token 自動續期（single-flight）、401 refresh 一次再試；POST／RPC 唔自動重試
+
+- 背景：stability-performance plan §3.1–3.3。審查發現全部 `fetch` 冇 timeout（慢網時掣一直灰／Loading… 永遠轉）；`_rpc` 發之前冇續期 token → 用超過 1 粒鐘全部 RPC 401、靜靜 return null（鑽石／EXP 唔入帳）；`_rpcTable` 冇登入時送 `Authorization: undefined`；`Sync`／`PvP` 冇登入時送 `Bearer null`。
+- 修正：新檔 `js/core/net.js`；`SupabaseAuth._req`／`authedFetch`／single-flight `ensureFreshSession(force)`／`_onSessionExpired`；auth endpoint、`_rpc`、`_rpcTable`、`submitReport`、`fetch()` helper、`Sync._api`、`Sync.syncClock`、`PvP.api` 全部經 Net。
+- 設計重點：refresh token 會輪換 → 並行過期一定要 single-flight，否則可能被當重用撤銷 session。
+- 驗證：browser stub fetch 六個場景全過（見 SKILL.md 驗收）；boot 冇新 Guard 錯誤。
+
+Skill: Rule 96 added

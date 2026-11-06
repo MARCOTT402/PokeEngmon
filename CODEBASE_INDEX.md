@@ -15,7 +15,8 @@
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔 | `js/storage.js` |
 | 雲端 sync | `js/sync.js` |
-| Auth + RPC（鑽石/捕捉/扭蛋/exp） | `js/supabase-auth.js` |
+| Auth + RPC（鑽石/捕捉/扭蛋/exp；`authedFetch`、single-flight token 續期，Rule 96） | `js/supabase-auth.js` |
+| 網絡層（timeout／離線／錯誤分類／連線 toast） | `js/core/net.js`（`Net.request`、`NetError`），Rule 96 |
 | Schema / RPC SQL | `supabase/supabase-schema.sql`, `supabase/migrations/` |
 | 捕捉（Three.js） | `js/capture.js` |
 | 扭蛋 | `js/gacha.js` |
