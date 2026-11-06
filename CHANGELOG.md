@@ -1,3 +1,10 @@
+## [1.63.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.2...v1.63.3) (2026-11-06)
+
+
+### Bug Fixes
+
+* **security:** Revival drops come from the server ([7ff05e2](https://github.com/MARCOTT402/PokeEngmon/commit/7ff05e21fac94f0b7f6820302c4653a11c9e4047))
+
 ## [1.63.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.63.1...v1.63.2) (2026-11-06)
 
 
