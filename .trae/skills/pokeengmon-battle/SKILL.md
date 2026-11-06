@@ -22,6 +22,13 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
 - Do NOT "fix" a stuck switch by moving forced switches outside the turn loop / giving them a free turn: PvP requires switch to stay a next-turn action (`prd.md` L162) because both clients replay the same seed with the same `Battle.turnOrder` (switch priority 6); changing turn semantics desyncs PvP.
 - When adding any new action kind (item, run, etc.), decide explicitly whether the fainted guard applies to it, and write it as a positive `kind ===` list rather than a blanket `continue`.
 
+### Rule 92 — AI 戰：我方暈咗之後補位係免費換入，唔經 `resolveTurn`（對手唔可以白打一下）；PvP 照 Rule 22
+
+- `chooseSwitch`：`mode !== "pvp"` 而且 `myActive().hp <= 0` → 直接 `animatedSwitch(mySide, idx)`，唔加 `state.turn`、唔叫 `pickAIAction`；完咗 `narrate("What will …")` + `showMainMenu`。
+- 補位後要處理：入場釘子打死新寵 → 再強制換；同一回合雙方都暈 → 對手都要 `animatedSwitch` 補位（舊流程靠回合尾 AI 自動換）。
+- 對手暈咗嘅補位本身已經係回合尾 `animatedSwitch`（免費），兩邊而家一致。PvP 換寵仍然係下一回合 action（Rule 22，兩邊 seed 同步），唔好郁。
+- 測試注意：戰鬥測試開戰時 team-select confirm 只可以有效撳一次；Modal 收埋之後再 `.click()` 會開第二場、兩條流程同時行，訊息全部出兩次，睇落好似換寵出錯。
+
 ### Rule 61 — 戰鬥 EXP：battle pokemon 必須帶 `uid`，分配只計「存活 + participated」；Level Sync 只降唔升
 
 - `makeBattlePokemon` 回傳必須包含 `uid: entry.uid`（同 `expLevel`）。

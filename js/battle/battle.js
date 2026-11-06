@@ -1972,6 +1972,30 @@ const BattleUI = (() => {
     acting = true;
     closeParty();
     hideActionMenus();
+    /* 暈咗之後補位（AI 戰）：原作規則係回合完先換入，唔使回合、對手冇得白打一下（Rule 92）。
+       PvP 換寵仍然係下一回合 action（Rule 22，兩邊 seed 同步），唔郁 */
+    if (mode !== "pvp" && myActive().hp <= 0) {
+      (async () => {
+        await animatedSwitch(mySide, idx);
+        if (BattleState.checkFinished(state)) { finishBattle(); return; }
+        /* 入場釘子打死新寵：再強制換 */
+        if (myActive().hp <= 0 && BattleState.hasUsable(me().team)) {
+          await say(`${myActive().name} fainted! Choose your next Pokémon.`);
+          acting = false;
+          openBattleBag("switch", true);
+          return;
+        }
+        /* 同一回合雙方都暈：對手都要補位（舊流程靠回合尾 AI 自動換） */
+        if (foeActive().hp <= 0 && BattleState.hasUsable(foe().team)) {
+          await animatedSwitch(foeSide, foe().team.findIndex(p => p.hp > 0));
+          if (BattleState.checkFinished(state)) { finishBattle(); return; }
+        }
+        narrate(`What will ${myActive().name.toUpperCase()} do?`);
+        showMainMenu();
+        acting = false;
+      })();
+      return;
+    }
     const action = { kind: "switch", idx };
     resolveTurn(action);
   }
@@ -2085,6 +2109,8 @@ const BattleUI = (() => {
       }
       const raw = b[foeCol] || {};
       const foeAction = raw.kind === "switch" ? { kind: "switch", idx: raw.idx }
+        /* 補位回合：冇暈嗰邊交 pass（Rule 92） */
+        : raw.kind === "pass" ? { kind: "pass" }
         /* 用藥：只限戰前投票准用藥，而且係引擎認得嘅道具；否則當冇效 → 出第一招 */
         : (raw.kind === "item" && pvpRules && pvpRules.items && BattleState.ITEMS[raw.itemId])
           ? { kind: "item", itemId: raw.itemId, target: raw.target }
@@ -2099,6 +2125,13 @@ const BattleUI = (() => {
   }
 
   function runTurnResolution(playerAction, foeAction) {
+    /* PvP 補位回合（Rule 92）：回合開始時任何一邊 active 已經暈 → 呢回合只做換寵，
+       唔出招、唔 Mega、唔計回合尾殘餘傷害。兩邊客戶端睇同一個 state，判斷一致（Rule 22 嘅 seed 同步唔受影響） */
+    const replacement = mode === "pvp" && (myActive().hp <= 0 || foeActive().hp <= 0);
+    if (replacement) {
+      if (playerAction.kind !== "switch") playerAction = { kind: "pass" };
+      if (foeAction.kind !== "switch") foeAction = { kind: "pass" };
+    }
     const myMove = playerAction.kind === "move" ? moveInfo(myActive().moves[playerAction.moveIdx].slug) : null;
     const foeMove = foeAction.kind === "move" ? moveInfo(foeActive().moves[foeAction.moveIdx].slug) : null;
     const wName = state.weather && state.weather.name;
@@ -2150,6 +2183,7 @@ const BattleUI = (() => {
         /* 已經倒下：冇得再出招（後攻者被先攻招打死就唔應該反擊）；
            但換寵例外 —— 暈咗之後嘅強制換寵一定要照做，唔係會卡死喺換寵頁 */
         if ((act.action.kind === "move" || act.action.kind === "item") && active(state, side).hp <= 0) continue;
+        if (act.action.kind === "pass") continue;
         if (act.action.kind === "switch") {
           /* FRLG 原版：收回舊寵 → 拋新球召出（animatedSwitch 自己 narrate） */
           await animatedSwitch(side, act.action.idx);
@@ -2200,7 +2234,7 @@ const BattleUI = (() => {
         }
         if (BattleState.checkFinished(state)) break;
       }
-      if (!state.finished) {
+      if (!state.finished && !replacement) {
         const resStart = state.log.length;
         BattleState.endTurnResidual(state, mySide);
         BattleState.endTurnResidual(state, foeSide);
@@ -2238,13 +2272,16 @@ const BattleUI = (() => {
         }
         await animatedSwitch(foeSide, nextIdx);
       }
-      /* PvP：對手換寵係佢下一回合 action（Rule 22），所以呢度只係問；揀咗換 = 我下一回合 action */
-      if (mode === "pvp" && foeActive().hp <= 0 && BattleState.hasUsable(foe().team) && myActive().hp > 0 && hasBench()) {
-        if (await askYesNo(`${foeTrainerName()} is sending in a new Pokémon. Switch Pokémon?`)) {
+      /* PvP 對手暈咗：下一回合係補位回合（Rule 92）——我唔使出招，自動交 pass；
+         想 Shift 就揀換寵（同樣免費）。對手客戶端會交佢嘅強制換寵 */
+      if (mode === "pvp" && foeActive().hp <= 0 && BattleState.hasUsable(foe().team) && myActive().hp > 0) {
+        if (hasBench() && await askYesNo(`${foeTrainerName()} is sending in a new Pokémon. Switch Pokémon?`)) {
           acting = false;
-          openBattleBag("switch", false);
+          openBattleBag("switch", true);
           return;
         }
+        resolveTurn({ kind: "pass" });
+        return;
       }
       showMainMenu();
       acting = false;

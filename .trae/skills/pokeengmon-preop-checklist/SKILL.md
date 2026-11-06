@@ -13,9 +13,9 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
-| 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79 |
+| 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92 |
 | 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77 |
-| home sheet、binder、overlay 點擊、手勢、按鈕、icon | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65 |
+| home sheet、binder、overlay 點擊、手勢、按鈕、icon | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91 |
 | 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
@@ -382,3 +382,11 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 90 — 固定 px 設計嘅遊戲畫面（戰鬥）喺大屏要「固定畫布＋等比例 scale」，唔好拉闊舞台；JS 座標用 offset
 
 → 已整合入 `.trae/skills/pokeengmon-responsive/SKILL.md` 正文 §4；完整事故原文見 `.trae/skills/pokeengmon-responsive/references/incidents.md`（Rule 90）。
+
+## Rule 91 — 重構拆 DOM 時，被保留／搬去 sheet 嘅元素，佢嘅 render 寫入要一齊搬；唔好沿用舊 id 而冇人寫
+
+→ 已整合入 `.trae/skills/pokeengmon-ui-sheets/SKILL.md` 正文 Rules；完整事故原文見 `.trae/skills/pokeengmon-ui-sheets/references/incidents.md`（Rule 91）。
+
+## Rule 92 — AI 戰：我方暈咗之後補位係免費換入，唔經 `resolveTurn`（對手唔可以白打一下）；PvP 照 Rule 22
+
+→ 已整合入 `.trae/skills/pokeengmon-battle/SKILL.md`；完整事故原文見 `.trae/skills/pokeengmon-battle/references/incidents.md`（Rule 92）。

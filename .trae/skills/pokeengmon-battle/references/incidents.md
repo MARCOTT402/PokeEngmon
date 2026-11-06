@@ -64,3 +64,13 @@ Incident (2026-11-06，Aura Guard／Eelevate)：上一輪將 Mega Lucario Z 嘅 
 - Log 能力名：engine key（atk/def/spa/spd/spe）要先轉做 PokeAPI 名再 call `statLabel`。
 
 Skill: Rule 79 added
+
+### Rule 92 — AI 戰：我方暈咗之後補位係免費換入，唔經 `resolveTurn`（對手唔可以白打一下）；PvP 照 Rule 22
+
+Incident (2026-11-06，用戶回報)：我方 Pokémon 被打暈 → 強制換寵 → 揀咗後備之後，對手即刻打多一下。原因：`chooseSwitch` 一律 `resolveTurn({kind:"switch"})`，強制換寵當咗一個普通回合，AI 揀招照出。原作規則：暈咗嘅補位喺回合尾發生，唔佔回合。對手暈咗嘅補位本身已經用 `animatedSwitch`（免費），所以兩邊唔一致。
+
+- 修正：`chooseSwitch` 喺 AI 戰 + 我方 active HP 0 → 直接 `animatedSwitch`，之後處理釘子再暈、雙方同時暈（對手補位），再出選單。PvP 唔郁（Rule 22）。
+- 驗證（headless，臨時 localhost debug hook，驗完已移除）：我方 HP 設 1 → 被打暈 → 經背包「Send out」補位 → `state.turn` 不變、新寵滿血、選單返返嚟。
+- 測試踩坑：team-select confirm 喺 modal 收埋後再 `.click()` 會開第二場戰鬥，兩條流程同時行（每句訊息出兩次），令人誤以為換寵後背包又彈返出嚟。
+
+Skill: Rule 92 added
