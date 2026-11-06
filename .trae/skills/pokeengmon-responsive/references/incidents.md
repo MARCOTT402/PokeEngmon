@@ -432,3 +432,13 @@ Incident (2026-11-06，Responsive P1 Task 10)：觸控目標驗收發現 sheet �
 - 字級：tablet／wide 最細 12px；phone 嘅 HUD 細字（品牌 9px、鑽石 pill 10px、stat 標籤 11px）係紅框設計，改咗會破手機零回歸，未郁。
 
 Skill: Rule 88 added
+
+### Rule 89 — overlay 基礎規則嘅 `max-width` 要喺 `.active` 覆寫；canvas 場景跟 overlay 變闊要 resize＋加闊內容
+
+Incident (2026-11-06，用戶截圖)：wide（1440×900 等）開捕捉畫面，`#view-capture` 只得 520px 闊，右欄後面嘅 Daily Quests 露出一截。原因：基礎規則 `#view-capture { max-width: 520px; margin: 0 auto }`（舊全螢幕設計）冇喺 display-window overlay 規則覆寫；phone 嘅 `--frame-screen-w` ≤ 428 所以一直睇唔到，tablet（628）同 wide（750–818）先爆。
+
+- `#view-capture.active` 加 `max-width: none`。加新 overlay 時 grep 基礎規則有冇 `max-width`／`margin: auto`。
+- `capture.js`：`_buildGrass` 喺 `(min-width: 700px)` 草叢闊 24 → 36、數量按比例（密度不變）；`start` 重用 renderer 前 call `_resize()`（phone↔wide 轉過 layout 都對齊）。
+- 驗收：`tools/responsive/test-capture-fit.mjs`，7 尺寸 overlay 同 `.ph-sheets`／`.pd-screen2` 左右差 0、canvas = overlay − 邊框；440×956、375×667 rect 同之前一樣。
+
+Skill: Rule 89 added

@@ -16,7 +16,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79 |
 | 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77 |
 | home sheet、binder、overlay 點擊、手勢、按鈕、icon | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65 |
-| 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–88 |
+| 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–89 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
 - 新 Rule：編號接最大號；內容入題目 skill（要點入 `SKILL.md`、經過入 `references/incidents.md`），呢度只加標題＋指向，並更新上表（`post-fix-lesson-capture`）。
@@ -374,3 +374,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 88 — 擴大觸控範圍唔改外觀：用透明 `::after`；元素有 `overflow:hidden` 就改用父層點擊轉交；量度要用 hit-test
 
 → 已整合入 `.trae/skills/pokeengmon-responsive/SKILL.md` 正文 §10；完整事故原文見 `.trae/skills/pokeengmon-responsive/references/incidents.md`（Rule 88）。
+
+## Rule 89 — overlay 基礎規則嘅 `max-width` 要喺 `.active` 覆寫；canvas 場景跟 overlay 變闊要 resize＋加闊內容
+
+→ 已整合入 `.trae/skills/pokeengmon-responsive/SKILL.md` 正文 §4；完整事故原文見 `.trae/skills/pokeengmon-responsive/references/incidents.md`（Rule 89）。

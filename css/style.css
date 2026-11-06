@@ -2520,6 +2520,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* 捕捉：3D canvas 跟白螢幕區大小，紅框保持可見（即刻黑屏，唔好見到主頁） */
 #view-capture.active {
   padding: 0; height: auto; background: #07110d; overflow: hidden; animation: none;
+  max-width: none; /* 基礎規則嘅 520px 上限會令平板／大屏右欄露出後面 sheet（Rule 89） */
 }
 /* 選題頁：Start 浮起喺 display window 底（精靈球 Home 鍵上方），清單用盡全高自己滾動 */
 #view-quiz-setup.active { overflow: hidden; }

@@ -97,7 +97,8 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 - 層級：bezel／chin `z-index: 100`（`position: relative`）< overlay 120 < sheets（Rule 47）。
 - Exit 動畫：`transform-origin: bottom center; transform: scaleY(0)`，`.4s cubic-bezier(.25,1,.5,1)`；唔用 translateY（會穿出紅框）；`prefers-reduced-motion` 即時（Rule 47）。
 - 答題／捕捉／對戰呢類 overlay **唔可以 fade**（後面係 active 主頁，會閃）；`animation: none`（Rule 45）。
-- 全頁 view 收入 overlay：`height: auto`（原本 `100dvh` 嘅要覆寫）、內部 `position: fixed` 改 `absolute; inset: 0`（Rule 45）。
+- 全頁 view 收入 overlay：`height: auto`（原本 `100dvh` 嘅要覆寫）、內部 `position: fixed` 改 `absolute; inset: 0`（Rule 45）；基礎規則有 `max-width`（例如 `#view-capture` 520px）要喺 `.active` 覆寫 `max-width: none`，否則 tablet／wide 闊唔到、露出後面 sheet（Rule 89）。
+- Canvas／WebGL 場景（捕捉）跟 overlay 變闊：每次 start 都 `_resize()` 對齊 host；場景內容（草叢、地面）喺 ≥700px 要加闊，唔好露邊（Rule 89）。
 - 將 view 搬入另一容器（例如戰鬥橫向紅框 `.bl-screen`）：新容器 selector 用 `!important` 清走 `position`、inset、`transform`、`max-width/height`、負 margin、`100vh`；離開時搬返原位（comment placeholder）；搬完即刻 `getComputedStyle` 檢查（Rule 67）。
 
 **Z-order 全景**（Rule 46）：toast 3000 > bag-rotate／轉直提示 2600 > battle-land 2400 > inferno-unlock 2300 > tier-select 2200 > pvp-match 2100 > team-select 2000 > modal-backdrop 1400 > display-window overlays 120 > bezel／chin 100；entry-gate 9000、lb-login-modal／update-modal 9999、qd-fly 9999 刻意蓋過一切。新 fixed 層要高過 120，同時確認 toast 仲高過佢。
@@ -192,6 +193,7 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 | `test-rotate.mjs <out>` | 轉直提示、tablet 唔轉、桌面矮窗唔彈 | — |
 | `test-touch-targets.mjs <out>` | ✕／下巴可撳範圍、<12px 字清單 | — |
 | `test-quiz-fit.mjs <out>` | 答題 7 尺寸 overflow、輸入格 vs 鍵盤 | S1 文字題 21px |
+| `test-capture-fit.mjs <out>` | 捕捉 overlay＋canvas 7 尺寸蓋滿白螢幕／右欄（WARNING 同 3D 場景各影一張） | — |
 
 - 鎖同觸控範圍用 CDP `Input.dispatchMouseEvent`（`el.click()` 唔經 hit-test）；觸控手勢用 `Input.dispatchTouchEvent`。
 - IDE／Browser pane：`resize_window` 可能唔派 `resize`／matchMedia 事件，即時切換用 headless 驗；自動化前先查 `innerWidth/innerHeight` 唔係 0（Rule 20）；改 state 嘅 JS 前 assert localhost（Rule 62）。
@@ -227,4 +229,4 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 ## 14. 已知未處理同下一步
 
 - iPhone SE 文字題題目卡多 21px scroll；手機同一 tick 三連撳開 3 個 sheet（原有）；iPad 直向背包字偏細；下巴列 46px（tablet 差 2）。
-- P2：圖鑑格數、Streak 月曆、育成、Friends、Leaderboard、Daily Quests 雙欄、Settings、錯題回顧喺 wide。P3：扭蛋、捕捉 canvas 跟右欄、戰鬥／背包喺 iPad 直向同大屏比例。
+- P2：圖鑑格數、Streak 月曆、育成、Friends、Leaderboard、Daily Quests 雙欄、Settings、錯題回顧喺 wide。P3：扭蛋、戰鬥／背包喺 iPad 直向同大屏比例。

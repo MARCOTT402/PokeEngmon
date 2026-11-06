@@ -1083,6 +1083,7 @@ class PokemonCaptureScene {
     this.ball.visible = true;
     if (this.monAnchor) this.monAnchor.position.set(0, 1.25, -7.85);
 
+    this._resize(); /* overlay 闊度可能因 layout 改變（phone↔wide），重用 renderer 前先對齊 host */
     this.cameraRig.position.copy(CAM_START);
     this.camera.fov = 55;
     this.camera.aspect = this.width / this.height;
@@ -1340,7 +1341,10 @@ class PokemonCaptureScene {
     }
     blade.computeVertexNormals();
 
-    const count = 7200;
+    /* 平板／大屏 capture 跟右欄變闊（Rule 89）：草叢加闊，密度不變；手機維持 24 闊 */
+    const wideScene = window.matchMedia("(min-width: 700px)").matches;
+    const spread = wideScene ? 36 : 24;
+    const count = Math.round(7200 * spread / 24);
     const mat = this._windMaterial(uniforms);
     const mesh = new THREE.InstancedMesh(blade, mat, count);
     mesh.frustumCulled = false;
@@ -1350,7 +1354,7 @@ class PokemonCaptureScene {
     let guard = 0;
     while (placed < count && guard < count * 6) {
       guard++;
-      const x = (Math.random() - 0.5) * 24;
+      const x = (Math.random() - 0.5) * spread;
       const z = 3.5 - Math.random() * 17;
       const distToBush = Math.hypot(x - BUSH_POS.x, z - BUSH_POS.z);
       /* Keep a clear pocket around the encounter bush for the close-up */
