@@ -1,7 +1,10 @@
 # 穩定性＋效能優化計劃（商用級）— 2026-11-06
 
 > 範圍：成個 App（純前端 + Supabase）。目標：**任何未預期錯誤／斷網都唔可以白屏、唔可以卡死，一定有兜底提示**；同時解決「入題卡一陣」「轉介面慢」。
-> 狀態：**計劃已定稿，未落手**（§9 四個決定已確認）。
+> 狀態（2026-11-06）：§9 四個決定已確認。
+> - ✅ §5.7 bench + §5.1 SM-2 快取（commit 253d320，Rule 93）
+> - ✅ §2 全域錯誤邊界 + 兜底畫面 + async 掣 + 題庫載入失敗提示 + `client_errors` 上報（Rule 94；migration 已 apply）
+> - ⏭ 下一步：§3.1–3.3 Net timeout + token 續期
 > 本 project 冇 framework（冇 React／Vue Error Boundary），所以「Error Boundary」要用原生方式自己做：全域 handler + 開機邊界 + 每個 view 嘅 render 邊界。
 
 ---

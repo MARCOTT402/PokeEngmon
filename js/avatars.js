@@ -108,7 +108,7 @@ const Avatars = (() => {
         <div class="confirm-row"><button id="avp-close" class="btn-big btn-plain">Done</button></div>
       </div>`);
     const box = document.querySelector(".avp-box");
-    box.addEventListener("click", async e => {
+    box.addEventListener("click", Guard.asyncClick(async e => {
       const b = e.target.closest("[data-av]");
       if (!b) return;
       box.querySelectorAll(".avp-item.on").forEach(x => x.classList.remove("on"));
@@ -117,7 +117,7 @@ const Avatars = (() => {
       box.querySelector(".avp-big").src = url(id);
       document.getElementById("avp-cur-name").textContent = label(id);
       await set(id);
-    });
+    }, "avatar-pick"));
     document.getElementById("avp-close").onclick = () => { App.closeModal(); if (onDone) onDone(mine()); };
   }
 

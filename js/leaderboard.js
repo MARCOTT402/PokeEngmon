@@ -169,7 +169,7 @@ const Leaderboard = {
     /* 榜上＋掣：事件委派式逐粒綁，撳咗就送好友邀請 */
     const bindAddBtns = (el) => {
       el.querySelectorAll(".lb-add").forEach(btn => {
-        btn.onclick = async (ev) => {
+        btn.onclick = Guard.asyncClick(async (ev) => {
           ev.stopPropagation();
           btn.disabled = true;
           if (btn.dataset.act === "accept") {
@@ -185,7 +185,7 @@ const Leaderboard = {
             await Friends.addByUid(btn.dataset.uid, btn.dataset.name);
             await this.render();   /* 重新攞 relation → 顯示 PENDING */
           }
-        };
+        }, "lb-add");
       });
     };
     bindAddBtns(list);

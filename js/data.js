@@ -219,6 +219,15 @@ let SITE_QUESTIONS = [];
 /* 圖片單字題（Q_folder/vocab/vocab.csv）：點圖聽聲 → 默寫單字 */
 let PICTURE_WORDS = [];
 
+/* 題庫載入失敗記錄（Rule 94）：file:// 以外載唔到就記低，選題／抽題要話用戶知係網絡問題，唔好扮「All caught up」 */
+const QUESTION_LOAD_FAILED = { site: false, words: false };
+function questionBankFailed() { return QUESTION_LOAD_FAILED.site || QUESTION_LOAD_FAILED.words; }
+/* GET 題庫／資料檔：有 Guard 就用 timeout＋重試，否則原生 fetch */
+function _getAsset(url, init) {
+  if (window.Guard && Guard.fetchGet) return Guard.fetchGet(url, init, { tries: 3, timeout: 15000 });
+  return fetch(url, init);
+}
+
 /* ---------- 題目分類（三層）----------
    大類 Category → 單元 Unit → 題型 Topic
    - 大類：固定次序，見 CATEGORY_ORDER（未有題目嘅會顯示 Coming Soon）
@@ -275,8 +284,8 @@ function normalizeQuestion(q) {
 /* 載入網站題庫。失敗（例如用 file:// 開）就靜靜略過 */
 async function loadSiteQuestions() {
   try {
-    const res = await fetch("Q_folder/grammar/grammar.csv", { cache: "no-cache" });
-    if (!res.ok) return 0;
+    const res = await _getAsset("Q_folder/grammar/grammar.csv", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
     const { questions } = questionsFromCSV(await res.text());
     questions.forEach(q => {
       normalizeQuestion(q);
@@ -284,8 +293,13 @@ async function loadSiteQuestions() {
       q.custom = false;
     });
     SITE_QUESTIONS = questions;
+    QUESTION_LOAD_FAILED.site = false;
     return questions.length;
   } catch (e) {
+    if (/^https?:/.test(location.protocol)) {
+      QUESTION_LOAD_FAILED.site = true;
+      if (window.Guard) Guard.report(e, { where: "loadSiteQuestions", silent: true });
+    }
     return 0;
   }
 }
@@ -344,12 +358,17 @@ function wordsFromCSV(text) {
 
 async function loadPictureWords() {
   try {
-    const res = await fetch("Q_folder/vocab/vocab.csv", { cache: "no-cache" });
-    if (!res.ok) return 0;
+    const res = await _getAsset("Q_folder/vocab/vocab.csv", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
     const { words } = wordsFromCSV(await res.text());
     PICTURE_WORDS = words;
+    QUESTION_LOAD_FAILED.words = false;
     return words.length;
   } catch (e) {
+    if (/^https?:/.test(location.protocol)) {
+      QUESTION_LOAD_FAILED.words = true;
+      if (window.Guard) Guard.report(e, { where: "loadPictureWords", silent: true });
+    }
     return 0;
   }
 }

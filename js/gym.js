@@ -120,7 +120,7 @@ const Gym = {
         <p>Claim your <b>×${milestone}</b> badge<br><small>(${item.replace(/-/g, " ")})</small></p>
         <button id="gym-claim-btn" class="btn-big btn-primary">Claim Badge</button>
       </div>`, true);
-    document.getElementById("gym-claim-btn").onclick = async () => {
+    document.getElementById("gym-claim-btn").onclick = Guard.asyncClick(async () => {
       const btn = document.getElementById("gym-claim-btn");
       if (btn) btn.disabled = true;
       let badges = this.getBadges();
@@ -136,7 +136,7 @@ const Gym = {
       App.renderHome();
       App.showView("view-home");
       App.toast(`Badge ×${milestone} claimed!`);
-    };
+    }, "gym-claim");
   },
 
   _boltRaf: 0,

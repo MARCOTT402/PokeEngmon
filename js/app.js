@@ -450,7 +450,7 @@ const App = {
     };
     input.onkeydown = (e) => { if (e.key === "Enter" && !yesBtn.disabled) yesBtn.click(); };
     setTimeout(() => input.focus(), 50);
-    yesBtn.onclick = async () => {
+    yesBtn.onclick = Guard.asyncClick(async () => {
       /* 先丟棄未發送嘅同步 queue，再清雲端，最後清本機（避免 reset 後又被寫返上去） */
       if (window.Sync) Sync.clearQueue();
       if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
@@ -461,7 +461,7 @@ const App = {
       this.closeModal();
       this.renderHome();
       this.toast("All reset — starting fresh!");
-    };
+    }, "reset-progress");
     document.getElementById("cf-no").onclick = () => this.closeModal();
   },
 
@@ -1108,7 +1108,7 @@ const App = {
       if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} }
       this.closeModal();
     };
-    document.getElementById("btn-add-pic-save").onclick = async () => {
+    document.getElementById("btn-add-pic-save").onclick = Guard.asyncClick(async () => {
       const file = fileEl.files && fileEl.files[0];
       const r = await addCustomPictureQuestion({
         word: document.getElementById("add-pic-word").value,
@@ -1123,7 +1123,7 @@ const App = {
       this.selectedTopics = new Set(this._allTopicKeys());
       this.renderSetup();
       this.toast("Picture question added");
-    };
+    }, "add-pic-save");
   },
 
   /* ---------- 瀏覽／編輯／刪除自訂題 ---------- */
@@ -1167,13 +1167,13 @@ const App = {
     document.getElementById("btn-myq-close").onclick = () => this.closeModal();
     const clearBtn = document.getElementById("btn-myq-clear");
     if (clearBtn) {
-      clearBtn.onclick = async () => {
+      clearBtn.onclick = Guard.asyncClick(async () => {
         if (!confirm("Delete ALL custom questions? This cannot be undone.")) return;
         await clearCustomQuestionsAndImages();
         this.renderSetup();
         this.toast("Custom questions deleted (site questions are kept)");
         this.openMyQuestions();
-      };
+      }, "clear-custom");
     }
     document.querySelectorAll("#modal-root .my-q-edit").forEach(btn => {
       btn.onclick = () => {
@@ -1182,7 +1182,7 @@ const App = {
       };
     });
     document.querySelectorAll("#modal-root .my-q-del").forEach(btn => {
-      btn.onclick = async () => {
+      btn.onclick = Guard.asyncClick(async () => {
         const q = list[+btn.dataset.i];
         if (!q) return;
         if (!confirm("Delete this question?")) return;
@@ -1191,7 +1191,7 @@ const App = {
         this.renderSetup();
         this.toast("Question deleted");
         this.openMyQuestions();
-      };
+      }, "delete-custom");
     });
   },
 
@@ -1242,7 +1242,7 @@ const App = {
         if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} }
         this.openMyQuestions();
       };
-      document.getElementById("btn-edit-save").onclick = async () => {
+      document.getElementById("btn-edit-save").onclick = Guard.asyncClick(async () => {
         const file = fileEl.files && fileEl.files[0];
         const r = await updateCustomQuestion(id, {
           word: document.getElementById("edit-pic-word").value,
@@ -1258,7 +1258,7 @@ const App = {
         this.renderSetup();
         this.toast("Question updated");
         this.openMyQuestions();
-      };
+      }, "edit-pic-save");
       return;
     }
 
@@ -1294,7 +1294,7 @@ const App = {
       </div>`, true);
     document.getElementById("edit-sent-sentence").value = q.sentence || "";
     document.getElementById("btn-edit-back").onclick = () => this.openMyQuestions();
-    document.getElementById("btn-edit-save").onclick = async () => {
+    document.getElementById("btn-edit-save").onclick = Guard.asyncClick(async () => {
       const r = await updateCustomQuestion(id, {
         sentence: document.getElementById("edit-sent-sentence").value,
         answer: document.getElementById("edit-sent-answer").value,
@@ -1310,7 +1310,7 @@ const App = {
       this.renderSetup();
       this.toast("Question updated");
       this.openMyQuestions();
-    };
+    }, "edit-sent-save");
   },
 
   /* ---------- CSV 匯入（含指引） ---------- */
@@ -1357,12 +1357,12 @@ const App = {
 
     document.getElementById("btn-do-import").onclick = () => this._doImport();
     document.getElementById("btn-import-cancel").onclick = () => this.closeModal();
-    document.getElementById("btn-clear-custom").onclick = async () => {
+    document.getElementById("btn-clear-custom").onclick = Guard.asyncClick(async () => {
       await clearCustomQuestionsAndImages();
       this.closeModal();
       this.renderSetup();
       this.toast("Custom questions deleted (site questions are kept)");
-    };
+    }, "clear-custom-2");
   },
 
   _doImport() {
@@ -2774,7 +2774,7 @@ const App = {
 
     const lg = root.querySelector("#au-link-google");
     if (lg) {
-      lg.onclick = async () => {
+      lg.onclick = Guard.asyncClick(async () => {
         lg.disabled = true;
         lg.innerHTML = this._authSpinner("Connecting…");
         const res = await SupabaseAuth.linkGoogle();
@@ -2786,7 +2786,7 @@ const App = {
             this.toast("Failed to connect Google: " + (res.error || "unknown"));
           }
         }
-      };
+      }, "link-google");
     }
     root.querySelector("#au-signout").onclick = () => this._confirmSignOut();
   },
@@ -2805,7 +2805,7 @@ const App = {
     const root = document.querySelector("#modal-root .au");
     const F = this._authForm(root, "signout");
     root.querySelector("[data-act=cancel]").onclick = () => this._showAccountHub();
-    root.querySelector("#au-submit").onclick = async () => {
+    root.querySelector("#au-submit").onclick = Guard.asyncClick(async () => {
       F.busy(true, "Signing out…");
       try {
         await SupabaseAuth.signOut();
@@ -2826,7 +2826,7 @@ const App = {
         F.busy(false);
         this.toast("Sign out failed: " + e.message);
       }
-    };
+    }, "sign-out");
   },
 
   /* ---------- 首次登入 Learning Curve Mode 設定 ---------- */
@@ -2863,7 +2863,7 @@ const App = {
       };
     });
 
-    document.getElementById("lh-curve-continue").onclick = async () => {
+    document.getElementById("lh-curve-continue").onclick = Guard.asyncClick(async () => {
       const sel = document.querySelector('input[name="curveModeSetup"]:checked');
       const mode = sel ? sel.value : "standard";
       /* 寫入本地 state + SM2 */
@@ -2873,7 +2873,7 @@ const App = {
       try { await Sync.pushState(); } catch (e) { console.warn("Curve mode DB patch failed:", e); }
       this.closeModal();
       this.toast(`📈 Curve mode: ${mode}`);
-    };
+    }, "curve-continue");
   },
 
   /* ---------- 改訓練員名 ---------- */
@@ -4146,21 +4146,31 @@ function dismissLoading() {
   setTimeout(() => el.remove(), 420);
 }
 function armLoadingWatchdog() {
+  /* 12 秒：提示可以撳重試（慢網第一次開可能真係要咁耐，唔好即刻判死） */
   setTimeout(() => {
     if (_loadingDone) return;
     const sub = document.getElementById("loading-sub");
     if (sub) sub.textContent = "Still loading… tap here to retry";
     const el = document.getElementById("loading-screen");
     if (el) el.addEventListener("click", () => location.reload(), { once: true });
-  }, 20000);
+  }, 12000);
+  /* 30 秒仲未好 → 兜底畫面（Retry／Repair app），唔可以永遠轉精靈球（Rule 94） */
+  setTimeout(() => {
+    if (_loadingDone) return;
+    if (window.Guard) Guard.fatal("boot-timeout", new Error("Boot did not finish in 30s"));
+  }, 30000);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  App._initLayout(); /* 最早標記 data-layout，init 期間嘅 render 已經可以讀 */
+  try { App._initLayout(); } /* 最早標記 data-layout，init 期間嘅 render 已經可以讀 */
+  catch (e) { if (window.Guard) Guard.report(e, { where: "initLayout", silent: true }); }
   armLoadingWatchdog();
   App.init().then(dismissLoading).catch((err) => {
     console.error("[boot] init failed", err);
-    dismissLoading();
+    _loadingDone = true;
+    /* init 中途失敗＝好多掣未綁，留低半殘主頁等於白屏 → 兜底畫面（Rule 94） */
+    if (window.Guard) Guard.fatal("boot", err);
+    else dismissLoading();
   });
 });
 

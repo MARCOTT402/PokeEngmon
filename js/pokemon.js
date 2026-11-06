@@ -53,11 +53,13 @@ const DAMAGE_CLASS_INFO = {
 async function loadPokemonDex() {
   if (POKEMON_DEX) return POKEMON_DEX;
   try {
+    /* timeout＋重試（Rule 94）：網絡差時唔好一 fail 就令成個 App 冇寶可夢資料 */
+    const get = (u) => (window.Guard && Guard.fetchGet) ? Guard.fetchGet(u, undefined, { tries: 3, timeout: 15000 }) : fetch(u);
     const [dexRes, moveRes, chartRes, abRes] = await Promise.all([
-      fetch("data/pokemon-151.json"),
-      fetch("data/moves.json"),
-      fetch("data/type-chart.json"),
-      fetch("data/abilities.json")
+      get("data/pokemon-151.json"),
+      get("data/moves.json").catch(e => ({ ok: false, e })),
+      get("data/type-chart.json").catch(e => ({ ok: false, e })),
+      get("data/abilities.json").catch(e => ({ ok: false, e }))
     ]);
     if (!dexRes.ok) throw new Error(`HTTP ${dexRes.status}`);
     POKEMON_DEX = await dexRes.json();
@@ -67,6 +69,7 @@ async function loadPokemonDex() {
     if (abRes.ok) ABILITIES = await abRes.json();
   } catch (e) {
     console.warn("Pokemon data load failed", e);
+    if (window.Guard) Guard.report(e, { where: "loadPokemonDex", silent: true });
     POKEMON_DEX = null;
   }
   return POKEMON_DEX;

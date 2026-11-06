@@ -9,7 +9,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 | 做緊咩 | 讀邊份 | Rule |
 |---|---|---|
-| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70 |
+| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94 |
 | SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
@@ -394,3 +394,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 93 — SM-2 storage：唔好逐題 parse／寫成個 cards blob；buildSession 讀一次快取，唔好為成個 pool 建卡
 
 → `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。
+
+## Rule 94 — Guard 全域錯誤邊界：新 code 唔准令畫面白屏或卡死；async 掣用 `Guard.asyncClick`；資料檔 GET 用 `Guard.fetchGet`；開機失敗一定落 `Guard.fatal`
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

@@ -561,7 +561,7 @@ const Friends = (() => {
           + "</button>"
         : "");
 
-    box.onclick = async (e) => {
+    box.onclick = Guard.asyncClick(async (e) => {
       const b = e.target.closest("button[data-act]");
       if (!b) return;
       const act = b.dataset.act;
@@ -572,6 +572,7 @@ const Friends = (() => {
         return;
       }
       b.disabled = true;
+      try {
       if (act === "accept-request") await respondRequest(b.dataset.uid, true);
       else if (act === "decline-request") await respondRequest(b.dataset.uid, false);
       else if (act === "accept-invite") await acceptInvite(b.dataset.invite);
@@ -579,7 +580,8 @@ const Friends = (() => {
       else if (act === "cancel-invite") await cancelInvite(b.dataset.invite);
       else if (act === "cancel-request") await cancelRequest(b.dataset.uid);
       else if (act === "cancel-wait") await cancelWaiting();
-    };
+      } catch (err) { b.disabled = false; throw err; } /* 出錯要還原掣，Guard.asyncClick 會 toast（Rule 94） */
+    }, "friends-actions");
     updateCountdowns();
   }
 
@@ -651,13 +653,15 @@ const Friends = (() => {
         + "</div>";
     }).join("");
 
-    box.onclick = async (e) => {
+    box.onclick = Guard.asyncClick(async (e) => {
       const b = e.target.closest("button[data-act]");
       if (!b) return;
       b.disabled = true;
-      if (b.dataset.act === "add") await addByUid(b.dataset.uid, b.dataset.name);
-      else if (b.dataset.act === "accept") await respondRequest(b.dataset.uid, true);
-    };
+      try {
+        if (b.dataset.act === "add") await addByUid(b.dataset.uid, b.dataset.name);
+        else if (b.dataset.act === "accept") await respondRequest(b.dataset.uid, true);
+      } catch (err) { b.disabled = false; throw err; }
+    }, "friends-search");
   }
 
   /* ---------- 好友請求 ---------- */
@@ -877,14 +881,14 @@ const Friends = (() => {
     const no = el("friends-remove-no");
     if (no) no.onclick = () => App.closeModal();
     const yes = el("friends-remove-yes");
-    if (yes) yes.onclick = async () => {
+    if (yes) yes.onclick = Guard.asyncClick(async () => {
       App.closeModal();
       const res = await call("removeFriend", uid);
       if (!res || !res.removed) { toast("Could not remove friend"); return; }
       toast("Removed " + (name || "friend"));
       refreshBadge();
       if (friendsOpen()) load();
-    };
+    }, "remove-friend");
   }
 
   /* ---------- 對戰邀請 ---------- */

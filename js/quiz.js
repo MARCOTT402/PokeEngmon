@@ -25,6 +25,31 @@ const Quiz = {
     this.mode = null;
     this.gymMilestone = 0;
     const set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
+    /* 題庫載唔到（網絡問題）→ 話用戶知＋Retry，唔好扮「All caught up」（Rule 94） */
+    if (set.length === 0 && typeof questionBankFailed === "function" && questionBankFailed()) {
+      App.showModal(`
+        <div class="confirm-box">
+          <p>📡 <b>Couldn't load questions</b><br>
+            <small>Please check your connection and try again.</small></p>
+          <div class="confirm-row">
+            <button id="qload-retry" class="btn-big btn-primary">Retry</button>
+            <button id="qload-cancel" class="btn-big">Later</button>
+          </div>
+        </div>`, true);
+      document.getElementById("qload-cancel").onclick = () => App.closeModal();
+      const retry = document.getElementById("qload-retry");
+      retry.onclick = () => {
+        const work = async () => {
+          await Promise.all([loadSiteQuestions(), loadPictureWords()]);
+          App.closeModal();
+          if (questionBankFailed()) { App.toast("Connection problem — please try again."); return; }
+          if (App.renderSetup) App.renderSetup();
+          this.start(topics);
+        };
+        if (window.Guard) Guard.busy(retry, work, "qload-retry"); else work();
+      };
+      return;
+    }
     if (set.length === 0) {
       App.showModal(`
         <div class="confirm-box">
@@ -1787,8 +1812,9 @@ const Quiz = {
 
     document.getElementById("report-cancel").onclick = () => App.closeModal();
 
-    send.onclick = async () => {
-      if (selected.size === 0 || send.disabled) return;
+    send.onclick = Guard.asyncClick(async () => {
+      /* 重複撳由 Guard.asyncClick 擋（佢撳時已 disable send），唔好再睇 send.disabled（Rule 94） */
+      if (selected.size === 0) return;
       const report = {
         id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
         ts: Date.now(),
@@ -1823,7 +1849,7 @@ const Quiz = {
       App.toast(uploaded
         ? "Thanks! Your report was sent."
         : "Thanks! Your report has been saved on this device.");
-    };
+    }, "report-send");
   },
 
   /* ---------- 設定 / 退出 ---------- */

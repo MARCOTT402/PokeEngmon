@@ -81,7 +81,45 @@
       .ld-ball { animation: none; }
       #loading-screen.ld-out { animation-duration: .01s; }
     }
+    /* 兜底畫面（Guard，Rule 94）：內聯 —— style.css 載唔到都要顯示到；z 高過 loading-screen 99999 */
+    #fatal-screen {
+      position: fixed; inset: 0; z-index: 100000;
+      display: flex; align-items: center; justify-content: center;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      background: #ffcb05; font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    #fatal-screen[hidden], #guard-recover[hidden] { display: none !important; }
+    .fatal-card {
+      width: 100%; max-width: 360px; box-sizing: border-box;
+      background: #fff; border: 3px solid #1a1a1a; border-radius: 18px;
+      padding: 24px 20px 20px; text-align: center; color: #1a1a1a;
+      box-shadow: 0 8px 0 rgba(0, 0, 0, .18);
+    }
+    .fatal-ball {
+      width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; border: 4px solid #1a1a1a;
+      background: linear-gradient(to bottom, #ee1515 0 45%, #1a1a1a 45% 55%, #fff 55% 100%);
+    }
+    .fatal-card h1 { font-size: 20px; margin: 0 0 6px; }
+    .fatal-card p { font-size: 14px; line-height: 1.45; margin: 0 0 18px; color: #4a4a4a; }
+    .fatal-btn {
+      display: block; width: 100%; min-height: 48px; margin: 0 0 10px; box-sizing: border-box;
+      border: 3px solid #1a1a1a; border-radius: 14px; background: #ee1515; color: #fff;
+      font: 800 16px/1 "Inter", sans-serif; cursor: pointer;
+    }
+    .fatal-btn.ghost { background: #fff; color: #1a1a1a; font-size: 14px; min-height: 44px; margin: 0; }
+    .fatal-btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+    /* 答題／捕捉／對戰中出錯嘅恢復卡：z 2700（高過 battle-land 2400／bag-rotate 2600，低過 toast 3000；Rule 46） */
+    #guard-recover {
+      position: fixed; inset: 0; z-index: 2700;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: rgba(0, 0, 0, .45); font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    #guard-recover .fatal-btn { margin-bottom: 10px; }
   </style>
+  <!-- Guard 一定要第一個 script（喺 style.css／supabase-config 之前），先捉得到其他檔案嘅錯（Rule 94） -->
+  <script src="js/core/guard.js?v=1.65.5"></script>
+  <!-- guard.js 自己都載唔到時嘅最細後備：其他模組直接用 Guard.asyncClick／busy，唔可以因為佢冇咗而 ReferenceError -->
+  <script>window.Guard||(window.Guard={asyncClick:function(f){return f},busy:function(b,f){return f()},safe:function(w,f,d){try{return f()}catch(e){return d}},safeAsync:function(w,f){return f()},report:function(){},fatal:function(){location.reload()},toast:function(){},fetchGet:function(u,i){return fetch(u,i)},num:function(v,d){v=Number(v);return isFinite(v)?v:(d||0)},clamp:function(v,a,b,d){v=Number(v);v=isFinite(v)?v:(d===undefined?a:d);return Math.min(b,Math.max(a,v))},posDim:function(v,d){v=Number(v);return v>0?v:(d||1)},safeJSON:function(r,d){try{var v=JSON.parse(r);return v==null?d:v}catch(e){return d}}});</script>
   <link rel="stylesheet" href="css/style.css?v=1.65.5">
 </head>
 <body>
@@ -90,6 +128,26 @@
     <div class="ld-ball" aria-hidden="true"></div>
     <div class="ld-text">Loading...</div>
     <div class="ld-sub" id="loading-sub">Setting up your adventure</div>
+  </div>
+
+  <!-- 兜底畫面（Guard.fatal）：開機失敗／核心 script 載唔到 -->
+  <div id="fatal-screen" role="alertdialog" aria-modal="true" aria-labelledby="fatal-title" hidden>
+    <div class="fatal-card">
+      <div class="fatal-ball" aria-hidden="true"></div>
+      <h1 id="fatal-title">System busy</h1>
+      <p>Something stopped the app from loading. Your progress is saved on this device — please try again.</p>
+      <button type="button" id="fatal-retry" class="fatal-btn">Retry</button>
+      <button type="button" id="fatal-repair" class="fatal-btn ghost">Still stuck? Repair app</button>
+    </div>
+  </div>
+  <!-- 恢復卡（Guard.report）：答題／捕捉／對戰中出錯，保證可以返主頁 -->
+  <div id="guard-recover" role="alertdialog" aria-modal="true" aria-labelledby="guard-recover-title" hidden>
+    <div class="fatal-card">
+      <h1 id="guard-recover-title">Something went wrong</h1>
+      <p>This screen hit a problem. You can keep going, or head back to Home — your answers so far are saved.</p>
+      <button type="button" id="guard-recover-continue" class="fatal-btn">Continue</button>
+      <button type="button" id="guard-recover-home" class="fatal-btn ghost">Back to Home</button>
+    </div>
   </div>
 
   <div id="app">

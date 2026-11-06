@@ -71,3 +71,15 @@ if (!e.request.url.startsWith("http")) return;
 - 由工作檔抽出嚟嘅片段，插入 repo blob 前一律將 CRLF 轉 LF；commit 前逐個檔 `git cat-file -p :<file>` 數 CRLF，應該係 0（混合或者全 CRLF 都唔准 commit）。
 - 要寫入反斜線字樣（例如 `\r\n`）嘅文字，用 Write 工具寫獨立檔再拼接，唔好經 bash heredoc + Python 字串（雙重 escape 會變真控制字元）。
 - autostash 還原衝突：唔好 `git reset --hard`。stash 會保留；將 ours（stash）／base（stash^1）／theirs（HEAD）三份統一 LF 再 `git merge-file`，寫返工作檔，`git reset -q` 取消 staging，再對 stash 做 `git diff --ignore-cr-at-eol` 確認淨係版本號唔同先 `git stash drop`。
+
+### Rule 94 — Guard 全域錯誤邊界：新 code 唔准令畫面白屏或卡死；async 掣用 `Guard.asyncClick`；資料檔 GET 用 `Guard.fetchGet`；開機失敗一定落 `Guard.fatal`
+
+- `js/core/guard.js` 係**第一個** script（`index.html` `<head>`，喺 `style.css`／`supabase-config.js` 之前），後面有一段內聯 shim：guard.js 載唔到時 `Guard.*` 變 no-op，其他模組唔會 ReferenceError。唔好改次序，唔好刪 shim。
+- 全域 `error`／`unhandledrejection`／`<script>` 載入失敗 → `Guard.report`：本地 `pokeengmon_errlog_v1`（50 筆）＋排隊上報 RPC `log_client_errors`（server 限流 10／分鐘、200／日）。localhost 預設**唔上報**（要測設 `localStorage.pokeengmon_errlog_force_upload=1`）。
+- 答題／捕捉／對戰（frame lock）中有程式錯 → `#guard-recover`（Continue／Back to Home）；`Guard.goHome()` 喺 `showView` 壞咗都會手動解鎖。新增「會鎖住畫面」嘅 view 要確保 `Guard.goHome` 識得退出佢（例如 `BattleLand.exit`）。
+- 開機：`App.init()` reject → `Guard.fatal("boot")`；30 秒未完成 → `Guard.fatal("boot-timeout")`；核心 global 唔存在 → `core-missing`。兜底畫面 `#fatal-screen` 樣式內聯喺 `index.html`（CSS 載唔到都顯示），z 100000（高過 loading 99999）。
+- async click：`el.onclick = Guard.asyncClick(async () => {…}, "where")`——撳時 disable、完成還原「撳之前」狀態、出錯 toast。**handler 入面唔好再用 `btn.disabled` 判斷重複撳**（Guard 已 disable，會直接 return）。事件委派（容器）出錯要自己還原子掣。
+- 冪等 GET（題庫 CSV、`data/*.json`）用 `Guard.fetchGet(url, init, {tries, timeout})`；POST／RPC 唔好自動重試（Rule 5，防重複發獎勵）。題庫載唔到 → `questionBankFailed()`，選題要出「Couldn't load questions — Retry」，唔好扮「All caught up」。
+- 數值兜底：`Guard.num／clamp／posDim／safeJSON`。
+- 驗收：錯誤注入（答題中 click handler `null.x()` → 恢復卡＋Home 可撳；`Promise.reject(new TypeError())` → toast；`NotAllowedError` 唔記錄）、headless `Network.setBlockedURLs` 封 `js/pokemon.js`／`js/app.js` → fatal 畫面、封 `js/core/guard.js` → App 照開。
+

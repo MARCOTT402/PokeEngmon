@@ -5,6 +5,7 @@
 | 功能 | 主要檔案 |
 |------|----------|
 | 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`, `sw.js` |
+| 全域錯誤邊界（error／rejection handler、ErrorLog 上報、恢復卡、開機兜底畫面、`Guard.asyncClick`／`fetchGet`／`num`） | `js/core/guard.js`, `index.html`（head 內聯樣式＋shim、`#fatal-screen`、`#guard-recover`）, `supabase/migrations/supabase-migrate-20261106d-client-errors.sql`（`client_errors`、`log_client_errors`）, Rule 94 |
 | 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
 | 結算畫面（分數圈／stat／錯題預覽） | `js/app.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
