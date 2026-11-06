@@ -1,3 +1,10 @@
+## [1.65.5](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.4...v1.65.5) (2026-11-06)
+
+
+### Performance Improvements
+
+* **quiz:** cache SM-2 storage parse so quiz start is instant ([253d320](https://github.com/MARCOTT402/PokeEngmon/commit/253d3206694f52a6c24045b5825e0b58c10ce9e7))
+
 ## [1.65.4](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.3...v1.65.4) (2026-11-06)
 
 
