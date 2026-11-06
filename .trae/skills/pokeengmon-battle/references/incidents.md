@@ -73,4 +73,6 @@ Incident (2026-11-06，用戶回報)：我方 Pokémon 被打暈 → 強制換�
 - 驗證（headless，臨時 localhost debug hook，驗完已移除）：我方 HP 設 1 → 被打暈 → 經背包「Send out」補位 → `state.turn` 不變、新寵滿血、選單返返嚟。
 - 測試踩坑：team-select confirm 喺 modal 收埋後再 `.click()` 會開第二場戰鬥，兩條流程同時行（每句訊息出兩次），令人誤以為換寵後背包又彈返出嚟。
 
+- 跟進（同日，用戶確認）：「強制換寵可以免費，但唔係戰死而換寵就唔免費」；PvP 都要免費、Shift 維持免費。PvP 加補位回合：冇暈嗰邊自動交 `pass`，回合只做換寵、唔計殘餘。Rule 22 原本「唔好畀強制換寵免費回合」嘅寫法同步改為「經補位回合實現，唔好搬出回合 loop」。未做真機 PvP 測試（要兩個帳號）。
+
 Skill: Rule 92 added

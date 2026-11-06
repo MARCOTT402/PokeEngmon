@@ -16,17 +16,19 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
 - **Screenshot verification**: battle anims run at 60fps and many are ~260ms total, so browser_use screenshots almost always land between animations and report "nothing renders" for perfectly fine anims. Use the dev harness `tools/_anim_preview.html?slug=<a,b,c>&frameMs=400` (passes `frameMs` to `MoveAnim.play`, 4–6s per move) — screenshots then reliably catch every move mid-animation.
 - **Empty frame 0**: when staggering layer entrances (e.g. trick-room tiles appearing one by one), make sure at least one layer exists in frame 0 — `MoveAnim.play` calls `drawFrame(0)` immediately, and an empty first frame shows a blank beat (and trips `tools/gen_missing_anims.js` validation). Bias stagger formulas so the first element is already visible at i=0.
 
-### Rule 22 — The "fainted → skip action" guard in `runTurnResolution` must not swallow switch actions
+### Rule 22 — The "fainted → skip action" guard in `runTurnResolution` must not swallow switch actions (see also Rule 92)
 
 - Only `move` actions may be skipped for a fainted side. `switch` actions MUST still execute even when the outgoing Pokémon is at 0 HP — `executeMove` already guards `actor.hp <= 0`, and `animatedSwitch` skips the recall animation when `out.hp <= 0`, so a fainted-side switch is safe.
-- Do NOT "fix" a stuck switch by moving forced switches outside the turn loop / giving them a free turn: PvP requires switch to stay a next-turn action (`prd.md` L162) because both clients replay the same seed with the same `Battle.turnOrder` (switch priority 6); changing turn semantics desyncs PvP.
+- PvP forced switches stay inside the turn loop (both clients replay the same seed with the same `Battle.turnOrder`, switch priority 6). Since Rule 92 they are free via a **replacement turn**: the fainted side submits `switch`, the other side auto-submits `pass`, and `runTurnResolution` runs only switches (no moves, Mega or residuals). Don't move them out of the turn loop: that would desync PvP.
 - When adding any new action kind (item, run, etc.), decide explicitly whether the fainted guard applies to it, and write it as a positive `kind ===` list rather than a blanket `continue`.
 
-### Rule 92 — AI 戰：我方暈咗之後補位係免費換入，唔經 `resolveTurn`（對手唔可以白打一下）；PvP 照 Rule 22
+### Rule 92 — 暈咗之後嘅強制換寵係免費（對手唔可以白打一下）；自己揀換寵照計回合；Shift 免費
 
-- `chooseSwitch`：`mode !== "pvp"` 而且 `myActive().hp <= 0` → 直接 `animatedSwitch(mySide, idx)`，唔加 `state.turn`、唔叫 `pickAIAction`；完咗 `narrate("What will …")` + `showMainMenu`。
+- 用戶規則：**只有戰死後嘅強制換寵免費**；主選單 POKéMON 自己換照樣佔回合；對手暈咗時問嘅 Shift 維持免費（原作做法）。
+- **AI 戰**：`chooseSwitch`：`mode !== "pvp"` 而且 `myActive().hp <= 0` → 直接 `animatedSwitch(mySide, idx)`，唔加 `state.turn`、唔叫 `pickAIAction`；完咗 `narrate("What will …")` + `showMainMenu`。
 - 補位後要處理：入場釘子打死新寵 → 再強制換；同一回合雙方都暈 → 對手都要 `animatedSwitch` 補位（舊流程靠回合尾 AI 自動換）。
-- 對手暈咗嘅補位本身已經係回合尾 `animatedSwitch`（免費），兩邊而家一致。PvP 換寵仍然係下一回合 action（Rule 22，兩邊 seed 同步），唔好郁。
+- 對手暈咗嘅補位本身已經係回合尾 `animatedSwitch`（免費），兩邊而家一致。
+- **PvP（補位回合）**：仍然經 `resolvePvpTurn` 交 action（兩邊 seed 同步，Rule 22）。暈咗嗰邊交 `switch`；冇暈嗰邊唔出選單，回合尾自動 `resolveTurn({kind:"pass"})`（想 Shift 就揀換寵，`openBattleBag("switch", true)`）。`runTurnResolution` 開頭 `replacement = pvp && 任何一邊 active HP 0` → 非 switch 一律當 `pass`、唔計殘餘傷害。新 action kind `pass` 要喺 `resolvePvpTurn` 解析；舊版客戶端唔識 `pass`（會當第 0 招）→ 兩邊要同版本。
 - 測試注意：戰鬥測試開戰時 team-select confirm 只可以有效撳一次；Modal 收埋之後再 `.click()` 會開第二場、兩條流程同時行，訊息全部出兩次，睇落好似換寵出錯。
 
 ### Rule 61 — 戰鬥 EXP：battle pokemon 必須帶 `uid`，分配只計「存活 + participated」；Level Sync 只降唔升

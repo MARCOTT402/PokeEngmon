@@ -387,6 +387,6 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 → 已整合入 `.trae/skills/pokeengmon-ui-sheets/SKILL.md` 正文 Rules；完整事故原文見 `.trae/skills/pokeengmon-ui-sheets/references/incidents.md`（Rule 91）。
 
-## Rule 92 — AI 戰：我方暈咗之後補位係免費換入，唔經 `resolveTurn`（對手唔可以白打一下）；PvP 照 Rule 22
+## Rule 92 — 暈咗之後嘅強制換寵係免費（對手唔可以白打一下）；自己揀換寵照計回合；Shift 免費
 
 → 已整合入 `.trae/skills/pokeengmon-battle/SKILL.md`；完整事故原文見 `.trae/skills/pokeengmon-battle/references/incidents.md`（Rule 92）。
