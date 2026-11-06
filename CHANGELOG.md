@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.5...v1.66.0) (2026-11-06)
+
+
+### Features
+
+* **guard:** global error boundary and fallback screens ([a8dff79](https://github.com/MARCOTT402/PokeEngmon/commit/a8dff79bf9cfe78c7fc1f22bb2b5ae7481d08ec4))
+
 ## [1.65.5](https://github.com/MARCOTT402/PokeEngmon/compare/v1.65.4...v1.65.5) (2026-11-06)
 
 
