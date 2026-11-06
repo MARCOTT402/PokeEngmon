@@ -1,0 +1,410 @@
+# Home sheet 互動規格（原 `webapp-mobile-dev` Rule 6.2–7，2026-11-06 搬入，原文照錄）
+
+> 版面定位（原 6.1）喺 `pokeengmon-responsive` §5；wide 右欄行為喺同一份 §6。
+
+### 6.2 頭部結構 + ✕ 關閉鍵（所有 Sheet 必須遵守）
+
+**鐵律：每一個 sheet 嘅 ✕ 關閉鍵一律擺喺右上角。** 唔可以隨意放左邊、中間或者唔放。
+
+#### bottom-up sheet（向上捲，例如 setting / battle）
+
+HTML 順序：**grip → title → ✕**
+
+```html
+<div class="ph-sheet ph-sheet-up" id="sheet-setting">
+  <div class="ph-sheet-head">
+    <span class="ph-sheet-grip"></span>
+    <span class="ph-sheet-t">Settings</span>
+    <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="ph-sheet-body">…</div>
+</div>
+```
+
+CSS：`ph-sheet-grip { margin-right:auto }` 自動把 title + ✕ 推向右。
+
+#### top-down sheet（向下捲，例如 quests / pokedex / gacha）
+
+HTML 順序：**title → ✕**（冇 grip）
+
+```html
+<div class="ph-sheet ph-sheet-down" id="sheet-quests">
+  <div class="ph-sheet-head">
+    <span class="ph-sheet-t">Daily Quests</span>
+    <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="ph-sheet-body">…</div>
+</div>
+```
+
+CSS 用 absolute 定位，確保 title **絕對居中**、✕ **固定右上角**（唔會被 title 長度影響位置）：
+
+```css
+.ph-sheet-down .ph-sheet-head { position: relative; justify-content: center; }
+.ph-sheet-down .ph-sheet-t    { flex: 0 0 auto; }  /* 取消 flex:1 令 title 真正居中 */
+.ph-sheet-down .ph-sheet-x    { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
+.ph-sheet-down .ph-sheet-grip { display: none; }   /* top-down 唔需要 grip */
+```
+
+**點解 top-down 要用 absolute？** 如果 title 太長（例如 "Pokédex · 45 / 151"），flex layout 會把 ✕ 推出右邊界。用 absolute + fixed `right:14px`，無論 title 幾長，✕ 永遠喺同一個位置。
+
+#### ✕ 按鈕規格
+
+```css
+.ph-sheet-x {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 2px solid #1b1b22; background: #f3efe2;
+  font-size: 18px; font-weight: 900; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+```
+
+**最小 34×34（≥44×44 熱區規格已滿足）**，icon 用 `✕` 或 `×` 都得（統一用 `✕`），`aria-label="Close"` 必加。
+
+#### 檢查清單
+
+- [ ] ✕ 係 `<button>`（唔係 `<span>` 或 `<div>`），原生支援 keyboard focus + Enter/Space 觸發
+- [ ] ✕ 有 `aria-label="Close"`
+- [ ] bottom-up：grip → title → ✕ 順序
+- [ ] top-down：title 居中，✕ absolute 固定右上 `right:14px`
+- [ ] 唔好兩個 sheet 唔同規格（例如一個 ✕ 係左邊、一個係右邊）
+
+**結構圖：**
+```
+.pd-shell (max-width:440, 3-row grid: 48px bezel | 1fr screen | 34px chin)
+├── .pd-bezel (48px, 紅色, 4 stat buttons)
+├── .pd-screen2 (1fr, 白色, 內容區)
+│   └── .ph-sheets (position:absolute, bottom:calc(56px+8px))  ← sheet 入呢度
+│       ├── .ph-sheet-down#sheet-calendar
+│       ├── .ph-sheet-down#sheet-pokedex
+│       ├── .ph-sheet-down#sheet-quests
+│       ├── .ph-sheet-down#sheet-gacha
+│       ├── .ph-sheet-up#sheet-battle
+│       ├── .ph-sheet-up#sheet-setting
+│       └── .ph-backdrop
+└── .pd-chin (34px)
+```
+
+### 6.3 捲動時間統一 0.4s
+
+```css
+.ph-sheet { transition: transform .4s cubic-bezier(.25, 1, .5, 1); }
+```
+
+所有 sheet 開 / 關都用同一條 transition。JS 入面所有 close timer 一律 **430ms**（transition 400ms + 30ms buffer），binder 嘅 cross-button open 延遲一律 **410ms**（transition 400ms + 10ms buffer），close timer 遲過 open timer 20ms 確保 race condition 安全。
+
+**唔好做：** 唔好對唔同 sheet 改唔同 transition time，會令切換兩個 sheet 時其中一個「快過另一個」→ 視覺上好似冇動畫。
+
+### 6.4 按鈕行為 3 種狀態
+
+每個可以開 sheet 嘅按鈕（bezel stat buttons、dockbar、其他入口）必須實現以下 3 種狀態：
+
+| 當前狀態 | 用戶動作 | 行為 |
+|---|---|---|
+| 冇 sheet 開住 | 點按鈕 A | **直接開 A** |
+| sheet A 開住 | 再點按鈕 A | **toggle 關閉 A** |
+| sheet A 開住 | 點按鈕 B（另一個） | **先關 A → 等 410ms → 再開 B** |
+| sheet 開住 | 點非 sheet 區域 / backdrop / dockbar 按鈕 | **先關當前 sheet → 再執行該點擊** |
+
+### 6.5 實現 Pattern（Binder + Debounce）
+
+```js
+let _sheetSwitching = false; /* 捲動中 flag，防重複點擊 */
+
+const binder = (btnId, sheetId, openFn) => {
+  const el = document.getElementById(btnId);
+  if (!el) return;
+  el.onclick = () => {
+    if (_sheetSwitching) return;                    // 捲動中忽略
+    const cur = document.querySelector(".ph-sheet.ph-open");
+    const isToggle = cur && cur.id === sheetId;
+    if (isToggle) {
+      App._closeSheet(sheetId);                      // 同一按鈕 → toggle 關閉
+      return;
+    }
+    if (cur) {
+      _sheetSwitching = true;
+      App._closeAllSheets();                         // 先捲回全部
+      setTimeout(() => { _sheetSwitching = false; openFn(); }, 410);
+    } else {
+      openFn();                                      // 直接開
+    }
+  };
+};
+binder("btn-bezel-diamond", "sheet-gacha", () => { App.openGachaSheet(); });
+binder("btn-bd-battle",    "sheet-battle", () => { App._openSheet("sheet-battle"); });
+/* 直接跳 view 嘅按鈕：sheetId = null（唔會 toggle，只會先 close → 再跳） */
+binder("btn-bd-quiz",      null,           () => { App.showView("view-quiz"); });
+```
+
+### 6.4.1 子按鈕唔好用 binder！用 expandArrow() — Accordion 模式
+
+**錯誤做法 A（binder 謬用）：** 把子按鈕綁入 `binder()` 而唔傳 `sheetId` → binder 見到 curSheet 存在 → `isToggle = undefined === curSheet.id → false` → 以為係 cross-button → debounce 鎖死（Incident 9）。
+
+**錯誤做法 B（mode-switch 謬用）：** 展開時 `innerHTML` 覆蓋 container → 把 compact streak 數字都洗掉，只剩下 calendar。用戶要嘅係 **accordion（保留頂部 + 展開下面）**。
+
+**正確做法：**
+
+```js
+const expandArrow = (id, sheetId, renderCompact, renderFull) => {
+  const el = document.getElementById(id);
+  el.onclick = (e) => {
+    e.stopPropagation();  // 鐵律！防止 bubble 到 document click handler
+    e.preventDefault();
+    const sheet = document.getElementById(sheetId);
+    const isFull = sheet.classList.contains("ph-sheet-full");
+    if (isFull) {
+      sheet.classList.remove("ph-sheet-full");
+      renderCompact();
+      el.innerHTML = /* 向下箭咀 */;
+    } else {
+      sheet.classList.add("ph-sheet-full");
+      renderFull();  // ← accordion：保留 compact 內容 + append 更多
+      el.innerHTML = /* 向上箭咀 */;
+    }
+  };
+};
+expandArrow("btn-calendar-expand", "sheet-calendar",
+  () => { container.innerHTML = `🔥 ${streak}\nDay streak`; },  // compact
+  () => { container.innerHTML = `🔥 ${streak}\nDay streak<div class="cal-wrap"></div>`;
+          Calendar.render("#sheet-calendar-content .cal-wrap"); }  // accordion：保留頂部 + 加 calendar
+);
+```
+
+**配套 CSS（必須！）：**
+```css
+.ph-sheet { max-height: 100%; overflow: hidden; transition: transform .4s, max-height .4s; }
+.ph-sheet-down:not(.ph-sheet-full) { max-height: 58%; }  /* compact 高度 */
+.ph-sheet-down.ph-sheet-full { max-height: 100%; }        /* full 高度（max-height transition = 捲動畫！）*/
+.ph-sheet-down.ph-sheet-full .ph-sheet-body { overflow-y: auto; flex: 1; min-height: 0; }
+```
+**鐵律 6（關鍵！）：唔好用 `overflow: visible` 嚟解決內容裁切！** 有 `transform` 嘅元素上，Chrome 會自動把 `overflow: visible` 強制變 `overflow: hidden`（瀏覽器規格）！.ph-sheet-down 有 `transform: translateY()` → overflow:visible 永遠唔生效 → simulator 睇唔到 calendar（但 web browser DevTools 可能顯示正常，因為冇 transform context）。正確做法：**用 max-height transition 做捲動畫 + body overflow-y:auto**。
+
+**Pattern 使用場景：**
+
+| Pattern | 使用者 | Debounce | Toggle | Cross-button | Accordion |
+|---|---|---|---|---|---|
+| `binder()` | **Bezel stat + Dockbar** | ✅ | ✅ | ✅ | ❌ |
+| `expandArrow()` | **Sheet 內子按鈕** | ❌ | ✅（模式切換） | ❌ | ✅（保留頂部 + append） |
+
+**鐵律：**
+1. 永遠唔好把子按鈕綁入 binder（binder 係頂層導航專用）
+2. expandArrow onclick 必須 `stopPropagation()` + `preventDefault()`
+3. `renderFull` 必須保留 compact 頂部內容（accordion 原則）
+4. `_openSheet()` 必須永遠重置 `.ph-sheet-full` class + arrow 方向 + content（確保每次開都由 compact 開始）
+5. `.ph-sheet-full` 必須解鎖 `overflow`（唔係只改 max-height）
+
+### 6.6 兩條 close 路徑必須一致（`_closeSheet` / `_closeAllSheets`）
+
+**錯誤做法 A：** remove class 同時設 hidden → 跳過 transform，「閃一下就冇咗」。
+
+**錯誤做法 B：** `_closeSheet` 410ms、`_closeAllSheets` 410ms，但 binder 都係 410ms → timer race，新 sheet 被舊 timer 設 hidden。
+
+**正確做法：** 兩條路徑共享同一規則：
+
+```js
+_closeSheet(id) {
+  const sheet = document.getElementById(id);
+  sheet.classList.remove("ph-open");
+  setTimeout(() => {
+    if (document.querySelector(".ph-sheet.ph-open")) return; /* stillOpen guard */
+    sheet.hidden = true;
+    const bd = document.querySelector(".ph-backdrop");
+    if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+  }, 430); /* 比 transition + binder open 嘅 410ms 遲 20ms */
+},
+_closeAllSheets() {
+  document.querySelectorAll(".ph-sheet").forEach(s => s.classList.remove("ph-open"));
+  const bd = document.querySelector(".ph-backdrop");
+  if (bd) bd.classList.remove("ph-open");
+  setTimeout(() => {
+    if (document.querySelector(".ph-sheet.ph-open")) return; /* stillOpen guard */
+    document.querySelectorAll(".ph-sheet").forEach(s => {
+      if (!s.classList.contains("ph-open")) s.hidden = true;
+    });
+    if (bd && !bd.classList.contains("ph-open")) bd.hidden = true;
+  }, 430);
+}
+```
+
+**鐵律：**
+- `setTimeout` 一律 **430ms**（transition 400ms + buffer 10ms + binder open defer 20ms）
+- 一律有 **stillOpen guard**（隱藏前檢查有冇新 `ph-open`）
+- 移除 `_checkCloseAllSheets`（舊時 closeSheet 完再 call closeAllSheets → 雙 timer race）
+
+### 6.7 切換 View 時自動捲回
+
+`showView(id)` 最頂部必須 call `_closeAllSheets()`：
+
+```js
+showView(id) {
+  if (document.getElementById("view-home").classList.contains("active")) {
+    this._closeAllSheets();  // 唔等動畫，直接開下一個 view（動畫同 view 切換平行跑）
+  }
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+```
+
+### 6.8 四種關閉路徑（全部一致）
+
+| 路徑 | Trigger | Handler |
+|---|---|---|
+| ① Backdrop 點擊 | 半透明遮罩 click → target.closest(ph-backdrop) | `_closeAllSheets()` |
+| ② Esc key | `document keydown e.key === "Escape"` | `_closeAllSheets()` |
+| ③ Sheet ✕ | `.ph-sheet-x` click → 取 parent sheet id | `_closeSheet(sheetId)` |
+| ④ 點非 sheet 區域 | document click handler，排除 sheet 內 + backdrop + button 本身 | `_closeAllSheets()`（click 繼續冒泡到目標元素） |
+
+```js
+document.addEventListener("click", (e) => {
+  const openSheet = document.querySelector("#view-home .ph-sheet.ph-open");
+  if (!openSheet) return;
+
+  // 路徑①：backdrop click → close all
+  if (e.target.closest("#view-home .ph-backdrop")) { App._closeAllSheets(); return; }
+  // 路徑③：sheet ✕ → close single
+  const xBtn = e.target.closest("#view-home .ph-sheet-x");
+  if (xBtn) { const s = xBtn.closest(".ph-sheet"); if (s) App._closeSheet(s.id); return; }
+  // 路徑④：點 sheet 內部 → 唔攔（由 sheet 子按鈕自行 close）
+  if (e.target.closest("#view-home .ph-sheet")) return;
+  // 路徑④：點任何其他地方 → close all，click 繼續冒泡到目標元素
+  App._closeAllSheets();
+});
+```
+
+**鐵律：** 所有路徑必須走 `_closeSheet` / `_closeAllSheets`（有 stillOpen guard + 430ms timer），唔好直接 `classList.remove + hidden=true`。
+
+### 6.9 Bezel stat button icon 定位技巧
+
+Bezel 按鈕（44px）通常係 flex 容器（icon 22px + pill 數字）。如果要把 pill 貼住某個 icon 嘅右上角（例如鑽石 icon）：
+
+```css
+.pd-stat-diamond { position: relative; }           /* button 做定位參考 */
+.pd-topdiamond {
+  position: absolute;
+  /* button 44px 寬，icon 22px 佔左半 → gem right edge = button 嘅 50% 位置 */
+  left: calc(50% + 2px);  /* 貼 gem 右邊 */
+  top: -8px;               /* 向上偏移貼 gem 頂部 */
+  pointer-events: none;    /* 唔擋 click */
+}
+```
+
+**鐵律：** 唔好用 `right: -8px` 相對於 44px button（飛去 button 最右邊），要用 `left: calc(50% + 2px)` 精確貼 icon 嘅 right edge。button 必須先設 `position: relative`。
+
+### 6.10 實戰經驗（Incident Log）
+
+| # | 問題 | 根因 | 解法 | Lesson 邊關 |
+|---|---|---|---|---|
+| 1 | 點 A → 點 B 變兩個 sheet 同時 open | Binder 冇檢查 `curSheet`，直接 `openFn()` | 加 `cur && cur.id !== sheetId` 檢查 → closeAll → wait 410ms → open | 6.3 / 6.4 |
+| 2 | Sheet「閃一下就冇咗」| `_closeAllSheets` 立即設 `hidden=true` 跳過 transform | 只 remove class，setTimeout 後先 hidden | 6.5 |
+| 3 | 連續快速點擊開唔到第二個 sheet | 捲動未完成（400ms）又被打開 | 加 `_sheetSwitching` flag | 6.4 |
+| 4 | 點白色螢幕無反應 | 只有 backdrop handler，白色區域冇 | document click handler 路徑④ | 6.8 |
+| 5 | Dockbar 切換 view 無先關 sheet | dockbar handler 冇 close 邏輯 | 同 `dockBinder` pattern，加 curSheet 檢查 | 6.4 |
+| 6 | Gacha 關閉後鑽石冇 update | `_closeSheet(gacha)` 冇 sync UI | wrapper `closeGachaSheet()` 入面 call renderHome | 6.4 |
+| 7 | 點閃電 → 點電池，新 sheet 直接彈出冇動畫 | **Timer race**：`_closeAllSheets` 410ms + binder 410ms 同時 race，JS event loop ordering 唔 guarentee → 新 sheet 可能被舊 timer 設 hidden | close timer 改 **430ms**（遲 binder 20ms）+ 加 **stillOpen guard**（timer 跑時檢查有冇新 ph-open）→ 兩條 close 路徑統一 | 6.2 / 6.5 |
+| 8 | 逐個 toggle close 後再 closeAllSheets | `_checkCloseAllSheets` 令單獨 close 完再 call closeAllSheets → **雙 timer race** | 移除 `_checkCloseAllSheets()`；每條 close 路徑有自己嘅 guard timer 就夠 | 6.6 |
+| 9 | Sheet 內展開箭咀點擊後冇執行功能 | 把子按鈕綁入 `binder()` 但唔傳 `sheetId` → binder 見到 `curSheet` 存在 → `isToggle = undefined === curSheet.id → false` → 以為係 cross-button → `_closeAllSheets()` + wait 410ms + `_sheetSwitching` debounce 鎖死 | 新增 `expandArrow()` pattern（6.4.1）— 直接 `_closeSheet` → wait 430ms → openFn，唔經 binder | 6.4.1 |
+| 10 | Calendar 展開後 simulator 睇唔到 | `.ph-sheet-full` 加 `overflow: visible` 但 Chrome 對有 `transform` 嘅元素**自動把 overflow:visible 變 hidden**（瀏覽器規格）！`.ph-sheet-down` 有 `transform: translateY()` → overflow:visible 永遠唔生效 | 用 **max-height transition** 做捲動畫（compact 58% / full 100%）+ body overflow-y:auto。唔好改 overflow！ | 6.4.1 |
+
+---
+
+## Rule 7 — 手勢互動：左右掃分頁 + 箭咀拖曳展合
+
+**適用範圍（日後同類 UI 一律照做）：**
+- 任何有「左右分頁」嘅介面（日曆轉月、carousel、tab pager、step wizard）→ 一定要有左右掃。
+- 任何有「展開／收起箭咀」嘅面板（sheet、accordion、bottom panel）→ 箭咀除咗 tap，一定要可以拖曳。
+
+### 7.1 左右掃分頁（Swipe pager）
+
+Pattern（本專案參考實作：`js/calendar.js` 的 `_bindSwipe()`）：
+
+1. CSS：容器 `touch-action: pan-y;`（保留垂直捲動，橫向自己處理）+ `will-change: transform;`。
+2. 只綁 pointer events（`pointerdown/move/up/cancel`），唔好同時寫 touch + mouse 兩套。
+3. **Axis lock**：手指移動超過 6px 後判斷 `|dx| > |dy|`：
+   - 橫向 → `setPointerCapture`、跟手 `translateX(dx)`；
+   - 縱向 → 即刻放手（`activeId = null`），交返俾外層捲動，否則會搶走 scroll。
+4. 放手判斷（`W` = 容器寬）：
+   - `|dx| > min(W * 0.18, 56)`，或快速掃（`|velocity| > 0.45px/ms` 且方向一致）→ 轉頁；
+   - 否則磁吸回彈：`transition: transform .34s cubic-bezier(.22,1,.36,1); transform: translateX(0)`。
+5. 轉頁動畫：現頁 `.2s` 滑出 → `render()` 新頁 → 新頁由反方向 `translateX(±W)` 用 `.34s cubic-bezier(.22,1,.36,1)` 滑入。
+6. `render()` 會重建 DOM ⇒ 每次 render 都用 `AbortController` abort 舊 listener 再重綁，避免 handler 疊加。
+7. **Suppress click 要跨 re-render 保存**：flag 掛喺 DOM element（例：`grid._swipeSuppress = true`，350ms 後清）。若只存喺 closure，轉頁 render 後新 listener 冇 flag，synthetic click 會誤觸被掃過嘅 item。
+8. 轉頁時要清走當前展開內容（例如已展開嘅日期詳情），避免殘留上一頁資料。
+
+```js
+// 核心骨架
+const ac = new AbortController();
+let activeId = null, startX = 0, startY = 0, dx = 0, locked = false, horizontal = false;
+let suppressClick = !!container._swipeSuppress;
+
+container.addEventListener("pointerdown", (e) => {
+  activeId = e.pointerId; startX = e.clientX; startY = e.clientY; dx = 0; locked = false;
+  container.style.transition = "none";
+}, { signal: ac.signal });
+
+container.addEventListener("pointermove", (e) => {
+  if (e.pointerId !== activeId) return;
+  const mx = e.clientX - startX, my = e.clientY - startY;
+  if (!locked) {
+    if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+    locked = true; horizontal = Math.abs(mx) > Math.abs(my);
+    if (!horizontal) { activeId = null; return; }   // 交返俾垂直捲動
+    container.setPointerCapture(e.pointerId);
+  }
+  dx = mx;
+  container.style.transform = `translateX(${dx}px)`;
+}, { signal: ac.signal, passive: false });
+
+const end = (e) => {
+  if (e.pointerId !== activeId) return;
+  activeId = null;
+  if (locked && horizontal && Math.abs(dx) > 10) {
+    suppressClick = container._swipeSuppress = true;
+    setTimeout(() => { suppressClick = container._swipeSuppress = false; }, 350);
+    // |dx| 過門檻 → changePage()，否則磁吸回 0
+  }
+};
+container.addEventListener("pointerup", end, { signal: ac.signal });
+container.addEventListener("click", (e) => {
+  if (!suppressClick) return;
+  suppressClick = false; container._swipeSuppress = false;
+  e.stopPropagation(); e.preventDefault();
+}, { signal: ac.signal, capture: true });
+```
+
+### 7.2 箭咀 / Handle 拖曳展合（Drag to expand）
+
+Pattern（本專案參考實作：`js/app.js` 的 `expandArrow()`）：
+
+1. Tap 照舊 toggle；拖曳就即時改高度跟手指，放手磁吸到最近狀態。
+2. **方向必須跟 anchor，唔係死記「向上展開」：**
+   - `top: 0` 嘅面板（`.ph-sheet-down`，由頂部向下展開）→ **向下拖 = 展開、向上拖 = 收起**（height 增加時 handle 向下行；反之會同手指相反）。
+   - `bottom: 0` 嘅面板（`.ph-sheet-up`）→ 向上拖 = 展開、向下拖 = 收起。
+3. CSS：handle `touch-action: none;`，咁先收得齊 pointer events；`pointerdown` 時 `setPointerCapture`。
+4. 拖曳中：`sheet.style.transition = "none"`、`height = clamp(startH + dy, minH, fullH)`；compact 時 `minH = startH`（唔可以再縮）；full 時預留下限（例如 90px）。
+5. 放手門檻：`max(52px, fullH * 0.14)`；夠力就切換狀態，唔夠力就磁吸返原本高度。
+6. **height auto / 100% 唔可以 transition**：
+   - 展開：量 full 高度 → 設返起點 px → `transition: height .34s cubic-bezier(.22,1,.36,1)` → animate 去 full px → 完成後改 `height: 100%`。
+   - 收起：先 render compact → 量 auto 高度 → 設返拖曳中 px → animate 去 compact px → 完成後改回 `height: ""`（auto）。
+7. 每個 height 動畫要有 **token**（例：`sheet._settleSeq`）；新動畫或重新開 sheet 時 `++`，舊動畫嘅 timer / `transitionend` 見到 token 唔同就唔好再改 style，否則會「補刀」跳位。
+8. 拖曳超過 4px 就設 `suppressClick`，並喺 350ms 後清；否則放手時嗰個 click 會再 toggle 一次。
+9. 收起／展開後記得換箭咀方向 icon（compact 向下、full 向上），同埋開 sheet 時重置 height / transition / icon。
+
+### 7.4 舊 view 搬入 full sheet（本專案 pattern）
+
+當某個 sheet 嘅「Open full …」要改成同 Streak 一樣嘅箭咀展開時，唔需要重寫舊頁面：
+
+1. 把舊 view 嘅 `childNodes` **暫時搬入** sheet body 內嘅 `.sheet-view-host`（用 `Array.from` snapshot，唔好直接 spread live `childNodes`），所有 ID 唔變，`render()` 照用。
+2. CSS：`view-mode` 隱藏 sheet body 內嘅 compact 內容；host 內嘅 `.topbar`、`.hub-bar`、`.hub-spacer`、`.dex-title` 都要隱藏（`.hub-bar` 係 `position: fixed`，唔隱藏會浮喺畫面底部）。
+3. **收起／關閉時一定要搬返原位**：`_unmountSheetView()` 把 host 內 nodes `append` 返原本嘅 view。所有 close 路徑（X、backdrop、切換 sheet）同 `_openSheet` 開頭都要叫，否則下次開 sheet 會殘留上次 full 狀態，或者舊全頁入口（`Pokedex.open()` / `Quests.open()`）會見到空 view。
+4. 搬入後只 call view 嘅 render 方法（本專案：`Pokedex.mount()` / `Quests.mount()`），**唔好** call `open()`（`open()` 會 `App.showView()` 跳走個畫面）。
+
+### 7.5 驗收清單（每次加呢類手勢都要跑）
+
+- 橫掃過門檻 → 轉頁；細掃 → 磁吸回彈、頁碼不變。
+- 垂直手勢仍然可以捲動頁面（唔會被手勢搶走）。
+- 掃完之後 tap 清單／日期仍然正常（唔會被 suppress 誤殺）。
+- 轉頁後上一頁嘅展開內容已清空。
+- 箭咀：tap 切換正常；拖過門檻雙向切換正常；拖唔夠 → 回彈原位；快速連續操作唔會跳位。
+- Headless 用 CDP `Input.dispatchTouchEvent` 驗（真 touch），唔好用 JS 合成 `PointerEvent`（`setPointerCapture` 會拋錯）。

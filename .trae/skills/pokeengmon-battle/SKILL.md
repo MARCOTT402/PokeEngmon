@@ -1,0 +1,54 @@
+---
+name: pokeengmon-battle
+description: PokeEngmon battle rules: hand-made animations, the fainted/switch guard, battle EXP distribution, items with care vs battle effects, battle test conventions, and Mega abilities. Read before changing js/battle/*, battle items, EXP or abilities, or writing battle tests.
+---
+
+# PokeEngmon 戰鬥
+
+> 幾時讀：改 `js/battle/*`、戰鬥道具、EXP、特性，或者寫戰鬥測試之前。
+> 由 `pokeengmon-preop-checklist` 按題目拆出（2026-11-06）。下面係每條 Rule 嘅**現行要點**（原文條列照抄）；事故經過、code 範例、原因分析喺 `references/incidents.md`，要查來龍去脈先開。
+> 新事故：寫入 `references/incidents.md`（`### Rule N — 標題` 加喺尾），呢度加要點；preop checklist 加 `## Rule N — 標題` 一行指向（跟 `post-fix-lesson-capture`）。
+
+## Rules
+
+### Rule 21 — Hand-made battle anims: verify in slow-mo; never emit an empty frame 0
+
+- **Screenshot verification**: battle anims run at 60fps and many are ~260ms total, so browser_use screenshots almost always land between animations and report "nothing renders" for perfectly fine anims. Use the dev harness `tools/_anim_preview.html?slug=<a,b,c>&frameMs=400` (passes `frameMs` to `MoveAnim.play`, 4–6s per move) — screenshots then reliably catch every move mid-animation.
+- **Empty frame 0**: when staggering layer entrances (e.g. trick-room tiles appearing one by one), make sure at least one layer exists in frame 0 — `MoveAnim.play` calls `drawFrame(0)` immediately, and an empty first frame shows a blank beat (and trips `tools/gen_missing_anims.js` validation). Bias stagger formulas so the first element is already visible at i=0.
+
+### Rule 22 — The "fainted → skip action" guard in `runTurnResolution` must not swallow switch actions
+
+- Only `move` actions may be skipped for a fainted side. `switch` actions MUST still execute even when the outgoing Pokémon is at 0 HP — `executeMove` already guards `actor.hp <= 0`, and `animatedSwitch` skips the recall animation when `out.hp <= 0`, so a fainted-side switch is safe.
+- Do NOT "fix" a stuck switch by moving forced switches outside the turn loop / giving them a free turn: PvP requires switch to stay a next-turn action (`prd.md` L162) because both clients replay the same seed with the same `Battle.turnOrder` (switch priority 6); changing turn semantics desyncs PvP.
+- When adding any new action kind (item, run, etc.), decide explicitly whether the fainted guard applies to it, and write it as a positive `kind ===` list rather than a blanket `continue`.
+
+### Rule 61 — 戰鬥 EXP：battle pokemon 必須帶 `uid`，分配只計「存活 + participated」；Level Sync 只降唔升
+
+- `makeBattlePokemon` 回傳必須包含 `uid: entry.uid`（同 `expLevel`）。
+- `grantKOExp` 收 EXP 名單用 `team.filter(p => p.participated && p.hp > 0)`；fainted 唔派 EXP（Gen 5 規則）。
+- Inferno Level Sync 用 `Math.min(e.level, levelSyncLevel)` **只降唔升**：本身低過 sync 值嘅寵唔應該被升。
+- 以弱勝強加成用 `expLevel`（sync 前真實等級），唔好用 `level`，否則被壓低等級嘅寵會被誤加乘。
+- 改 EXP 相關流程後，跑 `node tools/_test_battle.js`（應 97 PASS）。
+
+### Rule 63 — 一件道具有「育成效果」同「戰鬥效果」兩套：使用路徑一定要按場景分支，兩邊都要測
+
+- 道具定義要同時有育成欄位（`care`／`food`）同戰鬥欄位（`bHeal`／`bHealPct`／`bCure`），使用函數用 `S.battle`（正式版：戰鬥 state）分支，唔可以共用一條。
+- 解狀態用陣列（`cure: ["psn","tox"]`），唔好單一字串比較。
+- 戰鬥中「冇效果」（滿血又冇對應狀態）跟原作：提示 "It won't have any effect." 而且唔扣數；育成藥物照狀態 spec（滿血照扣、計過量）。
+- 蓋喺主畫面上面嘅 overlay（換招頁等）要跟住「當前選中」：`select()` 入面同步更新或者關閉 overlay。
+- 任何 Undo stack 換選中對象時要清空（或者每條記錄帶 uid）。
+- 改完背包流程，喺 `tools/prototype-bag.html` 用 console 跑一次三個 mode（Normal／In-battle bag／In-battle switch）嘅端到端檢查，`errs` 要係空。
+
+### Rule 68 — 戰鬥測試：名唔好寫死、推進文字要撳 `.battle-bottom`、回合完 = 選單打開
+
+- node 測試：用 `chainKey` 建隊一定要寫 `stage`（1 = 第一段），想要邊隻就寫邊段；名由 `team[i].name` 讀，或者 regex 唔包名。
+- 瀏覽器推進對白：`document.querySelector('.battle-bottom').click()`（programmatic click 冇座標，唔會誤撳 RUN）。
+- 判斷「輪到我」：`.battle-bottom.menu-open` + `#battle-action-menu` 顯示，唔好靠文字。
+- 1v1 對手（Youngster 等）隊伍只得 1 隻：測換 Pokémon／後備觸發要揀多隻隊伍嘅對手或者用 node 測試。
+
+### Rule 79 — 新 Mega 特性：去 Pokémon Champions 資料搵效果；`statLabel` 只收 PokeAPI stat 名
+
+- 新 Mega／新特性效果：先睇 Serebii Pokémon Champions 新特性頁；Z-A 搵唔到唔等於冇效果。
+- 寫完用 `tools/_test_mega_abilities.js` 嘅 Node 腳本列出 `MEGA_STONES` 特性有邊啲未出現喺 `state.js`／`engine.js`，逐個確認係「單打本來冇效果」（Stalwart、Healer；本 engine 冇 Protect → Piercing Drill、Unseen Fist）定真係漏咗。
+- 防守方特性要諗埋 Mold Breaker：加入 `BREAKABLE`。Levitate 類用 `LEVITATING` set／`grounded()`，唔好再寫死 `=== "levitate"`。
+- Log 能力名：engine key（atk/def/spa/spd/spe）要先轉做 PokeAPI 名再 call `statLabel`。

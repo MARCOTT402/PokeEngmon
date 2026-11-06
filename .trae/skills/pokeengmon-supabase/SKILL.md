@@ -1,0 +1,104 @@
+---
+name: pokeengmon-supabase
+description: PokeEngmon Supabase rules: upserts, uuid columns, sensitive state via RPC, plpgsql naming and terminators, column grants, sync normalisation, gacha queries, shared-pool rows, new JS modules calling RPCs, login checks and anti-cheat revokes. Read before writing SQL/migrations, RPC calls, sync code or anything that changes diamonds, items, Pokémon or battle rewards.
+---
+
+# PokeEngmon Supabase（RPC／SQL／sync／防作弊）
+
+> 幾時讀：寫 SQL／migration、加或改 RPC、改 `js/sync.js`／`js/supabase-auth.js`、任何改鑽石／道具／寶可夢／獎勵嘅 code 之前。
+> 由 `pokeengmon-preop-checklist` 按題目拆出（2026-11-06）。下面係每條 Rule 嘅**現行要點**（原文條列照抄）；事故經過、code 範例、原因分析喺 `references/incidents.md`，要查來龍去脈先開。
+> 新事故：寫入 `references/incidents.md`（`### Rule N — 標題` 加喺尾），呢度加要點；preop checklist 加 `## Rule N — 標題` 一行指向（跟 `post-fix-lesson-capture`）。
+
+## Rules
+
+### Rule 2 — Supabase upsert requires `Prefer: resolution=merge-duplicates`
+
+Any `POST` to `/rest/v1/<table>?on_conflict=<col>` MUST include the header:
+```
+Prefer: return=representation,resolution=merge-duplicates
+```
+Without `resolution=merge-duplicates`, PostgREST treats it as a plain INSERT. If a row with the same PK already exists, you get `409 Conflict: duplicate key value violates unique constraint` — the `on_conflict` param does NOTHING without this header.
+
+The `_api()` helper in `js/sync.js` auto-adds this header when the path contains `on_conflict`. If you write a new fetch call that uses `on_conflict`, route it through `_api()` or add the header manually.
+
+### Rule 3 — `uuid` columns need valid UUIDs
+
+`user_entries.id` and other `uuid`-type columns require a valid UUID v4 string (e.g. `550e8400-e29b-41d4-a716-446655440000`). Do NOT use base36 timestamps (e.g. `lq3k7a9x2b`) — Supabase returns `400 Invalid input`.
+
+`uidGen()` in `js/storage.js` uses `crypto.randomUUID()`. If you introduce a new ID generator, ensure it emits valid UUIDs. Existing entries with non-UUID IDs are auto-migrated in `loadState()`.
+
+### Rule 5 — Sensitive state changes go through RPCs, not pushState
+
+- Quiz round diamonds → `awardRoundDiamonds(score, total)` (server returns the authoritative balance — use it, don't `+=`)
+- Rare pull → `gachaPull(initExp, unlockedGen)` (server deducts diamonds atomically, rolls rarity/chain itself, returns the entry row → `adoptServerEntry()`)
+- Capture success → `obtainCapture(chainKey, stage1Dex)` (+ `settleCapture(stage1Dex)` for logging) — **always stage1**, never evolved form dex
+- EXP gains (quiz settle / Power Up batch) → `addEntryExp(entryId, delta)`
+- Candy feed → `useEntryCandy(entryId, count, expDelta)`
+- EV allocation → `allocEv(entryId, stat)`
+- Partner switch / Eevee branch evolution → `Sync.patchEntry(entryId, { active | branch })`
+- New Google account first-time import → `importState(payload)` (one-shot guard server-side)
+
+### Rule 9 — plpgsql RPC: variable names must NEVER collide with column names
+
+- Prefix declared variables with `v_` and **parameters with `p_`** (e.g. `p_chain_key`, `p_dex_id`) — v135 `obtain_capture` hit 42702 again when bare `chain_key`/`dex_id` collided with columns.
+- ALWAYS qualify columns with a table alias (`cr.rarity`).
+- **Smoke-test every new/modified RPC with a real authenticated call against live Supabase** — browser DevTools Network tab must show `200` from `/rest/v1/rpc/<name>`. Do NOT trust in-browser flow testing alone.
+- If the user reports "Supabase didn't update after action X", FIRST check the console for `[Auth RPC] ... failed: 400` before debugging sync logic.
+
+### Rule 11 — Import/Export save feature was removed (v107); import_state is one-shot and server-clamped (v106)
+
+- The manual Export/Import Save UI was **removed in v107** (`exportSave`/`handleImportFile` in `app.js`, local `importState` in `storage.js` deleted) because a tampered save file was a cheat vector. Do NOT re-add a client-side import without server-side validation.
+- The remaining upload path is the post-login first-connect migration via the `import_state` RPC, hardened in `supabase-migrate-20261024e-import-tightening.sql`: **diamonds never cross the trust boundary** (client value ignored, fixed 20💎 welcome bonus), entries ≤151, exp ≤1.25M, candies ≤99, dupes ≤100, one-shot `user_account.imported_at` lock, `user_imports` audit table.
+- Known adjacent RPC gaps deliberately deferred (fix in a future task, highest priority first): `award_round_diamonds` has no round-authenticity check, `obtain_capture` has no round proof, `add_entry_exp` has no rate limit.
+
+### Rule 14 — Sync.pull: normalize `dex_*` BEFORE collecting gens
+
+`pull()` must rewrite legacy `dex_<id>` chain keys first, then walk entries to `ensureGenDataLoaded(g)`. Skipping `dex_` entries during gen collect leaves Gen2+ moves empty (v140).
+
+### Rule 24 — plpgsql block terminators: `IF` ends with `end if;`, only the function body ends with `end;`
+
+- Before running a new migration, count `IF ... THEN` / `ELSIF` chains against `end if;`. Loops close with `end loop;`; only the outermost `begin ... end;` uses a bare `end;`.
+- Failure mode: `42601 syntax error at or near ";"` points at the stray `end;` line, NOT at the `IF` that opened the chain — so do not reread the flagged line, count terminators instead.
+- Re-running is only safe when the file is written idempotently (`create table if not exists`, `drop policy if exists` + `create policy`, `create or replace`, seed `on conflict do nothing`); keep new migrations in that shape so a failed paste can simply be re-run.
+
+### Rule 54 — 新增可寫 column 必須同一份 migration 加 column-level grant
+
+- **加任何 client 會直寫嘅新 column 時，同一份 migration 必須加：** `grant update (<col>) on public.user_account to authenticated;`（其他表同理）。
+- **驗證（唔好信 client 測試）：** 用 SQL 查 `information_schema.role_column_grants where table_name='<t>' and privilege_type='UPDATE' and grantee='authenticated'`，確認新欄喺入面。
+- **診斷呢類「改咗但重開變返」嘅投訴：** 先查 grant，再查 client catch 係咪有 silent fallback 扮成功（sync.js 嘅 legacy-schema fallback 會吞咗 permission error）。
+- 已修：migration `grant_authenticated_update_curve_mode` + 補返落 `supabase-migrate-20261030-curve-mode.sql`。
+
+### Rule 57 — 10 連抽：`chain_rarity` 有 normal、保底查詢要排除；MCP 唔可以偽造 `auth.uid()`
+
+- `chain_rarity` 有 **normal / rare / epic / legend** 四種；`GACHA_BALL` 只識 rare/epic/legend。任何「保底／派球」查詢必須 `and cr.rarity in ('rare','epic','legend')`。
+- 冒煙測試用 `pg_temp.test_x(p_uid)` 包 transaction，最後 `rollback`；**唔好用** `set local role authenticated` + `set_config('request.jwt.claims', ...)` 偽造 `auth.uid()`，MCP 執行環境唔生效（會回 `not authenticated`）。
+- 10 連經濟：9 次 `gacha_pull` + 第 10 次 `gacha_pull_lucky`，順序 await；`pendingExp` 只傳第一抽；任何一次 RPC 回 null → 唔本地假派（Rule 5 / v140），已落地嘅抽數保留。
+- 本地 fallback 的保底 `_pickLuckyChainLocal` 同樣只揀 epic/legend，並排除已持有 chain。
+
+### Rule 66 — 「共用池」數值存喺個別 row：刪 row 之前要將佢嗰份搬走
+
+- 任何「加總先係真數」嘅資源（共用 EV 池等），刪除／合併 row 之前，先將嗰 row 嘅份額轉去另一個 row（server RPC 同 client 本地兩邊都要做）。
+- 測試要對「池總數」：刪除前總數 − 退還規則 = 刪除後總數，唔好只睇單一 row。
+
+### Rule 75 — 新 JS module：`const X` 要掛 `window.X`；`SupabaseAuth._rpc` 會食 error 同拆 array；防作弊資料唔好放 `battles`
+
+- 新 module 尾加 `if (typeof window !== "undefined") window.X = X;`，或者全部用 `typeof X !== "undefined"` 判斷；唔好兩種混用。
+- 新 RPC 回 **jsonb object**（要 list 就包 `{ cards: [...] }`）；client 經 `_rpc` 判斷失敗用 `res == null`，唔好靠 catch。
+- 防竄改／結算用嘅資料放獨立表（RLS on、`revoke all from anon, authenticated`），只經 security definer RPC 寫；加欄位之前先查 `information_schema.table_privileges`，有 table-level UPDATE 就唔好放落嗰張表。
+- DDL dry-run（`execute_sql` 包 `raise exception` rollback）會俾 auto mode 擋：寫好 migration 交用戶跑，跑完先用 RPC 呼叫驗證。
+
+### Rule 76 — 「有冇登入」用 `SupabaseAuth.isLoggedIn()`，唔好用 `Sync.isEnabled()`；server 退道具時本地唔好再加
+
+- `Sync.isEnabled()` 只代表有 Supabase 設定（匿名 device 都係 true），唔等於已登入；判斷登入一律用 `SupabaseAuth.isLoggedIn()`（`bag.js`／`care.js` 嘅 `online()`）。
+- 同一件道具 server（migration／RPC）同本地都可能退：登入用戶只信 server（pull 會帶返數量），本地只清 `heldItem`，唔好 `Pet.addItem` 再加，否則 `pushItems` 會將雙倍數推上雲。
+- 收回欄位 grant 之前，先 grep client 所有 `patchEntry({ <col> })`／PATCH body，一併拎走，否則整個 PATCH 會 401／403 連其他欄位都寫唔到。
+
+### Rule 78 — 防作弊收權：新 RPC 上線要 revoke 舊版；table-level revoke 會連 column grant 一齊收
+
+- 經濟數值（道具數量、勝負、鑽石）一律經 security definer RPC 寫：掉落由 server 抽（`award_*`），使用由 server 扣（`use_*`），client 只用 RPC 回傳數量覆蓋本地（`Care.applyStones`）。
+- 出新版 RPC 取代舊版時，同一份 migration `revoke execute` 舊版；用 `has_function_privilege('authenticated', oid, 'execute')` 列晒同名函數核對。
+- 要改一個長 RPC 加 guard：用 `pg_get_functiondef` + `replace` 插入再 `execute`，replace 後檢查有冇插到（anchor 唔中就 `raise`），唔好成段重抄（容易抄錯舊版本）。
+- `revoke update on table` 會連該表所有 column-level UPDATE grant 一齊收走：revoke 之後要再 `grant update (<cols>)`。
+- 多人共用一行（battles）：用 BEFORE UPDATE trigger 按 `auth.uid()` 判斷邊一方，只准寫自己嗰欄；`current_user <> 'authenticated'` 時放行（security definer RPC 係 owner 身份）。
+- 收 grant 之前照 Rule 76：grep 晒 client 所有 PATCH body，拎走相關欄位（今次：`patchEntry` 嘅 `stone_used`、`pushItems` 嘅 `items_stones`）。
+- 驗證：未登入路徑喺 localhost 跑（Rule 62，試完還原存檔並 reload）；登入路徑要等用戶跑完 migration，再用 RPC 呼叫 + `information_schema.role_column_grants` 核對。

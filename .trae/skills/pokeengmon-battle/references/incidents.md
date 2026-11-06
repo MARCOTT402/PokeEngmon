@@ -1,0 +1,66 @@
+# PokeEngmon 戰鬥 — 事故紀錄同原文（references）
+
+> 由 `pokeengmon-preop-checklist` 原文搬入（2026-11-06），每條 Rule 原文照錄。主要點喺 `../SKILL.md`。
+
+### Rule 21 — Hand-made battle anims: verify in slow-mo; never emit an empty frame 0
+
+Two pitfalls from authoring the 27 custom `assets/battle/anim/*.json` (v1.15.17):
+
+- **Screenshot verification**: battle anims run at 60fps and many are ~260ms total, so browser_use screenshots almost always land between animations and report "nothing renders" for perfectly fine anims. Use the dev harness `tools/_anim_preview.html?slug=<a,b,c>&frameMs=400` (passes `frameMs` to `MoveAnim.play`, 4–6s per move) — screenshots then reliably catch every move mid-animation.
+- **Empty frame 0**: when staggering layer entrances (e.g. trick-room tiles appearing one by one), make sure at least one layer exists in frame 0 — `MoveAnim.play` calls `drawFrame(0)` immediately, and an empty first frame shows a blank beat (and trips `tools/gen_missing_anims.js` validation). Bias stagger formulas so the first element is already visible at i=0.
+
+### Rule 22 — The "fainted → skip action" guard in `runTurnResolution` must not swallow switch actions
+
+Bug (reported as "對戰用戶Pokémon戰死後不能換Pokémon上場"): `js/battle/battle.js` `runTurnResolution` guarded every queued action with `if (active(state, side).hp <= 0) continue;`. A forced post-faint switch is itself a queued `{kind:"switch"}` action resolved inside that loop, so the guard skipped it → `switchTo` never ran → the turn ended with the active still at 0 HP → the forced-switch branch re-opened `showSwitchMenu(true)` forever. Symptom: player picks a healthy Pokémon, taps SEND OUT, party screen reopens every time.
+
+Fix shape (keep this condition):
+
+```js
+if (act.action.kind === "move" && active(state, side).hp <= 0) continue;
+```
+
+Rules:
+- Only `move` actions may be skipped for a fainted side. `switch` actions MUST still execute even when the outgoing Pokémon is at 0 HP — `executeMove` already guards `actor.hp <= 0`, and `animatedSwitch` skips the recall animation when `out.hp <= 0`, so a fainted-side switch is safe.
+- Do NOT "fix" a stuck switch by moving forced switches outside the turn loop / giving them a free turn: PvP requires switch to stay a next-turn action (`prd.md` L162) because both clients replay the same seed with the same `Battle.turnOrder` (switch priority 6); changing turn semantics desyncs PvP.
+- When adding any new action kind (item, run, etc.), decide explicitly whether the fainted guard applies to it, and write it as a positive `kind ===` list rather than a blanket `continue`.
+
+### Rule 61 — 戰鬥 EXP：battle pokemon 必須帶 `uid`，分配只計「存活 + participated」；Level Sync 只降唔升
+
+Incident (2026-11-04)：結算畫面顯示「獲得 EXP」但實際冇加。根因係 `Battle.makeBattlePokemon` 回傳物件冇 `uid`，`grantKOExp` 記落 `pendingExp` 嘅 uid 全部係 `undefined`，`applyRewards` 用 `gainByUid[e.uid]` 查唔到 → gain 永遠 0。
+
+- `makeBattlePokemon` 回傳必須包含 `uid: entry.uid`（同 `expLevel`）。
+- `grantKOExp` 收 EXP 名單用 `team.filter(p => p.participated && p.hp > 0)`；fainted 唔派 EXP（Gen 5 規則）。
+- Inferno Level Sync 用 `Math.min(e.level, levelSyncLevel)` **只降唔升**：本身低過 sync 值嘅寵唔應該被升。
+- 以弱勝強加成用 `expLevel`（sync 前真實等級），唔好用 `level`，否則被壓低等級嘅寵會被誤加乘。
+- 改 EXP 相關流程後，跑 `node tools/_test_battle.js`（應 97 PASS）。
+
+### Rule 63 — 一件道具有「育成效果」同「戰鬥效果」兩套：使用路徑一定要按場景分支，兩邊都要測
+
+Incident (2026-11-05，背包 prototype)：樹果育成 = 加飽肚值，戰鬥 = 原作效果（Oran +10 HP、Sitrus +25%、Pecha／Cheri／Lum 解狀態）。`applyTo()` 只寫咗育成分支，戰鬥中餵樹果只加飽肚值、冇回血，用戶先發現。同輪複查再搵到：Antidote 只解 `psn` 唔解 `tox`；換招 overlay 開住時撳左欄另一隻，overlay 仲顯示舊嗰隻；EV Undo stack 冇按 Pokémon 分，換隻後 Undo 會扣錯隻。
+
+- 道具定義要同時有育成欄位（`care`／`food`）同戰鬥欄位（`bHeal`／`bHealPct`／`bCure`），使用函數用 `S.battle`（正式版：戰鬥 state）分支，唔可以共用一條。
+- 解狀態用陣列（`cure: ["psn","tox"]`），唔好單一字串比較。
+- 戰鬥中「冇效果」（滿血又冇對應狀態）跟原作：提示 "It won't have any effect." 而且唔扣數；育成藥物照狀態 spec（滿血照扣、計過量）。
+- 蓋喺主畫面上面嘅 overlay（換招頁等）要跟住「當前選中」：`select()` 入面同步更新或者關閉 overlay。
+- 任何 Undo stack 換選中對象時要清空（或者每條記錄帶 uid）。
+- 改完背包流程，喺 `tools/prototype-bag.html` 用 console 跑一次三個 mode（Normal／In-battle bag／In-battle switch）嘅端到端檢查，`errs` 要係空。
+
+### Rule 68 — 戰鬥測試：名唔好寫死、推進文字要撳 `.battle-bottom`、回合完 = 選單打開
+
+Incident (2026-11-05，背包第 4b 段)：(1) node 測試用 `chainKey: "bulbasaur", level: 30`（冇 `stage`）建隊，出嚟係 Venusaur，regex 寫死「Bulbasaur ate its…」全部 FAIL（引擎其實啱）。**更正（第 4c 段）**：物種由 `entryCurrentSpecies` 按 `stage` 決定，唔係等級；冇 `stage`（undefined）會跌落「最後一段」fallback。(2) 瀏覽器自動推進戰鬥文字撳 `#battle-text` 冇反應（`waitTap` 聽 `.battle-bottom`），又等「What will…」先出招，但回合完 `showMainMenu()` 唔會 narrate → loop 以為卡死。
+
+- node 測試：用 `chainKey` 建隊一定要寫 `stage`（1 = 第一段），想要邊隻就寫邊段；名由 `team[i].name` 讀，或者 regex 唔包名。
+- 瀏覽器推進對白：`document.querySelector('.battle-bottom').click()`（programmatic click 冇座標，唔會誤撳 RUN）。
+- 判斷「輪到我」：`.battle-bottom.menu-open` + `#battle-action-menu` 顯示，唔好靠文字。
+- 1v1 對手（Youngster 等）隊伍只得 1 隻：測換 Pokémon／後備觸發要揀多隻隊伍嘅對手或者用 node 測試。
+
+### Rule 79 — 新 Mega 特性：去 Pokémon Champions 資料搵效果；`statLabel` 只收 PokeAPI stat 名
+
+Incident (2026-11-06，Aura Guard／Eelevate)：上一輪將 Mega Lucario Z 嘅 Aura Guard 同 Mega Eelektross 嘅 Eelevate 當「效果不明」做 no-op。原因係淨係喺 Legends Z-A 搵資料，但 Z-A 本身冇特性系統；呢啲新特性係 Pokémon Champions 先定義（Serebii `pokemonchampions/newabilities.shtml`）。另外寫 Eelevate log 時用 `statLabel("spa")`，但 `statLabel` 只認 `special-attack` 呢類 PokeAPI 名，會顯示 raw key。
+
+- 新 Mega／新特性效果：先睇 Serebii Pokémon Champions 新特性頁；Z-A 搵唔到唔等於冇效果。
+- 寫完用 `tools/_test_mega_abilities.js` 嘅 Node 腳本列出 `MEGA_STONES` 特性有邊啲未出現喺 `state.js`／`engine.js`，逐個確認係「單打本來冇效果」（Stalwart、Healer；本 engine 冇 Protect → Piercing Drill、Unseen Fist）定真係漏咗。
+- 防守方特性要諗埋 Mold Breaker：加入 `BREAKABLE`。Levitate 類用 `LEVITATING` set／`grounded()`，唔好再寫死 `=== "levitate"`。
+- Log 能力名：engine key（atk/def/spa/spd/spe）要先轉做 PokeAPI 名再 call `statLabel`。
+
+Skill: Rule 79 added
