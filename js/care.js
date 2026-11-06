@@ -471,6 +471,20 @@ const Care = (() => {
     return slug;
   }
 
+  /* Revival 掉落（migration 20261106b）：登入由 award_revive RPC 抽，數量以 server 為準；
+     未登入照舊用 Pet.rollDrops 本地抽。回傳 drops 陣列（同 rollDrops 一樣格式） */
+  async function awardRevive(perfect) {
+    if (!online()) return window.Pet ? Pet.rollDrops(!!perfect) : [];
+    const res = await rpc("award_revive", { p_perfect: !!perfect });
+    if (!res || !res.ok) return [];   /* RPC 唔通就唔掉，唔好本地憑空加 */
+    if (window.Pet && res.revive != null) { Pet.items().revive = Math.max(0, Number(res.revive) || 0); saveState(); }
+    const drops = [];
+    for (let i = 0; i < (Number(res.gain) || 0); i++) {
+      drops.push({ kind: "revive", label: i === 0 ? "💊 Revival +1" : "💊 Revival +1 (bonus)" });
+    }
+    return drops;
+  }
+
   /* 用石進化：登入先經 use_stone RPC 扣石 + 記 stone_used／branch，成功先喺本地進化。
      回傳同 Pet.useItem 一樣嘅 { ok, msg, evolvedFrom, evolvedTo, branch, stone } */
   const STONE_REASON = {
@@ -566,7 +580,7 @@ const Care = (() => {
     MED_KINDS, MED_INFO, STATUS_INFO, REASON_TEXT, ITEM_SPRITE, SLEEP_MS,
     ensure, settleOne, settleAll, feedRule, useRule,
     maxHp, hpOf, isFaint, statusKey, sleepLeftMs, eventText,
-    online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle, awardStone, useStone,
+    online, applyState, settle, tickLocal, feed, use, awardMeds, settleBattle, awardStone, useStone, awardRevive,
     BERRIES, isBerry, berryCount, addBerry, ownedBerries, awardBerry, rollBerry, holdBerry, holdItem,
     isMega, megaCount, addMega, ownedMegas, awardMega, MEGA_RATE
   };

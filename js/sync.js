@@ -505,20 +505,9 @@ window.Sync = (() => {
   /* 第 14 項：Trainer Avatar（user_account.trainer_avatar，column grant + check） */
   async function pushAvatar(id) { return patchAccount({ trainer_avatar: id }); }
 
-  async function pushItems(items) {
-    const ref = _accountRef();
-    if (!ref.isAuth || !items) return false;
-    const base = {
-      items_food: Math.max(0, Number(items.food) || 0),
-      items_premium: Math.max(0, Number(items.premium) || 0),
-      items_revive: Math.max(0, Number(items.revive) || 0)
-    };
-    /* items_stones 唔再由 client 寫：migration 20261106 收回 grant，只經 award_stone／use_stone RPC */
-    try {
-      await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, base);
-      return true;
-    } catch (e) { console.warn("[Sync] pushItems failed:", e.message); return false; }
-  }
+  /* 背包數量（items_food／items_premium／items_revive／items_stones）唔再由 client 寫：
+     migration 20261106／20261106b 收回 grant，只經 award_*／use_* RPC。保留空函數俾舊 call site 唔會爆 */
+  async function pushItems() { return true; }
 
   return {
     queueUpsert,

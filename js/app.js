@@ -560,10 +560,10 @@ const App = {
   /* 寵物狀態 + 背包 → 雲端備份（只對已登入用戶；失敗靜默，下次操作再試） */
   _syncPetCloud() {
     if (!window.Sync || !Sync.isEnabled || !Sync.isEnabled()) return;
-    if (!Sync.pushPet || !Sync.pushItems) return;
+    if (!Sync.pushPet) return;
     const entry = getActiveEntry();
     if (entry && entry.pet) Sync.pushPet(entry.uid, entry.pet);
-    Sync.pushItems(Pet.items());
+    /* 背包數量唔再由 client 推（migration 20261106b：items_* 只經 RPC 寫） */
   },
 
   _pcToast(msg) {
@@ -1491,9 +1491,12 @@ const App = {
       rewards.exp = 0;
       rewards.fainted = true;
     }
-    /* 電子寵物掉落：10/10 → 復活藥 1 + 高級食物 1（另有 10% 額外復活藥）；
-       1–9 題 → 普通食物 1（另有 10% 復活藥） */
-    rewards.drops = window.Pet ? Pet.rollDrops(data.score === data.total) : [];
+    /* Revival：10/10 → 1 粒（另有 10% 多 1 粒）；1–9 題 → 10% 1 粒（登入由 server 抽，migration 20261106b） */
+    rewards.drops = [];
+    try {
+      rewards.drops = (window.Care && Care.awardRevive) ? await Care.awardRevive(data.score === data.total)
+        : (window.Pet ? Pet.rollDrops(data.score === data.total) : []);
+    } catch (e) {}
     /* 背包第 3b 段：答題掉樹果（全對 → Super、1–9 題 → Normal；登入由 server 抽） */
     if (window.Care && Care.awardBerry) {
       try {
@@ -1522,10 +1525,7 @@ const App = {
         if (med && Care.MED_INFO[med]) rewards.drops.push({ kind: med, label: `💊 ${Care.MED_INFO[med].name} +1` });
       } catch (e) {}
     }
-    /* 掉落即時備份上雲（換機／清 cache 都唔會失去道具） */
-    if (window.Pet && window.Sync && Sync.isEnabled && Sync.isEnabled() && Sync.pushItems) {
-      Sync.pushItems(Pet.items());
-    }
+    /* 掉落全部由 server RPC 派（登入），唔使再 pushItems（migration 20261106b 已收回 items_* 直寫） */
     /* Diamonds：防金手指走 RPC（登入時由 server 計算 + 權威 balance）
        RPC 失敗（null）→ fallback 本地計算，離線都唔會變 0 粒 */
     let serverRes = null;
