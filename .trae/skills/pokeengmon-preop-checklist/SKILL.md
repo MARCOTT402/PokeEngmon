@@ -15,8 +15,8 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
 | 戰鬥、EXP、道具效果、特性、戰鬥測試 | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92 |
 | 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77、93 |
-| home sheet、binder、overlay 點擊、手勢、按鈕、icon | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91 |
-| 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90 |
+| home sheet、binder、overlay 點擊、手勢、按鈕、icon、場景動畫倍速 | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91、95 |
+| 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具、全鍵盤操作 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90、97 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
 - 新 Rule：編號接最大號；內容入題目 skill（要點入 `SKILL.md`、經過入 `references/incidents.md`），呢度只加標題＋指向，並更新上表（`post-fix-lesson-capture`）。
@@ -399,9 +399,17 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
+## Rule 95 — 全域動畫倍速（GSAP `globalTimeline.timeScale`／`--anim-spd`）：場景所有結束同中斷路徑都要還原；用戶互動唔跟倍速
+
+→ `.trae/skills/pokeengmon-ui-sheets/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-ui-sheets/references/incidents.md`。
+
 ## Rule 96 — 網絡請求一律經 `Net.request`／`SupabaseAuth.authedFetch`：有 timeout、token 自動續期（single-flight）、401 refresh 一次再試；POST／RPC 唔自動重試
 
 → `.trae/skills/pokeengmon-supabase/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-supabase/references/incidents.md`。
+
+## Rule 97 — 全鍵盤操作（`js/keys.js`）：方向鍵空間導航要認啱當前情境（overlay > sheet > view）；舊 Enter／Esc 預設要讓位畀焦點掣；開關 overlay 要放／還焦點
+
+→ `.trae/skills/pokeengmon-responsive/SKILL.md` §10（要點）；事故原文 `.trae/skills/pokeengmon-responsive/references/incidents.md`。
 
 ## Rule 98 — 本機資料唔准靜靜冇咗：sync queue 要持久化＋backoff＋毒批丟棄＋keepalive；存檔讀唔到要先備份；寫唔落要話用戶知；離線用 pill 提示
 

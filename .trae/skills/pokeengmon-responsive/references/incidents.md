@@ -453,3 +453,21 @@ Incident (2026-11-06，用戶截圖)：電腦（1440×900、1920×1080）同平�
 - 驗收：`tools/responsive/test-battle-fit.mjs`；`test-rotate.mjs` 18/18。
 
 Skill: Rule 90 added
+
+### Rule 97 — 全鍵盤操作：方向鍵空間導航要認啱「當前情境」；舊 Enter 預設要讓位畀焦點掣
+
+- 背景（2026-11-06）：用戶要求電腦端淨用鍵盤控制所有掣，並且唔記得快捷鍵都可以用 ↑↓←→＋Enter＋Esc。
+- 撞板（headless 實測先發現）：
+  1. 首次入 app 有 `#entry-gate` 全屏層唔喺 overlay 清單 → 主頁所有掣被判「蓋住」，0 個候選。→ 加通用偵測：body／#app 直屬、fixed／absolute、蓋 ≥40% 視窗、入面有掣。
+  2. wide 開咗 Settings sheet，入面嘅掣全部唔算 → sheet 開咗仍然 `aria-hidden="true"`（app 從來冇切換）。→ keys.js 對 `.ph-sheet` 忽略 aria-hidden；app 本身嘅 aria-hidden 係另一個讀屏 bug。
+  3. ↓ 由左欄 dock 跳去右欄 radio、由 sheet 清單跳去下巴 Home → 分數只用中心距離＋弱橫向權重。→ 60° 錐形＋邊距計分＋「先留喺目前捲動區」。
+  4. Esc 關 sheet 之後焦點留喺正在收埋嘅 sheet → 關咗冇人接。→ 開嗰陣記低開佢嗰粒掣，返到嗰個情境就還焦點；同一情境焦點冇咗就放主要掣。
+  5. Leaderboard 嘅登入 popup 喺 fetch 後（~0.8s）先插入，再加上 opacity 淡入唔觸發 MutationObserver → 要 120ms＋450ms 兩次檢查。Esc 關唔到因為掣叫「Maybe later」。
+  6. 答題設定彈窗：舊 document handler「Enter = Quit this set」無視焦點 → 方向鍵揀 Keep going 再 Enter 都會 Quit。→ 焦點喺 modal 掣上就唔行預設。
+- pane-locks W2／W4、sheets P9b 喺封咗 keys.js／anim-speed.js 嘅 baseline 一樣 fail，唔係呢次引入。
+
+#### Rule 97 續 — 第二期捷徑層（2026-11-06）
+
+- 背包 `B` 開到但 Esc 關唔到：Esc 揀中 banner 嘅「Cancel」——banner `max-height:0; overflow:hidden` 摺埋，但掣自己 rect 正常（71×25）。→ isVisible 加「0 高／闊嘅 overflow 祖先」同祖先 opacity（`checkVisibility`）。
+- 扭蛋結果卡出現嗰刻，Scene B 仲喺度淡出，`Pull again` 被判「蓋住」→ 嗰次揀唔到；之後情境冇變就冇人再理。→ 同一情境但焦點喺外面都拉入嚟；`transitionend`／`animationend` 再檢查。
+- 測試陷阱：capture 結果用 `caught` 判斷 → 走甩咗就 false，誤以為 Enter 無效；要睇 `done`／`_finished`。

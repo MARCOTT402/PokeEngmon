@@ -216,3 +216,9 @@ Incident (2026-11-06，Settings sheet → Trainer → Name)：Name 行一直顯�
 - 搬去新位置嘅元素要改用反映新位置嘅 id（例如 `setting-name`），唔好沿用舊名（`topbar-name`），否則 Grep 會以為仲有人用緊。
 - HTML 預設佔位字（`—`、`0`）要當成「未 render」嘅訊號：驗收時打開該 sheet，確認顯示嘅係真資料，唔係佔位字。
 - 顯示用戶輸入（名、email）嘅值欄位要有 `min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap`，用最長允許長度（名字 24 字）測一次。
+
+### Rule 95 — 全域動畫倍速：場景所有結束同中斷路徑都要還原；用戶互動唔跟倍速
+
+- 背景（2026-11-06）：用戶要求捕捉加 2×／3× 倍速，之後擴展到扭蛋同進化動畫。捕捉動畫係 GSAP timeline + 十幾個 `setTimeout` + Three.js `dt` + CSS keyframes 混用，淨改一種會令音效同畫面對唔上。
+- 做法：共用 `AnimSpeed`（`begin` 設 `gsap.globalTimeline.timeScale(spd)` 同 `--anim-spd`；`end` 還原），各場景計時 wrapper 除以倍速，CSS 一次性動畫用 `calc(… / var(--anim-spd, 1))`。
+- 風險：`globalTimeline` 係全 app 共用，`end` 漏一條路徑（例如扭蛋中途離開、進化等用戶撳外面、程式錯誤經 Guard 返主頁）就會令之後所有 GSAP 動畫變快，好難追。所以要列晒出口逐個加 `end`，並喺驗收量「完結後 timeScale === 1」。

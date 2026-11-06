@@ -40,6 +40,8 @@ const ASSETS = [
   "./js/dex-sort.js",
   "./js/genpack.js",
   "./js/storage.js",
+  "./js/anim-speed.js",
+  "./js/keys.js",
   "./js/pet.js",
   "./js/care.js",
   "./js/bag.js",

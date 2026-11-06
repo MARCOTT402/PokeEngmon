@@ -65,6 +65,7 @@ const Gacha = {
     const flow = this._flow;
     this._flowId++;
     this._clearTimers();
+    this._spdEnd();
     this._flow = null;
     this.busy = false;
 
@@ -98,9 +99,20 @@ const Gacha = {
 
   /* 所有流程 timeout 都經呢個 wrapper 記錄，中斷時一次過清走 */
   _setT(fn, ms) {
-    const id = setTimeout(fn, ms);
+    /* 動畫倍速：放手拉 arm 後（_spdBegin）先生效；拉 arm／充電嘅計時 _spd = 1 */
+    const id = setTimeout(fn, ms / (this._spd || 1));
     this._timers.push(id);
     return id;
+  },
+
+  /* 動畫倍速（Settings → Animation speed）：放手後開始，結果卡／中斷／執場還原 */
+  _spdBegin() {
+    this._spd = window.AnimSpeed ? AnimSpeed.begin("gacha") : 1;
+  },
+  _spdEnd() {
+    if (window.AnimSpeed) AnimSpeed.end("gacha");
+    this._spd = 1;
+    if (this._sceneB && window.AnimSpeed) AnimSpeed.badge(this._sceneB, 1);
   },
 
   _clearTimers() {
@@ -689,6 +701,7 @@ const Gacha = {
       this._setPull(0);
     }
 
+    this._spdBegin();
     this._setT(() => {
       if (fid !== this._flowId) return;
       machine.classList.add("belly-open");
@@ -775,6 +788,7 @@ const Gacha = {
     this.phase = "sceneB";
     const fid = flow.id;
     const sc = this._ensureSceneB();
+    if (window.AnimSpeed) AnimSpeed.badge(sc, this._spd || 1);
     const wrap = sc.querySelector(".gsb-ball-wrap");
     const particles = sc.querySelector(".gsb-particles");
     const prompt = sc.querySelector(".gsb-prompt");
@@ -855,7 +869,7 @@ const Gacha = {
           const r = document.createElement("i");
           r.className = "gsb-ring";
           r.style.borderColor = rarity === "legend" ? "#ffe28a" : "#d8a4ff";
-          r.style.animationDelay = (j * .1) + "s";
+          r.style.animationDelay = (j * .1 / (this._spd || 1)) + "s";
           rings.appendChild(r);
           this._setT(() => r.remove(), 1200);
         }
@@ -880,6 +894,7 @@ const Gacha = {
   _revealMultiResults(flow, results) {
     this.phase = "inspect";
     this._flow = null;
+    this._spdEnd();
     const sc = this._sceneB;
     if (sc) sc.classList.remove("show");
     const meta = flow.settlement || {};
@@ -1302,6 +1317,7 @@ const Gacha = {
     }
 
     /* 艙門打開 */
+    this._spdBegin();
     this._setT(() => {
       if (fid !== this._flowId) return;
       machine.classList.add("belly-open");
@@ -1398,6 +1414,7 @@ const Gacha = {
     const rarity = this._visualRarity(s);
     const cfg = GACHA_BALL[rarity];
     const sc = this._ensureSceneB();
+    if (window.AnimSpeed) AnimSpeed.badge(sc, this._spd || 1);
     const wrap = sc.querySelector(".gsb-ball-wrap");
     const particles = sc.querySelector(".gsb-particles");
     const prompt = sc.querySelector(".gsb-prompt");
@@ -1461,7 +1478,7 @@ const Gacha = {
         const r = document.createElement("i");
         r.className = "gsb-ring";
         r.style.borderColor = color;
-        r.style.animationDelay = (i * 0.12) + "s";
+        r.style.animationDelay = (i * 0.12 / (this._spd || 1)) + "s";
         rings.appendChild(r);
         this._setT(() => r.remove(), 1100 + i * 120);
       }
@@ -1596,6 +1613,7 @@ const Gacha = {
   _revealInspect(flow, s) {
     this.phase = "inspect";
     this._flow = null;
+    this._spdEnd();
     const rarity = this._visualRarity(s);
     const cfg = GACHA_BALL[rarity];
     const entry = s.entry;
@@ -1668,6 +1686,7 @@ const Gacha = {
 
   /* 執場：overlay / 艙門 / 拖拽旗標全部還原（Prototype 教訓：旗標唔重置會卡死再抽） */
   _cleanupScene() {
+    this._spdEnd();
     const g = this._gsap();
     const sc = this._sceneB;
     if (sc) {

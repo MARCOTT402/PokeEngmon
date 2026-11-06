@@ -392,7 +392,7 @@ class CaptureAudio {
     setTimeout(() => {
       this._noiseSweep(1400, 300, 0.25, 0.08);
       this._tone(520, { type: "triangle", dur: 0.15, gain: 0.1 });
-    }, 250);
+    }, window.AnimSpeed ? AnimSpeed.ms(250) : 250);
   }
 
   /* ---------- BGM: Battle! (Wild Pokémon) — Gen 1 original ----------
@@ -700,7 +700,14 @@ class CaptureAudio {
         src.onended = () => {
           try { src.disconnect(); g.disconnect(); } catch (e) {}
         };
-        if (maxSeconds > 0) timer = setTimeout(stop, maxSeconds * 1000);
+        /* 自動 cut 前 0.3s 淡出，避免「咔」一聲（倍速下 cut 得早更明顯） */
+        if (maxSeconds > 0) {
+          const FADE = 0.3;
+          timer = setTimeout(() => {
+            try { g.gain.setTargetAtTime(0, this.ctx.currentTime, FADE / 4); } catch (e) {}
+            timer = setTimeout(stop, FADE * 1000);
+          }, Math.max(0, maxSeconds - FADE) * 1000);
+        }
       } catch (e) {}
     };
     const cached = this._oneShotBufs[url];
@@ -931,6 +938,23 @@ class PokemonCaptureScene {
     };
     this.view.addEventListener("pointerdown", this._onTap);
     this.continueBtn.addEventListener("click", () => this._finish());
+
+    /* 鍵盤（js/keys.js 第二期）：Space／Enter = 撳波（三下掟）；結果卡出咗 = Continue。
+       長按唔計（e.repeat），免得一下連 tap 三次 */
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== " " && e.key !== "Enter") return;
+      if (!this.view.classList.contains("active") || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (document.querySelector("#modal-root .modal-backdrop")) return;
+      if (this.state === STATE.IDLE) {
+        e.preventDefault();
+        if (!e.repeat) this.tap();
+        return;
+      }
+      if (this.resultEl.classList.contains("show") && !this._finished) {
+        e.preventDefault();
+        if (!e.repeat) this._finish();
+      }
+    });
   }
 
   isSupported() {
@@ -964,7 +988,7 @@ class PokemonCaptureScene {
     return new Promise(resolve => {
       this.warningEl.classList.remove("show");
       this.warningEl.classList.add("hide");
-      setTimeout(() => {
+      this._after(() => {
         this.warningEl.classList.remove("hide");
         resolve();
       }, 560);
@@ -973,7 +997,7 @@ class PokemonCaptureScene {
   _startWarp() {
     if (!this.warpEl) return;
     this.warpEl.classList.add("go");
-    setTimeout(() => {
+    this._after(() => {
       this.warpEl.classList.remove("go");
     }, 950);
   }
@@ -988,6 +1012,9 @@ class PokemonCaptureScene {
     this._finished = false;
     this._resultInfo = null;
     this._resetScene();
+    /* 動畫倍速（Settings → Animation speed）：完結／中斷由 _finish／_resetScene 還原 */
+    this._spd = window.AnimSpeed ? AnimSpeed.begin("capture") : 1;
+    this._syncSpdBadge();
 
     /* Show WARNING overlay before any 3D work — keeps it crisp on mobile */
     try { this._showWarning(dexId, name); } catch (e) { /* ignore */ }
@@ -1010,7 +1037,7 @@ class PokemonCaptureScene {
     this._donePromise = new Promise(resolve => { this._resolve = resolve; });
 
     /* Schedule warning → warp → encounter */
-    setTimeout(async () => {
+    this._after(async () => {
       try {
         await this._hideWarning();
         this._startWarp();
@@ -1041,7 +1068,9 @@ class PokemonCaptureScene {
       .to(this.ball.rotation, { y: Math.PI * 2, duration: 1.3, ease: "power1.inOut" }, 2.4)
       .call(() => {
         this._setState(STATE.IDLE);
-        this._prompt("Tap the Poké Ball 3× to charge!");
+        /* 有滑鼠嘅裝置順便提 Space（手機文案唔變） */
+        const fine = window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+        this._prompt(fine ? "Tap the Poké Ball 3× (or press Space) to charge!" : "Tap the Poké Ball 3× to charge!");
         this._showTaps(true);
         this.audio.ready();
       }, null, 3.6);
@@ -1051,6 +1080,9 @@ class PokemonCaptureScene {
 
   /* ---------- reset ---------- */
   _resetScene() {
+    if (window.AnimSpeed) AnimSpeed.end("capture");
+    this._spd = 1;
+    this._syncSpdBadge();
     if (this.tl) { this.tl.kill(); this.tl = null; }
     if (this.shakeTl) { this.shakeTl.kill(); this.shakeTl = null; }
     if (this.finishTimer) { clearTimeout(this.finishTimer); this.finishTimer = null; }
@@ -1655,7 +1687,7 @@ class PokemonCaptureScene {
       this.motes.geometry.attributes.position.needsUpdate = true;
     }
 
-    this._updateBursts(dt);
+    this._updateBursts(dt * (this._spd || 1));
     this._updateTrail();
     this._syncMon();
   }
@@ -1786,6 +1818,13 @@ class PokemonCaptureScene {
   }
 
   /* ---------- UI helpers ---------- */
+  /* 場景計時一律經呢度：按 play() 時嘅倍速縮短 */
+  _after(fn, ms) {
+    return setTimeout(fn, ms / (this._spd || 1));
+  }
+  _syncSpdBadge() {
+    if (window.AnimSpeed) AnimSpeed.badge(this.view, this._spd || 1);
+  }
   _prompt(text) {
     this.promptEl.textContent = text || "";
     this.promptEl.classList.toggle("show", !!text);
@@ -1844,13 +1883,13 @@ class PokemonCaptureScene {
     gsap.fromTo(this.ball.scale,
       { x: 1, y: 1, z: 1 },
       { x: 1.2, y: 0.86, z: 1.2, duration: 0.11, yoyo: true, repeat: 1, ease: "power2.out", overwrite: true }
-    );
+    ).timeScale(1 / (this._spd || 1));  /* 用戶互動手感唔跟倍速 */
     gsap.to(this.ball.rotation, {
       y: this.ball.rotation.y + 0.7 + this.taps * 0.25,
       duration: 0.38,
       ease: "power2.out",
       overwrite: true
-    });
+    }).timeScale(1 / (this._spd || 1));
     this._glow(0.18 + this.taps * 0.16);
 
     if (this.taps === 1) this._prompt("Nice! Tap again…");
@@ -1869,10 +1908,10 @@ class PokemonCaptureScene {
     this._glow(1);
     this._flash(0.55);
     /* From the throw, BGM fades LINEARLY to silence — reaching 0 exactly at the 3rd shake (~6.2s) */
-    this.duckBGM(0, 6200);
+    this.duckBGM(0, 6200 / (this._spd || 1));
 
     /* Short hit-stop before the throw */
-    setTimeout(() => {
+    this._after(() => {
       if (this.state !== STATE.CHARGING) return;
       this._setState(STATE.THROWING);
       this.audio.throwBall();
@@ -1961,8 +2000,8 @@ class PokemonCaptureScene {
     );
 
     /* red silhouette + absorption beam */
-    setTimeout(() => this._absorbPokemon(), 180);
-    setTimeout(() => this._startShakes(), 1250);
+    this._after(() => this._absorbPokemon(), 180);
+    this._after(() => this._startShakes(), 1250);
   }
 
   _absorbPokemon() {
@@ -2062,7 +2101,7 @@ class PokemonCaptureScene {
     this._haptic([30, 55, 30, 55, 45]);
     this._flash(0.9);
     this._glow(1.6);
-    setTimeout(() => {
+    this._after(() => {
       this._glow(0);
       this.buttonMat.emissiveIntensity = 0;
       this.ringGlow.material.opacity = 0;
@@ -2096,14 +2135,14 @@ class PokemonCaptureScene {
     this._prompt("Gotcha!");
 
     if (!isDupe) {
-      setTimeout(() => {
+      this._after(() => {
         try {
           if (typeof Pokedex !== "undefined") Pokedex.playCry(this.dexId);
         } catch (e) { /* ignore */ }
       }, 420);
     }
 
-    this.finishTimer = setTimeout(() => this._finish(), 3000);
+    this.finishTimer = this._after(() => this._finish(), 3000);
   }
 
   _escape() {
@@ -2124,7 +2163,7 @@ class PokemonCaptureScene {
       .call(() => { this.ball.visible = false; }, null, 0.54);
 
     this._escapeTimers = [];
-    const _setET = (fn, ms) => this._escapeTimers.push(setTimeout(fn, ms));
+    const _setET = (fn, ms) => this._escapeTimers.push(this._after(fn, ms));
 
     /* Particles from broken ball */
     _setET(() => {
@@ -2204,7 +2243,7 @@ class PokemonCaptureScene {
       this.resultSub.textContent = "It broke free! Try again next time.";
       this.resultEl.classList.add("show", "is-escape");
       this._prompt("Better luck next time!");
-      this.finishTimer = setTimeout(() => this._finish(), 3500);
+      this.finishTimer = this._after(() => this._finish(), 3500);
     }, 2300);
   }
 
@@ -2212,6 +2251,7 @@ class PokemonCaptureScene {
     if (this._finished) return;
     this._finished = true;
     if (this.finishTimer) { clearTimeout(this.finishTimer); this.finishTimer = null; }
+    if (window.AnimSpeed) AnimSpeed.end("capture");
     this._setState(STATE.DONE);
     this._stopLoop();
     const cap = this._captureResult || { caught: true, dexId: this.dexId, name: this.monName };

@@ -17,19 +17,21 @@ const EvolveScene = (() => {
   const FLICKER_STEP = 400;      // 交替間隔
   const CRY_GAP_MS = 1200;      // 進化後叫聲 → fanfare
   const FANFARE_MS = 5000;      // fanfare 播放時間
+  const FLICKER_MIN = 150;      // 倍速下閃動間隔下限（照顧光敏感：閃少啲次，唔係閃密啲）
 
   let _timers = [];
   let _intervals = [];
   let _handles = [];
   let _onDone = null;
   let _closing = false;
+  let _spd = 1;                 // 動畫倍速（Settings → Animation speed），open() 時鎖定
 
   function _audio() {
     return window.CaptureScene && CaptureScene.audio;
   }
 
   function _later(ms, fn) {
-    _timers.push(setTimeout(fn, ms));
+    _timers.push(setTimeout(fn, ms / _spd));
   }
 
   function _clearAll() {
@@ -56,6 +58,8 @@ const EvolveScene = (() => {
   }
 
   function _armClose() {
+    /* 動畫部分完咗就還原倍速（等用戶點外面期間唔好令其他 GSAP／CSS 動畫加速） */
+    if (window.AnimSpeed) AnimSpeed.end("evolve");
     const root = document.getElementById("modal-root");
     if (!root) return;
     const backdrop = root.querySelector(".modal-backdrop");
@@ -75,6 +79,7 @@ const EvolveScene = (() => {
     _stopAudio();
     _closing = false;
     _onDone = opts.onDone || null;
+    _spd = window.AnimSpeed ? AnimSpeed.begin("evolve") : 1;
 
     const audio = _audio();
     if (audio) audio.stopTownBGM();
@@ -94,6 +99,7 @@ const EvolveScene = (() => {
         <div class="evo-name" id="evo-name"></div>
         <div class="evo-hint" id="evo-hint">Evolution in progress…</div>
       </div>`, true);
+    if (window.AnimSpeed) AnimSpeed.badge(document.querySelector("#modal-root .evolve-scene"), _spd);
 
     /* 1) 進化前叫聲 */
     if (window.Pokedex && Pokedex.playCry) Pokedex.playCry(fromDex);
@@ -101,7 +107,7 @@ const EvolveScene = (() => {
     /* 2) 進化音樂 + 交替閃動 */
     _later(LEAD_MS, () => {
       const a = _audio();
-      if (a && a.playMusicOnce) _handles.push(a.playMusicOnce(MUSIC, 0.7, MUSIC_CUT_MS / 1000));
+      if (a && a.playMusicOnce) _handles.push(a.playMusicOnce(MUSIC, 0.7, MUSIC_CUT_MS / _spd / 1000));
 
       const base = document.querySelector("#modal-root .evo-gif.base");
       const next = document.querySelector("#modal-root .evo-gif.next");
@@ -110,7 +116,7 @@ const EvolveScene = (() => {
         showNext = !showNext;
         if (base) base.classList.toggle("show", !showNext);
         if (next) next.classList.toggle("show", showNext);
-      }, FLICKER_STEP));
+      }, Math.max(FLICKER_MIN, FLICKER_STEP / _spd)));
 
       _later(FLICKER_MS, () => {
         _intervals.forEach(clearInterval);
@@ -127,7 +133,7 @@ const EvolveScene = (() => {
         /* 4) Fanfare 5 秒 → 完結，等用戶點擊外面 */
         _later(CRY_GAP_MS, () => {
           const a2 = _audio();
-          if (a2 && a2.playMusicOnce) _handles.push(a2.playMusicOnce(FANFARE, 0.8, FANFARE_MS / 1000));
+          if (a2 && a2.playMusicOnce) _handles.push(a2.playMusicOnce(FANFARE, 0.8, FANFARE_MS / _spd / 1000));
           _later(FANFARE_MS, _armClose);
         });
       });
@@ -139,6 +145,8 @@ const EvolveScene = (() => {
     _closing = true;
     _clearAll();
     _stopAudio();
+    if (window.AnimSpeed) AnimSpeed.end("evolve");
+    _spd = 1;
     const audio = _audio();
     if (audio) audio.startTownBGM();
     App.closeModal();

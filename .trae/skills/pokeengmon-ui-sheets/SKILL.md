@@ -178,3 +178,12 @@ if (hasFixedOverlay || curSheet) {
 - 搬去新位置嘅元素要改用反映新位置嘅 id（例如 `setting-name`），唔好沿用舊名（`topbar-name`），否則 Grep 會以為仲有人用緊。
 - HTML 預設佔位字（`—`、`0`）要當成「未 render」嘅訊號：驗收時打開該 sheet，確認顯示嘅係真資料，唔係佔位字。
 - 顯示用戶輸入（名、email）嘅值欄位要有 `min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap`，用最長允許長度（名字 24 字）測一次。
+
+### Rule 95 — 全域動畫倍速（GSAP `globalTimeline.timeScale`／`--anim-spd`）：場景所有結束同中斷路徑都要還原；用戶互動唔跟倍速
+
+- 捕捉／扭蛋／進化嘅倍速一律經 `js/anim-speed.js`：`AnimSpeed.begin(tag)` 開始、`AnimSpeed.end(tag)` 還原。`begin` 改嘅係**全 app** 嘅 GSAP 時間同 `<html>` 上嘅 `--anim-spd`，漏咗 `end` 會令之後所有 GSAP／CSS 動畫都快咗。
+- `end` 要放喺**每一條**出口：正常完結（`_finish`、結果卡出現）、`abort()`、執場（`_cleanupScene`、`_resetScene`）、modal 關閉，同埋「動畫做完但仲等用戶撳」嗰刻（例如進化 `_armClose`）。Guard 恢復卡「Back to Home」由 `AnimSpeed` 自己 `endAll()` 兜底。
+- 場景入面嘅 `setTimeout` 唔好直接寫，要經場景自己嘅 wrapper（capture `_after`、gacha `_setT`、evolve `_later`），wrapper 除以 `begin` 嗰陣鎖定嘅倍速；CSS 一次性動畫用 `calc(原值 / var(--anim-spd, 1))`；JS inline `animationDelay` 都要除。
+- 用戶互動手感唔跟倍速：拉 arm、充電喺 `begin` 之前；捕捉 tap 嘅 tween 用 `.timeScale(1 / spd)` 抵銷。
+- 閃動類效果加速時設下限（進化閃動 ≥150ms），閃少啲次，唔好閃密啲。
+- 驗收：每個場景 1×／3× 量時間；完結同中途關閉之後 `gsap.globalTimeline.timeScale() === 1`、`--anim-spd` 係 1；連住「捕捉 → 扭蛋」確認冇殘留加速。

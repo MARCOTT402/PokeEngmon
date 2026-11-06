@@ -1525,6 +1525,15 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 .gsb-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
 .gsb-flash.on { animation: flash-pop .5s ease-out; }
 .gsb-flash.on.big { animation: flash-pop .8s ease-out; }
+/* 動畫倍速（扭蛋放手後 js/anim-speed.js 設 --anim-spd；結果卡出現前還原） */
+.eject-ball { animation-duration: calc(1.7s / var(--anim-spd, 1)); }
+.pokeball.wob { animation-duration: calc(.55s / var(--anim-spd, 1)); }
+.gsb-ball-wrap.roll-in { animation-duration: calc(.72s / var(--anim-spd, 1)); }
+.gsb-ring { animation-duration: calc(.8s / var(--anim-spd, 1)); }
+.gsb-star { animation-duration: calc(.9s / var(--anim-spd, 1)); }
+.gsb-beam.rise { animation-duration: calc(.55s / var(--anim-spd, 1)); }
+.gsb-flash.on { animation-duration: calc(.5s / var(--anim-spd, 1)); }
+.gsb-flash.on.big { animation-duration: calc(.8s / var(--anim-spd, 1)); }
 @keyframes flash-pop { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 .gsb-prompt {
   position: absolute; bottom: calc(9dvh + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
@@ -2262,6 +2271,13 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 }
 .cwarp-l2 { animation-duration: 1.4s; animation-direction: reverse; opacity: .85; }
 .cwarp-l3 { animation-duration: 1.6s; opacity: .5; }
+/* 動畫倍速（js/anim-speed.js 喺場景期間設 <html> --anim-spd） */
+.capture-warning.show { animation-duration: calc(.35s / var(--anim-spd, 1)); }
+.capture-warning.hide { animation-duration: calc(.55s / var(--anim-spd, 1)); }
+.capture-warp.go { animation-duration: calc(.9s / var(--anim-spd, 1)); }
+.capture-warp.go .cwarp-layer { animation-duration: calc(1.2s / var(--anim-spd, 1)); }
+.capture-warp.go .cwarp-l2 { animation-duration: calc(1.4s / var(--anim-spd, 1)); }
+.capture-warp.go .cwarp-l3 { animation-duration: calc(1.6s / var(--anim-spd, 1)); }
 @keyframes cwarp-spin {
   from { transform: rotate(0deg) scale(1.8); }
   to   { transform: rotate(-720deg) scale(.1); }
@@ -2354,7 +2370,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   position: absolute; inset: 0; z-index: 5; display: none; place-items: center;
   padding: 24px; background: radial-gradient(ellipse at 50% 45%, rgba(255, 220, 130, .2), rgba(3, 10, 7, .8) 68%);
 }
-.capture-result.show { display: grid; animation: capture-in .35s ease both; }
+.capture-result.show { display: grid; animation: capture-in calc(.35s / var(--anim-spd, 1)) ease both; }
 
 .capture-result-card {
   position: relative; display: flex; flex-direction: column; align-items: center;
@@ -3058,7 +3074,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .mv-wrap.swap-target{cursor:pointer;outline-color:#4ade80;box-shadow:0 0 10px rgba(74,222,128,.45)}
 
 /* 進化場景 */
-.evolve-scene{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:6px 4px}
+.evolve-scene{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:6px 4px}
+.evolve-scene > .anim-spd-badge{top:0;right:0}
 .evo-stage{position:relative;width:200px;height:200px}
 .evo-gif{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;
   transition:opacity .1s;image-rendering:pixelated;pointer-events:none}
@@ -4875,6 +4892,29 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   width: 100%; height: 26px; accent-color: #e03a32; cursor: pointer;
 }
 .ph-sitem-t b { font-variant-numeric: tabular-nums; color: #e03a32; }
+/* Settings → Animation speed（原生 radio：←→ 鍵盤切換、讀屏都照用） */
+.ph-speed-seg {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  padding: 4px; border-radius: 12px; background: #f1ede0;
+}
+.ph-speed-seg label { position: relative; display: block; cursor: pointer; }
+.ph-speed-seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.ph-speed-seg span {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 40px; border-radius: 9px;
+  font-size: 15px; font-weight: 900; color: #6b675d; font-variant-numeric: tabular-nums;
+  transition: background-color .15s, color .15s, box-shadow .15s;
+}
+.ph-speed-seg input:checked + span { background: #fff; color: #e03a32; box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+.ph-speed-seg input:focus-visible + span { outline: 3px solid #1b1b22; box-shadow: 0 0 0 6px #ffd93b; }
+.ph-speed-note { font-size: 12px; font-weight: 700; color: #6b675d; }
+/* 倍速 ≠ 1 時場景右上角細字（capture／gacha／evolve 共用） */
+.anim-spd-badge {
+  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 30;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(0,0,0,.45); color: #fff;
+  font: 900 12px/1.4 inherit; letter-spacing: .5px; pointer-events: none;
+}
 .ph-sitem-sites {
   padding: 10px 12px; border-radius: 10px;
   background: #f3efe2;
@@ -5084,6 +5124,36 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   outline: 3px solid #fff8e1; outline-offset: 2px; box-shadow: 0 0 0 6px #1b1b22; border-radius: 12px;
 }
 .pd-chin .pd-home-ball:focus-visible { border-radius: 50%; }
+/* 全鍵盤操作（js/keys.js）：方向鍵揀中嘅 div／label，同 body 級 overlay 入面嘅掣，都要見到焦點框 */
+[data-kbd-auto]:focus-visible,
+:where(#gacha-multi, #gacha-inspect, .team-select-modal, .tier-select-modal, .pvp-match-panel, .lb-login-modal, #guard-recover, #fatal-screen, .bag-root) :where(button, [role="button"], label, [tabindex]):focus-visible {
+  outline: 3px solid #1b1b22; outline-offset: 2px;
+  box-shadow: 0 0 0 6px #ffd93b;
+}
+[data-kbd-auto]:focus { outline-offset: 2px; }
+/* 「Keyboard shortcuts」只喺有滑鼠嘅裝置顯示（手機截圖零變化，Rule 88） */
+.kbd-only { display: none !important; }
+@media (hover: hover) and (pointer: fine) { .kbd-only { display: flex !important; } }
+/* 捷徑 badge：鍵盤模式＋滑鼠裝置先出（js/keys.js renderBadges；撳滑鼠／觸控即收） */
+.kbd-badges { position: fixed; inset: 0; pointer-events: none; z-index: 99990; }
+.kbd-badge {
+  position: absolute; min-width: 18px; height: 18px; padding: 0 4px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; background: #1b1b22; color: #ffd93b;
+  border: 1.5px solid #ffd93b; box-shadow: 0 1px 3px rgba(0,0,0,.35);
+  font: 900 11px/1 system-ui, sans-serif; letter-spacing: 0;
+}
+.kbd-help { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.kbd-help-t { margin: 0; font-size: 18px; font-weight: 900; }
+.kbd-help-s { margin: 4px 0 0; font-size: 12px; font-weight: 900; color: #6b675d; text-transform: uppercase; letter-spacing: 1px; }
+.kbd-help-tb { width: 100%; border-collapse: collapse; font-size: 14px; }
+.kbd-help-tb td { padding: 5px 4px; vertical-align: middle; }
+.kbd-help-tb td:first-child { white-space: nowrap; width: 1%; padding-right: 12px; }
+.kbd-help kbd {
+  display: inline-block; min-width: 22px; margin: 0 2px 0 0; padding: 2px 6px;
+  border: 1px solid #c9c3b2; border-bottom-width: 3px; border-radius: 6px;
+  background: #fff; font: 800 12px/1.3 inherit; text-align: center; color: #1b1b22;
+}
 /* 觸控目標：✕ 外觀 34px（tablet 40px），用透明 ::after 擴大可撳範圍到 46／52px，唔改外觀（Task 10）。
    下巴 Home 球有 overflow:hidden（::after 會被裁走、點唔到），改由 JS 將下巴球附近嘅點擊轉交（見 App.init）。 */
 .ph-sheet-x { position: relative; }

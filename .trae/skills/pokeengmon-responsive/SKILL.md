@@ -154,12 +154,26 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 - 「Turn your phone upright」：`App._syncRotateHint()`，條件 `phone-land`；豁免 `body.bag-open`、`body.battle-landscape`、`#view-capture.active`；「Continue anyway」收起到離開 phone-land；唔中斷 state。入／出豁免畫面要 call 佢（`_doShowView`、背包 open/close、`BattleLand.enter/exit` 已 call）。
 - 視覺沿用 `.bag-rotate`（`.back` = 轉返直）。
 
-## 10. 鍵盤、hover、觸控、字級（Rule 88）
+## 10. 鍵盤、hover、觸控、字級（Rule 88、97）
 
 - `:focus-visible`：白底「`outline: 3px solid #1b1b22` ＋ `box-shadow: 0 0 0 6px #ffd93b`」；紅機身（bezel、下巴）「奶白 `#fff8e1` 框＋黑光環」。只鍵盤出現，手機截圖唔變。有自己 `box-shadow` 嘅掣（`.ph-cta`）光環會被蓋，淨黑框。
 - hover 一律 `@media (hover: hover) and (pointer: fine)`（按鈕 lift 動畫見 Rule 49）。
 - 觸控目標：phone ≥44、tablet ≥48。唔改外觀擴大：`.ph-sheet-x::after { inset: -6px }`；下巴 Home 球有 `overflow:hidden`，改由 `.pd-chin` click 按距離（≤24px）轉交。量度用 `elementFromPoint`／真滑鼠，唔好淨睇 rect。已知：下巴列 46px，tablet 差 2px。
 - 字級：tablet／wide 最細 12px；phone HUD 細字保持。
+- **全鍵盤操作（Rule 97，`js/keys.js`）**：↑↓←→ 空間導航＋Enter＋Esc 要去到每個畫面每粒掣。
+  - keydown 掛 `window`（bubble 最尾）：document 上舊 handler（答題 Enter／Esc、Ctrl+P／H）先行；`defaultPrevented` 就唔理。舊 handler 嘅「Enter 預設動作」要讓位畀焦點所在嘅掣（例如答題設定彈窗：焦點喺 Keep going 時 Enter 就撳 Keep going）。
+  - 情境：overlay（最高 z-index；列表＋body／#app 直屬嘅全屏 fixed 層，例如 `#entry-gate`）> phone／tablet 開住嘅 sheet > active view（非 home 優先，連 bezel／下巴）。wide 右欄 sheet 唔係 modal，但新開嗰陣焦點要跳入去。
+  - 候選：原生可聚焦（`tabindex=-1` 容器唔算）＋ `cursor:pointer` 嘅最頂層 div／label（自動補 `tabindex=-1`＋`data-kbd-auto`）；被蓋住（`elementFromPoint`）唔算；捲咗出去嘅只可以由同一個捲動區入面行過去；先喺目前捲動區入面揀，再出去；60° 錐形防止跳去另一欄。
+  - 打字中：單行 input 左右留畀游標、上下照導航；textarea／select 全部原生；range 左右調值。radio 用方向鍵只移焦點（唔會順手改設定），Enter／Space 先揀。
+  - 開 sheet／modal 自動將焦點放主要掣（`[data-kbd-primary]` > 已知主掣 > 最上最左，✕ 排最後）；關咗還焦點畀開佢嗰粒掣。淡入／延遲出現（fetch 後先插入）嘅 overlay 要 450ms 再檢查一次。overlay／phone sheet 入面 Tab 困住。
+  - Esc：overlay 搵 Close／Back／Cancel／Maybe later／`[id$=-cancel]`；普通頁冇 Back 就撳下巴 Home；答題／捕捉／結算／戰鬥唔當離開。
+  - 捷徑層（第二期）：`SHORTCUTS` 表（`js/keys.js`）——主頁 `S` 開始、`1–4` 下巴四掣、`D` 圖鑑、`G` 扭蛋、`C` 日曆、`Q` 任務、`B` 背包；選題 `S` Start；普通頁 `H` 返主頁；捕捉 `Space`／`Enter` tap 三下、結果卡 Continue（`capture.js` 自己聽，`e.repeat` 唔計）。答題係打字題，冇選擇題，所以冇 1–4。加新捷徑：入 `SHORTCUTS`（`when` 限情境、目標喺收埋 sheet 就 `hidden:true`），`?` 一覽自動列「On this screen」。
+  - 按鍵 badge：獨立 fixed 層 `.kbd-badges`，用目標 rect 定位；只喺鍵盤模式＋`(hover:hover) and (pointer:fine)` 出，撳滑鼠／觸控即收。唔好為 badge 改掣嘅 `position`（入面有 absolute 子元素）。
+  - 「睇唔睇到」要計埋：祖先 opacity 0（`checkVisibility({checkOpacity})`；透明 radio 睇 label）、摺疊咗嘅 overflow 祖先（0 高／闊，例如背包 banner `max-height:0`）。否則 Esc 會撳中隱形嘅 Cancel。
+  - overlay 淡入完先睇得到：`transitionend`（opacity／visibility／transform）同 `animationend` 都要再檢查；同一情境但焦點仲喺外面（主掣當時被淡出緊嘅層蓋住）→ 都要拉焦點入嚟。
+  - 單抽結果卡（`#gacha-inspect`）冇關閉掣：Esc = `App.closeGachaSheet()`。
+  - 已知：home sheet 開咗仍然 `aria-hidden="true"`（app 冇切換，讀屏會跳過）→ keys.js 暫時對 `.ph-sheet` 忽略 aria-hidden。
+  - 驗收：headless CDP `Input.dispatchKeyEvent` 淨用方向鍵／Enter／Esc 行 wide（1280×800）同 phone（440×956）：入口 gate → 主頁 → Settings sheet（Tab 困住、Esc 還焦點）→ 選題 → 答題 → 設定彈窗；再逐個 bezel／dock 掣開＋↓＋Esc。responsive `test-sheets`／`test-overlay-switch`／`test-pane-locks`／`test-touch-targets` 結果要同 baseline 一樣。
 
 ## 11. CSS cascade
 

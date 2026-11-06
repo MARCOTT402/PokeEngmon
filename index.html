@@ -449,6 +449,18 @@
               </label>
             </div>
             <div class="ph-ssec">
+              <div class="ph-ssec-t">Gameplay</div>
+              <div class="ph-sitem ph-sitem-col">
+                <span class="ph-sitem-t" id="sheet-anim-speed-t">Animation speed</span>
+                <div class="ph-speed-seg" id="sheet-anim-speed" role="radiogroup" aria-labelledby="sheet-anim-speed-t">
+                  <label><input type="radio" name="animSpeedSheet" value="1"><span>1×</span></label>
+                  <label><input type="radio" name="animSpeedSheet" value="2"><span>2×</span></label>
+                  <label><input type="radio" name="animSpeedSheet" value="3"><span>3×</span></label>
+                </div>
+                <small class="ph-speed-note">Catching, gacha &amp; evolution</small>
+              </div>
+            </div>
+            <div class="ph-ssec">
               <div class="ph-ssec-t">Forgetting Curve</div>
               <div class="curve-mode-grid" id="sheet-curve-grid">
                 <label class="curve-mode-opt">
@@ -486,6 +498,11 @@
             </div>
             <div class="ph-ssec">
               <div class="ph-ssec-t">Help</div>
+              <button class="ph-sitem kbd-only" id="btn-kbd-help" type="button">
+                <span class="ph-sitem-t">Keyboard shortcuts</span>
+                <span class="ph-sitem-v">?</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
               <button class="ph-sitem" id="btn-disclaimer" type="button">
                 <span class="ph-sitem-t">Copyright &amp; Disclaimer</span>
                 <span class="ph-s-arrow">›</span>
@@ -1253,6 +1270,8 @@
   <script src="js/battle/battle.js?v=1.68.0"></script>
   <script src="js/genpack.js?v=1.68.0"></script>
   <script src="js/storage.js?v=1.68.0"></script>
+  <script src="js/anim-speed.js?v=1.68.0"></script>
+  <script src="js/keys.js?v=1.68.0"></script>
   <script src="js/pet.js?v=1.68.0"></script>
   <script src="js/care.js?v=1.68.0"></script>
   <script src="js/bag.js?v=1.68.0"></script>

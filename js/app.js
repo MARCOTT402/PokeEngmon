@@ -627,13 +627,15 @@ const App = {
         this._pcKeepSprite = true;
         this._syncPetCare();
         const sp = document.getElementById("pc-sprite");
-        if (sp) sp.classList.add("glow-evo");
+        /* 動畫倍速：進化前發光同等待時間一齊縮短 */
+        const evoSpd = window.AnimSpeed ? AnimSpeed.get() : 1;
+        if (sp) { sp.style.animationDuration = (1.5 / evoSpd) + "s"; sp.classList.add("glow-evo"); }
         setTimeout(() => {
           this.showEvolveModal(res.evolvedTo, () => {
             this._pcKeepSprite = false;
             this.openPartnerPicker();
           }, res.evolvedFrom);
-        }, 1500);
+        }, 1500 / evoSpd);
         return;
       }
       this._syncPetCare();
@@ -2956,7 +2958,7 @@ const App = {
         document.querySelector(".view.active:not(#view-home)")) {
       this.showView("view-home");
     }
-    if (id === "sheet-setting") { this._syncAudioSliders(); this._syncCurveMode(); }
+    if (id === "sheet-setting") { this._syncAudioSliders(); this._syncCurveMode(); this._syncAnimSpeed(); }
     delete sheet.dataset.wideDefault; /* 用戶主動開 = 唔再係 wide 預設 */
     /* wide：開任何 sheet 都要先收起右欄預設 Daily Quests。
        _closeAllSheets 喺 wide 刻意保留預設 sheet，所以經 fixed overlay（Friends／Leaderboard／Battle Menu）
@@ -3278,6 +3280,20 @@ const App = {
     }
     const pctEl = document.getElementById(`sheet-${which}-pct`);
     if (pctEl) pctEl.textContent = Math.round(v * 100) + "%";
+  },
+  /* Home sheet：動畫倍速（捕捉／扭蛋／進化；只存本機，見 js/anim-speed.js） */
+  _syncAnimSpeed() {
+    const seg = document.getElementById("sheet-anim-speed");
+    if (!seg || !window.AnimSpeed) return;
+    const cur = AnimSpeed.get();
+    seg.querySelectorAll('input[name="animSpeedSheet"]').forEach(r => {
+      r.checked = Number(r.value) === cur;
+      r.onchange = () => {
+        if (!r.checked) return;
+        const v = AnimSpeed.set(r.value);
+        this.toast(`Animation speed: ${v}×`);
+      };
+    });
   },
   /* Home sheet：遺忘曲線模式（同舊 settings modal 共用同一套 storage 與 Sync） */
   _syncCurveMode() {
@@ -3705,6 +3721,8 @@ const App = {
     document.getElementById("btn-import-sheet").onclick = () => { this._closeSheet("sheet-setting"); this.openImport(); };
     document.getElementById("btn-myq-sheet").onclick = () => { this._closeSheet("sheet-setting"); this.openMyQuestions(); };
     document.getElementById("btn-disclaimer").onclick = () => { this._closeSheet("sheet-setting"); this.openDisclaimer(); };
+    const kbdHelpBtn = document.getElementById("btn-kbd-help");
+    if (kbdHelpBtn) kbdHelpBtn.onclick = () => { this._closeSheet("sheet-setting"); if (window.Keys) Keys.showHelp(); };
 
     /* TodayStrip 按鈕 */
     const todayQuestsBtn = document.getElementById("btn-home-quests");
@@ -3838,11 +3856,14 @@ const App = {
       }
       const qv = document.getElementById("view-quiz");
       if (!qv || !qv.classList.contains("active")) return;
+      /* 焦點喺某粒掣上（方向鍵揀咗，js/keys.js）：Enter 撳嗰粒，唔好用下面嘅預設 */
+      const onBtn = !!(e.target && e.target.closest && e.target.closest("#modal-root button"));
       /* ✕ 確認窗開住：Enter = Keep learning */
       const stayBtn = document.getElementById("quiz-quit-stay");
-      if (stayBtn) { e.preventDefault(); stayBtn.click(); return; }
+      if (stayBtn) { if (onBtn) return; e.preventDefault(); stayBtn.click(); return; }
       /* 設定彈窗開住：Enter = 確認 Quit this set（經按鈕，會一併關窗） */
       const quitBtn = document.getElementById("quiz-settings-quit");
+      if (quitBtn && onBtn) return;
       if (quitBtn) {
         e.preventDefault();
         quitBtn.click();
