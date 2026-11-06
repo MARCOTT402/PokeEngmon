@@ -1,3 +1,10 @@
+# [1.68.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.67.0...v1.68.0) (2026-11-06)
+
+
+### Features
+
+* **sync:** persistent sync queue, corrupt-save backup, offline pill ([aa8bdce](https://github.com/MARCOTT402/PokeEngmon/commit/aa8bdce24a0add50fd37b8ca9acf4a7fbacb23ab)), closes [#net-offline](https://github.com/MARCOTT402/PokeEngmon/issues/net-offline)
+
 # [1.67.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.66.0...v1.67.0) (2026-11-06)
 
 
