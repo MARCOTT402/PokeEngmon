@@ -1,3 +1,10 @@
+## [1.69.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.0...v1.69.1) (2026-11-06)
+
+
+### Performance Improvements
+
+* numeric guards, faster sheet transitions, lighter boot ([84b0ac4](https://github.com/MARCOTT402/PokeEngmon/commit/84b0ac4e5ab601ba4f0895f10b8269aa41ca8c98))
+
 # [1.69.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.68.0...v1.69.0) (2026-11-06)
 
 

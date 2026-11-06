@@ -128,12 +128,12 @@
     #net-offline[hidden] { display: none !important; }
   </style>
   <!-- Guard 一定要第一個 script（喺 style.css／supabase-config 之前），先捉得到其他檔案嘅錯（Rule 94） -->
-  <script src="js/core/guard.js?v=1.69.0"></script>
+  <script src="js/core/guard.js?v=1.69.1"></script>
   <!-- guard.js 自己都載唔到時嘅最細後備：其他模組直接用 Guard.asyncClick／busy，唔可以因為佢冇咗而 ReferenceError -->
   <script>window.Guard||(window.Guard={asyncClick:function(f){return f},busy:function(b,f){return f()},safe:function(w,f,d){try{return f()}catch(e){return d}},safeAsync:function(w,f){return f()},report:function(){},fatal:function(){location.reload()},toast:function(){},fetchGet:function(u,i){return fetch(u,i)},num:function(v,d){v=Number(v);return isFinite(v)?v:(d||0)},clamp:function(v,a,b,d){v=Number(v);v=isFinite(v)?v:(d===undefined?a:d);return Math.min(b,Math.max(a,v))},posDim:function(v,d){v=Number(v);return v>0?v:(d||1)},safeJSON:function(r,d){try{var v=JSON.parse(r);return v==null?d:v}catch(e){return d}}});</script>
   <!-- Net：統一網絡層（timeout／離線／錯誤提示；Rule 96），SupabaseAuth／Sync／PvP 都經佢 -->
-  <script src="js/core/net.js?v=1.69.0"></script>
-  <link rel="stylesheet" href="css/style.css?v=1.69.0">
+  <script src="js/core/net.js?v=1.69.1"></script>
+  <link rel="stylesheet" href="css/style.css?v=1.69.1">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -1248,47 +1248,47 @@
     <div id="toast" class="toast"></div>
   </div>
 
-  <script src="supabase/supabase-config.js?v=1.69.0"></script>
-  <script src="js/supabase-auth.js?v=1.69.0"></script>
-  <script src="js/sm2.js?v=1.69.0"></script>
-  <script src="js/sync.js?v=1.69.0"></script>
-  <script src="js/gens-data.js?v=1.69.0"></script>
-  <script src="js/data.js?v=1.69.0"></script>
-  <script src="js/qimg-db.js?v=1.69.0"></script>
-  <script src="js/pokemon.js?v=1.69.0"></script>
-  <script src="js/mega-data.js?v=1.69.0"></script>
-  <script src="js/avatars.js?v=1.69.0"></script>
-  <script src="js/dex-sort.js?v=1.69.0"></script>
-  <script src="js/battle/rng.js?v=1.69.0"></script>
-  <script src="js/battle/energy.js?v=1.69.0"></script>
-  <script src="js/battle/realtime.js?v=1.69.0"></script>
-  <script src="js/battle/pvp.js?v=1.69.0"></script>
-  <script src="js/battle/engine.js?v=1.69.0"></script>
-  <script src="js/battle/state.js?v=1.69.0"></script>
-  <script src="js/battle/moveanim.js?v=1.69.0"></script>
-  <script src="js/battle/sprites.js?v=1.69.0"></script>
-  <script src="js/battle/battle.js?v=1.69.0"></script>
-  <script src="js/genpack.js?v=1.69.0"></script>
-  <script src="js/storage.js?v=1.69.0"></script>
-  <script src="js/anim-speed.js?v=1.69.0"></script>
-  <script src="js/keys.js?v=1.69.0"></script>
-  <script src="js/pet.js?v=1.69.0"></script>
-  <script src="js/care.js?v=1.69.0"></script>
-  <script src="js/bag.js?v=1.69.0"></script>
-  <script src="js/battle/landscape.js?v=1.69.0"></script>
-  <script src="js/explain.js?v=1.69.0"></script>
-  <script src="js/quiz.js?v=1.69.0"></script>
-  <script src="js/gacha.js?v=1.69.0"></script>
-  <script src="js/pokedex.js?v=1.69.0"></script>
-  <script src="js/gym.js?v=1.69.0"></script>
-  <script src="js/leaderboard.js?v=1.69.0"></script>
-  <script src="js/friends.js?v=1.69.0"></script>
-  <script src="js/quests.js?v=1.69.0"></script>
-  <script src="js/calendar.js?v=1.69.0"></script>
-  <script src="js/evolve-scene.js?v=1.69.0"></script>
-  <script src="js/app.js?v=1.69.0"></script>
-  <script src="vendor/gsap/gsap.min.js?v=1.69.0"></script>
-  <script type="module" src="js/capture.js?v=1.69.0"></script>
+  <script src="supabase/supabase-config.js?v=1.69.1"></script>
+  <script src="js/supabase-auth.js?v=1.69.1"></script>
+  <script src="js/sm2.js?v=1.69.1"></script>
+  <script src="js/sync.js?v=1.69.1"></script>
+  <script src="js/gens-data.js?v=1.69.1"></script>
+  <script src="js/data.js?v=1.69.1"></script>
+  <script src="js/qimg-db.js?v=1.69.1"></script>
+  <script src="js/pokemon.js?v=1.69.1"></script>
+  <script src="js/mega-data.js?v=1.69.1"></script>
+  <script src="js/avatars.js?v=1.69.1"></script>
+  <script src="js/dex-sort.js?v=1.69.1"></script>
+  <script src="js/battle/rng.js?v=1.69.1"></script>
+  <script src="js/battle/energy.js?v=1.69.1"></script>
+  <script src="js/battle/realtime.js?v=1.69.1"></script>
+  <script src="js/battle/pvp.js?v=1.69.1"></script>
+  <script src="js/battle/engine.js?v=1.69.1"></script>
+  <script src="js/battle/state.js?v=1.69.1"></script>
+  <script src="js/battle/moveanim.js?v=1.69.1"></script>
+  <script src="js/battle/sprites.js?v=1.69.1"></script>
+  <script src="js/battle/battle.js?v=1.69.1"></script>
+  <script src="js/genpack.js?v=1.69.1"></script>
+  <script src="js/storage.js?v=1.69.1"></script>
+  <script src="js/anim-speed.js?v=1.69.1"></script>
+  <script src="js/keys.js?v=1.69.1"></script>
+  <script src="js/pet.js?v=1.69.1"></script>
+  <script src="js/care.js?v=1.69.1"></script>
+  <script src="js/bag.js?v=1.69.1"></script>
+  <script src="js/battle/landscape.js?v=1.69.1"></script>
+  <script src="js/explain.js?v=1.69.1"></script>
+  <script src="js/quiz.js?v=1.69.1"></script>
+  <script src="js/gacha.js?v=1.69.1"></script>
+  <script src="js/pokedex.js?v=1.69.1"></script>
+  <script src="js/gym.js?v=1.69.1"></script>
+  <script src="js/leaderboard.js?v=1.69.1"></script>
+  <script src="js/friends.js?v=1.69.1"></script>
+  <script src="js/quests.js?v=1.69.1"></script>
+  <script src="js/calendar.js?v=1.69.1"></script>
+  <script src="js/evolve-scene.js?v=1.69.1"></script>
+  <script src="js/app.js?v=1.69.1"></script>
+  <script src="vendor/gsap/gsap.min.js?v=1.69.1"></script>
+  <script type="module" src="js/capture.js?v=1.69.1"></script>
 </body>
 </html>
 
