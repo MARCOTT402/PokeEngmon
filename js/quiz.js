@@ -540,16 +540,35 @@ const Quiz = {
       num.textContent = on ? "ABC" : "123";
     };
 
+    /* 按鍵動作。字母／⌫／123 喺 pointerdown 即時生效（Rule 107）：
+       快打時兩隻手指重疊，第二隻係非 primary pointer → 瀏覽器唔發 click，甚至連第一隻嘅 click 都取消，
+       靠 click 會成串食字。Submit／Hint 等「放手先算」（同一 pointer 喺同一粒鍵放手），防誤觸。 */
+    const run = (key) => {
+      const kb = key.dataset.kb;
+      if (kb === "num") { toggleNum(); return; }
+      if (kb === "go") { if (this.answered) this.next(); else this.check(); return; }
+      if (kb === "hint") { this.hint(); return; }
+      if (kb === "voice") return;
+      if (this.answered) return;
+      if (kb === "back") this._kbBackspace();
+      else this._kbInsert(key.dataset.ch || "");
+      this._focusCurrent();
+    };
+    const onRelease = (key) => key.dataset.kb === "go" || key.classList.contains("qk-tool");
+    const pending = new Map();   /* pointerId → 放手先算嘅鍵 */
+
     /* pointerdown preventDefault：保留輸入格焦點，亦阻止系統鍵盤彈出；字母鍵出放大預覽 */
-    const clearDown = () => host.querySelectorAll(".down").forEach(k => {
+    const clearKey = (k) => {
       k.classList.remove("down");
       const bub = k.querySelector(".qk-bubble");
       if (bub) bub.remove();
-    });
+    };
+    const clearDown = () => host.querySelectorAll(".down").forEach(clearKey);
     host.addEventListener("pointerdown", (e) => {
       const key = e.target.closest(".qk-key, .qk-tool");
       if (!key) return;
       e.preventDefault();
+      if (e.button > 0) return;
       clearDown();
       if (key.disabled) return;
       key.classList.add("down");
@@ -560,20 +579,23 @@ const Quiz = {
         key.appendChild(bub);
       }
       this._vibrate(5);
+      if (onRelease(key)) pending.set(e.pointerId, key);
+      else run(key);
     });
-    ["pointerup", "pointercancel", "pointerleave"].forEach(t => host.addEventListener(t, clearDown));
+    host.addEventListener("pointerup", (e) => {
+      const key = pending.get(e.pointerId);
+      pending.delete(e.pointerId);
+      clearDown();
+      const under = e.target && e.target.closest ? e.target.closest(".qk-key, .qk-tool") : null;
+      if (key && under === key && !key.disabled) run(key);
+    });
+    host.addEventListener("pointercancel", (e) => { pending.delete(e.pointerId); clearDown(); });
+    host.addEventListener("pointerleave", clearDown);
+    /* click 只處理鍵盤／輔助技術觸發（detail === 0，例如 Tab 到鍵再撳 Enter）；指標觸發已喺 pointer 事件做咗 */
     host.addEventListener("click", (e) => {
       const key = e.target.closest(".qk-key, .qk-tool");
-      if (!key || key.disabled) return;
-      const kb = key.dataset.kb;
-      if (kb === "num") { toggleNum(); return; }
-      if (kb === "go") { if (this.answered) this.next(); else this.check(); return; }
-      if (kb === "hint") { this.hint(); return; }
-      if (kb === "voice") return;
-      if (this.answered) return;
-      if (kb === "back") this._kbBackspace();
-      else this._kbInsert(key.dataset.ch || "");
-      this._focusCurrent();
+      if (!key || key.disabled || e.detail !== 0) return;
+      run(key);
     });
   },
 

@@ -54,3 +54,14 @@ Skill: Rule 77 added
 - 計劃：`.trae/documents/20261106-stability-performance.md` §5.1。
 
 Skill: Rule 93 added
+
+### Rule 107 — 平板／手機答題快打，撳咗字母冇輸入
+
+- 症狀（2026-11-07 用戶報告）：平板或手機答題時打得快，撳咗 App 鍵盤字母但冇字入到格。
+- 根因：`js/quiz.js` `_buildKeyboard()` 喺 `click` 先 `_kbInsert`。快打時兩隻手指重疊，第二隻係非 primary pointer → 冇 `click`；Chrome 仲會取消第一隻嘅 click。
+- 重現（headless Chrome CDP 觸控）：舊碼「多指重疊打 world」→ 輸入格係空（5 個字全冇）；重疊 `h e ⌫` → 空。
+- 修正：字母／⌫／123 改喺 `pointerdown` 執行；Submit／Hint 用同一 `pointerId` 喺同一粒鍵 `pointerup` 先執行；`click` 只收 `detail === 0`。
+- 測試：`tools/responsive/test-quiz-keyboard.mjs`（17 項，新碼全 pass，舊碼 8 fail）。
+- 測試陷阱：CDP 觸控模擬中途淨放一隻手指唔生效（要全部 `touchEnd`）；同一個 Chrome 轉 viewport／mobile 之後觸控會失效 → 每個尺寸開新 Chrome。
+
+Skill: Rule 107 added

@@ -27,6 +27,14 @@ description: PokeEngmon quiz rules: SM-2 due-card sessions, settlement exits and
 - 桌面（`pointer: fine`）冇 App 鍵盤，用內容區 Hint 掣＋底部 Check／Continue 主掣（顯示 `Enter`／`Ctrl H` 提示）。
 - 驗證：用 mobile preset（會模擬 coarse pointer）試鍵盤；自訂闊度 ≥768 會變 fine pointer，鍵盤會消失係正常。
 
+### Rule 107 — App 鍵盤：字母／⌫ 要喺 `pointerdown` 即時入字，唔好靠 `click`（快打兩指重疊會成串食字）
+
+- 觸控快打時前一隻手指未放、下一隻已撳 → 第二隻係非 primary pointer，瀏覽器**唔會**發 `click`，Chrome 仲會連第一隻嘅 click 都取消 → 用 `click` 做輸入會「撳咗冇字」。
+- `#quiz-keyboard`：字母、`'`／`-`、space、⌫、123 喺 `pointerdown` 執行；Submit（`#qk-go`）同 `.qk-tool`（Hint）用「同一個 `pointerId` 喺同一粒鍵 `pointerup`」先執行（滑走唔算，防誤交卷）。
+- `click` handler 只處理 `e.detail === 0`（鍵盤／輔助技術、`el.click()`），否則同 pointer 路徑重複。
+- 新增任何「要快速連撳」嘅觸控掣（鍵盤、數字盤、節奏遊戲）都照呢個模式；`touch-action: manipulation` 只解決 double-tap zoom，解決唔到多指。
+- 驗收：`node tools/responsive/test-quiz-keyboard.mjs`（CDP `Input.dispatchTouchEvent` 多指重疊、極快連撳、滑出、Submit 放手先算；手機＋平板）。
+
 ### Rule 74 — 答題空格：顯示字同透明 input 嘅字型（字重、字距、size、family）一定要一致，否則浮標越打越向左移
 
 - 字重／字距要放喺 `.qb-cell`（或者佢上層），`.qb-text`、`.qb-ghost`、`.qb-input` 全部 `inherit`；唔好只改顯示字嘅 font。
