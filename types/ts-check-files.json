@@ -12,6 +12,7 @@
   "js/care.js",
   "js/core/dom.js",
   "js/core/guard.js",
+  "js/core/html.js",
   "js/core/net.js",
   "js/dex-sort.js",
   "js/evolve-scene.js",

@@ -24,6 +24,7 @@ const ASSETS = [
   "./Q_folder/grammar/grammar_images/index.json",
   "./js/core/guard.js",
   "./js/core/dom.js",
+  "./js/core/html.js",
   "./js/core/net.js",
   "./js/supabase-auth.js",
   "./js/sm2.js",

@@ -462,3 +462,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 110 — z-index 用 `:root` 嘅 `--z-*` token：全域層（≥100）唔准寫字面值；改層級只改 token；`index.html` 內聯兜底層照寫數字
 
 → `.trae/skills/pokeengmon-responsive/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-responsive/references/incidents.md`。
+
+## Rule 111 — 砌 HTML 用 `html```＋`Html.render()`（`js/core/html.js`）：字串自動 escape、巢狀唔會雙重 escape；可信 markup 先用 `Html.raw()`；屬性值一定加引號
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

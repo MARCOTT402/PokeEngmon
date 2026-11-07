@@ -158,3 +158,13 @@ if (!e.request.url.startsWith("http")) return;
 - 驗收要用「未定義 global → TS2304」嚟證明 check 生效。`Sync.nope()` 呢類**唔會**紅，因為 `globals.d.ts` 將大部分模組宣告做 `any`。
 - 仲未開嘅大檔（`checkJs: true` 時 345 個錯，主要係 DOM 型別收窄）：`app.js` 173、`battle.js` 56、`quiz.js` 28、`bag.js` 24。改到嗰個檔先順手清，唔做大搬遷。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 111 — 砌 HTML 用 `html```＋`Html.render()`（`js/core/html.js`）：字串自動 escape、巢狀唔會雙重 escape；可信 markup 先用 `Html.raw()`；屬性值一定加引號
+
+- 新 code 砌 `innerHTML` 一律寫 `Html.render(el, html`…${value}…`)`。字串會經 `escapeHTML`（`js/core/dom.js`，全 App 唯一嘅 escape）；數字照出；`null`／`undefined`／`false` 唔出任何嘢；陣列直接放入 `${list.map(x => html`<li>${x}</li>`)}`。
+- `html``` 嘅結果係 `SafeHTML`，放入另一個 `html``` 唔會再 escape。**唔好自己再 `escapeHTML()` 一次**，會變 `&amp;amp;`。
+- 自己砌、完全冇用戶／server 字串嘅 markup 先可以用 `Html.raw()`。`Html.render(el, "純字串")` 會當純文字 escape。
+- 屬性值一定加引號（`value="${x}"`）。escape 擋唔到 `href="javascript:…"`，URL 要自己驗證。
+- 函數入面已經有局部變數叫 `html`（例如 `let html = ""`，`avatars`／`bag`／`battle`／`calendar`／`explain`／`keys`／`leaderboard` 都有）會遮住個 tag；嗰度照舊用 `escapeHTML`，或者將局部變數改名。
+- 舊 `innerHTML`（約 170 處）唔做大搬遷：改到嗰段先順手換。總計劃 P5 會做一次審計，處理含用戶資料嘅位。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

@@ -162,3 +162,12 @@ Skill: Rule 108 added
 - 原計劃嘅驗收「寫 `Sync.nope()` 會紅」行唔通，因為 `Sync` 係 `any`；改用未定義 global（TS2304）同拎走檔頭（ratchet 測試）兩個方法，兩個都會紅。
 
 Skill: Rule 109 added
+
+## Rule 111 — 砌 HTML 用 `html```＋`Html.render()`（`js/core/html.js`）：字串自動 escape、巢狀唔會雙重 escape；可信 markup 先用 `Html.raw()`；屬性值一定加引號
+
+- 2026-11-07 總計劃 P1.3（現代化 Task 3）。`tests/unit/html.test.js` 8 項先寫，8 項全紅（檔案未存在），實作之後全綠。
+- 設計：`SafeHTML` 包住已經安全嘅字串。`html``` 對每個值：`SafeHTML` 照放、陣列逐個處理再 join、`null`／`undefined`／`false` 變空、其餘經 `escapeHTML`。`Html.render` 對普通字串都會 escape，所以唔小心傳咗用戶字串入去都安全。
+- 瀏覽器實測：`<img src=x onerror=…>` 放入 `html``` 之後只係顯示成文字，冇建立任何元素，`onerror` 冇觸發；`title` 屬性值正確。
+- 改 `sw.js` 之後，第一次重新載入 preview 會被新 Service Worker 再 reload 一次，所以喺 Browser pane 跑嘅腳本會中途斷，要再跑一次。
+
+Skill: Rule 111 added
