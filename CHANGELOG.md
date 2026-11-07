@@ -1,3 +1,15 @@
+# [1.71.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.70.1...v1.71.0) (2026-11-07)
+
+
+### Bug Fixes
+
+* **quiz:** register app-keyboard taps on pointerdown so fast typing never drops letters ([1e10cdb](https://github.com/MARCOTT402/PokeEngmon/commit/1e10cdbb02d0df675427d9a960429665d2c11d3e))
+
+
+### Features
+
+* **keys:** keyboard control for Pokédex, bag and battle, plus shortcut toggle ([776cb3d](https://github.com/MARCOTT402/PokeEngmon/commit/776cb3d74f4ab9e82fcfa6a41baa29bfd15a336a))
+
 ## [1.70.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.70.0...v1.70.1) (2026-11-07)
 
 
