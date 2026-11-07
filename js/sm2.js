@@ -201,7 +201,6 @@ window.SM2 = (() => {
   }
 
   function applyHint(card, hintCount, now) {
-    const p = profile();
     const t = now || Date.now();
     return {
       ...card,

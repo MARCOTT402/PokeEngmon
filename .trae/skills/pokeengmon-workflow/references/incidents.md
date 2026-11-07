@@ -146,3 +146,11 @@ Skill: Rule 105 added
 - 同日：e2e `test-pane-locks` W2／W4 fail，我只對 memory 清單就報「唔係已知問題」。其實 responsive skill 測試表早已寫明「W2／W4（guest 登入提示）」。Headless 證實：W2 = guest Friends toast＋登入框；W4 = CTA 中心 `elementFromPoint` 撳中 `lb-login-modal`。教訓：e2e fail 先對 skill 表嘅已知 fail 欄。
 
 Skill: Rule 106 added
+
+## Rule 108 — 清死碼：先用工具列清單（ESLint、`tools/audit/unused-css.mjs`、`unused-assets.mjs`），動態拼接一律當「有用」；刪 CSS 前後影 shots 做像素比較
+
+- 2026-11-07 商用級計劃 Phase B Task 4。JS：ESLint 20 個 warning 降到 0；刪咗 8 個冇人 call 嘅 function（`_initBoltCanvas` 等）、Pokédex 配招／EV 殘骸（約 65 行），同埋第二輪先出現嘅 `addEvPoint`／`allocEv`。11 個檔合共 -204 行。
+- CSS：掃描器第一版只認 `foo-${` 呢種動態寫法，報咗 182 條 dead。抽查發現 `" lb-top" + rank`、`ladder-zone z${zoneIdx}` 都被誤判，放寬前綴規則之後變 136 條。刪完再多咗 3 個冇人用嘅 `@keyframes`（只俾已刪嘅 rule 用），一併刪走；CSS 合共 -286 行。
+- Asset：第一版報 2,258 個冇引用嘅檔，全部係 `BASE + id` 呢種動態載入。改咗規則之後剩 5 個戰鬥 UI 原始 atlas（54 KB），保留。
+
+Skill: Rule 108 added

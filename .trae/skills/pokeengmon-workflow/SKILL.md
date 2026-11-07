@@ -137,3 +137,12 @@ if (!e.request.url.startsWith("http")) return;
 - `npm run test:e2e` 有 fail 時，**先對 `.trae/skills/pokeengmon-responsive/SKILL.md`「互動測試」表嘅「已知 fail」欄**（同測試檔第一行註解），唔好淨係對 memory 就話係新 regression。未列入嘅 fail 先用 `elementFromPoint`／toast／modal 狀態搵出實際原因。
 - ESLint：跨檔 global 由 `tools/audit/gen-eslint-globals.mjs` 生成（`prelint`），`no-redeclare` 要 `builtinGlobals: false`、`no-unused-vars` 用 `vars: "local"`；warning 上限喺 `package.json` `--max-warnings`，只准減。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 108 — 清死碼：先用工具列清單（ESLint、`tools/audit/unused-css.mjs`、`unused-assets.mjs`），動態拼接一律當「有用」；刪 CSS 前後影 shots 做像素比較
+
+- 死 function／變數：`npm run lint`（`no-unused-vars`）＋全文搜尋名（`js`、`index.html`、`tools`、`tests`、`_seed*.html`）。只出現一次即係只有定義。**刪之前要睇清楚係咪「漏咗用」**：例如 Pokédex `otherCards`／`evButtons` 係 `7b7e45b` 將配招搬去背包之後留低嘅殘骸，要用 `git log -S` 查出處先刪。刪完要再掃一次，因為會連帶出現新嘅死碼（例如 `addEvPoint`、`SupabaseAuth.allocEv`）。
+- 死 CSS：`node tools/audit/unused-css.mjs`。佢只會刪「所有 selector 都引用咗 source 完全冇出現過嘅 class／id」嘅 rule。動態 class 唔一定有連字號，例如 `" lb-top" + rank`、`` `z${i}` ``，所以任何喺 `${` 或者 `" +` 前面嘅字都當前綴，以佢開頭嘅 class 一律列做 dynamic，唔刪。第一版只認 `foo-${` 就誤判咗 46 條。
+- 死 asset：`node tools/audit/unused-assets.mjs`。目錄字面值（`const BASE = "assets/battle/anim/"` 之後再拼接）成個目錄當動態。結果只係報告，唔會自動刪。
+- 改 repo 檔唔好用 Git Bash 嘅 `sed -i`：會將 CRLF 檔成個轉行尾（`tests/unit/battle.test.js` 試過 538 行全部變）。要用 Edit 工具，或者用 Python 讀寫 bytes。commit 前用 `git diff --numstat` 睇吓有冇「全檔 +N/−N」。
+- 刪 CSS 前要先 `node tools/responsive/shots.mjs --out <before>`，刪完再影 `<after>`，然後 `--compare` rects 加逐像素比較；兩者都要零差異（每次全套大約 12 分鐘，要喺背景跑）。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

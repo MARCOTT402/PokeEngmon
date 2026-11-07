@@ -18,7 +18,6 @@ const BagUI = (() => {
   const $ = sel => root.querySelector(sel);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  const MED_LABEL = () => (window.Care ? Care.MED_INFO : {});
   /* 第 1 段只讀顯示現有庫存（食物同藥）；樹果取代食物喺第 3 段 */
   function itemList() {
     const out = [];

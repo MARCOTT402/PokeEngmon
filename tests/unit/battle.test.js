@@ -11,7 +11,7 @@ vm.createContext(ctx);
 const src = ["js/gens-data.js", "js/data.js", "js/pokemon.js", "js/battle/rng.js", "js/battle/engine.js", "js/battle/state.js"]
   .map(p => fs.readFileSync(p, "utf8")).join("\n;\n");
 vm.runInContext(src, ctx, { filename: "battle-bundle.js" });
-const { Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats } =
+const { Battle, BattleState, BattleRng } =
   vm.runInContext("({Battle, BattleState, BattleRng, moveInfo, entryCurrentSpecies, calcStats})", ctx);
 const { IMPLEMENTED_ABILITIES, abilityPool, rollEntryAbility, abilityName } =
   vm.runInContext("({IMPLEMENTED_ABILITIES, abilityPool, rollEntryAbility, abilityName})", ctx);

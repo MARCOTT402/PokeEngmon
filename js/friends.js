@@ -59,11 +59,6 @@ const Friends = (() => {
       && SupabaseAuth.isLoggedIn && SupabaseAuth.isLoggedIn());
   }
 
-  function meUid() {
-    const u = (window.SupabaseAuth && SupabaseAuth.currentUser) ? SupabaseAuth.currentUser() : null;
-    return u ? u.id : null;
-  }
-
   function activeView() {
     const v = document.querySelector(".view.active");
     return v ? v.id : null;

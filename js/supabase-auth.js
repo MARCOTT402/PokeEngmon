@@ -706,12 +706,6 @@ const SupabaseAuth = {
     return this._rpc("alloc_ev_shared", { p_entry: entryId, p_stat: stat, p_n: n || 1 });
   },
 
-  /* ---------- RPC：分配 EV（回傳 {evs, ev_points}） ---------- */
-  async allocEv(entryId, stat) {
-    if (!this.currentUser()) return null;
-    return this._rpc("alloc_ev", { entry_id: entryId, stat });
-  },
-
   /* ---------- RPC：清空雲端進度（Reset Progress 用；以 auth.uid() 為準） ---------- */
   async resetProgress() {
     if (!this.currentUser()) return null;

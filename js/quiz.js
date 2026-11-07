@@ -668,7 +668,6 @@ const Quiz = {
 
     const junior = this._isJunior();
     const a = this._answerFor(this.queue[0] && this.queue[0].q);
-    const ans = this._norm(c.primary);
     const val = this._norm(c.value);
 
     if (junior) {

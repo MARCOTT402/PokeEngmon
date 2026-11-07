@@ -450,3 +450,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 107 — App 答題鍵盤：字母／⌫ 喺 `pointerdown` 入字，唔好靠 `click`（快打多指重疊會食字）；Submit 用同一 pointer 放手先算
 
 → `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。
+
+## Rule 108 — 清死碼：先用工具列清單（ESLint、`tools/audit/unused-css.mjs`、`unused-assets.mjs`），動態拼接一律當「有用」；刪 CSS 前後影 shots 做像素比較
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

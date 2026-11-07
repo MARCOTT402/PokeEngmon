@@ -375,19 +375,6 @@ function obtainPokemon(chainKey, mode) {
   return { entry, isDupe: false, newlyUnlockedGen };
 }
 
-/* 用 1 點自由 EV 加落某項能力（每項上限 252、總和上限 510） */
-function addEvPoint(entry, statKey) {
-  ensureEntryPokemonData(entry);
-  if (!STAT_KEYS.includes(statKey)) return false;
-  if ((entry.evPoints || 0) <= 0) return false;
-  if ((entry.evs[statKey] || 0) >= MAX_EV) return false;
-  if (evTotal(entry.evs) >= MAX_EV_TOTAL) return false;
-  entry.evs[statKey] = (entry.evs[statKey] || 0) + 1;
-  entry.evPoints -= 1;
-  saveState();
-  return true;
-}
-
 /* ---------- 進化石 / 官方進化條件 ---------- */
 const STONE_KINDS = ["thunder", "moon", "fire", "leaf", "water"];
 const STONE_LABELS = {
@@ -496,7 +483,6 @@ function isEntryFullyEvolved(entry) {
 }
 
 function addEntryExp(entry, amount) {
-  const st = loadState();
   ensureEntryPokemonData(entry);
   const chain = EVOLUTION_CHAINS.find(c => c.key === entry.chainKey);
   const maxStage = chainMaxStage(chain);
@@ -790,10 +776,6 @@ function migrateEntries() {
     }
   });
   if (changed) saveState();
-}
-
-function getEntry(uid) {
-  return loadState().entries.find(e => e.uid === uid) || null;
 }
 
 function getActiveEntry() {

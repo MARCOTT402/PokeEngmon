@@ -195,77 +195,6 @@ const App = {
     return total || 151;
   },
 
-  /* Canvas 閃電動畫（22×22 px pixel art，閃爍效果） */
-  _initBoltCanvas() {
-    const canvas = document.getElementById("pd-bolt-canvas");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    /* Pixel art 閃電（5 段 path，22×22） */
-    const boltPaths = [
-      /* base frame — 主閃電 */
-      [[14,2, 8,11,12,11,7,20]],
-      /* frame 2 — 加支線 */
-      [[14,2, 8,11,12,11,7,20], [10,7, 14,9]],
-      /* frame 3 — 加另一條支線 */
-      [[14,2, 8,11,12,11,7,20], [10,7, 14,9], [9,14, 6,16]],
-      /* frame 4 — 減返支線 */
-      [[14,2, 8,11,12,11,7,20]],
-    ];
-
-    let frameIdx = 0;
-    let tick = 0;
-    const FLASH_INTERVAL = 6; /* 每 N tick 換一幀 */
-
-    const draw = () => {
-      ctx.clearRect(0, 0, 22, 22);
-
-      const paths = boltPaths[frameIdx % boltPaths.length];
-      paths.forEach(pts => {
-        /* 主體（亮黃） */
-        ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i+1]);
-        ctx.stroke();
-
-        /* 高光（白邊） */
-        ctx.strokeStyle = "#fff8dc";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i+1]);
-        ctx.stroke();
-      });
-
-      tick++;
-      if (tick >= FLASH_INTERVAL) { tick = 0; frameIdx++; }
-    };
-
-    /* 開始動畫 */
-    this._boltRaf = requestAnimationFrame(function loop() {
-      draw();
-      App._boltRaf = requestAnimationFrame(loop);
-    });
-
-    /* 清理（頁面隱藏時） */
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden && this._boltRaf) {
-        cancelAnimationFrame(this._boltRaf);
-        this._boltRaf = null;
-      } else if (!this._boltRaf) {
-        this._boltRaf = requestAnimationFrame(function loop() {
-          draw();
-          App._boltRaf = requestAnimationFrame(loop);
-        });
-      }
-    });
-  },
-
   /* ---------- 主畫面 ---------- */
   renderHome() {
     const st = loadState();
@@ -718,7 +647,6 @@ const App = {
     if (!entry) return;
     const p = Pet.ensure(entry);
     const cur = entryCurrentSpecies(entry);
-    const dayQ = Pet.dayKey();
 
     const sprite = document.getElementById("pc-sprite");
     if (sprite && !this._pcKeepSprite) {
@@ -1560,7 +1488,6 @@ const App = {
        v3 單一維度：只計「無提示清題數」→ 換算到 /10 刻度 → span 百分比；
        Lv.1–10 新手期保底 50% span（分級高過 50% 照攞高嗰個） */
     const entry = getActiveEntry();
-    const perfect = data.score === data.total;
     let expGain = GAME_CONFIG.EXP_BASE;
     if (entry) {
       ensureEntryPokemonData(entry);
@@ -2423,8 +2350,6 @@ const App = {
     if (user) { this._showAccountHub(); return; }
     this._showAuth(isGate, tab);
   },
-  _showSignUpForm(isGate) { this._showAuth(isGate, "signup"); },
-  _showSignInForm(isGate) { this._showAuth(isGate, "signin"); },
 
   /* ---------- 主 Auth 卡：Create account / Sign in ---------- */
   _showAuth(isGate, tab, opts = {}) {
@@ -3229,13 +3154,6 @@ const App = {
     if (view) view.prepend(...Array.from(host.childNodes));
     host.remove();
   },
-  /* 移除：舊時逐個 close 完再 closeAll → 會雙 timer race。
-   * 所有 close 路徑（_closeSheet / _closeAllSheets）都有自己嘅 stillOpen guard timer */
-  _checkCloseAllSheets() {},
-  _bindSheetBtn(btnId, sheetId) {
-    const btn = document.getElementById(btnId);
-    if (btn) btn.onclick = () => { /* 子 onclick 會覆寫，但保留 default handler 如果子冇覆蓋 */ };
-  },
   /* Gacha：由白色螢幕內上邊向下捲出 */
   openGachaSheet() {
     /* 一定要真正切返 view-home：結算等 display-window overlay 會令 view-home 保持 active，
@@ -3348,15 +3266,6 @@ const App = {
     if (typeof Pokedex !== "undefined" && Pokedex._setDexBackMode) Pokedex._setDexBackMode("grid");
   },
 
-  /* 同步狀態 banner：唔會靜靜消失，要俾用戶自己 dismiss */
-  showSyncBanner(msg, isError) {
-    const el = document.getElementById("sync-banner");
-    if (!el) return;
-    el.className = "sync-banner" + (isError ? " sync-error" : "");
-    el.innerHTML = `<span>${escapeHTML(msg)}</span><button id="sync-banner-x">OK</button>`;
-    document.getElementById("sync-banner-x").onclick = () => el.classList.add("hidden");
-  },
-
   toast(msg) {
     const t = document.getElementById("toast");
     t.textContent = msg;
@@ -3459,7 +3368,6 @@ const App = {
       this._openSheet("sheet-calendar");
       const container = document.getElementById("sheet-calendar-content");
       if (container) {
-        const st = loadState();
         const streak = calcStreak();
         container.innerHTML = `
           <div style="padding:12px; text-align:center;">

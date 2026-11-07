@@ -12,7 +12,7 @@ const rules = {
   "no-unreachable": "error",
   "no-redeclare": ["error", { builtinGlobals: false }],   /* 頂層宣告本身就係 eslint.globals.json 嘅來源 */
   /* vars: "local" — 頂層宣告係俾其他 script 用，唔當 unused */
-  "no-unused-vars": ["warn", { vars: "local", args: "none", caughtErrors: "none" }],
+  "no-unused-vars": ["warn", { vars: "local", args: "none", caughtErrors: "none", ignoreRestSiblings: true }],   /* `const { _key, ...clean } = card` 係刻意剔走欄位 */
   "eqeqeq": ["warn", "smart"]
 };
 

@@ -18,7 +18,14 @@
 - 執行決定（rulings）：舊 script 實際係 10 個（多咗 `_test_sync_queue.js`）；遷移時只換 pass/fail helper、vm 設定原封保留；loader 將 timer `unref`（否則測試 process 唔會完）；`MAX_LEVEL` = 99 係設計；`eslint.globals.json` 由 `prelint` 生成、gitignore；ESLint `no-redeclare` 要 `builtinGlobals: false`。
 - e2e 基線（`npm run test:e2e`，2026-11-07，working tree 包括另一個 session 未 commit 嘅鍵盤改動）：10 個檔 7 過。失敗：`test-sheets` P9b（同一 tick 連撳 3 下，已知舊問題）、`test-quiz-fit` S1 375×667 文字題捲 21px（已知）、`test-pane-locks` W2／W4。三項全部係 `pokeengmon-responsive` SKILL.md 測試表記錄咗嘅已知 fail。W2／W4 已用 headless 證實原因係 guest 狀態：W2 撳 Friends → 「Log in first」toast＋登入框；W4 CTA 中心點 `elementFromPoint` = `lb-login-modal`（Leaderboard 嘅 guest 登入提示蓋住成個畫面）。唔係 regression。之後已將 W2／W4 改成識分 guest（21/21 pass；mutation：Friends 唔出登入提示 → W2 紅），所以而家 e2e 已知 fail 只剩 P9b 同 S1。（較早一版誤寫成「唔喺已知清單」，因為只對咗 memory，冇對 skill 表。）
 - **Task 5 注意**：`tools/responsive/test-*.mjs` 靠 `_seedtest.html` → 部署衛生只可以「唔發佈」佢，唔可以刪。
-- ⏭ 下一步：Phase B（要等另一個 session 嘅鍵盤改動 commit 咗）或 Task 6（洩漏量度，唔改產品檔，可以即刻做）。
+- ✅ **Phase B Task 4（清死碼）2026-11-07 完成，未 commit**：
+  - JS：11 個檔 -204 行，ESLint 由 0 error／20 warning 變成 0／0，`--max-warnings 0`。刪咗嘅包括 8 個冇人 call 嘅 function、Pokédex 配招／EV 殘骸（`7b7e45b` 搬去背包後留低），同埋第二輪先出現嘅 `addEvPoint`、`SupabaseAuth.allocEv`（server 嘅 `alloc_ev` RPC 仲喺度，client 已經冇用）。
+  - CSS：-286 行（136 條 rule + 3 個 `@keyframes`）。前後 144 張 shots，rects 零差異；像素差異 62 張，抽查全部係動畫 GIF 唔同幀或者隨機抽題。
+  - Asset：冇引用嘅只剩 5 個戰鬥 UI 原始 atlas（54 KB），保留。新工具：`tools/audit/unused-css.mjs`、`unused-assets.mjs`（Rule 108）。
+  - 驗證：`npm test` 347 全過；e2e 11 個檔過 9 個，失敗嗰 2 個係已知 P9b、S1。
+  - 新發現：S1 溢出量取決於隨機抽到邊條題（之前記錄 21px；最長嗰條題係 64px，HEAD CSS 一樣）。原本 known fail 低估咗，屬舊有問題。
+  - 另外：guest 開機時 `js/sync.js:552` 用 anon key 探測 `user_account` 會 401（RLS），係舊有 console 噪音。
+- ⏭ 下一步：Task 5（合併重複 helper ＋ 部署衛生，部署要你喺 GitHub 改 Pages Source）或 Task 6（洩漏量度）。
 
 ## 0. Review 記錄（2026-11-07）
 
@@ -243,7 +250,7 @@ CSS：只喺用戶確認後先拆（每多一個檔＝首次載入多一個 requ
 | 單元測試數 | 0（10 個一次性 script，合共 308 項） | **347**（308 遷移 + 39 新 characterization），`npm test` ≈ 7 s | 只增唔減 |
 | Line coverage（loader 載入嘅檔） | — | storage 46%、pokemon 69%、care 53%、data 49%、dex-sort 67%、guard 54%、quiz 17% | ≥ 70%（純邏輯檔） |
 | Coverage 盲點 | — | 遷移嘅戰鬥／SM-2／sync 測試用「字串拼接」載入 → coverage 冇計 `battle/*`、`sm2.js`、`sync.js`；Phase D 改用 `loadScripts` 後先計到 | |
-| ESLint errors／warnings | — | **0 / 20**（17 個係 js 冇用嘅 local → Task 4；3 個喺遷移測試，原封保留） | 0 / 0 |
+| ESLint errors／warnings | — | 0 / 20 → **0 / 0**（Task 4 後） | 0 / 0 |
 | 最大 JS 檔行數 | 4,241（app.js） | 不變 | < 1,000 |
 | 10 次開關後 listener／node 增長 | 未量 | 未量 | 無線性增長 |
 | 正式網址公開內部檔案 | 有 | 有（Task 5） | 0 |

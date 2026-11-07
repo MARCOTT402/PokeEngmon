@@ -15,7 +15,6 @@ const BattleUI = (() => {
   let foeTeamEntries = [];
   let acting = false;      /* 防止重複點擊 */
   let forfeited = false;   /* 玩家撳 RUN 投降 */
-  let pendingSwitch = false;
   let battleSpeed = 1;      /* 1 = NORMAL、2 = FAST（只限 AI 對戰） */
   let pvpTeamSize = 3;       /* 抽中嘅場制 */
   let pvpBattle = null;      /* 真 PvP：battles row（含 seed） */
@@ -41,7 +40,6 @@ const BattleUI = (() => {
   let aiTier = "normal";       /* 目前挑戰嘅難度 */
   let levelSyncLevel = null;   /* Inferno：玩家隊伍臨時同步等級 */
   let aiPotions = 0;           /* 狀態系統第一期：Inferno AI Potion 已拎走，恆為 0 */
-  let myFullRestores = 0;      /* 舊 Inferno Full Restore（已拎走，保留變數免舊路徑出錯） */
   let megaArmed = false;       /* FIGHT 頁 MEGA 掣（第 4c 段）：揀招時一齊交 mega:true */
   let battleUsed = {};         /* 今場用咗嘅背包道具 { potion: n, ... }，戰鬥完一次過扣 */
   const BAG_ITEMS = ["potion", "super_potion", "antidote", "burn_heal", "paralyze_heal", "awakening", "ice_heal", "revive"];
@@ -513,7 +511,6 @@ const BattleUI = (() => {
     }
     levelSyncLevel = aiTier === "inferno" ? infernoSyncLevel(trainer) : null;
     aiPotions = 0;
-    myFullRestores = 0;
     foeTeamEntries = buildFoeTeam(trainer, aiTier);
     /* Gen 2-5 訓練家：先確保對應世代圖鑑資料載入（failed 就照開，唔好卡死揀隊） */
     const gens = gensForTeam(foeTeamEntries);
@@ -530,7 +527,6 @@ const BattleUI = (() => {
     aiTrainer = null;
     aiTier = "normal";
     levelSyncLevel = null;
-    myFullRestores = 0;
     showMatchPanel();
   }
 
@@ -593,7 +589,6 @@ const BattleUI = (() => {
     aiTrainer = null;
     aiTier = "normal";
     levelSyncLevel = null;
-    myFullRestores = 0;
     pvpCancel = null;
     const me = (window.SupabaseAuth && SupabaseAuth.currentUser) ? SupabaseAuth.currentUser() : null;
     const myId = me ? me.id : null;
@@ -1436,7 +1431,6 @@ const BattleUI = (() => {
   function playMoveFx(type, slug, targetEl) {
     return new Promise(res => {
       const layer = document.getElementById("move-fx");
-      const stage = document.querySelector(".battle-stage");
       /* 舞台座標（Rule 90）：精靈係 .battle-stage 直屬子元素，用 offset 唔受 scale／rotate 影響 */
       const cx = targetEl.offsetLeft + targetEl.offsetWidth / 2;
       const cy = targetEl.offsetTop + targetEl.offsetHeight / 2;
@@ -1831,7 +1825,6 @@ const BattleUI = (() => {
   }
 
   function showSwitchMenu(force) {
-    pendingSwitch = !!force;
     partyForced = !!force;
     partySel = -1;
     document.getElementById("battle-action-menu").style.display = "none";
@@ -2154,7 +2147,6 @@ const BattleUI = (() => {
     }
     const myMove = playerAction.kind === "move" ? moveInfo(myActive().moves[playerAction.moveIdx].slug) : null;
     const foeMove = foeAction.kind === "move" ? moveInfo(foeActive().moves[foeAction.moveIdx].slug) : null;
-    const wName = state.weather && state.weather.name;
     /* Mega 進化（第 4c 段）：回合開始、出招之前；p1 先 p2 後，PvP 兩邊一致；之後速度用 Mega 數值 */
     const megaLog = state.log.length;
     const megaSides = [];

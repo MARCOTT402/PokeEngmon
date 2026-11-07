@@ -94,13 +94,6 @@ const Pet = (() => {
     return t.getUTCHours() * 60 + t.getUTCMinutes();
   }
 
-  /* 日期加減：用 UTC 做日期運算，避免任何時區偏移 */
-  function shiftDay(key, delta) {
-    const [y, m, d] = key.split("-").map(Number);
-    const t = new Date(Date.UTC(y, m - 1, d + delta));
-    return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
-  }
-
   /* updatedAt 同時係連續消耗嘅時間錨點，統一用校正後時鐘 */
   function touch(p) { p.updatedAt = new Date(nowTs()).toISOString(); }
 

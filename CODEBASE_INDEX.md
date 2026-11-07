@@ -11,7 +11,7 @@
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
-| 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 計劃 `.trae/documents/20261106-commercial-grade-engineering.md` |
+| 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, 死碼掃描 `tools/audit/unused-css.mjs`／`unused-assets.mjs`（Rule 108）, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 計劃 `.trae/documents/20261106-commercial-grade-engineering.md` |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
 | 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
 | 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |

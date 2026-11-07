@@ -16,7 +16,7 @@
     "test:coverage": "node --test --experimental-test-coverage \"tests/unit/*.test.js\"",
     "test:e2e": "node tools/responsive/run-all.mjs",
     "prelint": "node tools/audit/gen-eslint-globals.mjs",
-    "lint": "eslint js tests --max-warnings 20"
+    "lint": "eslint js tests --max-warnings 0"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",

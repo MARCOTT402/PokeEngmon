@@ -17,7 +17,6 @@ const MoveAnim = (() => {
   const FRAME_MS = 1000 / 60;      /* PokeRogue FPS = 60 */
   const CELL = 96;                 /* loadSpritesheet(graphic, "battle_anims", 96) */
   const DESIGN_W = 320;
-  const DESIGN_H = 240;
   const MIN_MS = 260;              /* 太短嘅招式（如 Tackle）保留一下，睇得清 */
   const BASE = "assets/battle/anim/";
 
