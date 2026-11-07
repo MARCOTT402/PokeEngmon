@@ -281,6 +281,7 @@ const Quiz = {
 
     /* 圖片（句子題專用）*/
     this._renderImage(q);
+    this._preloadNext();
 
     /* 空格格數＝第一個答案寫法嘅字數 */
     this.cells = this._buildCells(q);
@@ -1631,6 +1632,24 @@ const Quiz = {
       img.src = url;
       box.classList.add("show");
     });
+  },
+
+  /* 預載下一題（Rule 102）：圖片同錄音喺答緊呢題嘅時候背景載，撳 Next 即刻出、即刻有聲。
+     只預載 queue[1]（答錯會 push 返隊尾，唔使預載晒成 set）；失敗唔理，render 嗰陣照舊再載 */
+  _preloadNext() {
+    const nx = this.queue[1] && this.queue[1].q;
+    if (!nx) return;
+    setTimeout(() => {
+      try {
+        if (nx.type === "word") {
+          if (nx.image) { const im = new Image(); im.decoding = "async"; im.src = nx.image; }
+          const audio = window.CaptureScene && CaptureScene.audio;
+          if (audio && audio.preloadWord && typeof wordAudioURL === "function") audio.preloadWord(wordAudioURL(nx.word));
+        } else if (nx.no && typeof findQuestionImage === "function") {
+          findQuestionImage(nx.no).then(url => { if (url) { const im = new Image(); im.decoding = "async"; im.src = url; } }).catch(() => {});
+        }
+      } catch (e) { /* 預載唔可以影響答題 */ }
+    }, 400);
   },
 
   _autoPlayWord(token) {

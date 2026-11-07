@@ -15,7 +15,9 @@
 | 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
 | 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`） | `js/app.js`（entry gate `unlockAudio`）, `js/capture.js`（`_loadBGMBuffer`）, Rule 101 |
 | Power Up 改錯 | `js/powerup.js` |
-| 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98） | `js/storage.js` |
+| 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98；150ms 合併寫入＋`flushState`，Rule 102） | `js/storage.js` |
+| Service Worker 分流（`swRoute`：跨域 API skip、版本化 cache-first、頁面 3 秒 timeout） | `sw.js`, `tools/_test_sw_strategy.js`, Rule 102 |
+| 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz.js`, `js/capture.js`, Rule 102 |
 | 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tools/_test_sync_queue.js` |
 | Auth + RPC（鑽石/捕捉/扭蛋/exp；`authedFetch`、single-flight token 續期，Rule 96） | `js/supabase-auth.js` |
 | 網絡層（timeout／離線／錯誤分類／連線 toast／離線 pill `#net-offline`） | `js/core/net.js`（`Net.request`、`NetError`、`syncPill`），Rule 96／98 |

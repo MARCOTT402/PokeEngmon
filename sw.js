@@ -155,39 +155,88 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-/* App 檔案（同源）：網絡優先，離線先用快取 → 更新即時生效
-   assets/（屬性 Icon、動態 GIF）同 Pokemon 圖片（外部 CDN）：快取優先，慳流量 */
-self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
-  /* 非 http(s) scheme（例如 chrome-extension://）Cache API 唔支援，直接放行，
-     否則 caches.put 會抛「Request scheme is unsupported」 */
-  if (!e.request.url.startsWith("http")) return;
-  const sameOrigin = e.request.url.startsWith(self.location.origin);
-  const isAsset = sameOrigin && e.request.url.includes("/assets/");
+/* ---------- fetch 策略（Rule 102） ----------
+   - 跨域：只 cache 圖片／音效／字型（精靈 CDN 等）。Supabase REST／RPC 等 API **一律唔經 SW**：
+     舊做法跨域全部 cache-first，`user_account?select=*` 等 GET 會返上次（甚至上一個帳號）嘅資料。
+   - 頁面（navigate／index.html）：network-first，3 秒冇回應先用 cache（慢網唔使白等）。
+   - 帶 `?v=<本 SW 版本>` 嘅檔案：版本化 → cache-first（precache key 冇 query，用 ignoreSearch 對返）。
+     版本唔同（新 index 配舊 SW 嘅過渡期）就照行 network-first。
+   - /assets/：cache-first。其他同源（CSV、data/*.json）：network-first＋3 秒 timeout。
+   - localhost／127.0.0.1：版本化檔案都唔 cache-first，開發改 code 唔使 bump 版本（Rule 62）。 */
+const SW_VERSION = CACHE_NAME.slice("pokeengmon-".length);
+const NET_TIMEOUT_MS = 3000;
+const IS_DEV = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(self.location.hostname);
 
-  if (sameOrigin && !isAsset) {
-    e.respondWith(
-      fetch(new Request(e.request, { cache: "reload" })).then(res => {
-        if (res && res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
+function swRoute(req) {
+  if (req.method !== "GET") return "skip";
+  /* 非 http(s) scheme（例如 chrome-extension://）Cache API 唔支援（Rule 10） */
+  if (!req.url.startsWith("http")) return "skip";
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) {
+    return /^(image|audio|font|video)$/.test(req.destination || "") ? "cache-first" : "skip";
+  }
+  if (req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("/index.html")) return "page";
+  if (url.pathname.endsWith("/sw.js")) return "skip";
+  if (url.pathname.includes("/assets/")) return "cache-first";
+  if (!IS_DEV && url.searchParams.get("v") === SW_VERSION) return "versioned";
+  return "network-first";
+}
+
+function _put(req, res) {
+  if (!res || !res.ok || res.type === "opaque") return;
+  const clone = res.clone();
+  caches.open(CACHE_NAME).then(c => c.put(req, clone)).catch(() => {});
+}
+
+async function _fromCache(req, loose) {
+  const hit = await caches.match(req);
+  if (hit || !loose) return hit;
+  return caches.match(req, { ignoreSearch: true });
+}
+
+async function cacheFirst(req, loose) {
+  const hit = await _fromCache(req, loose);
+  if (hit) return hit;
+  const res = await fetch(req);
+  _put(req, res);
+  return res;
+}
+
+/* 網絡優先：timeout 到咗而 cache 有就用 cache；網絡繼續跑完照更新 cache */
+function networkFirst(req, fetchReq, fallbackKey) {
+  return new Promise(resolve => {
+    let done = false;
+    const finish = r => { if (!done && r) { done = true; resolve(r); } };
+    const fromCache = () => _fromCache(req, true)
+      .then(hit => hit || (fallbackKey ? caches.match(fallbackKey) : undefined));
+    const net = fetch(fetchReq).then(res => {
+      if (res && res.ok) _put(req, res);
+      return res;
+    });
+    const timer = setTimeout(() => fromCache().then(finish), NET_TIMEOUT_MS);
+    net.then(res => { clearTimeout(timer); finish(res); })
+      .catch(() => {
+        clearTimeout(timer);
+        fromCache().then(hit => {
+          if (hit) finish(hit);
+          else if (!done) { done = true; resolve(Response.error()); }
+        });
+      });
+  });
+}
+
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  const kind = swRoute(req);
+  if (kind === "skip") return;
+  if (kind === "page") {
+    /* no-cache：同 server revalidate（GitHub Pages 有 ETag，冇改返 304） */
+    e.respondWith(networkFirst(req, new Request(req.url, { cache: "no-cache", credentials: "same-origin" }), "./index.html"));
+  } else if (kind === "versioned") {
+    e.respondWith(cacheFirst(req, true).catch(() => networkFirst(req, req)));
+  } else if (kind === "cache-first") {
+    e.respondWith(cacheFirst(req, false).catch(() => _fromCache(req, true).then(h => h || Response.error())));
   } else {
-    e.respondWith(
-      caches.match(e.request).then(cached => {
-        const fetched = fetch(e.request).then(res => {
-          if (res && res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          }
-          return res;
-        }).catch(() => cached);
-        return cached || fetched;
-      })
-    );
+    e.respondWith(networkFirst(req, new Request(req, { cache: "no-cache" })));
   }
 });
-

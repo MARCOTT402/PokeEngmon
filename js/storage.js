@@ -172,7 +172,25 @@ function _sanitizeStateNumbers(st, where) {
 }
 
 let _saveFailToastAt = 0;
-function saveState() {
+/* 合併寫入（Rule 102）：重度用戶存檔約 200 KB，每次 stringify＋setItem 喺 4× CPU 要 ~4 ms；
+   餵食／背包／結算會連續 call 好多次。記憶體 _state 一直係最新（loadState 讀記憶體），
+   所以只係延後落 localStorage：150 ms 內嘅寫入合併做一次；入背景／關頁（pagehide、
+   visibilitychange hidden）即刻 flush。要即刻落地（reset、登出清進度）用 saveState({ now: true }）或 flushState() */
+const SAVE_DEBOUNCE_MS = 150;
+let _saveTimer = 0;
+function saveState(opt) {
+  if (!_state) return;
+  _sanitizeStateNumbers(_state, "saveState");
+  if (opt && opt.now) { _writeState(); return; }
+  if (_saveTimer) return;
+  _saveTimer = setTimeout(_writeState, SAVE_DEBOUNCE_MS);
+}
+function flushState() {
+  if (_saveTimer) _writeState();
+}
+function _writeState() {
+  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = 0; }
+  if (!_state) return;
   _sanitizeStateNumbers(_state, "saveState");
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
@@ -209,7 +227,7 @@ function setCurveMode(mode) {
 
 function resetState() {
   _state = defaultState();
-  saveState();
+  saveState({ now: true });
   /* Reset 必須連 SM-2 卡片與歷史一併清除，否則新開局會被舊到期卡影響 */
   try { localStorage.removeItem("pokeengmon_sm2_cards_v2"); } catch (e) {}
   try { localStorage.removeItem("pokeengmon_sm2_history_v2"); } catch (e) {}
@@ -227,7 +245,7 @@ function clearGameProgress() {
   _state = defaultState();
   _state.device_id = keepDeviceId;
   _state.customQuestions = keepCustomQuestions;
-  saveState();
+  saveState({ now: true });
   /* 清除 SM-2 卡片同歷史 */
   try { localStorage.removeItem("pokeengmon_sm2_cards_v2"); } catch (e) {}
   try { localStorage.removeItem("pokeengmon_sm2_history_v2"); } catch (e) {}
@@ -937,4 +955,11 @@ function dayLevel(key) {
   if (n <= 2) return 1;
   if (n <= 4) return 2;
   return 3;
+}
+
+/* 入背景／關頁：未落地嘅合併寫入即刻寫（iOS 唔一定有 beforeunload；Rule 102） */
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("pagehide", flushState);
+  window.addEventListener("beforeunload", flushState);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushState(); });
 }

@@ -98,3 +98,13 @@ Skill: Rule 94 added
 - 未做：three.js 延後（要先將 audio 拆出 capture.js；另一個 session 當時改緊 capture.js）。
 
 Skill: Rule 101 added
+
+### Rule 102 — SW 分流（Supabase API 唔經 cache、版本化 cache-first、頁面 3 秒 timeout）、`saveState` 150ms 合併寫入、答題預載下一題
+
+- 背景：stability-performance plan §5.2／§5.5／§5.6。
+- 發現：做 §5.5 時睇 `sw.js` fetch handler，`sameOrigin` 假就入 else 分支 cache-first → Supabase REST GET（Sync.pull 六條、PvP matchmaking／battles poll）全部經 SW cache，回應係上一次嘅；cache 只按 URL 對，唔理 Authorization → 同一部機換帳號 pull 到上個帳號嘅 `user_account`。
+- 修正：`swRoute()` 分流（跨域只 cache 媒體）；頁面 network-first 3 秒 timeout；版本化 cache-first；`tools/_test_sw_strategy.js`。`storage.js` 合併寫入＋flush；`quiz.js` `_preloadNext`；`capture.js` `preloadWord`／`_loadOneShot`。
+- 撞板：`tools/_test_numeric_guards.js` stub `setTimeout: () => 0`，debounce 之後永遠唔寫 → 改用 `saveState({ now: true })`。測 SW 時 stub origin 用 https、request 用 http 會變跨域 → 測試 URL 要同 origin 一致。
+- 結果：20 次 saveState → 1 次寫入；下一題錄音／圖片答緊上一題時已載；離線 reload 正常；bench 冇退步、冇 page error。
+
+Skill: Rule 102 added

@@ -9,7 +9,8 @@
 > - ✅ §4 數值兜底（Rule 99；`--frame-*` 只喺 CSS 定義唔使 fallback；`capture.js` renderer size 未改——另一個 session 改緊，留待之後）
 > - ✅ §5.3 轉場：sheet 同時切換 220ms、overlay exit 200ms（Rule 100；bench 836 → 315ms）
 > - ✅ §5.4／§5.6（部分）：戰鬥 BGM idle 預載、gacha 大圖 lazy、題目圖片 `index.json`（Rule 101；入場前 8,036 → 5,776 KB、圖片 404 → 0）。three.js 延後未做：要先將 audio 拆出 `capture.js`
-> - ⏭ 下一步：§5.2 `saveState` 合併寫入、§5.5 Service Worker 策略（cache-first＋index.html 3 秒 timeout）、§5.6 答下一題預載
+> - ✅ §5.2／§5.5／§5.6：`saveState` 150ms 合併（20 次 → 寫 1 次）、SW 分流（修 Supabase GET 被 cache 嘅 bug）＋頁面 3 秒 timeout＋版本化 cache-first、預載下一題錄音／圖片（Rule 102）
+> - ⏭ 下一步（選做）：three.js 延後（要先將 audio 拆出 `capture.js`）、capture renderer 尺寸兜底、`user_history` server 端去重
 > 本 project 冇 framework（冇 React／Vue Error Boundary），所以「Error Boundary」要用原生方式自己做：全域 handler + 開機邊界 + 每個 view 嘅 render 邊界。
 
 ---

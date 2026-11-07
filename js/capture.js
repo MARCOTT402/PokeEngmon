@@ -821,21 +821,38 @@ class CaptureAudio {
     };
     const cached = this._oneShotBufs[url];
     if (cached && cached.buf) { start(cached.buf); return; }
-    if (cached && cached.loading) { cached.waiters.push(start); return; }
-    const rec = { buf: null, loading: true, waiters: [start] };
+    /* 預載緊（preloadWord）或者上一次撳緊：排隊等同一個 decode */
+    if (cached && cached.loading) { cached.waiters.push(start); cached.failers.push(fallback); return; }
+    const rec = { buf: null, loading: true, waiters: [start], failers: [fallback] };
     this._oneShotBufs[url] = rec;
+    this._loadOneShot(url, rec);
+  }
+
+  /* 預載下一題錄音（Rule 102）：只 fetch＋decode 入 _oneShotBufs，唔播；之後 playWord 即刻有聲。
+     冇 AudioContext（未撳入場）就唔做；失敗唔快取，playWord 會自己再試＋fallback */
+  preloadWord(url) {
+    if (!url || !this.ctx) return;
+    if (!this._oneShotBufs) this._oneShotBufs = {};
+    if (this._oneShotBufs[url]) return;
+    const rec = { buf: null, loading: true, waiters: [], failers: [] };
+    this._oneShotBufs[url] = rec;
+    this._loadOneShot(url, rec);
+  }
+
+  _loadOneShot(url, rec) {
     fetch(url)
       .then(r => { if (!r.ok) throw new Error("missing"); return r.arrayBuffer(); })
       .then(ab => this.ctx.decodeAudioData(ab))
       .then(buf => {
         rec.buf = buf; rec.loading = false;
         rec.waiters.forEach(fn => { try { fn(buf); } catch (e) {} });
-        rec.waiters = [];
+        rec.waiters = []; rec.failers = [];
       })
       .catch(() => {
-        rec.loading = false; rec.waiters = [];
-        delete this._oneShotBufs[url];       // 下次再試，唔好快取失敗結果
-        fallback();
+        const failers = rec.failers;
+        rec.loading = false; rec.waiters = []; rec.failers = [];
+        if (this._oneShotBufs[url] === rec) delete this._oneShotBufs[url];   // 下次再試，唔好快取失敗結果
+        failers.forEach(fn => { try { fn(); } catch (e) {} });
       });
   }
 
