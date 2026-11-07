@@ -107,6 +107,7 @@ if (!e.request.url.startsWith("http")) return;
 - 預載：開機 `CaptureScene.preload(20000)`、`Quiz._begin` `preload(1500)`（一 set 做完就係捕捉）。`preload` 會揀**最早**嗰個時間（舊版 20 秒 timer 排咗之後答題嘅 1.5 秒請求被食咗，要 14 秒先載好）。`load()` 失敗唔快取、會 report `capture-load`；`_captureThenSettle` 原有 try/catch 會直接跳去結算。
 - BGM：`flat-water.mp3` 128k → 80k（主頁 gain 0.1，聽唔出），`wild-battle.mp3` 192k → 112k，兼剝走封面圖（ffprobe 見 `video` stream 就係有封面）。指令：`ffmpeg -i in.mp3 -map 0:a -vn -codec:a libmp3lame -b:a 80k -ar 44100 -map_metadata -1 -id3v2_version 0 out.mp3`。
 - 字型：`pokemon-emerald-pro.ttf` 5 MB（33,000 中日文字形）→ `pokemon-emerald-pro-latin.woff2` 12 KB（`python -m fontTools.subset … --unicodes="U+0000-024F,U+02B0-036F,U+0370-03FF,U+2000-206F,U+20A0-20CF,U+2100-22FF,U+2460-27BF,U+FFFD" --layout-features='*' --flavor=woff2`）。CSS 兩個同名 `@font-face` 用 **互補** `unicode-range`；ttf 只喺出現中日文先下載，唔 precache。
+- **量度要睇實際傳輸量**：GitHub Pages 會 gzip JS／CSS／JSON（例如 `moves.json` 241 KB → 20 KB、全部開機 JS 1.3 MB → 393 KB），bench 嘅 `decodedBodySize` 會誇大；mp3／png 先係真重量。改之前亦要確認個 fetch **幾時真係開始**——主頁 BGM 本身喺 `App.init`（資料載完）先 fetch，「再延後」實測冇分別，已還原。
 - SW：install 會 precache ~14 MB。**第一次開**（冇 controller）等 `load` ＋ 8 秒＋idle 先 `register`；已有 controller 照即刻 register／update。
 - 驗收（headless，冇 CPU 降速）：開頁 4 秒內 resource 冇 `three`／`capture.js`／`.ttf`、冇 SW registration；拉丁字 `document.fonts.check` true 而 ttf 未 request，渲染中文先 request；`Quiz._begin` 後約 1.5 秒 `CaptureScene._real` 有、`_real.audio === CaptureScene.audio`；`CaptureScene.play()` 撳三下 resolve `{caught,…}`；load＋8 秒後有 SW registration；`test-capture-fit` 等 responsive suite 照舊。
 

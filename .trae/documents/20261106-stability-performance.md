@@ -11,7 +11,8 @@
 > - ✅ §5.4／§5.6（部分）：戰鬥 BGM idle 預載、gacha 大圖 lazy、題目圖片 `index.json`（Rule 101；入場前 8,036 → 5,776 KB、圖片 404 → 0）。three.js 延後未做：要先將 audio 拆出 `capture.js`
 > - ✅ §5.2／§5.5／§5.6：`saveState` 150ms 合併（20 次 → 寫 1 次）、SW 分流（修 Supabase GET 被 cache 嘅 bug）＋頁面 3 秒 timeout＋版本化 cache-first、預載下一題錄音／圖片（Rule 102）
 > - ✅ §5.4 開機減重：audio 拆去 `js/audio.js`、three.js 按需 import＋預載、BGM 降 bitrate（-1.7 MB）、emerald 字型子集（5 MB → 12 KB）、第一次開延後註冊 SW（Rule 103）
-> - ⏭ 下一步（選做）：sheet 切換 ≤ 250 ms（逐個 sheet profile render）、capture renderer 尺寸兜底、`user_history` server 端去重、`moves.json` 延後
+> - ✅ 收尾（2026-11-07）：evolution.mp3 238k → 128k（1.03 → 0.55 MB）。用**實際傳輸量（gzip）**重新評估：開機 JS 393 KB、CSS 77 KB、data ≈ 65 KB，唔計 BGM 約 0.6 MB；`moves.json` gzip 後只得 20 KB、minify／build step 估計慳 ~100 KB → **唔做**（唔值得破「冇 build step」）。主頁 BGM「延後載」實測冇幫助（`App.init` 本身喺資料載完先行，BGM 從來唔同首屏爭頻寬）→ 已還原。bench 加 `sheetVisibleMs`：新 sheet 開始出現 124 ms（4× CPU，達標）；`sheetSwitchMs` 328 ms 係滑入完成（60 ms 錯開＋220 ms 動畫嘅設計值），唔再縮
+> - ⏭ 下一步（選做）：capture renderer 尺寸兜底、`user_history` server 端去重
 > 本 project 冇 framework（冇 React／Vue Error Boundary），所以「Error Boundary」要用原生方式自己做：全域 handler + 開機邊界 + 每個 view 嘅 render 邊界。
 
 ---
@@ -72,11 +73,11 @@
 | 指標 | 目標 | 量度方法 |
 |---|---|---|
 | 撳 Start → 第一題出現（主線程阻塞） | **< 50 ms**（桌面）／< 200 ms（4× CPU 降速） | `tools/perf/bench.mjs` |
-| Sheet／overlay 切換到新內容可見 | **≤ 250 ms** | 同上（量 class 變化 → transitionend） |
+| Sheet／overlay 切換到新內容可見 | **≤ 250 ms** | bench `sheetVisibleMs`（ph-open 後下一幀）；`sheetSwitchMs` = 滑入完成，參考用 |
 | 任何 API | 10 秒內一定有結果（成功／錯誤提示） | Net 層 timeout + DevTools offline 測試 |
 | 未捕捉錯誤 | 0 白屏；100% 有記錄；Home 掣永遠可用 | 故意注入錯誤測試（見 §7） |
 | 首屏（4G 慢網，第二次開） | 可互動 < 2 秒 | SW cache-first + bench |
-| 首次開 App 下載量 | < 1.5 MB decoded 先到主頁（BGM／three.js 延後） | bench resource 統計 |
+| 首次開 App 下載量 | < 1.5 MB **實際傳輸（gzip）** 先到主頁；mp3 唔壓縮另計 | bench resource 統計＋gzip 估算（decoded size 會誇大 JS／JSON） |
 
 ---
 

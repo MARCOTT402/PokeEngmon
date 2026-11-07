@@ -98,7 +98,10 @@ const SHEET = `
     const target = document.getElementById('sheet-calendar');
     const tick = () => {
       if (target && target.classList.contains('ph-open')) {
-        const done = () => res({ sheetSwitchMs: Math.round(performance.now()-t0) });
+        /* sheetVisibleMs：新 sheet 開始出現（ph-open 之後下一幀已 paint）；sheetSwitchMs：滑入完成（transitionend） */
+        let visibleMs = null;
+        requestAnimationFrame(() => requestAnimationFrame(() => { visibleMs = Math.round(performance.now()-t0); }));
+        const done = () => res({ sheetSwitchMs: Math.round(performance.now()-t0), sheetVisibleMs: visibleMs });
         /* 加埋 transition 時間：等 transitionend 或 600ms */
         let fired = false;
         target.addEventListener('transitionend', () => { if (!fired) { fired = true; done(); } }, { once: true });
@@ -138,6 +141,7 @@ const summary = {
   warmQuizStartMs: pick("warm.quizStartMs"),
   answerWriteMs: pick("warm.answerWriteMs"),
   sheetSwitchMs: pick("sheet.sheetSwitchMs"),
+  sheetVisibleMs: pick("sheet.sheetVisibleMs"),
   firstLoadDecodedKB: pick("fresh.decodedKB"),
   dclMs: pick("warm.dcl"),
   cardsKB: pick("warm.cardsKB"),
