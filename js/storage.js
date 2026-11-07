@@ -74,7 +74,8 @@ function defaultState() {
     myTeam: [],             // 我的隊伍：entry uid ×≤6（AI／PvP／好友戰共用；雲端 user_account.my_team）
     bagPrefs: {},           // 背包設定（排序 chip 次序等；雲端 user_account.bag_prefs）
     dexCaught: [],          // 曾經捕捉過嘅圖鑑號（送走都保留「已捕捉」；雲端 user_account.dex_caught）
-    curveMode: "standard"   // 遺忘曲線模式：standard / junior / teen / adult
+    curveMode: "standard",  // 遺忘曲線模式：standard / junior / teen / adult
+    bgmTrack: "flat-water"  // 背景音樂（BGM_TRACKS key；雲端 user_account.bgm_track）
     /* SM-2 SRS 狀態已遷移至 js/sm2.js 使用 LocalStorage (pokeengmon_sm2_cards_v2) */
   };
 }
@@ -215,6 +216,27 @@ function getCurveMode() {
 function questionsToday(st, day) {
   const list = (st && st.records && st.records[day]) || [];
   return list.reduce((n, r) => n + (Number(r.total) || 0), 0);
+}
+
+/* 背景音樂選擇（Setting → Music track）。url 喺 js/audio.js 讀；新增曲目要同步
+   sw.js ASSETS 同 migration 嘅 user_account_bgm_track_check */
+const BGM_TRACKS = {
+  "flat-water":  { label: "Flat Water", url: "assets/bgm/flat-water.mp3" },
+  "brown-noise": { label: "Brown Noise", url: "assets/bgm/focus-brown-noise.mp3" },
+  "isochronic":  { label: "Focus Tones", url: "assets/bgm/focus-isochronic.mp3" }
+};
+
+function getBgmTrack() {
+  const id = loadState().bgmTrack;
+  return BGM_TRACKS[id] ? id : "flat-water";
+}
+
+function setBgmTrack(id) {
+  if (!BGM_TRACKS[id]) id = "flat-water";
+  const st = loadState();
+  st.bgmTrack = id;
+  saveState();
+  return id;
 }
 
 function setCurveMode(mode) {

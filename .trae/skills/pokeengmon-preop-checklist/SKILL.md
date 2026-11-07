@@ -9,7 +9,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 | 做緊咩 | 讀邊份 | Rule |
 |---|---|---|
-| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94、101、102、103 |
+| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94、101、102、103、105 |
 | SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊、網絡請求／token、sync queue／本機存檔防損 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78、96、98 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
@@ -432,5 +432,9 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
 ## Rule 103 — 開機減重：音效拆去 `js/audio.js`、three.js 捕捉場景按需 `import()`、BGM 降 bitrate、emerald 字型拉丁子集、第一次開 App 延後註冊 SW
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 105 — 可揀 BGM（Music track）：buffer 按 url 快取、`stopTownBGM` 要清 `_townPending`、新曲 loudness-match＋crossfade loop、選用大音檔唔 precache
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

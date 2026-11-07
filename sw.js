@@ -113,6 +113,8 @@ const ASSETS = [
   "./assets/bgm/obtained-pokemon.mp3",
   "./assets/bgm/obtained-berry.mp3",
   "./assets/bgm/flat-water.mp3",
+  /* focus-brown-noise.mp3／focus-isochronic.mp3（Setting → Music track，各 ~1.8 MB）刻意唔 precache：
+     只有揀咗嘅用戶先下載，/assets/ cache-first 播過一次就離線可用 */
   "./assets/bgm/evolution.mp3",
   "./assets/bgm/evolution-fanfare.mp3",
   "./assets/gacha/dragonite.png",

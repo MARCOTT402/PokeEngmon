@@ -266,6 +266,18 @@ window.Sync = (() => {
           st.curveMode = acct.curve_mode;
           try { if (window.SM2 && SM2.setMode) SM2.setMode(acct.curve_mode); } catch (e) {}
         }
+        /* 背景音樂選擇：雲端有值就跟雲端；雲端 null（未揀過）但本機揀過 → backfill 上去 */
+        if (typeof BGM_TRACKS !== "undefined") {
+          if (acct.bgm_track && BGM_TRACKS[acct.bgm_track]) {
+            if (st.bgmTrack !== acct.bgm_track) {
+              st.bgmTrack = acct.bgm_track;
+              setTimeout(() => { try { if (window.CaptureScene && CaptureScene.audio.switchTownTrack) CaptureScene.audio.switchTownTrack(); } catch (e) {} }, 0);
+            }
+          } else if (!acct.bgm_track && "bgm_track" in acct && st.bgmTrack && st.bgmTrack !== "flat-water" && BGM_TRACKS[st.bgmTrack]) {
+            const local = st.bgmTrack;
+            setTimeout(() => patchAccount({ bgm_track: local }), 0);
+          }
+        }
         /* Mega 石（第 4c 段）：只經 RPC 寫，雲端就係權威 */
         if (acct.items_mega && typeof acct.items_mega === "object") st.megaStones = Object.assign({}, acct.items_mega);
         /* 背包：雲端 null = 未上過雲 → 保留本機（首次 backfill 靠呢條規則） */
@@ -561,6 +573,7 @@ window.Sync = (() => {
     if (Array.isArray(fields.my_team)) body.my_team = fields.my_team.slice(0, 6).map(String);
     if (typeof fields.trainer_avatar === "string" && /^[a-z0-9-]{1,32}$/.test(fields.trainer_avatar)) body.trainer_avatar = fields.trainer_avatar;
     if (fields.bag_prefs && typeof fields.bag_prefs === "object") body.bag_prefs = fields.bag_prefs;
+    if (typeof fields.bgm_track === "string" && typeof BGM_TRACKS !== "undefined" && BGM_TRACKS[fields.bgm_track]) body.bgm_track = fields.bgm_track;
     if (!Object.keys(body).length) return false;
     try {
       await _api("PATCH", `/user_account?id=eq.${ref.account_id}`, body);

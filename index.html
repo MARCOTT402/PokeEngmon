@@ -439,6 +439,15 @@
                 <span class="ph-sitem-t">Music <b id="sheet-bgm-pct">100%</b></span>
                 <input id="sheet-bgm" type="range" min="0" max="100" step="1" value="100" aria-label="Music volume">
               </label>
+              <div class="ph-sitem ph-sitem-col">
+                <span class="ph-sitem-t" id="sheet-bgm-track-t">Music track</span>
+                <div class="ph-speed-seg ph-track-seg" id="sheet-bgm-track" role="radiogroup" aria-labelledby="sheet-bgm-track-t">
+                  <label><input type="radio" name="bgmTrackSheet" value="flat-water"><span>Flat Water</span></label>
+                  <label><input type="radio" name="bgmTrackSheet" value="brown-noise"><span>Brown Noise</span></label>
+                  <label><input type="radio" name="bgmTrackSheet" value="isochronic"><span>Focus Tones</span></label>
+                </div>
+                <small class="ph-speed-note">Brown Noise &amp; Focus Tones help you concentrate</small>
+              </div>
               <label class="ph-sitem ph-sitem-col" for="sheet-sfx">
                 <span class="ph-sitem-t">Sound Effects <b id="sheet-sfx-pct">100%</b></span>
                 <input id="sheet-sfx" type="range" min="0" max="100" step="1" value="100" aria-label="Sound effects volume">

@@ -539,36 +539,65 @@ class CaptureAudio {
     this._tone(1318, { type: "sine", dur: 0.22, gain: 0.16, at: 0.07 });
   }
 
-  /* ---------- Town BGM: Flat Water (BGM channel) — global background loop ---------- */
-  _loadTownBuffer() {
+  /* ---------- Town BGM (BGM channel) — global background loop ----------
+     用戶喺 Setting → Music track 揀（BGM_TRACKS，js/storage.js）；預設 Flat Water。
+     每首 buffer 按 url 快取，切歌唔使重新 decode 返舊嗰首。 */
+  _townUrl() {
+    const id = (typeof getBgmTrack === "function") ? getBgmTrack() : "flat-water";
+    const t = (typeof BGM_TRACKS !== "undefined" && BGM_TRACKS[id]) || null;
+    return t ? t.url : "assets/bgm/flat-water.mp3";
+  }
+  _loadTownBuffer(url) {
     this.ensure();
-    if (!this.ctx || this._townBuf || this._townBufLoading) return;
-    this._townBufLoading = true;
-    fetch("assets/bgm/flat-water.mp3")
+    if (!this.ctx) return;
+    if (!this._townBufs) this._townBufs = {};
+    if (!this._townLoading) this._townLoading = {};
+    if (this._townBufs[url] || this._townLoading[url]) return;
+    this._townLoading[url] = true;
+    fetch(url)
       .then(r => r.arrayBuffer())
       .then(ab => this.ctx.decodeAudioData(ab))
-      .then(buf => { this._townBuf = buf; if (this._townPending) { this._townPending = false; this.startTownBGM(); } })
+      .then(buf => {
+        this._townBufs[url] = buf;
+        /* 等緊嘅係呢首先播：中途切咗歌就等新嗰首自己 load 完 */
+        if (this._townPending && this._townUrl() === url) { this._townPending = false; this.startTownBGM(); }
+      })
       .catch(() => {})
-      .finally(() => { this._townBufLoading = false; });
+      .finally(() => { this._townLoading[url] = false; });
   }
   startTownBGM() {
     this.ensure();
     if (!this.ctx || this._townSrc) return;
-    if (!this._townBuf) { this._townPending = true; this._loadTownBuffer(); return; }
+    const url = this._townUrl();
+    const buf = this._townBufs && this._townBufs[url];
+    if (!buf) { this._townPending = true; this._loadTownBuffer(url); return; }
     try {
       const g = this.ctx.createGain();
-      g.gain.value = 0.1;   /* 設計基數；用戶倍率喺 bgmBus */
+      g.gain.value = 0.1;   /* 設計基數；用戶倍率喺 bgmBus（新曲已 loudness-match 到約 -15 LUFS） */
       g.connect(this.bgmBus || this.ctx.destination);
       const src = this.ctx.createBufferSource();
-      src.buffer = this._townBuf;
+      src.buffer = buf;
       src.loop = true;
       src.connect(g);
       src.start(0);
       this._townGain = g;
       this._townSrc = src;
+      this._townSrcUrl = url;
     } catch (e) {}
   }
+  /* Setting 切歌：town BGM 播緊就淡出換新曲；對戰／扭蛋期間只記低，完場 startTownBGM 自然播新嗰首 */
+  switchTownTrack() {
+    const url = this._townUrl();
+    if (this._townSrc) {
+      if (this._townSrcUrl === url) return;
+      this.stopTownBGM(350);
+      this.startTownBGM();
+    } else if (this._townPending) {
+      this._loadTownBuffer(url);
+    }
+  }
   stopTownBGM(fadeMs = 400) {
+    this._townPending = false;   /* 未 load 完就叫停：唔好 load 完先自己播（會疊落對戰／扭蛋度） */
     if (!this._townSrc || !this.ctx) return;
     const src = this._townSrc;
     const g = this._townGain;

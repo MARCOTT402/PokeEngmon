@@ -117,3 +117,14 @@ Skill: Rule 102 added
 - 結果：開機（4 秒內）decoded 3.6 MB（無 three／capture／ttf）；BGM 共慳 1.7 MB；字型 5 MB → 12 KB；SW 延後註冊。
 
 Skill: Rule 103 added
+
+### Rule 105 — 可揀 BGM（Music track）：buffer 按 url 快取、`stopTownBGM` 要清 `_townPending`、新曲 loudness-match＋crossfade loop、選用大音檔唔 precache
+
+- 2026-11-07：用戶要喺 Setting 揀背景音樂（原有 Flat Water ＋ 兩首 3 小時 focus 音檔 cut 到 3 分鐘 loop），選擇要上雲。
+- 改 `_loadTownBuffer` 做按 url 快取時發現：舊 code `stopTownBGM` 冇清 `_townPending`——boot 時 buffer 未 load 完就入對戰／扭蛋，load 完會自己 `startTownBGM()`，同 battle BGM 疊聲。切歌令「load 中」嘅窗口變多（新曲第一次要 fetch 1.8 MB），所以一併修。
+- 音檔處理（brown noise 原本 -20.1 LUFS，isochronic -13.6，Flat Water -12.7）：
+  `ffmpeg -ss 120 -t 183 -i in.mp3 -filter_complex "[0:a]aresample=44100,asplit=3[h][b][t];[h]atrim=0:3,asetpts=PTS-STARTPTS,afade=t=in:d=3:curve=qsin[hh];[t]atrim=180:183,asetpts=PTS-STARTPTS,afade=t=out:d=3:curve=qsin[tt];[b]atrim=3:180,asetpts=PTS-STARTPTS[bb];[hh][tt]amix=inputs=2:normalize=0[x];[x][bb]concat=n=2:v=0:a=1,volume=<dB>dB,alimiter=limit=0.89:level=false[o]" -map "[o]" -c:a libmp3lame -b:a 80k out.mp3`
+  （brown +5.9 dB → -15.4 LUFS；isochronic -0.6 dB → -14.7 LUFS；兩首都正好 180.0 秒）
+- Migration `supabase-migrate-20261107-bgm-track.sql` 經 MCP 執行，查 `role_column_grants`／check constraint 確認。
+
+Skill: Rule 105 added

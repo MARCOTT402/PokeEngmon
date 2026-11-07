@@ -109,3 +109,12 @@ if (!e.request.url.startsWith("http")) return;
 - 字型：`pokemon-emerald-pro.ttf` 5 MB（33,000 中日文字形）→ `pokemon-emerald-pro-latin.woff2` 12 KB（`python -m fontTools.subset … --unicodes="U+0000-024F,U+02B0-036F,U+0370-03FF,U+2000-206F,U+20A0-20CF,U+2100-22FF,U+2460-27BF,U+FFFD" --layout-features='*' --flavor=woff2`）。CSS 兩個同名 `@font-face` 用 **互補** `unicode-range`；ttf 只喺出現中日文先下載，唔 precache。
 - SW：install 會 precache ~14 MB。**第一次開**（冇 controller）等 `load` ＋ 8 秒＋idle 先 `register`；已有 controller 照即刻 register／update。
 - 驗收（headless，冇 CPU 降速）：開頁 4 秒內 resource 冇 `three`／`capture.js`／`.ttf`、冇 SW registration；拉丁字 `document.fonts.check` true 而 ttf 未 request，渲染中文先 request；`Quiz._begin` 後約 1.5 秒 `CaptureScene._real` 有、`_real.audio === CaptureScene.audio`；`CaptureScene.play()` 撳三下 resolve `{caught,…}`；load＋8 秒後有 SW registration；`test-capture-fit` 等 responsive suite 照舊。
+
+### Rule 105 — 可揀 BGM（Music track）：buffer 按 url 快取、`stopTownBGM` 要清 `_townPending`、新曲 loudness-match＋crossfade loop、選用大音檔唔 precache
+
+- 曲目表 `BGM_TRACKS`（`js/storage.js`）係唯一來源；加曲要同步 migration 嘅 `user_account_bgm_track_check`。`state.bgmTrack` ↔ 雲端 `user_account.bgm_track`（nullable：null = 未揀過，pull 時用本機值 backfill；有值就跟雲端）。寫雲端經 `Sync.patchAccount`（白名單驗證），唔好塞入 `pushState` 嘅 fallback 鏈（缺欄會連 curve_mode 一齊跌落 legacy 分支）。
+- 「async load 完先自己開始播」嘅 pending flag：**叫停嘅路徑一定要清**。`stopTownBGM` 而家會清 `_townPending`，否則 load 未完就入對戰／扭蛋，load 完 town BGM 會疊落去。所有叫停之後都有對應 `startTownBGM()` 恢復，所以清 pending 安全。
+- 切歌：`audio.switchTownTrack()`——播緊就淡出換；對戰／扭蛋期間（冇 `_townSrc`）只改 state，完場 `startTownBGM()` 自然讀新 url。buffer 按 url 快取（`_townBufs`），pending 完成時要核對 `_townUrl() === url`。
+- 新音檔：ffmpeg 揀中段（`-ss 120`）、尾 3 秒 qsin crossfade 入頭 3 秒做無縫 loop、`ebur128` 量 loudness 對齊 Flat Water（約 -13～-15 LUFS，連續噪音寧願細少少）、`alimiter` 防 clip、80k 44.1k。指令見 incidents。
+- 選用嘅大音檔（每首 ~1.8 MB）**唔加 sw.js precache**（開機減重，Rule 103）；`/assets/` 本身 cache-first，播過一次就離線可用。sw.js 留註解講明。
+- 驗收：headless 切歌 → `_townSrcUrl` 換、`buffer.duration === 180`、`loop`；`stopTownBGM` 後切歌 → 冇 `_townSrc`、冇 pending；`startTownBGM` → 播新曲；reload 後 radio 保持；SQL 查 `role_column_grants` 有 `bgm_track`（Rule 54）；`test-sheets`、`test-touch-targets` 照過。

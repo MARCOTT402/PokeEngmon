@@ -24,6 +24,7 @@
 | Schema / RPC SQL | `supabase/supabase-schema.sql`, `supabase/migrations/` |
 | 捕捉（Three.js；按需 `import()`，經 `CaptureScene.load()`／`play()`，Rule 103） | `js/capture.js` |
 | 音效引擎（BGM、SFX、單字錄音；`window.CaptureScene` facade） | `js/audio.js`, Rule 103 |
+| 背景音樂選擇（Settings → Audio → Music track：Flat Water／Brown Noise／Focus Tones，3 分鐘 loop；`state.bgmTrack` ↔ 雲端 `user_account.bgm_track`） | `js/storage.js`（`BGM_TRACKS`、`getBgmTrack/setBgmTrack`）, `js/audio.js`（`_townUrl`、`switchTownTrack`）, `js/app.js`（`_syncBgmTrack`）, `js/sync.js`（pull／`patchAccount`）, `assets/bgm/focus-*.mp3`, migration `supabase-migrate-20261107-bgm-track.sql` |
 | 對戰字型（emerald 拉丁子集 woff2＋原 ttf 互補 `unicode-range`） | `assets/fonts/pokemon-emerald-pro-latin.woff2`, `css/style.css` `@font-face`, Rule 103 |
 | 扭蛋 | `js/gacha.js` |
 | 動畫倍速 1×／2×／3×（捕捉、扭蛋、進化；Settings → Gameplay；只存本機 `pe_anim_speed`；GSAP `globalTimeline.timeScale` + `<html>` `--anim-spd`，Rule 95） | `js/anim-speed.js`（`AnimSpeed.begin/end/ms/badge`）, `js/capture.js`（`_after`）, `js/gacha.js`（`_setT`、`_spdBegin/_spdEnd`）, `js/evolve-scene.js`（`_later`）, `js/app.js`（`_syncAnimSpeed`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |

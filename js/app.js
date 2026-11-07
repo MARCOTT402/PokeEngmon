@@ -2965,7 +2965,7 @@ const App = {
         document.querySelector(".view.active:not(#view-home)")) {
       this.showView("view-home");
     }
-    if (id === "sheet-setting") { this._syncAudioSliders(); this._syncCurveMode(); this._syncAnimSpeed(); }
+    if (id === "sheet-setting") { this._syncAudioSliders(); this._syncBgmTrack(); this._syncCurveMode(); this._syncAnimSpeed(); }
     delete sheet.dataset.wideDefault; /* 用戶主動開 = 唔再係 wide 預設 */
     /* wide：開任何 sheet 都要先收起右欄預設 Daily Quests。
        _closeAllSheets 喺 wide 刻意保留預設 sheet，所以經 fixed overlay（Friends／Leaderboard／Battle Menu）
@@ -3277,6 +3277,23 @@ const App = {
     }
     const pctEl = document.getElementById(`sheet-${which}-pct`);
     if (pctEl) pctEl.textContent = Math.round(v * 100) + "%";
+  },
+  /* Home sheet：背景音樂選擇（state.bgmTrack；登入咗就 PATCH user_account.bgm_track） */
+  _syncBgmTrack() {
+    const seg = document.getElementById("sheet-bgm-track");
+    if (!seg || typeof getBgmTrack !== "function") return;
+    const cur = getBgmTrack();
+    seg.querySelectorAll('input[name="bgmTrackSheet"]').forEach(r => {
+      r.checked = r.value === cur;
+      r.onchange = () => {
+        if (!r.checked) return;
+        const id = setBgmTrack(r.value);
+        const audio = window.CaptureScene && CaptureScene.audio;
+        if (audio && audio.switchTownTrack) audio.switchTownTrack();
+        try { if (window.Sync && Sync.patchAccount) Sync.patchAccount({ bgm_track: id }); } catch (e) {}
+        this.toast(`Music: ${BGM_TRACKS[id].label}`);
+      };
+    });
   },
   /* Home sheet：動畫倍速（捕捉／扭蛋／進化；只存本機，見 js/anim-speed.js） */
   _syncAnimSpeed() {
