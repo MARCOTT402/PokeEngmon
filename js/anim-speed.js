@@ -78,7 +78,7 @@
 
   /* 場景中途出錯 → Guard 恢復卡「Back to Home」唔會行場景嘅 end()，喺度兜底還原 */
   document.addEventListener("click", (e) => {
-    const t = e.target;
+    const t = /** @type {Element} */ (e.target);
     if (active.size && t && t.closest && t.closest("#guard-recover-home")) endAll();
   }, true);
 

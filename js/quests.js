@@ -173,7 +173,7 @@ const Quests = (() => {
     if (all) {
       all.hidden = g.claimable <= 0;
       all.textContent = g.claimable > 1 ? `CLAIM ALL (${g.claimable})` : "CLAIM 1⚡";
-      all.disabled = claiming;
+      /** @type {HTMLButtonElement} */ (all).disabled = claiming;
     }
     refreshBadge();
   }
@@ -412,7 +412,7 @@ const Quests = (() => {
     const track = el("quests-track");
     if (track) {
       track.onclick = (ev) => {
-        const btn = ev.target.closest(".quest-check");
+        const btn = /** @type {Element} */ (ev.target).closest(".quest-check");
         if (!btn || !btn.classList.contains("quest-ready")) return;
         claim(1);
       };
@@ -420,7 +420,7 @@ const Quests = (() => {
     const defs = el("quests-defs");
     if (defs) {
       defs.onclick = (ev) => {
-        const btn = ev.target.closest(".qd-claim[data-quest]");
+        const btn = /** @type {Element} */ (ev.target).closest(".qd-claim[data-quest]");
         if (!btn) return;
         claimDef(btn.dataset.quest, btn);
       };

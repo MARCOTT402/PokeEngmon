@@ -237,7 +237,7 @@ const PvpNet = (() => {
     }
     timer = setTimeout(pollTick, FALLBACK_FIRST_MS);
 
-    p.cancel = () => {
+    /** @type {any} */ (p).cancel = () => {
       if (settled) return;
       settled = true;
       cleanup();

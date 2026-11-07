@@ -1,0 +1,17 @@
+{
+  // Type-check only (no build, no emit). Run: npm run typecheck
+  // Classic scripts share one global scope, exactly like index.html loads them.
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "moduleDetection": "legacy",
+    "types": []
+  },
+  "include": ["js/**/*.js", "types/**/*.d.ts", "supabase/supabase-config.js"],
+  "exclude": ["js/capture.js", "vendor"]
+}

@@ -114,7 +114,7 @@ const Avatars = (() => {
       box.querySelectorAll(".avp-item.on").forEach(x => x.classList.remove("on"));
       b.classList.add("on");
       const id = b.dataset.av;
-      box.querySelector(".avp-big").src = url(id);
+      /** @type {HTMLImageElement} */ (box.querySelector(".avp-big")).src = url(id);
       document.getElementById("avp-cur-name").textContent = label(id);
       await set(id);
     }, "avatar-pick"));

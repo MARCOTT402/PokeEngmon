@@ -22,7 +22,7 @@
 
   const version = (() => {
     try {
-      const s = document.currentScript && document.currentScript.src;
+      const s = document.currentScript && /** @type {HTMLScriptElement} */ (document.currentScript).src;
       const m = s && s.match(/[?&]v=([^&]+)/);
       return m ? decodeURIComponent(m[1]) : "dev";
     } catch (e) { return "dev"; }
@@ -70,7 +70,7 @@
       const ua = navigator.userAgent || "";
       const os = /iPhone|iPad|iPod/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS/.test(ua) ? "macOS" : "other";
       const br = /CriOS|Chrome\//.test(ua) ? "Chrome" : /FxiOS|Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "other";
-      const pwa = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone ? " pwa" : "";
+      const pwa = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || /** @type {any} */ (navigator).standalone ? " pwa" : "";
       return `${os} ${br}${pwa} ${innerWidth}x${innerHeight}`.slice(0, 120);
     } catch (e) { return ""; }
   }
@@ -266,7 +266,7 @@
     if (ld) ld.remove();
     if (!el) { try { alert("System busy — please refresh the page."); } catch (e) {} return; }
     el.hidden = false;
-    try { el.querySelector("#fatal-retry").focus(); } catch (e) {}
+    try { /** @type {HTMLElement} */ (el.querySelector("#fatal-retry")).focus(); } catch (e) {}
   }
   /* 修復：清 Service Worker＋Cache Storage（唔掂 localStorage 存檔），再 reload */
   async function repair() {
@@ -345,7 +345,7 @@
   /* ---------- 全域監聽 ---------- */
   const _failedScripts = [];
   window.addEventListener("error", (e) => {
-    const t = e && e.target;
+    const t = /** @type {any} */ (e && e.target);
     /* 資源載入失敗（capture 階段先收到）：只理 <script>；圖片 404 由各自 onerror 處理 */
     if (t && t !== window && t.tagName) {
       if (t.tagName === "SCRIPT") {

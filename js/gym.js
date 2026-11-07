@@ -121,7 +121,7 @@ const Gym = {
         <button id="gym-claim-btn" class="btn-big btn-primary">Claim Badge</button>
       </div>`, true);
     document.getElementById("gym-claim-btn").onclick = Guard.asyncClick(async () => {
-      const btn = document.getElementById("gym-claim-btn");
+      const btn = /** @type {HTMLButtonElement} */ (document.getElementById("gym-claim-btn"));
       if (btn) btn.disabled = true;
       let badges = this.getBadges();
       if (!badges.includes(milestone)) badges.push(milestone);

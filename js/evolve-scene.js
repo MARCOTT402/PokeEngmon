@@ -62,7 +62,7 @@ const EvolveScene = (() => {
     if (window.AnimSpeed) AnimSpeed.end("evolve");
     const root = document.getElementById("modal-root");
     if (!root) return;
-    const backdrop = root.querySelector(".modal-backdrop");
+    const backdrop = /** @type {HTMLElement} */ (root.querySelector(".modal-backdrop"));
     if (backdrop) {
       backdrop.onclick = (e) => {
         if (e.target === e.currentTarget) close();
