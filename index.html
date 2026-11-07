@@ -1307,6 +1307,17 @@
   <script src="js/evolve-scene.js?v=1.71.2"></script>
   <script src="js/audio.js?v=1.71.2"></script>
   <script src="js/app.js?v=1.71.2"></script>
+  <!-- App 方法按職責拆開（Object.assign mixin，總計劃 P2.2；Rule 116）：一定要喺 js/app.js 之後 -->
+  <script src="js/app/router.js?v=1.71.2"></script>
+  <script src="js/app/layout.js?v=1.71.2"></script>
+  <script src="js/app/home.js?v=1.71.2"></script>
+  <script src="js/app/setup-custom.js?v=1.71.2"></script>
+  <script src="js/app/settlement.js?v=1.71.2"></script>
+  <script src="js/app/settings.js?v=1.71.2"></script>
+  <script src="js/app/auth-ui.js?v=1.71.2"></script>
+  <script src="js/app/sheets.js?v=1.71.2"></script>
+  <script src="js/app/modals.js?v=1.71.2"></script>
+  <script src="js/app/boot.js?v=1.71.2"></script>
   <script src="vendor/gsap/gsap.min.js?v=1.71.2"></script>
 </body>
 </html>

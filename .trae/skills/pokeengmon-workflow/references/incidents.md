@@ -203,3 +203,14 @@ Skill: Rule 114 added
 - `deploy-manifest.test.js` 喺本地開發期間誤報：新檔未 `git add`，`git ls-files` 冇佢。改為計埋 `--others --exclude-standard`。CI 入面所有檔都已經 commit，真係漏咗 commit 嘅 runtime 檔照樣會令 CI 紅、唔會部署。
 
 Skill: Rule 115 added
+
+## Rule 116 — `App` 方法分喺 `js/app/*.js`（`Object.assign(App, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
+
+- 2026-11-07 總計劃 P2.2（現代化 2.2）。`js/app.js` 4,149 行 → 72 行，加 10 個 `js/app/*.js`（共約 4,160 行）。用 TypeScript AST 搬 96 個方法（104 個成員入面，狀態屬性同常數留喺 `app.js`）。
+- 驗證：
+  - `app-surface.test.js` 96 個方法指紋同拆檔前一樣；喺 `index.html` 拎走 `modals.js` 會即刻紅，仲列明少咗 `showModal`、`toast`。
+  - 逐行多重集合比對：原本每一行都仲喺度，只係 10 個 `},` 變成 `}`（每個檔最後一個方法），另外多咗檔頭。
+  - 393 個測試全過、lint 0、typecheck 0。
+- 陷阱：`OVERLAY_EXIT_MS: 200,     /* … */` 行尾註解被 AST 當成 `showView` 嘅前置註解，搬咗去 `router.js`。逐行比對冇捉到（行仍然存在），係睇 `router.js` 開頭先發現，已經搬返。
+
+Skill: Rule 116 added

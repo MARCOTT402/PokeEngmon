@@ -4,23 +4,24 @@
 
 | 功能 | 主要檔案 |
 |------|----------|
-| 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`, `sw.js` |
+| 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`（`APP_VERSION`、`App` 狀態、開機 `DOMContentLoaded`）, `js/app/router.js`（`showView`）, `js/app/modals.js`（`showModal`、`toast`）, `sw.js` |
+| App 方法分檔（`Object.assign(App, {…})` mixin，喺 `js/app.js` 之後載入；`tests/unit/app-surface.test.js` 用方法指紋保證只搬唔改；Rule 116） | `js/app/router.js`、`layout.js`、`home.js`（`renderHome`、拍檔照顧）、`setup-custom.js`（選題、自訂題、CSV 匯入）、`settlement.js`、`settings.js`、`auth-ui.js`（登入／帳戶）、`sheets.js`（sheet、wide 右欄）、`modals.js`、`boot.js`（`init`） |
 | 全域錯誤邊界（error／rejection handler、ErrorLog 上報、恢復卡、開機兜底畫面、`Guard.asyncClick`／`fetchGet`／`num`） | `js/core/guard.js`, `index.html`（head 內聯樣式＋shim、`#fatal-screen`、`#guard-recover`）, `supabase/migrations/supabase-migrate-20261106d-client-errors.sql`（`client_errors`、`log_client_errors`）, Rule 94 |
 | HTML escape／震動（全 App 唯一：`escapeHTML`、`haptic`；任何用戶／server 字串砌入 innerHTML 前都要經佢，只 escape 一次） | `js/core/dom.js`（喺 `guard.js` 之後載入）, `tests/unit/dom.test.js` |
 | 砌 HTML（`html``` tagged template 自動 escape、`Html.raw()` 可信 markup、`Html.render(el, tpl)`；新 code 一律用，Rule 111） | `js/core/html.js`（喺 `dom.js` 之後載入）, `tests/unit/html.test.js` |
 | 型別檢查（`npm run typecheck` = `tsc` noEmit；classic script 共用 global；逐檔 `// @ts-check`，清單只准加；CI release 前跑；Rule 109） | `tsconfig.json`, `types/globals.d.ts`（`window.X` 模組＋`module.exports` 檔；頂層已有 `const X` 嘅唔可以再 declare，TS2451）, `types/ts-check-files.json`, `tests/unit/ts-check-ratchet.test.js`, 總計劃 P1.1 |
 | z-index 層級 token（全域層 `--z-*`，數值同註解集中喺 `:root`；Rule 110） | `css/style.css`（`:root`）, `tests/unit/z-tokens.test.js`, `tools/audit/check-z-tokens.mjs`（同 git 版本逐條比較） |
 | 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
-| 結算畫面（分數圈／stat／錯題預覽） | `js/app.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
+| 結算畫面（分數圈／stat／錯題預覽） | `js/app/settlement.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 戰鬥特效 prototype（兩邊用 App 真正嘅戰鬥 HTML＋`css/style.css`＋`PokeSprite`＋`MoveAnim`；右邊背景同精靈改由 PixiJS 7 畫，命中先加 hit-stop、白閃、震屏、粒子、傷害數字、HP 殘影、bloom、暴擊推近；總計劃 P1.4，唔部署） | `tools/prototype-battle-fx.html`（要經 http：本地 8080 開 `/tools/prototype-battle-fx.html`；PixiJS／pixi-filters 由 jsDelivr 載入） |
-| 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
+| 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app/setup-custom.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
 | 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, 死碼掃描 `tools/audit/unused-css.mjs`／`unused-assets.mjs`（Rule 108）, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 總計劃 `.trae/documents/20261107-master-engineering-plan.md`（合併商用級＋現代化） |
 | 部署（GitHub Pages 只發佈 App 檔：清單、copy script、CI deploy job；SW precache 對 `index.html` 嘅核對；Rule 113） | `tools/deploy/site-files.json`, `tools/deploy/site-files.cjs`, `tools/deploy/build-site.cjs`, `.github/workflows/release.yml`（`deploy` job）, `tests/unit/deploy-manifest.test.js`, `tests/unit/sw-assets.test.js` |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
 | 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
-| 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |
+| 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app/boot.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98；150ms 合併寫入＋`flushState`，Rule 102） | `js/storage.js` |
 | Store（`Store.get`／`select`／`update`／`subscribe`，包住本地存檔；舊式 `saveState()` 都會通知訂閱者；Rule 115） | `js/store.js`（喺 `storage.js` 之後載入）, `js/storage.js`（`saveState` 叫 `Store._changed`）, `tests/unit/store.test.js` |
@@ -32,11 +33,11 @@
 | Schema / RPC SQL | `supabase/supabase-schema.sql`, `supabase/migrations/` |
 | 捕捉（Three.js；按需 `import()`，經 `CaptureScene.load()`／`play()`，Rule 103） | `js/capture.js` |
 | 音效引擎（BGM、SFX、單字錄音；`window.CaptureScene` facade） | `js/audio.js`, Rule 103 |
-| 背景音樂選擇（Settings → Audio → Music track：Flat Water／Brown Noise／Focus Tones，3 分鐘 loop；`state.bgmTrack` ↔ 雲端 `user_account.bgm_track`） | `js/storage.js`（`BGM_TRACKS`、`getBgmTrack/setBgmTrack`）, `js/audio.js`（`_townUrl`、`switchTownTrack`）, `js/app.js`（`_syncBgmTrack`）, `js/sync.js`（pull／`patchAccount`）, `assets/bgm/focus-*.mp3`, migration `supabase-migrate-20261107-bgm-track.sql` |
+| 背景音樂選擇（Settings → Audio → Music track：Flat Water／Brown Noise／Focus Tones，3 分鐘 loop；`state.bgmTrack` ↔ 雲端 `user_account.bgm_track`） | `js/storage.js`（`BGM_TRACKS`、`getBgmTrack/setBgmTrack`）, `js/audio.js`（`_townUrl`、`switchTownTrack`）, `js/app/settings.js`（`_syncBgmTrack`）, `js/sync.js`（pull／`patchAccount`）, `assets/bgm/focus-*.mp3`, migration `supabase-migrate-20261107-bgm-track.sql` |
 | 對戰字型（emerald 拉丁子集 woff2＋原 ttf 互補 `unicode-range`） | `assets/fonts/pokemon-emerald-pro-latin.woff2`, `css/style.css` `@font-face`, Rule 103 |
 | 扭蛋 | `js/gacha.js` |
-| 動畫倍速 1×／2×／3×（捕捉、扭蛋、進化；Settings → Gameplay；只存本機 `pe_anim_speed`；GSAP `globalTimeline.timeScale` + `<html>` `--anim-spd`，Rule 95） | `js/anim-speed.js`（`AnimSpeed.begin/end/ms/badge`）, `js/capture.js`（`_after`）, `js/gacha.js`（`_setT`、`_spdBegin/_spdEnd`）, `js/evolve-scene.js`（`_later`）, `js/app.js`（`_syncAnimSpeed`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
-| 全鍵盤操作（↑↓←→ 空間導航、Enter、Esc 關 overlay／返回、開 sheet／modal 自動焦點＋還焦點、overlay Tab 困住、`?` 快捷鍵一覽；捷徑層 `SHORTCUTS`（主頁 S／1–4／D／G／C／Q／B、選題 S、頁面 H、戰鬥 F／B／S／R／1–4／M／Y／N、圖鑑詳情 Shift+←／→）＋鍵盤模式 badge＋開關（`pe_kbd_shortcuts`）；捕捉 Space／Enter；背包 Space 拎起放低；戰鬥對話 Enter 推進；Settings → Help → Keyboard shortcuts 只喺滑鼠裝置顯示；Rule 97） | `js/keys.js`（`Keys.context/move/escape/showHelp`、`SHORTCUTS`、`renderBadges`）, `js/capture.js`（keydown Space／Enter）, `js/bag.js`（`Drag` kbd carry）, `js/pokedex.js`（`stepDetail`）, `js/battle/battle.js`（`waitTap` 鍵盤）, 測試 `tools/responsive/test-keys.mjs`、`test-anim-speed.mjs`, `css/style.css`（`[data-kbd-auto]:focus-visible`、`.kbd-only`、`.kbd-help`）, `js/app.js`（答題 Enter 讓位畀焦點掣、`btn-kbd-help`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
+| 動畫倍速 1×／2×／3×（捕捉、扭蛋、進化；Settings → Gameplay；只存本機 `pe_anim_speed`；GSAP `globalTimeline.timeScale` + `<html>` `--anim-spd`，Rule 95） | `js/anim-speed.js`（`AnimSpeed.begin/end/ms/badge`）, `js/capture.js`（`_after`）, `js/gacha.js`（`_setT`、`_spdBegin/_spdEnd`）, `js/evolve-scene.js`（`_later`）, `js/app/settings.js`（`_syncAnimSpeed`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
+| 全鍵盤操作（↑↓←→ 空間導航、Enter、Esc 關 overlay／返回、開 sheet／modal 自動焦點＋還焦點、overlay Tab 困住、`?` 快捷鍵一覽；捷徑層 `SHORTCUTS`（主頁 S／1–4／D／G／C／Q／B、選題 S、頁面 H、戰鬥 F／B／S／R／1–4／M／Y／N、圖鑑詳情 Shift+←／→）＋鍵盤模式 badge＋開關（`pe_kbd_shortcuts`）；捕捉 Space／Enter；背包 Space 拎起放低；戰鬥對話 Enter 推進；Settings → Help → Keyboard shortcuts 只喺滑鼠裝置顯示；Rule 97） | `js/keys.js`（`Keys.context/move/escape/showHelp`、`SHORTCUTS`、`renderBadges`）, `js/capture.js`（keydown Space／Enter）, `js/bag.js`（`Drag` kbd carry）, `js/pokedex.js`（`stepDetail`）, `js/battle/battle.js`（`waitTap` 鍵盤）, 測試 `tools/responsive/test-keys.mjs`、`test-anim-speed.mjs`, `css/style.css`（`[data-kbd-auto]:focus-visible`、`.kbd-only`、`.kbd-help`）, `js/app/boot.js`（答題 Enter 讓位畀焦點掣、`btn-kbd-help`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
 | 圖鑑 | `js/pokedex.js` |
 | 育成（飽肚值／拍檔／道具） | `js/pet.js` |
 | 戰鬥畫面轉橫（橫向紅框 host #view-battle） | `js/battle/landscape.js` |
@@ -58,9 +59,9 @@
 | Leaderboard | `js/leaderboard.js` |
 | 練習日曆 | `js/calendar.js` |
 | 錯題解析 | `js/explain.js` |
-| 響應式斷點（phone／tablet／wide／phone-land、`<html data-layout>`、`pe:layout` 事件、外殼幾何 `--frame-w`／`--frame-screen-*`） | `js/app.js`（`App.layout`、`_initLayout`）, `css/style.css`（頂部 LAYOUT BREAKPOINTS；`:root` 外殼變數；17b tablet／17c wide／17d 焦點＋hover）, spec `.trae/specs/20261106-responsive-layout.md`, plan `.trae/documents/20261106-responsive-layout-p1.md`, 截圖／rect 驗收 `tools/responsive/shots.mjs`、互動測試 `tools/responsive/test-*.mjs`（Rule 80–90）、改碼清單 `.trae/skills/pokeengmon-responsive/SKILL.md` |
-| wide 右欄（預設 Daily Quests、sheet 即時切換、Esc、左欄鎖） | `js/app.js`（`_showWideDefault`、`_wideSwitch`、`_wideHideSheets`、`_wideFull`、`_onLayoutChange`、`_setSettleLock`、`_applyPaneLock`）, `js/quests.js`（`boardOpen` 認 sheet、`resume`）, Rule 84／85 |
-| 手機橫向「請轉返直向」／背包戰鬥轉機判斷 | `js/app.js`（`_syncRotateHint`）, `js/bag.js`（`isPhone`、`fit`）, `js/battle/landscape.js`（`fit`、`enter／exit`）, Rule 87 |
+| 響應式斷點（phone／tablet／wide／phone-land、`<html data-layout>`、`pe:layout` 事件、外殼幾何 `--frame-w`／`--frame-screen-*`） | `js/app/layout.js`（`App.layout`、`_initLayout`）, `css/style.css`（頂部 LAYOUT BREAKPOINTS；`:root` 外殼變數；17b tablet／17c wide／17d 焦點＋hover）, spec `.trae/specs/20261106-responsive-layout.md`, plan `.trae/documents/20261106-responsive-layout-p1.md`, 截圖／rect 驗收 `tools/responsive/shots.mjs`、互動測試 `tools/responsive/test-*.mjs`（Rule 80–90）、改碼清單 `.trae/skills/pokeengmon-responsive/SKILL.md` |
+| wide 右欄（預設 Daily Quests、sheet 即時切換、Esc、左欄鎖） | `js/app/sheets.js`（`_showWideDefault`、`_wideSwitch`、`_wideHideSheets`、`_wideFull`）, `js/app/layout.js`（`_onLayoutChange`）, `js/app/router.js`（`_setSettleLock`、`_applyPaneLock`）, `js/quests.js`（`boardOpen` 認 sheet、`resume`）, Rule 84／85 |
+| 手機橫向「請轉返直向」／背包戰鬥轉機判斷 | `js/app/layout.js`（`_syncRotateHint`）, `js/bag.js`（`isPhone`、`fit`）, `js/battle/landscape.js`（`fit`、`enter／exit`）, Rule 87 |
 | 結算兩欄（wide） | `index.html`（`.settle-col-a／-b` wrapper，phone 係 `display: contents`）, `css/style.css`（17c wide 區塊）, Rule 86 |
 | UI 樣式 | `css/style.css` |
 | 敏感規則 | `.cursor/rules/pokeengmon-core.mdc` |
