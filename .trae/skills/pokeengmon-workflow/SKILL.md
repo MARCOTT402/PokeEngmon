@@ -210,7 +210,8 @@ if (!e.request.url.startsWith("http")) return;
   - `boot.js`：`init`
 - Skill／舊文件寫住「`js/app.js` 嘅 `_xxx`」：用方法名 grep `js/app/` 搵。
 - 寫法：每個檔係 `Object.assign(App, { 方法… });`，`this`／`App.xxx` 照用。App 冇 getter，所以 `Object.assign` 安全；如果將來加 getter，要改用 `Object.defineProperties`。
-- `tests/unit/app-surface.test.js` 會跟 `index.html` 嘅載入次序載入 `app.js` 同 `js/app/*.js`，核對 `App` 嘅成員清單，同埋每個方法原始碼嘅 SHA-1 指紋（`tests/fixtures/app-surface.json`）。漏咗 `<script>`、搬漏方法、搬嗰陣改咗代碼都會紅。**刻意改 App 方法之後**要跑 `node tests/unit/app-surface.test.js --update` 更新指紋，喺 commit 講明原因。
+- `tests/unit/app-surface.test.js` 會跟 `index.html` 嘅載入次序載入 `app.js` 同 `js/app/*.js`，核對 `App` 嘅成員清單，同埋每個方法原始碼嘅 SHA-1 指紋（`tests/fixtures/app-surface.json`）。漏咗 `<script>`、搬漏方法、搬嗰陣改咗代碼都會紅。**指紋計之前一定要將換行統一做 `
+`**：Windows checkout 係 CRLF、CI（Linux）係 LF，唔統一嘅話本機綠、CI 全紅。驗證時要真係將副本轉成 LF 再跑；Windows 上 `git archive` 匯出嘅都仲係 CRLF。**刻意改 App 方法之後**要跑 `node tests/unit/app-surface.test.js --update` 更新指紋，喺 commit 講明原因。
 - 搬方法唔好人手剪貼：用 TypeScript AST（`node_modules/typescript`）攞成員範圍（`getFullStart()` 包埋前面嘅註解，再加後面嘅逗號）。陷阱：上一行**行尾**嘅註解會被計做下一個成員嘅前置註解，搬完要逐行比對，例如 `OVERLAY_EXIT_MS` 嘅註解試過跟咗去 `router.js`。
 - 新檔要同時加 `index.html`（`js/app.js` 之後）同 `sw.js` ASSETS；`sw-assets.test.js` 同 `deploy-manifest.test.js` 會擋。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

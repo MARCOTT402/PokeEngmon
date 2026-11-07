@@ -25,7 +25,8 @@ function surface() {
   for (const k of Object.keys(App).sort()) {
     const v = App[k];
     out[k] = typeof v === "function"
-      ? "fn:" + crypto.createHash("sha1").update(v.toString()).digest("hex").slice(0, 16)
+      /* 換行統一做 \n：Windows checkout 係 CRLF、CI（Linux）係 LF，唔統一就喺 CI 全部對唔上 */
+      ? "fn:" + crypto.createHash("sha1").update(v.toString().replace(/\r\n?/g, "\n")).digest("hex").slice(0, 16)
       : (v === null ? "null" : typeof v) + ":" + JSON.stringify(v ?? null);
   }
   return out;

@@ -213,4 +213,8 @@ Skill: Rule 115 added
   - 393 個測試全過、lint 0、typecheck 0。
 - 陷阱：`OVERLAY_EXIT_MS: 200,     /* … */` 行尾註解被 AST 當成 `showView` 嘅前置註解，搬咗去 `router.js`。逐行比對冇捉到（行仍然存在），係睇 `router.js` 開頭先發現，已經搬返。
 
+- push 之後 CI 紅（只有 `app-surface` 一項）：96 個方法指紋全部對唔上。原因係 fixture 喺 Windows 用 CRLF 生成，CI checkout 係 LF。修正：hash 之前將 `
+` 統一做 `
+`，用拆檔前嘅代碼重新生成 fixture，再喺 LF 副本同 CRLF working tree 兩邊都測過。CI 測試唔過，`deploy` job 就自動 skipped，正式網址一直係舊版，P1.6 嘅部署閘門第一次發揮作用。
+
 Skill: Rule 116 added
