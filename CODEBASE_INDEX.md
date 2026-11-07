@@ -6,12 +6,14 @@
 |------|----------|
 | 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`, `sw.js` |
 | 全域錯誤邊界（error／rejection handler、ErrorLog 上報、恢復卡、開機兜底畫面、`Guard.asyncClick`／`fetchGet`／`num`） | `js/core/guard.js`, `index.html`（head 內聯樣式＋shim、`#fatal-screen`、`#guard-recover`）, `supabase/migrations/supabase-migrate-20261106d-client-errors.sql`（`client_errors`、`log_client_errors`）, Rule 94 |
+| HTML escape／震動（全 App 唯一：`escapeHTML`、`haptic`；任何用戶／server 字串砌入 innerHTML 前都要經佢，只 escape 一次） | `js/core/dom.js`（喺 `guard.js` 之後載入）, `tests/unit/dom.test.js` |
+| 型別檢查（`tsc` noEmit、classic script 共用 global；`checkJs` 逐檔用 `// @ts-check` 開） | `tsconfig.json`, `types/globals.d.ts`（`window.X` 模組＋`module.exports` 檔；頂層已有 `const X` 嘅唔可以再 declare，TS2451）, 總計劃 P1.1 |
 | 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
 | 結算畫面（分數圈／stat／錯題預覽） | `js/app.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
-| 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, 死碼掃描 `tools/audit/unused-css.mjs`／`unused-assets.mjs`（Rule 108）, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 計劃 `.trae/documents/20261106-commercial-grade-engineering.md` |
+| 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, 死碼掃描 `tools/audit/unused-css.mjs`／`unused-assets.mjs`（Rule 108）, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 總計劃 `.trae/documents/20261107-master-engineering-plan.md`（合併商用級＋現代化） |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
 | 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
 | 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |

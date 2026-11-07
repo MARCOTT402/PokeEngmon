@@ -1,5 +1,7 @@
 # 商用級工程化總計劃（測試／死碼／洩漏／拆檔／門面）— 2026-11-06（2026-11-07 review 版）
 
+> ⚠ **2026-11-07 已合併入 `.trae/documents/20261107-master-engineering-plan.md`。** 次序、狀態、分工以總計劃為準；本文件保留做歷史同設計細節參考。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 將 PokeEngmon 提升到「專業人士打開 repo 同正式網址都覺得成熟」嘅商用級水平：自動測試做安全網、CI 擋住壞 commit、冇死碼同公開垃圾檔、冇記憶體洩漏、大檔按責任拆細。
@@ -25,7 +27,10 @@
   - 驗證：`npm test` 347 全過；e2e 11 個檔過 9 個，失敗嗰 2 個係已知 P9b、S1。
   - 新發現：S1 溢出量取決於隨機抽到邊條題（之前記錄 21px；最長嗰條題係 64px，HEAD CSS 一樣）。原本 known fail 低估咗，屬舊有問題。
   - 另外：guest 開機時 `js/sync.js:552` 用 anon key 探測 `user_account` 會 401（RLS），係舊有 console 噪音。
-- ⏭ 下一步：Task 5（合併重複 helper ＋ 部署衛生，部署要你喺 GitHub 改 Pages Source）或 Task 6（洩漏量度）。
+- 🟡 **Phase B Task 5 進行中（2026-11-07，未 commit）**：已完成「HTML escape／震動合併」。新增 `js/core/dom.js`（全域 `escapeHTML`、`haptic`），8 份 escape、4 份 vibrate 改用佢，`tests/unit/dom.test.js` 6 項；353 測試全過、lint 0、preview 冇新 error。
+  - Rulings：保留現有全域名 `escapeHTML`（10 個檔 41 處已經用緊），冇改做 `Dom.esc`；13 處 localStorage JSON 讀取全部已有 try/catch，唔改。
+  - 未做：彎撇號修正、部署 workflow。
+  - ⚠ 另一個 session 開咗 `.trae/specs/20261107-modernization.md`：佢嘅 Phase 2 包括拆 `app.js` 同**轉 ES module**（同本計劃 §10 Q3「mixin、唔轉 ESM」相反），Task 3 會做 `js/core/html.js`（同 `dom.js` 重疊），亦會改 `index.html`／`sw.js`／`release.yml`。要用戶決定點分工先繼續。
 
 ## 0. Review 記錄（2026-11-07）
 
