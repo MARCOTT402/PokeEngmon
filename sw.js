@@ -57,6 +57,7 @@ const ASSETS = [
   "./js/calendar.js",
   "./js/evolve-scene.js",
   "./js/app.js",
+  "./js/audio.js",
   "./js/capture.js",
   "./js/battle/rng.js",
   "./js/battle/energy.js",
@@ -84,7 +85,7 @@ const ASSETS = [
   "./manifest.json",
   "./assets/fonts/inter-latin-var.woff2",
   "./assets/fonts/dotgothic16-latin.woff2",
-  "./assets/fonts/pokemon-emerald-pro.ttf",
+  "./assets/fonts/pokemon-emerald-pro-latin.woff2",   /* 原 ttf 5 MB 唔 precache，用到中日文先載（Rule 103） */
   "./assets/battle/ui/pr-msg-bg.png",
   "./assets/battle/ui/pr-window-1.png",
   "./assets/battle/ui/pr-prompt.png",

@@ -28,13 +28,25 @@
   src: url("../assets/fonts/dotgothic16-latin.woff2") format("woff2");
 }
 
-/* PokeRogue 對戰字體（pokemon-emerald-pro，即 PokeRogue 嘅 "emerald"） */
+/* PokeRogue 對戰字體（pokemon-emerald-pro，即 PokeRogue 嘅 "emerald"）
+   Rule 103：原 ttf 5 MB（33,000 個中日文字形）。拉丁＋符號子集 woff2（12 KB）係主檔；
+   原 ttf 只負責其餘字（unicode-range 互補），畫面出現中日文先會下載。
+   子集由 `python -m fontTools.subset`（見 Rule 103）產生，改字型要重做 */
+@font-face {
+  font-family: "PokeRogueEmerald";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/pokemon-emerald-pro-latin.woff2") format("woff2");
+  unicode-range: U+0000-024F, U+02B0-036F, U+0370-03FF, U+2000-206F, U+20A0-20CF, U+2100-22FF, U+2460-27BF, U+FFFD;
+}
 @font-face {
   font-family: "PokeRogueEmerald";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url("../assets/fonts/pokemon-emerald-pro.ttf") format("truetype");
+  unicode-range: U+0250-02AF, U+0400-1FFF, U+20D0-20FF, U+2300-245F, U+27C0-FFFC, U+FFFE-10FFFF;
 }
 
 :root {

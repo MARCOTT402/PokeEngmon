@@ -10,7 +10,8 @@
 > - ✅ §5.3 轉場：sheet 同時切換 220ms、overlay exit 200ms（Rule 100；bench 836 → 315ms）
 > - ✅ §5.4／§5.6（部分）：戰鬥 BGM idle 預載、gacha 大圖 lazy、題目圖片 `index.json`（Rule 101；入場前 8,036 → 5,776 KB、圖片 404 → 0）。three.js 延後未做：要先將 audio 拆出 `capture.js`
 > - ✅ §5.2／§5.5／§5.6：`saveState` 150ms 合併（20 次 → 寫 1 次）、SW 分流（修 Supabase GET 被 cache 嘅 bug）＋頁面 3 秒 timeout＋版本化 cache-first、預載下一題錄音／圖片（Rule 102）
-> - ⏭ 下一步（選做）：three.js 延後（要先將 audio 拆出 `capture.js`）、capture renderer 尺寸兜底、`user_history` server 端去重
+> - ✅ §5.4 開機減重：audio 拆去 `js/audio.js`、three.js 按需 import＋預載、BGM 降 bitrate（-1.7 MB）、emerald 字型子集（5 MB → 12 KB）、第一次開延後註冊 SW（Rule 103）
+> - ⏭ 下一步（選做）：sheet 切換 ≤ 250 ms（逐個 sheet profile render）、capture renderer 尺寸兜底、`user_history` server 端去重、`moves.json` 延後
 > 本 project 冇 framework（冇 React／Vue Error Boundary），所以「Error Boundary」要用原生方式自己做：全域 handler + 開機邊界 + 每個 view 嘅 render 邊界。
 
 ---

@@ -13,16 +13,18 @@
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
 | 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
-| 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`） | `js/app.js`（entry gate `unlockAudio`）, `js/capture.js`（`_loadBGMBuffer`）, Rule 101 |
+| 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98；150ms 合併寫入＋`flushState`，Rule 102） | `js/storage.js` |
 | Service Worker 分流（`swRoute`：跨域 API skip、版本化 cache-first、頁面 3 秒 timeout） | `sw.js`, `tools/_test_sw_strategy.js`, Rule 102 |
-| 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz.js`, `js/capture.js`, Rule 102 |
+| 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz.js`, `js/audio.js`, Rule 102 |
 | 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tools/_test_sync_queue.js` |
 | Auth + RPC（鑽石/捕捉/扭蛋/exp；`authedFetch`、single-flight token 續期，Rule 96） | `js/supabase-auth.js` |
 | 網絡層（timeout／離線／錯誤分類／連線 toast／離線 pill `#net-offline`） | `js/core/net.js`（`Net.request`、`NetError`、`syncPill`），Rule 96／98 |
 | Schema / RPC SQL | `supabase/supabase-schema.sql`, `supabase/migrations/` |
-| 捕捉（Three.js） | `js/capture.js` |
+| 捕捉（Three.js；按需 `import()`，經 `CaptureScene.load()`／`play()`，Rule 103） | `js/capture.js` |
+| 音效引擎（BGM、SFX、單字錄音；`window.CaptureScene` facade） | `js/audio.js`, Rule 103 |
+| 對戰字型（emerald 拉丁子集 woff2＋原 ttf 互補 `unicode-range`） | `assets/fonts/pokemon-emerald-pro-latin.woff2`, `css/style.css` `@font-face`, Rule 103 |
 | 扭蛋 | `js/gacha.js` |
 | 動畫倍速 1×／2×／3×（捕捉、扭蛋、進化；Settings → Gameplay；只存本機 `pe_anim_speed`；GSAP `globalTimeline.timeScale` + `<html>` `--anim-spd`，Rule 95） | `js/anim-speed.js`（`AnimSpeed.begin/end/ms/badge`）, `js/capture.js`（`_after`）, `js/gacha.js`（`_setT`、`_spdBegin/_spdEnd`）, `js/evolve-scene.js`（`_later`）, `js/app.js`（`_syncAnimSpeed`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
 | 全鍵盤操作（↑↓←→ 空間導航、Enter、Esc 關 overlay／返回、開 sheet／modal 自動焦點＋還焦點、overlay Tab 困住、`?` 快捷鍵一覽；捷徑層 `SHORTCUTS`（主頁 S／1–4／D／G／C／Q／B、選題 S、頁面 H）＋鍵盤模式 badge；捕捉 Space／Enter；Settings → Help → Keyboard shortcuts 只喺滑鼠裝置顯示；Rule 97） | `js/keys.js`（`Keys.context/move/escape/showHelp`、`SHORTCUTS`、`renderBadges`）, `js/capture.js`（keydown Space／Enter）, `css/style.css`（`[data-kbd-auto]:focus-visible`、`.kbd-only`、`.kbd-help`）, `js/app.js`（答題 Enter 讓位畀焦點掣、`btn-kbd-help`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |

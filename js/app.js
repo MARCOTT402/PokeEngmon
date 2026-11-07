@@ -4130,6 +4130,8 @@ const App = {
     };
     unlockAudio();  /* 開頁即試（可能被 suspend） */
     preloadBattleBGM();
+    /* three.js 捕捉場景（Rule 103）：唔再開機載；主頁 idle 20 秒後預載，答題開始亦會預載 */
+    try { if (window.CaptureScene && CaptureScene.preload) CaptureScene.preload(20000); } catch (e) {}
     const audioCtx = window.CaptureScene && CaptureScene.audio ? CaptureScene.audio.ctx : null;
     if (audioCtx && audioCtx.state === "running") {
       entryGate.classList.add("hidden");     /* 已獲授權，唔使彈窗 */
@@ -4156,7 +4158,9 @@ const App = {
         location.reload();
       });
 
-      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      /* Rule 103：SW install 會 precache ~14 MB（cries、戰鬥素材、BGM…）。第一次開 App 唔可以同首屏爭頻寬：
+         已有 controller（第二次開）即刻註冊／檢查更新；第一次就等 load 完再 idle 8 秒先註冊 */
+      const registerSW = () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
         .then(reg => {
           /* 每次載入同返回頁面都檢查更新 */
           reg.update().catch(() => {});
@@ -4165,6 +4169,13 @@ const App = {
           });
         })
         .catch(() => {});
+      if (hadController) registerSW();
+      else {
+        const later = () => setTimeout(() => {
+          if (window.requestIdleCallback) requestIdleCallback(registerSW, { timeout: 10000 }); else registerSW();
+        }, 8000);
+        if (document.readyState === "complete") later(); else window.addEventListener("load", later, { once: true });
+      }
     }
   },
 };

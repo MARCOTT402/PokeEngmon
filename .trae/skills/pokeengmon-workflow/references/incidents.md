@@ -108,3 +108,12 @@ Skill: Rule 101 added
 - 結果：20 次 saveState → 1 次寫入；下一題錄音／圖片答緊上一題時已載；離線 reload 正常；bench 冇退步、冇 page error。
 
 Skill: Rule 102 added
+
+### Rule 103 — 開機減重：音效拆去 `js/audio.js`、three.js 捕捉場景按需 `import()`、BGM 降 bitrate、emerald 字型拉丁子集、第一次開 App 延後註冊 SW
+
+- 背景：用戶揀「先減開機下載量」。SLO：首次開 App 未到主頁 < 1.5 MB decoded；實測 5.7 MB（7.8 MB 連 idle 戰鬥 BGM）。
+- 拆件：flat-water 2.2 MB、wild-battle 2.0 MB、three.js 1.2 MB、style.css 0.3 MB、moves.json 0.24 MB。再發現 SW 第一次開就 precache 19.5 MB（emerald ttf 5 MB、`assets/battle/pkmn/index.json` 3 MB），同首屏爭頻寬。
+- 撞板：wild-battle 第一次轉檔反而大咗（2.0 → 2.4 MB）——原檔有封面圖 stream 被 copy；加 `-map 0:a -vn`。preload timer 先到先得，答題嗰次早請求被開機 20 秒 timer 食咗 → 改為揀最早時間。
+- 結果：開機（4 秒內）decoded 3.6 MB（無 three／capture／ttf）；BGM 共慳 1.7 MB；字型 5 MB → 12 KB；SW 延後註冊。
+
+Skill: Rule 103 added

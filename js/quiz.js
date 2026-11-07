@@ -88,6 +88,8 @@ const Quiz = {
   },
 
   _begin(set) {
+    /* 一 set 做完就係捕捉場景：而家開始背景載 three.js（Rule 103），做完題已經載好 */
+    try { if (window.CaptureScene && CaptureScene.preload) CaptureScene.preload(1500); } catch (e) {}
     this.set = set;
     this.total = set.length;
     this.queue = set.map(q => ({ q, requeued: false, dueAt: 0 }));
