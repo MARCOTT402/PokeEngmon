@@ -217,4 +217,6 @@ Skill: Rule 115 added
 ` 統一做 `
 `，用拆檔前嘅代碼重新生成 fixture，再喺 LF 副本同 CRLF working tree 兩邊都測過。CI 測試唔過，`deploy` job 就自動 skipped，正式網址一直係舊版，P1.6 嘅部署閘門第一次發揮作用。
 
+- `init`（828 行）拆做 13 個 `_boot*` 步驟：用 AST 列出 111 句頂層語句，同埋每句宣告／用到嘅局部變數。跨段共用只有 `st`（第 86 句入面嘅 `st` 係區塊內重新宣告嘅），冇頂層 `return`、冇 `arguments`。每個步驟只包連續語句，所以執行次序唔變；腳本重新 parse 之後核對 110 句語句一字不差。指紋 diff：舊成員只有 `init` 改咗，新增 13 個 `_boot*`。瀏覽器實測：開機、登入閘、各步驟綁定嘅掣、sheet、Esc、Service Worker 都正常。
+
 Skill: Rule 116 added

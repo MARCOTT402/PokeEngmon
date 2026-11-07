@@ -207,7 +207,7 @@ if (!e.request.url.startsWith("http")) return;
   - `auth-ui.js`：登入／帳戶
   - `sheets.js`：sheet、wide 右欄、扭蛋 sheet
   - `modals.js`：`showModal`、`closeModal`、`toast`
-  - `boot.js`：`init`
+  - `boot.js`：`init` 只負責次序，順序 call 13 個 `_boot*` 步驟：`_bootSession` → `_bootSheets(st)` → `_bootHomeButtons` → `_bootLoginState` → `_bootNavButtons` → `_bootQuizControls` → `_bootKeyboardAndClicks` → `_bootCalendarAndReview` → `await _bootLoadData` → `_bootAfterFirstRender(st)` → `_bootClickFeedback` → `_bootAudio` → `_bootServiceWorker`。加新開機邏輯就放入啱嘅步驟；各步驟之間唯一共用嘅係 `st`（用參數傳入），唔好開新嘅跨步驟局部變數。
 - Skill／舊文件寫住「`js/app.js` 嘅 `_xxx`」：用方法名 grep `js/app/` 搵。
 - 寫法：每個檔係 `Object.assign(App, { 方法… });`，`this`／`App.xxx` 照用。App 冇 getter，所以 `Object.assign` 安全；如果將來加 getter，要改用 `Object.defineProperties`。
 - `tests/unit/app-surface.test.js` 會跟 `index.html` 嘅載入次序載入 `app.js` 同 `js/app/*.js`，核對 `App` 嘅成員清單，同埋每個方法原始碼嘅 SHA-1 指紋（`tests/fixtures/app-surface.json`）。漏咗 `<script>`、搬漏方法、搬嗰陣改咗代碼都會紅。**指紋計之前一定要將換行統一做 `

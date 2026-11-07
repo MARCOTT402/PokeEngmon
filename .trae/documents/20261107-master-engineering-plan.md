@@ -33,7 +33,7 @@
 | P1.1 typecheck：設定（`163ffd4`）＋ `npm run typecheck`、26／43 個檔 `// @ts-check`、ratchet 測試、CI 步驟 | 現代化 Task 1 | ✅ 設定 `163ffd4`；其餘見下一個 commit |
 | 其餘 | — | ⏳ 見 §3 |
 
-**而家下一步**：P2.2 收尾：將 `boot.js` 嘅 `init`（828 行）拆做具名 `_boot*` 步驟；之後 P2.5 拆 `battle.js`／`quiz.js`／`gacha.js`。
+**而家下一步**：P2.5 用同一方法拆 `battle.js`（2,698 行）／`quiz.js`／`gacha.js`（P2.2 已完成）。
 
 ---
 
@@ -70,7 +70,7 @@
 | # | 內容 | 來源 |
 |---|---|---|
 | P2.1 | ✅ 2026-11-07 **Store**：`js/store.js`（`get`／`select`／`update`／`subscribe`，Rule 115）。舊式 `saveState()` 都會通知訂閱者，所以舊 call site 留待 P2.2 拆 `app.js` 嗰陣分批換。`tests/unit/store.test.js` 11 項 | 現代化 2.1 |
-| P2.2 | ✅ 2026-11-07 **拆 `app.js`**：4,149 → 72 行＋10 個 `js/app/*.js`（router、layout、home、setup-custom、settlement、settings、auth-ui、sheets、modals、boot），用 AST 搬、方法指紋證明冇改（`tests/unit/app-surface.test.js`，Rule 116）。`init`（828 行）原封搬去 `boot.js`，拆細做 `_boot*` 步驟留做下一步 | 現代化 2.2（＋商用級 Phase D） |
+| P2.2 | ✅ 2026-11-07 **拆 `app.js`**：4,149 → 72 行＋10 個 `js/app/*.js`（router、layout、home、setup-custom、settlement、settings、auth-ui、sheets、modals、boot），用 AST 搬、方法指紋證明冇改（`tests/unit/app-surface.test.js`，Rule 116）。`init`（828 行）再拆做 13 個 `_boot*` 步驟（連續語句、次序不變，110 句核對一致） | 現代化 2.2（＋商用級 Phase D） |
 | P2.3 | **ES modules**：由冇副作用嘅底層開始（`data`、`pokemon`、`sm2`、`core/*`）轉 `type="module"`，過渡期 `window.X = X`，逐層向上推。前置：見 §2 D1 | 現代化 2.3 |
 | P2.4 | **可取消計時**：`Timers.scope(name)` → `after(ms, fn)`／`cancel()`；離開 view 時一次過清（取代散落嘅 token 寫法，Rule 52／64） | 現代化 2.4 |
 | P2.5 | 插入：其他大檔用同一做法拆：`battle/battle.js`、`quiz.js`、`gacha.js` | 商用級 Phase D |

@@ -6,9 +6,28 @@
    ============================================================ */
 
 Object.assign(App, {
-  /* ---------- 初始化 ---------- */
+  /* ---------- 初始化 ----------
+     App.init 只負責次序：每一步係一個具名方法（總計劃 P2.2；Rule 116）。
+     各步驟之間唯一共用嘅局部變數係 st（loadState() 同一個物件），用參數傳入。 */
   async init() {
     const st = loadState();
+    this._bootSession();
+    this._bootSheets(st);
+    this._bootHomeButtons();
+    this._bootLoginState();
+    this._bootNavButtons();
+    this._bootQuizControls();
+    this._bootKeyboardAndClicks();
+    this._bootCalendarAndReview();
+    await this._bootLoadData();
+    this._bootAfterFirstRender(st);
+    this._bootClickFeedback();
+    this._bootAudio();
+    this._bootServiceWorker();
+  },
+
+  /* 開機步驟：裝置 ID、SM-2 一次性重算、Supabase 背景 pull */
+  _bootSession() {
     ensureDeviceId();   /* 確保匿名裝置 ID 存在（供 SM-2 history + Supabase 用）*/
 
     /* SM-2 v3 一次性重算：先備份玩家 state，再補 last_review_at／新 interval */
@@ -23,7 +42,10 @@ Object.assign(App, {
         .then(() => this.renderHome())
         .catch(() => {});
     }
+  },
 
+  /* 開機步驟：主頁上框 sheet 掣、Quests 預覽、底部展開箭咀、dockbar */
+  _bootSheets(st) {
     /* 按鈕（Home P1 dock + sheet 系統） */
     document.getElementById("btn-start-quiz").onclick = () => this.openSetup();
 
@@ -360,7 +382,10 @@ Object.assign(App, {
     dockBinder("btn-bd-leaderboard", null, () => { if (typeof Leaderboard !== "undefined") Leaderboard.open(); }, "view-leaderboard");
     dockBinder("btn-bd-friends", null, () => { if (typeof Friends !== "undefined") Friends.open(); }, "view-friends");
     dockBinder("btn-bd-setting", "sheet-setting", () => this._openSheet("sheet-setting"));
+  },
 
+  /* 開機步驟：主頁各掣（Battle／Setting sheet 內容、TodayStrip、Gym、舊 topbar） */
+  _bootHomeButtons() {
     /* Battle sheet 內容按鈕 */
     document.getElementById("btn-home-battle").onclick = () => {
       this._closeSheet("sheet-battle");
@@ -407,7 +432,10 @@ Object.assign(App, {
     if (settingsBtn) settingsBtn.onclick = () => this.openSettings();
     const battleMenuFriends = document.getElementById("battle-menu-friends");
     if (battleMenuFriends) battleMenuFriends.onclick = () => { if (typeof Friends !== "undefined") Friends.open(); };
+  },
 
+  /* 開機步驟：登入狀態／OAuth 失敗提示 */
+  _bootLoginState() {
     /* OAuth redirect 返嚟時 SupabaseAuth.init() 已經 parse hash → save session。
        呢度只同步更新登入 UI；雲端合併（migrate / import / pull / overwrite 確認窗）
        全部延後到首屏出咗、loading 收走之後才跑 —— 見 _postLogin。 */
@@ -420,6 +448,10 @@ Object.assign(App, {
       this.toast("❌ Google sign-in failed: " + window.__oauthError);
       window.__oauthError = null;
     }
+  },
+
+  /* 開機步驟：扭蛋、錯題回顧、圖鑑／日曆返回、下巴精靈球 Home 鍵 */
+  _bootNavButtons() {
     /* btn-top-pull hidden since v48 — skip binding */
     document.getElementById("btn-pull-rare").onclick = () => Gacha.open("rare");
     document.getElementById("btn-review").onclick = () => this.showReview();
@@ -462,7 +494,10 @@ Object.assign(App, {
       else this.showView("view-settlement");
       this._reviewFrom = null;
     };
+  },
 
+  /* 開機步驟：選題、答題（確認／提示／下一題／設定）、結算 Continue、圖片題聽聲 */
+  _bootQuizControls() {
     /* 題型選擇畫面 */
     document.getElementById("btn-setup-start").onclick = () => Quiz.start([...this.selectedTopics]);
     document.getElementById("btn-topic-all").onclick = () => {
@@ -498,7 +533,10 @@ Object.assign(App, {
       if (window.CaptureScene) { window.CaptureScene.primeAudio(); window.CaptureScene.bgmPrime(); }
       Quiz.playWordAudio();
     };
+  },
 
+  /* 開機步驟：Enter／Esc／Ctrl+P／Ctrl+H、sheet 外面點擊收埋 */
+  _bootKeyboardAndClicks() {
     /* 答完後 Enter 亦可按 Next（輸入格已 disable，唔會再觸發 submit）*/
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
@@ -639,7 +677,10 @@ Object.assign(App, {
       e.preventDefault();
       Quiz.hint();
     });
+  },
 
+  /* 開機步驟：日曆掣、錯題回顧記住來源 */
+  _bootCalendarAndReview() {
     /* 日曆 */
     document.getElementById("btn-cal-prev").onclick = () => Calendar.prev();
     document.getElementById("btn-cal-next").onclick = () => Calendar.next();
@@ -647,7 +688,10 @@ Object.assign(App, {
     /* 原本 showReview 需要知道來源 */
     const _origShowReview = this.showReview.bind(this);
     this.showReview = (from) => { this._reviewFrom = from || null; _origShowReview(); };
+  },
 
+  /* 開機步驟：載入題庫同 PokéAPI 資料、自訂圖片、世代、寵物、時間校正、狀態推算、首屏 render */
+  async _bootLoadData() {
     /* 載入網站題庫（questions.csv）＋本地 PokéAPI 資料，先畫主畫面 */
     await Promise.all([loadSiteQuestions(), loadPictureWords(), loadPokemonDex()]);
     /* 自訂圖片題：從 IndexedDB hydrate blob URL 入 memory cache */
@@ -712,7 +756,10 @@ Object.assign(App, {
 
     this.renderHome();
     this.showView("view-home");
+  },
 
+  /* 開機步驟：首屏之後：OAuth 雲端合併、wide 右欄預設、未登入彈 Login Hub */
+  _bootAfterFirstRender(st) {
     /* 首屏已 render：等 loading 淡出走完（400ms）才做 OAuth 雲端合併，
        確保「Overwrite local progress?」確認窗浮喺正常畫面上，一定撳得到。 */
     if (this._needPostLogin) {
@@ -734,7 +781,10 @@ Object.assign(App, {
       /* 等 loading 淡出後先彈 modal，避免 modal 被 loading overlay 遮住 */
       setTimeout(() => { this.openLoginHub(true); }, 500);
     }
+  },
 
+  /* 開機步驟：全部 UI 掣嘅按聲、按下動畫、震動 */
+  _bootClickFeedback() {
     /* 全部 UI 掣短 click SFX + pressed 彈出動畫 + vibration（委派一次；跟 Settings SFX %） */
     if (!this._uiTapBound) {
       this._uiTapBound = true;
@@ -761,7 +811,10 @@ Object.assign(App, {
         }
       }, true);
     }
+  },
 
+  /* 開機步驟：全域 BGM、Entry Gate、戰鬥 BGM 同捕捉場景 idle 預載 */
+  _bootAudio() {
     /* 全域 BGM（Flat Water）+ Entry Gate：
        1) 開頁即試播 —— PWA / 高互動用戶可直接出聲，唔彈窗
        2) Autoplay 被擋 → 彈 entry gate，撳 YES!（合法手勢）解鎖 + 播 BGM */
@@ -803,7 +856,10 @@ Object.assign(App, {
       /* 掂卡片外都當 YES */
       entryGate.addEventListener("click", (e) => { if (e.target === entryGate) closeGate(); });
     }
+  },
 
+  /* 開機步驟：Service Worker 註冊同新版本自動套用 */
+  _bootServiceWorker() {
     /* Service Worker（PWA 離線）＋新版本自動套用 */
     if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
       const hadController = !!navigator.serviceWorker.controller;
