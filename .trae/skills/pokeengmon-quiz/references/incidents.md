@@ -65,3 +65,11 @@ Skill: Rule 93 added
 - 測試陷阱：CDP 觸控模擬中途淨放一隻手指唔生效（要全部 `touchEnd`）；同一個 Chrome 轉 viewport／mobile 之後觸控會失效 → 每個尺寸開新 Chrome。
 
 Skill: Rule 107 added
+
+## Rule 112 — 答案比對一律經 `Quiz._norm`（包括 `_buildCells` 嘅答案 token）；彎／修飾撇號 `’ ‘ ʼ` 當直撇號 `'`
+
+- 2026-11-07 總計劃 P1.5。Phase A 嘅 characterization test 記低咗 `KNOWN: ’ ≠ '`。今次先將斷言改成「應該相等」，見到 2 項紅，修完先變綠。
+- 根本原因有兩個：`_norm` 冇處理撇號；`_buildCells` 嘅 token 用 `toLowerCase()`，冇行 `_norm`，即係用戶輸入同答案用咗兩套規則。
+- 寫修正時，Python 將 U+2018 嘅 escape 寫成咗字元本身。Edit 工具亦認為兩者一樣，要用 `cat -v`／`ascii()` 先睇到分別；最後用 bytes 改返做 ASCII escape。真正原因：工具輸入入面打嘅 backslash-u 序列，喺寫入檔案之前已經被轉成字元；要寫 ASCII escape，就用 Python bytes（`b'\u2018'`）或者 `chr()` 砌出嚟。
+
+Skill: Rule 112 added

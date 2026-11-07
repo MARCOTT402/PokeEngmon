@@ -15,8 +15,24 @@ test("_norm: trim, lowercase, collapse inner whitespace", () => {
   assert.equal(Quiz._norm(undefined), "");
 });
 
-test("_norm keeps curly apostrophe as-is (KNOWN: ’ ≠ ')", () => {
-  assert.notEqual(Quiz._norm("don’t"), Quiz._norm("don't"));
+test("_norm treats curly / modifier apostrophes (’ ‘ ʼ) as a straight ' (smart punctuation)", () => {
+  assert.equal(Quiz._norm("don’t"), "don't");
+  assert.equal(Quiz._norm("‘tis"), "'tis");
+  assert.equal(Quiz._norm("Isnʼt"), "isn't");
+  assert.equal(Quiz._norm("don't"), "don't");
+});
+
+test("a curly-apostrophe input matches a straight-apostrophe answer and vice versa", () => {
+  const [straight] = Quiz._buildCells({ answer: "don't" });
+  assert.equal(Quiz._cellMatch(straight, Quiz._norm("Don’t")), true);
+  const [curly] = Quiz._buildCells({ answer: "don’t" });
+  assert.deepEqual(plain([...curly.tokens]), ["don't"]);
+  assert.equal(Quiz._cellMatch(curly, Quiz._norm("don't")), true);
+  assert.deepEqual([...Quiz._fullAnswerVariants({ answer: "It’s", accept: ["it is"] })], ["it's", "it is"]);
+});
+
+test("apostrophe normalisation keeps string length (hint prefix / junior ghost compare by index)", () => {
+  assert.equal(Quiz._norm("we’re").length, "we're".length);
 });
 
 test("_buildCells: one cell per answer word; accepted token is lowercase", () => {

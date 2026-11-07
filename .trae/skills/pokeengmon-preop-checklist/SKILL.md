@@ -466,3 +466,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 111 — 砌 HTML 用 `html```＋`Html.render()`（`js/core/html.js`）：字串自動 escape、巢狀唔會雙重 escape；可信 markup 先用 `Html.raw()`；屬性值一定加引號
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 112 — 答案比對一律經 `Quiz._norm`（包括 `_buildCells` 嘅答案 token）；彎／修飾撇號 `’ ‘ ʼ` 當直撇號 `'`
+
+→ `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。

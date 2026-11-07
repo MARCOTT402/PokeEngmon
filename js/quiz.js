@@ -343,10 +343,10 @@ const Quiz = {
     const variants = (q.type === "word" ? [] : (q.accept || [])).map(v => String(v).trim()).filter(Boolean);
 
     return tokens.map((t, i) => {
-      const accepted = new Set([t.toLowerCase()]);
+      const accepted = new Set([this._norm(t)]);
       variants.forEach(v => {
         const parts = v.split(/\s+/);
-        if (parts.length === tokens.length && parts[i]) accepted.add(parts[i].toLowerCase());
+        if (parts.length === tokens.length && parts[i]) accepted.add(this._norm(parts[i]));
       });
       return {
         primary: t,
@@ -641,8 +641,10 @@ const Quiz = {
   },
 
   /* ---------- 輸入 / 提示 ---------- */
+  /* 比對用：去頭尾空白、細階、合併空格；彎／修飾撇號（’ ‘ ʼ，系統鍵盤「智慧型標點」會打出）當直撇號 '（Rule 112）。
+     逐個字元替換，長度唔變（提示前綴同小學生 ghost 用 index 比對）。 */
   _norm(s) {
-    return String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " ");
+    return String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " ").replace(/[\u2018\u2019\u02BC]/g, "'");
   },
 
   _cellMatch(c, val) {

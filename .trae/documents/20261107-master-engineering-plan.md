@@ -33,7 +33,7 @@
 | P1.1 typecheck：設定（`163ffd4`）＋ `npm run typecheck`、26／43 個檔 `// @ts-check`、ratchet 測試、CI 步驟 | 現代化 Task 1 | ✅ 設定 `163ffd4`；其餘見下一個 commit |
 | 其餘 | — | ⏳ 見 §3 |
 
-**而家下一步**：P1.5 彎撇號判錯修正（先改測試見紅再修）。P1.4 畫質 prototype 只改 `tools/`，可以並行。
+**而家下一步**：P1.6 部署＋CI 收口（要你喺 GitHub Settings → Pages 將 Source 改做「GitHub Actions」）。P1.4 畫質 prototype 只改 `tools/`，可以並行。
 
 ---
 
@@ -56,7 +56,7 @@
 | P1.2 | **全域 z-index token**：`:root` 加 `--z-*`（數值同現況一樣）；≥100 嘅字面值換做 token；JS 設 `zIndex` 嘅地方同步 | 現代化 T2 | ✅ 2026-11-07：22 個 token、25 條全域層；`check-z-tokens.mjs` 同 HEAD 逐條一樣；`tests/unit/z-tokens.test.js`；JS 冇 `zIndex` 字面值要同步 |
 | P1.3 | **`html` tagged template**：新檔 `js/core/html.js`，**底層用 `dom.js` 嘅 `escapeHTML`**（唔准再寫一份 escape）。功能：`html```、`raw()`、陣列 join、`null`／`false` 變空字串、`Html.render(el, tpl)` | 現代化 T3（＋商用級 B5a） | ✅ 2026-11-07：`tests/unit/html.test.js` 8 項；瀏覽器實測 XSS 字串只顯示成文字；Rule 111 |
 | P1.4 | **畫質 prototype**：`tools/prototype-battle-fx.html`（現行 vs PixiJS 特效） | 現代化 T4 | 喺 Browser pane 截圖俾你睇 |
-| P1.5 | 插入：**彎撇號判錯（bug）**：`Quiz._norm` 將 `’ ‘ ʼ` 統一做 `'` | 商用級 KNOWN | `quiz-answer.test.js` 改斷言，**先見到紅**再修 |
+| P1.5 | 插入：**彎撇號判錯（bug）**：`Quiz._norm` 將 `’ ‘ ʼ` 統一做 `'` | 商用級 KNOWN | ✅ 2026-11-07：測試先紅 2 項再綠；瀏覽器輸入 `weren’t` 判啱；Rule 112 |
 | P1.6 | 插入：**部署＋CI 收口**：`deploy` job（`needs: release`，`ref: main`）；`tools/deploy-files.json`；`sw-assets.test.js`、`deploy-manifest.test.js`；CI 次序 lint → test → typecheck → release → deploy。同 P1.1 一齊改 `release.yml`，唔好分兩次 | 商用級 Task 5b | 正式網址唔再公開內部檔；兩個新測試綠 |
 
 **P1.1 交接資料（2026-11-07）：**

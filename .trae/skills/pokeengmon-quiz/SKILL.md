@@ -53,3 +53,12 @@ description: PokeEngmon quiz rules: SM-2 due-card sessions, settlement exits and
 - 快取 object 係共用：內部改完一定經 `_saveCards`／`_saveHistory` 寫返；對外（`listAll`／`listDue`／`listNew`／`listHistory`）一律回傳 copy。
 - `buildSession` 只讀一次 cards；未有 card 嘅題當全新（到期）；張 card 等 `Quiz._renderQuestion` 出題先建。**唔好**喺 loop 入面 call `getOrCreateCard`（每次 parse＋寫 359 KB → O(N²)，手機入題等幾秒）。
 - 驗收：`node tools/_test_sm2_cache.js`（Rule 7／77 行為＋快取失效）；`node tools/perf/bench.mjs --cpu 4` 嘅 `freshQuizStartMs`／`warmQuizStartMs` < 200。
+
+### Rule 112 — 答案比對一律經 `Quiz._norm`（包括 `_buildCells` 嘅答案 token）；彎／修飾撇號 `’ ‘ ʼ` 當直撇號 `'`
+
+- 用戶輸入同題庫答案（`answer`、`accept`、每格 token）都要經同一個 `_norm`：去頭尾空白、細階、合併空格、U+2018、U+2019、U+02BC（regex `[\u2018\u2019\u02BC]`）→ `'`。唔好喺其他地方自己寫 `toLowerCase()` 比對，`_buildCells` 之前就係咁漏咗。
+- 點解要咁做：系統鍵盤（Mac／iPad 外接鍵盤嘅「智慧型引號」、部分 Android 輸入法）同貼上文字會出 `’`；App 自帶鍵盤只會出 `'`。題庫有 26 條答案嘅可接受答案係縮寫（例如 `were not / weren't`）。
+- 替換要逐個字元做、保持長度唔變：提示前綴（`ans.indexOf(val) === 0`）同小學生 ghost 都係用 index 比對。
+- regex 寫 `\u` escape，唔好直接放彎撇號字元，因為肉眼分唔到 `'`、`’`、`ʼ`。
+- 驗收：`tests/unit/quiz-answer.test.js`（撇號三種寫法、兩個方向、長度唔變）；瀏覽器開題「They ___(not be) hungry…」，第一格輸入 `weren’t`（U+2019）→ 兩格綠，顯示 Perfect。
+→ `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。
