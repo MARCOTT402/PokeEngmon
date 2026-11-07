@@ -94,7 +94,7 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 **Display-window overlay 規格**（`#view-quiz-setup, #view-settlement, #view-leaderboard, #view-friends, #view-battle-menu, #view-quiz, #view-capture, #view-battle` 嘅 `.active`；`#gacha-scene-b`、`#gacha-inspect` 同樣定位）：
 - 定位：`top/bottom: var(--frame-screen-top/bottom)`、`left: var(--frame-screen-left)`、`width: var(--frame-screen-w)`、`transform: none`。
 - 外觀：四角 `border-radius: 14px`（唔好只修被投訴嗰角，Rule 39）、`border: 2.5px solid #1b1b22`、背景 `#fffdf7`。
-- 層級：bezel／chin `z-index: 100`（`position: relative`）< overlay 120 < sheets（Rule 47）。
+- 層級：bezel／chin `var(--z-frame)`（100，`position: relative`）< overlay `var(--z-overlay)`（120）< sheets（Rule 47、110）。
 - Exit 動畫：`transform-origin: bottom center; transform: scaleY(0)`，`.4s cubic-bezier(.25,1,.5,1)`；唔用 translateY（會穿出紅框）；`prefers-reduced-motion` 即時（Rule 47）。
 - 答題／捕捉／對戰呢類 overlay **唔可以 fade**（後面係 active 主頁，會閃）；`animation: none`（Rule 45）。
 - 全頁 view 收入 overlay：`height: auto`（原本 `100dvh` 嘅要覆寫）、內部 `position: fixed` 改 `absolute; inset: 0`（Rule 45）；基礎規則有 `max-width`（例如 `#view-capture` 520px）要喺 `.active` 覆寫 `max-width: none`，否則 tablet／wide 闊唔到、露出後面 sheet（Rule 89）。
@@ -102,7 +102,7 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 - Canvas／WebGL 場景（捕捉）跟 overlay 變闊：每次 start 都 `_resize()` 對齊 host；場景內容（草叢、地面）喺 ≥700px 要加闊，唔好露邊（Rule 89）。
 - 將 view 搬入另一容器（例如戰鬥橫向紅框 `.bl-screen`）：新容器 selector 用 `!important` 清走 `position`、inset、`transform`、`max-width/height`、負 margin、`100vh`；離開時搬返原位（comment placeholder）；搬完即刻 `getComputedStyle` 檢查（Rule 67）。
 
-**Z-order 全景**（Rule 46）：toast 3000 > bag-rotate／轉直提示 2600 > battle-land 2400 > inferno-unlock 2300 > tier-select 2200 > pvp-match 2100 > team-select 2000 > modal-backdrop 1400 > display-window overlays 120 > bezel／chin 100；entry-gate 9000、lb-login-modal／update-modal 9999、qd-fly 9999 刻意蓋過一切。新 fixed 層要高過 120，同時確認 toast 仲高過佢。
+**Z-order 全景**（Rule 46、110）：**以 `css/style.css` `:root` 嘅 `--z-*` token 為準**，嗰度有齊全部全域層同註解。由高至低：`--z-kbd-badges` 99990、`--z-top` 9999（lb-login-modal／update-modal／qd-fly，刻意蓋過一切）、`--z-entry-gate` 9000 > `--z-toast` 3000 > bag-ghost 2700 > bag-rotate／轉直提示 2600 > bag 2500 > battle-land 2400 > inferno-unlock 2300 > tier-select 2200 > pvp-match 2100 > team-select 2000 > `--z-modal` 1400 > sync-banner 900 > gacha 640–670 > hub 500 > pre-battle 140 > quiz 全螢幕 130 > `--z-overlay` 120 > `--z-frame` 100。`index.html` `<head>` 內聯兜底層唔用 token：loading 99999、fatal 100000、guard-recover 2700、offline pill 2550。新 fixed 層要高過 120，加 token 時確認 toast 仲高過佢（`tests/unit/z-tokens.test.js` 會檢查）。
 
 ## 5. Sheets 定位
 
@@ -144,7 +144,7 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 
 - phone／tablet：`.modal-backdrop` `align-items: flex-start`、`padding-top: calc(var(--frame-screen-top) + 14px)`；`.modal-card` `max-height: calc(100dvh - top - bottom - 28px)`——唔好跌落下巴 Home 鍵（Rule 46）。
 - wide：modal 置中成部機（`align-items: center; padding: 24px`），`max-width: 480px`（登入卡 420），內部 scroll。
-- toast：`top: calc(var(--frame-screen-top) + 12px)`、`left: calc(var(--frame-screen-left) + var(--frame-screen-w)/2)`（wide 自動喺右欄頂）、`z-index: 3000`。「撳掣冇反應」先查回饋係咪被蓋住（Rule 46）。
+- toast：`top: calc(var(--frame-screen-top) + 12px)`、`left: calc(var(--frame-screen-left) + var(--frame-screen-w)/2)`（wide 自動喺右欄頂）、`z-index: var(--z-toast)`（3000）。「撳掣冇反應」先查回饋係咪被蓋住（Rule 46）。
 - 其他全畫面 popup（`lb-login-modal`、`update-modal`、tier／team／pvp／inferno）用 `inset: 0` 置中，全部 layout 都啱。
 - 掛 body 嘅 overlay：`stopPropagation`（Rule 60）＋`__peHit` 豁免（Rule 40）。
 
@@ -243,7 +243,7 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 - [ ] wide Esc 清單、`_wideSwitch` 嘅 `overlayViewId`。
 - [ ] 要鎖左欄就 call `_setFrameLock`／`_setSettleLock`；橫向專用就加 `_syncRotateHint` 豁免。
 
-**加新 body 級 popup**：z-index 對 §4 全景；`stopPropagation`；toast 仲要高過佢。
+**加新 body 級 popup**：喺 `:root` 加一個 `--z-*` token（對 §4 全景揀數值），rule 用 `var(--z-…)`；`stopPropagation`；toast 仲要高過佢。
 
 **加新主頁元素**：問「矮視窗時邊個縮？」；wide 左欄自動限闊，唔好放入 `.ph-sheets`。
 
@@ -253,3 +253,10 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 
 - iPhone SE 文字題題目卡多 21px scroll；手機同一 tick 三連撳開 3 個 sheet（原有）；iPad 直向背包字偏細；下巴列 46px（tablet 差 2）。
 - P2：圖鑑格數、Streak 月曆、育成、Friends、Leaderboard、Daily Quests 雙欄、Settings、錯題回顧喺 wide。P3：扭蛋、背包喺 iPad 直向同大屏比例；戰鬥喺 iPad 直向畫面偏細（紅框高 = 闊×0.62）。
+
+### Rule 110 — z-index 用 `:root` 嘅 `--z-*` token：全域層（≥100）唔准寫字面值；改層級只改 token；`index.html` 內聯兜底層照寫數字
+
+- 全域層一律寫 `z-index: var(--z-xxx)`，數值集中喺 `:root`（每個 token 有註解）。改層級只改 token，唔好再喺 rule 度寫數字。
+- 局部層（喺自己 stacking context 入面，例如 `.catch-ball.grabbed`）照寫數字；要喺 `tests/unit/z-tokens.test.js` 同 `tools/audit/check-z-tokens.mjs` 嘅 `LOCAL_OK` 白名單登記。
+- `index.html` `<head>` 內聯兜底樣式（loading、`#fatal-screen`、`#guard-recover`、offline pill）**唔用 token**，因為 `style.css` 載唔到嗰陣都要顯示得到（Rule 94）。
+- 驗收：`node tools/audit/check-z-tokens.mjs`（同 git HEAD 逐條比較，數值要一樣）＋ `npm test`（`z-tokens.test.js`：冇字面值、token 齊、toast 只低過三個刻意最頂嘅層）＋ `shots --compare`。

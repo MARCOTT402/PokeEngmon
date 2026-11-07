@@ -59,6 +59,33 @@
   --card: #ffffff;
   --shadow: 0 4px 14px rgba(35, 60, 120, .14);
   --radius: 18px;
+  /* ---- z-index 層級（全域層，數值由細到大；Rule 110）----
+     局部層（喺自己 stacking context 入面，例如 .catch-ball.grabbed）照寫數字，唔使 token。
+     index.html <head> 內聯兜底層唔用 token（style.css 載唔到都要顯示得到，Rule 94）：
+       loading 99999、#fatal-screen 100000、#guard-recover 2700、offline pill 2550。
+     加新 fixed 層：揀一個未用嘅數值加 token，並確認 toast（--z-toast）仲高過佢（Rule 46）。 */
+  --z-frame: 100;          /* .pd-bezel／.pd-chin（position: relative） */
+  --z-overlay: 120;        /* display-window overlays（選題／結算／Leaderboard／Friends／Battle Menu／Quiz／Capture／Battle） */
+  --z-overlay-quiz: 130;   /* ≥600px 答題全螢幕 */
+  --z-pre-battle: 140;     /* PvP pre-battle 頁 */
+  --z-hub: 500;            /* .hub-bar */
+  --z-gacha-scene: 640;    /* #gacha-scene-b */
+  --z-gacha-inspect: 660;  /* #gacha-inspect */
+  --z-gacha-multi: 670;    /* #gacha-multi */
+  --z-sync-banner: 900;
+  --z-modal: 1400;         /* .modal-backdrop */
+  --z-team-select: 2000;
+  --z-pvp-match: 2100;
+  --z-tier-select: 2200;
+  --z-inferno-unlock: 2300;
+  --z-battle-land: 2400;   /* 戰鬥橫向紅框 */
+  --z-bag: 2500;           /* .bag-root */
+  --z-bag-rotate: 2600;    /* 背包／轉直提示 */
+  --z-bag-ghost: 2700;     /* 拖拉中嘅 ghost */
+  --z-toast: 3000;         /* 一定要高過所有互動層（Rule 46） */
+  --z-entry-gate: 9000;
+  --z-top: 9999;           /* lb-login-modal、update-modal、qd-fly：刻意蓋過一切 */
+  --z-kbd-badges: 99990;   /* 鍵盤快捷鍵提示 badge */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -1349,7 +1376,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
 }
 
 #gacha-scene-b {
-  position: fixed; inset: 0; height: 100dvh; z-index: 640; overflow: hidden;
+  position: fixed; inset: 0; height: 100dvh; z-index: var(--z-gacha-scene); overflow: hidden;
   background: radial-gradient(120% 80% at 50% 112%, #f2c34e 0%, #b9821f 34%, #5c3c0c 68%, #170e03 100%);
   opacity: 0; transition: opacity .5s;
 }
@@ -1454,7 +1481,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
    v102 檢視卡（fixed overlay，掛 body）
    ============================================================ */
 #gacha-inspect {
-  position: fixed; inset: 0; height: 100dvh; z-index: 660;
+  position: fixed; inset: 0; height: 100dvh; z-index: var(--z-gacha-inspect);
   display: flex; align-items: center; justify-content: center;
   background: radial-gradient(120% 100% at 50% 0%, rgba(60, 36, 8, .35), rgba(12, 7, 2, .92) 70%), #170e03;
   overflow-y: auto;
@@ -1516,7 +1543,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
    10 連結算頁（5×2 卡片格，掛 body）
    ============================================================ */
 #gacha-multi {
-  position: fixed; inset: 0; height: 100dvh; z-index: 670;
+  position: fixed; inset: 0; height: 100dvh; z-index: var(--z-gacha-multi);
   display: flex; align-items: center; justify-content: center;
   padding: calc(12px + env(safe-area-inset-top, 0px)) 10px calc(12px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto; overscroll-behavior: contain;
@@ -1942,7 +1969,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
    Modal / Toast
    ============================================================ */
 .modal-backdrop {
-  position: fixed; inset: 0; background: rgba(30, 40, 70, .55); z-index: 1400;
+  position: fixed; inset: 0; background: rgba(30, 40, 70, .55); z-index: var(--z-modal);
   display: flex; align-items: flex-start; justify-content: center;
   /* popup 一律貼 display window 頂部，唔好彈到下巴 Home 鍵附近 */
   padding: calc(var(--frame-screen-top) + 14px) 20px calc(var(--frame-screen-bottom) + 14px);
@@ -1966,7 +1993,7 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   transform: translateX(-50%) translateY(-12px);
   max-width: min(420px, calc(100vw - 24px)); text-align: center;
   background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 999px;
-  font-weight: 700; opacity: 0; pointer-events: none; transition: all .3s; z-index: 3000;
+  font-weight: 700; opacity: 0; pointer-events: none; transition: all .3s; z-index: var(--z-toast);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -2321,7 +2348,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* ============ Entry gate (audio unlock) ============ */
 .hidden { display: none !important; }
 .entry-gate {
-  position: fixed; inset: 0; z-index: 9000;
+  position: fixed; inset: 0; z-index: var(--z-entry-gate);
   display: flex; align-items: center; justify-content: center;
   background: rgba(8, 10, 18, 0.92);
   backdrop-filter: blur(6px);
@@ -2357,7 +2384,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .hub-spacer { height: 92px; }
 .hub-bar {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 520px; z-index: 500;
+  width: 100%; max-width: 520px; z-index: var(--z-hub);
   display: flex; gap: 10px;
   padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
   background: rgba(10, 12, 22, 0.92);
@@ -2386,7 +2413,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   border: 2.5px solid #1b1b22;
   overflow-y: auto;
   overscroll-behavior: contain;
-  z-index: 120;
+  z-index: var(--z-overlay);
   /* exit 動畫：由底部向上壓縮（唔用 translateY 移動，避免穿過 display window 邊界）*/
   transform-origin: bottom center;
   transition: transform .2s cubic-bezier(.25,1,.5,1);   /* = App.OVERLAY_EXIT_MS（Rule 100） */
@@ -2658,7 +2685,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .lb-login-modal {
   position: fixed; inset: 0; background: rgba(0,0,0,.55);
   display: flex; align-items: center; justify-content: center;
-  z-index: 9999; padding: 24px;
+  z-index: var(--z-top); padding: 24px;
 }
 .lb-login-card {
   background: #fff; border-radius: 20px; padding: 28px 24px;
@@ -2705,7 +2732,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* 同步狀態 banner（可 dismiss，唔會靜靜消失） */
 .sync-banner {
   position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 520px; z-index: 900;
+  width: 100%; max-width: 520px; z-index: var(--z-sync-banner);
   padding: 10px 14px; font-size: .9rem; font-weight: 700; text-align: center;
   background: #fff3cd; color: #7a5c00; border-bottom: 2px solid #ffd54f;
   box-shadow: 0 4px 14px rgba(0,0,0,.12);
@@ -2721,7 +2748,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 更新提示：畫面中央彈窗（用戶一睇就見到） */
 .update-modal {
-  position: fixed; inset: 0; z-index: 9999;
+  position: fixed; inset: 0; z-index: var(--z-top);
   background: rgba(0,0,0,.55);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
@@ -3151,7 +3178,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ----- 難度選擇彈窗 ----- */
 .tier-select-modal {
-  position: fixed; inset: 0; z-index: 2200;
+  position: fixed; inset: 0; z-index: var(--z-tier-select);
   display: flex; align-items: center; justify-content: center;
   padding: 14px; background: rgba(8, 12, 22, .82);
 }
@@ -3231,7 +3258,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ----- Inferno 解鎖演出 ----- */
 .inferno-unlock {
-  position: fixed; inset: 0; z-index: 2300;
+  position: fixed; inset: 0; z-index: var(--z-inferno-unlock);
   display: flex; align-items: center; justify-content: center;
   pointer-events: none; opacity: 0; transition: opacity .3s ease;
   background: radial-gradient(circle at 50% 50%, rgba(24, 8, 40, .75), rgba(4, 4, 12, .9));
@@ -3680,7 +3707,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* ----- 隊伍選擇彈窗 ----- */
 .team-select-modal {
   position: fixed; inset: 0; background: rgba(10, 12, 22, .82);
-  display: flex; align-items: center; justify-content: center; z-index: 2000;
+  display: flex; align-items: center; justify-content: center; z-index: var(--z-team-select);
   padding: 16px;
 }
 .team-select-card {
@@ -3809,7 +3836,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* ----- PvP 配對面板 ----- */
 .pvp-match-panel {
   position: fixed; inset: 0; background: rgba(10, 12, 22, .82);
-  display: flex; align-items: center; justify-content: center; z-index: 2100;
+  display: flex; align-items: center; justify-content: center; z-index: var(--z-pvp-match);
   padding: 16px;
 }
 .pvp-match-card {
@@ -4248,7 +4275,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 2. 上框 48px ---- */
 .pd-bezel {
-  position: relative; z-index: 100;  /* 確保高過所有 position:fixed 嘅 view overlays（friends / leaderboard / battle menu） */
+  position: relative; z-index: var(--z-frame);  /* 確保高過所有 position:fixed 嘅 view overlays（friends / leaderboard / battle menu） */
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 60%, #d42f28 100%);
   border-bottom: 2.5px solid #8a1712;
   display: flex; align-items: center; justify-content: space-between;
@@ -4332,7 +4359,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* ---- 4. 下巴 46px：放大精靈球做 Home 鍵 ---- */
 .pd-chin {
-  position: relative; z-index: 100;  /* 確保高過所有 position:fixed 嘅 view overlays */
+  position: relative; z-index: var(--z-frame);  /* 確保高過所有 position:fixed 嘅 view overlays */
   background: linear-gradient(180deg, #d42f28, #b5231d);
   display: flex; align-items: center; justify-content: center;
   padding: 0;
@@ -4869,7 +4896,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .kbd-only { display: none !important; }
 @media (hover: hover) and (pointer: fine) { .kbd-only { display: flex !important; } }
 /* 捷徑 badge：鍵盤模式＋滑鼠裝置先出（js/keys.js renderBadges；撳滑鼠／觸控即收） */
-.kbd-badges { position: fixed; inset: 0; pointer-events: none; z-index: 99990; }
+.kbd-badges { position: fixed; inset: 0; pointer-events: none; z-index: var(--z-kbd-badges); }
 .kbd-badge {
   position: absolute; min-width: 18px; height: 18px; padding: 0 4px;
   display: flex; align-items: center; justify-content: center;
@@ -5092,7 +5119,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 領取獎勵：由個掣位飄出 +N 字 */
 .qd-fly {
-  position: fixed; z-index: 9999; pointer-events: none;
+  position: fixed; z-index: var(--z-top); pointer-events: none;
   font-family: inherit; font-size: .95rem; font-weight: 900;
   color: #b26a00; text-shadow: 0 1px 0 #fff, 0 0 8px rgba(255, 214, 102, .8);
   transform: translate(-50%, -50%);
@@ -5344,7 +5371,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 @media (min-width: 600px) {
   #view-quiz.active {
     top: 0; bottom: 0; left: 0; right: 0; transform: none;
-    width: auto; max-width: none; border: 0; border-radius: 0; z-index: 130;
+    width: auto; max-width: none; border: 0; border-radius: 0; z-index: var(--z-overlay-quiz);
     padding-top: env(safe-area-inset-top, 0px);
   }
   #view-quiz .quiz-top { width: 100%; max-width: 760px; margin: 0 auto; padding: 22px 24px 8px; box-sizing: border-box; }
@@ -5449,7 +5476,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
    body 級 overlay：z 2500（高過 team-select 2000／pvp 2100，低過 toast 3000；Rule 46）
    ===================================================================== */
 .bag-root {
-  position: fixed; inset: 0; z-index: 2500; display: none; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: var(--z-bag); display: none; align-items: center; justify-content: center;
   background: #1b1d24; overflow: hidden; -webkit-user-select: none; user-select: none;
 }
 .bag-root.show { display: flex; animation: bagIn .22s ease; }
@@ -5591,7 +5618,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .bag-desc { font-size: 11.5px; line-height: 1.45; color: #3a3a42; font-weight: 600; }
 /* 轉手機提示（參考負責人提供嘅圖：斜紋底 + 手機旋轉 + 仍然這樣玩） */
 .bag-rotate {
-  position: fixed; inset: 0; z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  position: fixed; inset: 0; z-index: var(--z-bag-rotate); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   color: #fff; text-align: center; padding: 24px;
   background: radial-gradient(ellipse at center, rgba(120,26,22,0) 0%, rgba(20,6,6,.55) 75%), repeating-linear-gradient(135deg, #5a1612 0 22px, #45100d 22px 44px);
 }
@@ -5665,7 +5692,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .bag-root .drop-ok { outline: 3px dashed #2b5cb8; outline-offset: 1px; }
 .bag-root .drop-hot { background: #dde8ff !important; transform: scale(1.03); }
 .bag-ghost {
-  position: fixed; left: 0; top: 0; z-index: 2700; pointer-events: none; width: 64px; height: 64px; border-radius: 14px; border: 2px solid #1b1b22; background: #fff;
+  position: fixed; left: 0; top: 0; z-index: var(--z-bag-ghost); pointer-events: none; width: 64px; height: 64px; border-radius: 14px; border: 2px solid #1b1b22; background: #fff;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(0,0,0,.35); transform: translate(-50%, -60%) scale(1.08) rotate(-4deg); transition: transform .12s;
 }
 .bag-ghost img { width: 80%; height: 80%; object-fit: contain; image-rendering: pixelated; }
@@ -5809,7 +5836,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
    背包第 4a 段：戰鬥畫面轉橫（BattleLand）— 同背包同款紅框
    body 級 overlay：z 2400（低過背包 2500；Rule 46）
    ===================================================================== */
-.battle-land { position: fixed; inset: 0; z-index: 2400; display: none; align-items: center; justify-content: center; background: #1b1d24; overflow: hidden; }
+.battle-land { position: fixed; inset: 0; z-index: var(--z-battle-land); display: none; align-items: center; justify-content: center; background: #1b1d24; overflow: hidden; }
 .battle-land.show { display: flex; }
 .battle-land .bl-frame { flex: none; transform-origin: center center; }
 .battle-land .bag-bezel, .battle-land .bl-home { cursor: default; }
@@ -6051,7 +6078,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* PvP pre-battle（開戰前，蓋喺揀隊／戰鬥畫面上面） */
 .pre-battle {
-  position: fixed; inset: 0; z-index: 140; display: none; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: var(--z-pre-battle); display: none; align-items: center; justify-content: center;
   padding: 16px; background: rgba(10, 16, 30, .72);
 }
 .pb-card {

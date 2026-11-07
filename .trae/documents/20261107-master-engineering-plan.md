@@ -33,7 +33,7 @@
 | P1.1 typecheck：設定（`163ffd4`）＋ `npm run typecheck`、26／43 個檔 `// @ts-check`、ratchet 測試、CI 步驟 | 現代化 Task 1 | ✅ 設定 `163ffd4`；其餘見下一個 commit |
 | 其餘 | — | ⏳ 見 §3 |
 
-**而家下一步**：P1.2 z-index token（`css/style.css` ＋ JS `zIndex`）。P1.4 畫質 prototype 只改 `tools/`，可以並行。
+**而家下一步**：P1.3 `html` helper（建喺 `escapeHTML` 之上）。P1.4 畫質 prototype 只改 `tools/`，可以並行。
 
 ---
 
@@ -53,7 +53,7 @@
 | # | 內容 | 來源 | 驗收 |
 |---|---|---|---|
 | P1.1 | **Typecheck**：`npm run typecheck`（`tsc -p tsconfig.json`）；喺已經乾淨嘅檔加 `// @ts-check`，清單只准加唔准減；CI 喺 lint、test 之後跑 | 現代化 T1（做緊） | ✅ 2026-11-07：26 個檔 0 錯；`tests/unit/ts-check-ratchet.test.js`；驗收改用「未定義 global → TS2304」（`Sync` 宣告做 `any`，`Sync.nope()` 唔會紅） |
-| P1.2 | **全域 z-index token**：`:root` 加 `--z-*`（數值同現況一樣）；≥100 嘅字面值換做 token；JS 設 `zIndex` 嘅地方同步 | 現代化 T2 | `tools/audit/check-z-tokens.mjs`；`shots --compare` 零差異 |
+| P1.2 | **全域 z-index token**：`:root` 加 `--z-*`（數值同現況一樣）；≥100 嘅字面值換做 token；JS 設 `zIndex` 嘅地方同步 | 現代化 T2 | ✅ 2026-11-07：22 個 token、25 條全域層；`check-z-tokens.mjs` 同 HEAD 逐條一樣；`tests/unit/z-tokens.test.js`；JS 冇 `zIndex` 字面值要同步 |
 | P1.3 | **`html` tagged template**：新檔 `js/core/html.js`，**底層用 `dom.js` 嘅 `escapeHTML`**（唔准再寫一份 escape）。功能：`html```、`raw()`、陣列 join、`null`／`false` 變空字串、`Html.render(el, tpl)` | 現代化 T3（＋商用級 B5a） | `tests/unit/html.test.js`（XSS、巢狀、陣列、raw） |
 | P1.4 | **畫質 prototype**：`tools/prototype-battle-fx.html`（現行 vs PixiJS 特效） | 現代化 T4 | 喺 Browser pane 截圖俾你睇 |
 | P1.5 | 插入：**彎撇號判錯（bug）**：`Quiz._norm` 將 `’ ‘ ʼ` 統一做 `'` | 商用級 KNOWN | `quiz-answer.test.js` 改斷言，**先見到紅**再修 |

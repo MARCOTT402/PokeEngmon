@@ -458,3 +458,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 109 — 型別檢查：`npm run typecheck` 要 0 錯；改／加檔就順手開 `// @ts-check`，加入 `types/ts-check-files.json`（清單只准加）；只可以用 JSDoc cast，唔准為過 check 改行為
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 110 — z-index 用 `:root` 嘅 `--z-*` token：全域層（≥100）唔准寫字面值；改層級只改 token；`index.html` 內聯兜底層照寫數字
+
+→ `.trae/skills/pokeengmon-responsive/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-responsive/references/incidents.md`。

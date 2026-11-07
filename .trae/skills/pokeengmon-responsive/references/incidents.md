@@ -480,3 +480,11 @@ Skill: Rule 90 added
 - home sheet `aria-hidden="true"` 寫死喺 `index.html`、app 從來冇切換 → 讀屏會跳過開咗嘅 sheet。`hidden` 已經負責隱藏，所以直接刪走 6 個 sheet 嘅 aria-hidden（backdrop 係裝飾，保留）。
 - 測試陷阱：隊伍存喺 `st.myTeam`（唔係 `team`）；phone 開機 gate 要先 ↓ 揀 YES 再 Enter。
 - 戰鬥 B1（`F` 開招式）間歇 fail（約一半）：用 MutationObserver 追到「招式選單開咗即刻被 `showMainMenu()`＋`narrate()` 打返轉頭」。源頭係測試 helper（抄自 `test-battle-fit`）：揀隊 loop 開咗局 `break` 之後**仲無條件再撳一次 confirm** → 背景開咗第二場 intro，佢未完嘅 `waitTap()`（聽 `.battle-bottom` click）食咗 FIGHT 嘅 click，intro 收尾重設選單。→ 兩個測試都改做「揀隊窗仲開住先撳」。教訓：間歇 fail 唔好加 sleep／重試，要追到邊個改咗 DOM（MutationObserver 記 style／class 變化次序最快）。
+
+## Rule 110 — z-index 用 `:root` 嘅 `--z-*` token：全域層（≥100）唔准寫字面值；改層級只改 token；`index.html` 內聯兜底層照寫數字
+
+- 2026-11-07 總計劃 P1.2（現代化 Task 2）。25 條全域層 z-index 改用 22 個 token，數值完全唔變；`check-z-tokens.mjs` 確認 94 條 z-index 同 HEAD 逐條一樣；瀏覽器 computed 值抽查（bezel／chin 100、hub 500、sync-banner 900、modal 1400、toast 3000、entry-gate 9000）正確。
+- JS 冇直接設 `zIndex`，只有 `keys.js` 讀 computed 值揀最頂嘅 overlay，所以 token 化唔影響佢。
+- 原計劃寫「JS `zIndex` 同步」：盤點後發現冇需要同步嘅地方。
+
+Skill: Rule 110 added
