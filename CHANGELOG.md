@@ -1,3 +1,10 @@
+## [1.69.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.1...v1.69.2) (2026-11-07)
+
+
+### Performance Improvements
+
+* service worker routing, batched saves, next-question preload ([6d3bde3](https://github.com/MARCOTT402/PokeEngmon/commit/6d3bde3e49831a3e851bb3a2c6c5c3a7d65131c1))
+
 ## [1.69.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.0...v1.69.1) (2026-11-06)
 
 
