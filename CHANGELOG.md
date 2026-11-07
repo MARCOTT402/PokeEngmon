@@ -1,3 +1,10 @@
+## [1.70.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.70.0...v1.70.1) (2026-11-07)
+
+
+### Performance Improvements
+
+* smaller evolution BGM, sheet visibility metric, transfer-based SLOs ([2a40676](https://github.com/MARCOTT402/PokeEngmon/commit/2a40676b9bcb60da97293bbc9063d058a57a2215))
+
 # [1.70.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.3...v1.70.0) (2026-11-07)
 
 
