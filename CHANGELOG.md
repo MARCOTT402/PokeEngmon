@@ -1,3 +1,10 @@
+## [1.71.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.0...v1.71.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **quiz:** accept curly apostrophes in typed answers ([0267a6a](https://github.com/MARCOTT402/PokeEngmon/commit/0267a6aaca0e9f2ade2f382a3705e10ebd8127cb))
+
 # [1.71.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.70.1...v1.71.0) (2026-11-07)
 
 
