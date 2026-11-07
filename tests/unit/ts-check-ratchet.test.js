@@ -32,3 +32,22 @@ test("every js file with // @ts-check is listed (so the ratchet tracks it)", () 
 test("the list is sorted and has no duplicates", () => {
   assert.deepEqual(listed, [...new Set(listed)].sort());
 });
+
+/* 防「同時拎走檔頭同清單項目」：
+   - MIN_CHECKED 只准加。加檔就順手改大；改細一定要喺 review 講清楚原因。
+   - 本機：git HEAD 版本清單入面嘅檔，working tree 清單一定仲有（未 commit 嘅刪除即刻紅）。 */
+const MIN_CHECKED = 27;
+
+test(`at least ${MIN_CHECKED} files are type-checked (the ratchet only goes up)`, () => {
+  assert.ok(listed.length >= MIN_CHECKED, `only ${listed.length} files listed; MIN_CHECKED is ${MIN_CHECKED}`);
+});
+
+test("no file that is type-checked at git HEAD has been dropped from the list", () => {
+  let headList;
+  try {
+    headList = JSON.parse(require("child_process").execSync("git show HEAD:types/ts-check-files.json", { cwd: ROOT, stdio: ["ignore", "pipe", "ignore"] }).toString("utf8"));
+  } catch (e) {
+    return;   /* 冇 git 或者 HEAD 未有呢個檔：由 MIN_CHECKED 把關 */
+  }
+  assert.deepEqual(headList.filter((f) => !listed.includes(f)), []);
+});

@@ -31,3 +31,25 @@ test("toast sits above every interactive layer; only deliberate top layers are h
   const above = Object.entries(tokens).filter(([k, v]) => v > tokens["z-toast"]).map(([k]) => k).sort();
   assert.deepEqual(above, ["z-entry-gate", "z-kbd-badges", "z-top"]);
 });
+
+/* ---- tools/audit/check-z-tokens.mjs 嘅 compareZ：兩邊各自用自己嘅 :root token 解析 ---- */
+const fullCss = fs.readFileSync(path.join(__dirname, "../../css/style.css"), "utf8");
+const lib = () => import("../../tools/audit/check-z-tokens.mjs");
+
+test("checker: tokenised CSS compared with itself has no problems (default HEAD run on a clean tree)", async () => {
+  const { compareZ } = await lib();
+  assert.deepEqual(compareZ(fullCss, fullCss).problems, []);
+});
+
+test("checker: literal → token with the same value passes; a changed token value or literal is reported", async () => {
+  const { compareZ } = await lib();
+  const before = ".a { z-index: 3000; } .b { z-index: 5; }";
+  const ok = ":root { --z-toast: 3000; } .a { z-index: var(--z-toast); } .b { z-index: 5; }";
+  assert.deepEqual(compareZ(before, ok).problems, []);
+  const badToken = ":root { --z-toast: 2999; } .a { z-index: var(--z-toast); } .b { z-index: 5; }";
+  assert.equal(compareZ(before, badToken).problems.length, 1);
+  const badLiteral = ":root { --z-toast: 3000; } .a { z-index: var(--z-toast); } .b { z-index: 6; }";
+  assert.equal(compareZ(before, badLiteral).problems.length, 1);
+  const undefinedToken = ".a { z-index: var(--z-nope); } .b { z-index: 5; }";
+  assert.ok(compareZ(before, undefinedToken).problems.length >= 1);
+});

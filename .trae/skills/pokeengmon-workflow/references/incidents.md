@@ -180,3 +180,9 @@ Skill: Rule 111 added
 - 部署：5,540 個檔、96 MB（tracked 檔總共 7,601 個）。
 
 Skill: Rule 113 added
+
+## Rule 109／110 補充 — 另一個 session 嘅 P1 review（2026-11-07）
+
+- `check-z-tokens.mjs` 嘅「before」一邊用 `Number()` 讀值。`058ab55` 之後 HEAD 嘅 CSS 已經係 `var(--z-*)`，25 條全部變 NaN，所以乾淨 tree 跑預設 HEAD 都會 exit 1（誤報）。修正：兩邊各自用自己 `:root` 嘅 token 解析，邏輯抽出做 `compareZ()`，喺 `tests/unit/z-tokens.test.js` 直接測（自己對自己、字面值轉 token、改咗 token 值、改咗字面值、未定義 token）。
+- `ts-check-ratchet.test.js` 可以俾人繞過：同時拎走 `// @ts-check` 同清單項目，測試照樣全綠。修正：加 `MIN_CHECKED = 27` 下限，加「git HEAD 清單入面嘅檔仍然喺清單」。重試繞過，兩項都紅。
+- 教訓：防倒退嘅測試要試埋「同時改兩邊」嘅繞過方法；核對工具要喺「已經改完、已經 commit」之後再跑一次預設參數，確認唔會誤報。

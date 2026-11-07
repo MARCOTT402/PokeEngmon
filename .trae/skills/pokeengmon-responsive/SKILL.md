@@ -259,4 +259,4 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 - 全域層一律寫 `z-index: var(--z-xxx)`，數值集中喺 `:root`（每個 token 有註解）。改層級只改 token，唔好再喺 rule 度寫數字。
 - 局部層（喺自己 stacking context 入面，例如 `.catch-ball.grabbed`）照寫數字；要喺 `tests/unit/z-tokens.test.js` 同 `tools/audit/check-z-tokens.mjs` 嘅 `LOCAL_OK` 白名單登記。
 - `index.html` `<head>` 內聯兜底樣式（loading、`#fatal-screen`、`#guard-recover`、offline pill）**唔用 token**，因為 `style.css` 載唔到嗰陣都要顯示得到（Rule 94）。
-- 驗收：`node tools/audit/check-z-tokens.mjs`（同 git HEAD 逐條比較，數值要一樣）＋ `npm test`（`z-tokens.test.js`：冇字面值、token 齊、toast 只低過三個刻意最頂嘅層）＋ `shots --compare`。
+- 驗收：`node tools/audit/check-z-tokens.mjs [ref]`（同 git 版本逐條比較，兩邊各自用自己 `:root` 嘅 token 解析，數值要一樣；乾淨 tree 對 HEAD 一定 exit 0，`compareZ()` 有單元測試）＋ `npm test`（`z-tokens.test.js`：冇字面值、token 齊、toast 只低過三個刻意最頂嘅層）＋ `shots --compare`。

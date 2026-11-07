@@ -33,7 +33,7 @@
 | P1.1 typecheck：設定（`163ffd4`）＋ `npm run typecheck`、26／43 個檔 `// @ts-check`、ratchet 測試、CI 步驟 | 現代化 Task 1 | ✅ 設定 `163ffd4`；其餘見下一個 commit |
 | 其餘 | — | ⏳ 見 §3 |
 
-**而家下一步**：P1.6 code 已完成；等你喺 GitHub Settings → Pages 將 Source 改做「GitHub Actions」，然後 push，或者 Run workflow。之後係 P2.1 Store。P1.4 畫質 prototype 只改 `tools/`，可以並行。
+**而家下一步**：P1 完成（P1.4 畫質 prototype 未做，只改 `tools/`，可以隨時並行）。主線下一步係 P2.1 Store。
 
 ---
 
@@ -57,7 +57,7 @@
 | P1.3 | **`html` tagged template**：新檔 `js/core/html.js`，**底層用 `dom.js` 嘅 `escapeHTML`**（唔准再寫一份 escape）。功能：`html```、`raw()`、陣列 join、`null`／`false` 變空字串、`Html.render(el, tpl)` | 現代化 T3（＋商用級 B5a） | ✅ 2026-11-07：`tests/unit/html.test.js` 8 項；瀏覽器實測 XSS 字串只顯示成文字；Rule 111 |
 | P1.4 | **畫質 prototype**：`tools/prototype-battle-fx.html`（現行 vs PixiJS 特效） | 現代化 T4 | 喺 Browser pane 截圖俾你睇 |
 | P1.5 | 插入：**彎撇號判錯（bug）**：`Quiz._norm` 將 `’ ‘ ʼ` 統一做 `'` | 商用級 KNOWN | ✅ 2026-11-07：測試先紅 2 項再綠；瀏覽器輸入 `weren’t` 判啱；Rule 112 |
-| P1.6 | 插入：**部署＋CI 收口**：`deploy` job（`needs: release`，`ref: main`）；`tools/deploy-files.json`；`sw-assets.test.js`、`deploy-manifest.test.js`；CI 次序 lint → test → typecheck → release → deploy。同 P1.1 一齊改 `release.yml`，唔好分兩次 | 商用級 Task 5b | ✅ code 2026-11-07：deploy job、`tools/deploy/*`、兩個測試（順帶補咗 `gym.js`、`supabase-config.js` 冇 precache）；本地模擬正式網址：內部檔 404、App 正常、SW activated。**要你改 Pages Source 先生效** |
+| P1.6 | 插入：**部署＋CI 收口**：`deploy` job（`needs: release`，`ref: main`）；`tools/deploy-files.json`；`sw-assets.test.js`、`deploy-manifest.test.js`；CI 次序 lint → test → typecheck → release → deploy。同 P1.1 一齊改 `release.yml`，唔好分兩次 | 商用級 Task 5b | ✅ code 2026-11-07：deploy job、`tools/deploy/*`、兩個測試（順帶補咗 `gym.js`、`supabase-config.js` 冇 precache）；本地模擬正式網址：內部檔 404、App 正常、SW activated。2026-11-07 Pages 已改做 GitHub Actions；`ac28387` 部署 1.71.2，正式網址內部檔 404 |
 
 **P1.1 交接資料（2026-11-07）：**
 - `checkJs: true` 開全部檔嘅話：未加 `globals.d.ts` 時 1,103 錯，加咗之後 345 錯。大部分係 DOM 型別收窄問題（`Element.value`、`EventTarget.closest`）；`app.js` 173、`battle.js` 56、`quiz.js` 28、`bag.js` 24。

@@ -488,3 +488,5 @@ Skill: Rule 90 added
 - 原計劃寫「JS `zIndex` 同步」：盤點後發現冇需要同步嘅地方。
 
 Skill: Rule 110 added
+
+- 2026-11-07 補充：`check-z-tokens.mjs` 對已經 token 化嘅 HEAD 會誤報（before 一邊冇解析 `var()`），已修正並加單元測試，詳情見 workflow incidents「Rule 109／110 補充」。

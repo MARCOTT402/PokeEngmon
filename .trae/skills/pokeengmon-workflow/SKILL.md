@@ -153,7 +153,7 @@ if (!e.request.url.startsWith("http")) return;
 - 新增 global：
   - 只係 `window.X = …` 嘅模組，或者檔尾有 `module.exports` 嘅檔（TS 當佢 CommonJS，`const` 唔係 global），要喺 `types/globals.d.ts` 加 `declare var X: any;`。
   - 頂層已經有 `const X` 嘅檔**唔准**再 declare，會撞 TS2451。
-- 開 `// @ts-check`：用 Python bytes 加喺第一行，保留 BOM 同行尾（Rule 108），然後加入 `types/ts-check-files.json`（排好序）。`tests/unit/ts-check-ratchet.test.js` 會擋住「拎走檔頭」同「加咗檔頭但冇入清單」。
+- 開 `// @ts-check`：用 Python bytes 加喺第一行，保留 BOM 同行尾（Rule 108），然後加入 `types/ts-check-files.json`（排好序）。`tests/unit/ts-check-ratchet.test.js` 會擋住「拎走檔頭」、「加咗檔頭但冇入清單」，同埋「檔頭同清單項目一齊拎走」：清單數目唔可以少過 `MIN_CHECKED`（加檔就順手改大），而且 git HEAD 清單入面嘅檔一定仲要喺清單。
 - 修錯只可以用 JSDoc cast，例如 `/** @type {HTMLElement | null} */ (el.closest(...))`。唔准為咗過 check 改邏輯。
 - 驗收要用「未定義 global → TS2304」嚟證明 check 生效。`Sync.nope()` 呢類**唔會**紅，因為 `globals.d.ts` 將大部分模組宣告做 `any`。
 - 仲未開嘅大檔（`checkJs: true` 時 345 個錯，主要係 DOM 型別收窄）：`app.js` 173、`battle.js` 56、`quiz.js` 28、`bag.js` 24。改到嗰個檔先順手清，唔做大搬遷。
