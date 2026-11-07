@@ -1,3 +1,10 @@
+## [1.71.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.1...v1.71.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* **deploy:** publish only app files to GitHub Pages and precache gym.js ([ac28387](https://github.com/MARCOTT402/PokeEngmon/commit/ac283878ad1cbb5b05dcffe8d148ebe266f292d7))
+
 ## [1.71.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.0...v1.71.1) (2026-11-07)
 
 
