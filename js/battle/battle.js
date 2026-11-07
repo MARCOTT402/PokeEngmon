@@ -1233,11 +1233,23 @@ const BattleUI = (() => {
   function waitTap() {
     return new Promise(res => {
       const zone = document.querySelector(".battle-bottom");
+      const done = () => { zone.removeEventListener("click", h); document.removeEventListener("keydown", k); res(); };
       const h = () => {
         if (_finishType()) return;   /* 打字中：第一撳只補完文字，唔推進 */
-        zone.removeEventListener("click", h); res();
+        done();
+      };
+      /* 鍵盤（Rule 97）：Enter／Space 等同撳對話框；焦點喺某粒掣上就讓畀嗰粒掣，有 modal 就唔理 */
+      const k = (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+        if (!document.querySelector("#view-battle.active") || document.querySelector("#modal-root .modal-backdrop")) return;
+        const t = e.target;
+        if (t && t.closest && t.closest("button, input, textarea, select, [role=button]")) return;
+        e.preventDefault();
+        h();
       };
       zone.addEventListener("click", h);
+      document.addEventListener("keydown", k);
     });
   }
 

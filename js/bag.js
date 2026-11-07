@@ -201,6 +201,7 @@ const BagUI = (() => {
     if (window.App && App._syncRotateHint) App._syncRotateHint(); /* 背包豁免「請轉返直向」 */
   }
   function close() {
+    Drag.cancelCarry();
     if (S.battle) {
       if (S.battle.forced) { toast("Choose a Pokémon to send out"); return; }
       const ctx = S.battle; hideBattleBag(); if (ctx.onClose) ctx.onClose();
@@ -536,7 +537,14 @@ const BagUI = (() => {
   const Drag = (() => {
     let press = null, ghost = null, over = null;
     const api = { justDropped: false };
-    api.bind = (el, payloadFn) => el.addEventListener("pointerdown", e => {
+    api.bind = (el, payloadFn) => {
+      /* 鍵盤：可拖嘅格仔要 Tab／方向鍵去到；Space 拎起（見下面 kbd carry） */
+      el._dragPayload = payloadFn;
+      if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
+      if (!el.hasAttribute("role") && el.tagName !== "BUTTON") el.setAttribute("role", "button");
+      bindPointer(el, payloadFn);
+    };
+    const bindPointer = (el, payloadFn) => el.addEventListener("pointerdown", e => {
       if (e.button > 0 || e.target.closest("[data-fav]")) return;
       const payload = payloadFn(); if (!payload) return;
       press = { el, payload, x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, started: false, timer: null };
@@ -605,6 +613,71 @@ const BagUI = (() => {
     window.addEventListener("pointercancel", e => { if (press && e.pointerId === press.id) end(false); }, true);
     document.addEventListener("touchmove", e => { if (press && press.started) e.preventDefault(); }, { passive: false });
     document.addEventListener("contextmenu", e => { if (press) e.preventDefault(); });
+    /* ---------- 鍵盤版拖放（Rule 97）：Space 拎起 → 方向鍵揀目標 → Space／Enter 放低；
+       隊伍成員拎起後 Delete 移出隊伍；Esc 取消（唔好關成個背包）。放低行同一個 onDrop ---------- */
+    let carry = null;   /* { el, payload } */
+    const dropSel = k => k === "move" ? "[data-drop=mslot]" : k === "item" ? "[data-drop=slot][data-uid]" : "[data-drop=slot]";
+    function carryMark(on) {
+      root.querySelectorAll("[data-kbd-drop]").forEach(t => {
+        t.classList.remove("drop-ok");
+        t.removeAttribute("data-kbd-drop");
+        if (t.dataset.kbdTi === "1") { t.removeAttribute("tabindex"); delete t.dataset.kbdTi; }
+      });
+      root.classList.toggle("kbd-carry", on);
+      root.classList.toggle("removing", on && carry && carry.payload.kind === "teamslot");
+      if (!on) return;
+      root.querySelectorAll(dropSel(carry.payload.kind)).forEach(t => {
+        t.classList.add("drop-ok");
+        t.setAttribute("data-kbd-drop", "");
+        /* 空格仔本身唔可以聚焦：拎住嘢期間暫時俾方向鍵去到 */
+        if (!t.hasAttribute("tabindex")) { t.tabIndex = -1; t.setAttribute("data-kbd-auto", ""); t.dataset.kbdTi = "1"; }
+      });
+    }
+    function carryEnd() {
+      if (!carry) return;
+      carry.el.classList.remove("lifted");
+      carryMark(false);
+      carry = null;
+    }
+    api.carrying = () => !!carry;
+    api.cancelCarry = carryEnd;
+    document.addEventListener("keydown", e => {
+      if (!root || !root.isConnected || getComputedStyle(root).display === "none") return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = document.activeElement;
+      if (!t || !root.contains(t) || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      const k = e.key;
+      if (carry) {
+        if (k === "Escape") { e.preventDefault(); e.stopPropagation(); const el = carry.el; carryEnd(); toast("Cancelled"); if (el.isConnected) el.focus(); return; }
+        if ((k === "Delete" || k === "Backspace") && carry.payload.kind === "teamslot") {
+          e.preventDefault(); const p = carry.payload; carryEnd(); onDrop(p, $("#bag-dropzone")); return;
+        }
+        if (k === " " || k === "Enter") {
+          e.preventDefault(); e.stopPropagation();
+          if (e.repeat) return;
+          const target = t.closest(dropSel(carry.payload.kind));
+          if (!target || target === carry.el) { toast("Can't drop here — pick a highlighted slot (Esc to cancel)"); return; }
+          const p = carry.payload; carryEnd();
+          onDrop(p, target);
+          return;
+        }
+        return;
+      }
+      if (k === " " && !e.repeat) {
+        const src = t._dragPayload ? t : null;
+        if (!src) return;
+        const payload = src._dragPayload();
+        if (!payload) return;
+        e.preventDefault(); e.stopPropagation();
+        carry = { el: src, payload };
+        src.classList.add("lifted");
+        carryMark(true);
+        const what = payload.kind === "teamslot" ? "Move to another slot, or Delete to remove from team"
+          : payload.kind === "move" ? "Move to a move slot" : payload.kind === "item" ? "Move to a Pokémon" : "Move to a team slot";
+        toast(`Picked up — ${what}, then Space`);
+      }
+    }, true);
+
     function onDrop(pl, t) {
       if (pl.kind === "move") { ME.slot = Number(t.dataset.ms); learnMove(pl.name, ME.slot); return; }
       if (pl.kind === "item") { applyItem(pl.id, t.dataset.uid); return; }

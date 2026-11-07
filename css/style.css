@@ -4923,6 +4923,8 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 /* Settings → Music track：同一個 segmented 外觀，字長啲所以細啲、准斷行（375 寬每格約 100px） */
 .ph-track-seg span { font-size: 13px; line-height: 1.15; text-align: center; padding: 4px 6px; }
 .ph-speed-note { font-size: 12px; font-weight: 700; color: #6b675d; }
+.ph-sitem .ph-speed-note { font-weight: 700; }
+.ph-check { width: 22px; height: 22px; flex: none; accent-color: #e03a32; cursor: pointer; }
 /* 倍速 ≠ 1 時場景右上角細字（capture／gacha／evolve 共用） */
 .anim-spd-badge {
   position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 30;

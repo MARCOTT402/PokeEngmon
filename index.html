@@ -363,7 +363,7 @@
           <div class="ph-sheets">
         <!-- 頂部捲入 sheets：Practice Calendar / Pokédex / Quests / Gacha -->
         <!-- Streak（閃電按鈕）— 兩層展開：預覽 → 點底部箭咀 → full calendar -->
-        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-calendar" hidden aria-hidden="true" aria-label="Streak">
+        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-calendar" hidden aria-label="Streak">
           <div class="ph-sheet-head">
             <span class="ph-sheet-t">Streak</span>
             <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
@@ -380,7 +380,7 @@
         </div>
 
         <!-- Pokédex（Pokéball 按鈕） -->
-        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-pokedex" hidden aria-hidden="true" aria-label="Pokédex">
+        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-pokedex" hidden aria-label="Pokédex">
           <div class="ph-sheet-head">
             <span class="ph-sheet-t">Pokédex</span>
             <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
@@ -396,7 +396,7 @@
         </div>
 
         <!-- Quests / Daily Tasks（Energy 按鈕） -->
-        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-quests" hidden aria-hidden="true" aria-label="Daily Quests">
+        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-quests" hidden aria-label="Daily Quests">
           <div class="ph-sheet-head">
             <span class="ph-sheet-t">Daily Quests</span>
             <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
@@ -413,7 +413,7 @@
 
         <!-- Setting sheet：bottom-up -->
         <div class="ph-backdrop" hidden aria-hidden="true"></div>
-        <div class="ph-sheet ph-sheet-up" id="sheet-setting" hidden aria-hidden="true" aria-label="Settings">
+        <div class="ph-sheet ph-sheet-up" id="sheet-setting" hidden aria-label="Settings">
           <div class="ph-sheet-head">
             <span class="ph-sheet-grip"></span>
             <span class="ph-sheet-t">Settings</span>
@@ -468,6 +468,10 @@
                 </div>
                 <small class="ph-speed-note">Catching, gacha &amp; evolution</small>
               </div>
+              <label class="ph-sitem kbd-only" for="sheet-kbd-shortcuts">
+                <span class="ph-sitem-t">Keyboard shortcuts <small class="ph-speed-note">(letter &amp; number keys)</small></span>
+                <input id="sheet-kbd-shortcuts" class="ph-check" type="checkbox" checked>
+              </label>
             </div>
             <div class="ph-ssec">
               <div class="ph-ssec-t">Forgetting Curve</div>
@@ -526,7 +530,7 @@
         </div>
 
         <!-- Battle sheet：bottom-up -->
-        <div class="ph-sheet ph-sheet-up" id="sheet-battle" hidden aria-hidden="true" aria-label="Battle hub">
+        <div class="ph-sheet ph-sheet-up" id="sheet-battle" hidden aria-label="Battle hub">
           <div class="ph-sheet-head">
             <span class="ph-sheet-grip"></span>
             <span class="ph-sheet-t">Battle</span>
@@ -547,7 +551,7 @@
         </div>
 
         <!-- Gacha sheet：top-down，由白色螢幕內上邊向下捲出 -->
-        <div class="ph-sheet ph-sheet-down" id="sheet-gacha" hidden aria-hidden="true" aria-label="Lucky Draw">
+        <div class="ph-sheet ph-sheet-down" id="sheet-gacha" hidden aria-label="Lucky Draw">
           <div class="ph-sheet-head">
             <span class="ph-sheet-t" id="gacha-title">
               <svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true">

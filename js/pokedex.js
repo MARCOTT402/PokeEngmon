@@ -368,6 +368,7 @@ const Pokedex = {
           : ""}
       `;
       if (isOwned) {
+        cell.dataset.dex = sp.dexId;   /* 詳情頁 Shift+←／→ 跟住格仔次序行（js/keys.js） */
         cell.onclick = () => this.showDetail(sp.dexId);
         /* Tap the sprite for its cry; tap elsewhere for details */
         const img = cell.querySelector("img");
@@ -383,6 +384,7 @@ const Pokedex = {
   /* Owned -> big art + data modal */
   showDetail(dexId, keepScroll) {
     const sp = SPECIES[dexId];
+    this._detailDex = dexId;
     const st = loadState();
     const chain = EVOLUTION_CHAINS.find(c => c.key === sp.chainKey);
     /* 一條鏈可以多個 entry（完全進化後可再收集）。
@@ -516,6 +518,8 @@ const Pokedex = {
     if (entry) {
       const otherWraps = document.querySelectorAll("#modal-root .mv-other");
       const heldWraps = document.querySelectorAll("#modal-root .mv-held");
+      /* 鍵盤：招式卡係 div，要 role／tabindex 先 Tab／方向鍵去到，Enter／Space 由 js/keys.js 轉做 click */
+      [...otherWraps, ...heldWraps].forEach(w => { w.setAttribute("role", "button"); w.tabIndex = 0; });
       let swapSlug = null;
       const clearSwap = () => {
         swapSlug = null;
@@ -549,6 +553,23 @@ const Pokedex = {
         };
       });
     }
+  },
+
+  /* 詳情頁上／下一隻（鍵盤 Shift+←／→ 或 [ ]）：跟圖鑑格仔而家嘅排序同篩選；格仔未 render 就跟圖鑑號 */
+  stepDetail(delta) {
+    if (!this._detailDex || !document.querySelector("#modal-root .dex-detail")) return false;
+    let ids = [...document.querySelectorAll("#pokedex-grid .dex-cell.owned[data-dex]")].map(c => Number(c.dataset.dex));
+    if (!ids.length) {
+      const st = loadState();
+      const owned = new Set();
+      st.entries.forEach(e => (e.ownedSpecies || []).forEach(id => owned.add(id)));
+      ids = [...owned].filter(id => SPECIES[id]).sort((a, b) => a - b);
+    }
+    const i = ids.indexOf(Number(this._detailDex));
+    if (i < 0 || ids.length < 2) return false;
+    const next = ids[(i + delta + ids.length) % ids.length];
+    this.showDetail(next);
+    return true;
   },
 
   /* Feed candy -> +1 level (may learn a move / evolve) */

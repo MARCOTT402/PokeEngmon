@@ -58,7 +58,7 @@ const startBattle = async () => {
   await ev("BattleUI.openMenu()"); await sleep(900);
   await ev("document.querySelector('.ai-trainer-card').click()"); await sleep(600);
   await ev("document.querySelector('.tier-card:not([disabled])').click()"); await sleep(1500);
-  await ev("const c=document.getElementById('team-select-confirm'); for(const s of document.querySelectorAll('.team-slot')){ c.click(); if(document.getElementById('team-select-modal').style.display==='none') break; s.click(); } c.click();"); await sleep(1800);
+  await ev("const c=document.getElementById('team-select-confirm'), m=document.getElementById('team-select-modal'); const open=()=>m.style.display!=='none'; for(const s of document.querySelectorAll('.team-slot')){ c.click(); if(!open()) break; s.click(); } if (open()) c.click();");  /* 開咗局就唔好再撳 confirm（會開多一場） */ await sleep(1800);
   await ev("document.querySelector('.bag-rotate.show .bag-rot-btn')?.click()"); await sleep(2600);
 };
 const rows = []; let pass = 0, fail = 0;

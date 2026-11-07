@@ -111,6 +111,13 @@ if (!e.request.url.startsWith("http")) return;
 - SW：install 會 precache ~14 MB。**第一次開**（冇 controller）等 `load` ＋ 8 秒＋idle 先 `register`；已有 controller 照即刻 register／update。
 - 驗收（headless，冇 CPU 降速）：開頁 4 秒內 resource 冇 `three`／`capture.js`／`.ttf`、冇 SW registration；拉丁字 `document.fonts.check` true 而 ttf 未 request，渲染中文先 request；`Quiz._begin` 後約 1.5 秒 `CaptureScene._real` 有、`_real.audio === CaptureScene.audio`；`CaptureScene.play()` 撳三下 resolve `{caught,…}`；load＋8 秒後有 SW registration；`test-capture-fit` 等 responsive suite 照舊。
 
+### Rule 104 — 場景按需載入（Rule 103）之後：「可以互動」嘅 state 一定要等場景物件起好先出；輸入 handler 要查 ready
+
+- 捕捉場景 `STATE.IDLE` 有兩個意思：「未開始」同「等玩家撳波」。three.js 改咗 lazy `import()` 之後，WARNING 畫面期間 state 仲係 idle 但 `this.ball` 未起 → 一撳（或者鍵盤 Space）`tap()` 就讀 `this.ball.scale` 出 TypeError（Guard 恢復卡）。
+- 修法：`play()` 一開始就 `_setState(STATE.ENCOUNTER)`（WARNING／warp 期間唔接受 tap）；`tap()` 再加 `!this.ball` 保險。
+- 通則：把同步建立改成 lazy／async 之後，逐個入口（pointer、keyboard、外部 API、測試 helper）檢查「物件未 ready 時會唔會被呼叫」。facade `play()` 變咗 async：量「開始時」嘅狀態要等 `CaptureScene._real`。
+- 驗收：`tools/responsive/test-anim-speed.mjs`（A7／A8）、`tools/responsive/test-keys.mjs`（W27／W28）；手動：WARNING 畫面狂撳／狂按 Space 唔可以出錯。
+
 ### Rule 105 — 可揀 BGM（Music track）：buffer 按 url 快取、`stopTownBGM` 要清 `_townPending`、新曲 loudness-match＋crossfade loop、選用大音檔唔 precache
 
 - 曲目表 `BGM_TRACKS`（`js/storage.js`）係唯一來源；加曲要同步 migration 嘅 `user_account_bgm_track_check`。`state.bgmTrack` ↔ 雲端 `user_account.bgm_track`（nullable：null = 未揀過，pull 時用本機值 backfill；有值就跟雲端）。寫雲端經 `Sync.patchAccount`（白名單驗證），唔好塞入 `pushState` 嘅 fallback 鏈（缺欄會連 curve_mode 一齊跌落 legacy 分支）。

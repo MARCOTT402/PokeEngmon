@@ -471,3 +471,12 @@ Skill: Rule 90 added
 - 背包 `B` 開到但 Esc 關唔到：Esc 揀中 banner 嘅「Cancel」——banner `max-height:0; overflow:hidden` 摺埋，但掣自己 rect 正常（71×25）。→ isVisible 加「0 高／闊嘅 overflow 祖先」同祖先 opacity（`checkVisibility`）。
 - 扭蛋結果卡出現嗰刻，Scene B 仲喺度淡出，`Pull again` 被判「蓋住」→ 嗰次揀唔到；之後情境冇變就冇人再理。→ 同一情境但焦點喺外面都拉入嚟；`transitionend`／`animationend` 再檢查。
 - 測試陷阱：capture 結果用 `caught` 判斷 → 走甩咗就 false，誤以為 Enter 無效；要睇 `done`／`_finished`。
+
+#### Rule 97 續 — 第三／四期（2026-11-07）
+
+- 圖鑑詳情 Shift+→ 冇反應：keys.js 寫 `window.Pokedex && …`，但 `Pokedex` 係 classic script top-level `const`，唔喺 `window` → 靜靜咩都冇做（Rule 75 同一類）。→ 用 `typeof Pokedex !== "undefined"`。
+- 戰鬥測試開唔到局：開場「XXX would like to battle!」靠 `waitTap()` 等撳 `.battle-bottom`，鍵盤完全推進唔到 → 真 bug，唔係測試問題。→ `waitTap` 加 Enter／Space（焦點喺掣上就讓畀掣）。
+- 戰鬥 `F` 冇反應：BattleLand 將戰鬥搬入 `.battle-land`（body 級 fixed、蓋大半個視窗）→ 被通用 overlay 偵測認做 overlay，`isBattle`（要求 view 情境）唔成立。→ 第一次改做「情境包唔包住 `#view-battle`」都唔得：BattleLand 係將戰鬥舞台同底欄**搬出** `#view-battle`。最後用「情境入面有冇 `.battle-bottom`」，Esc 嘅 findClose 都用嗰個 root。測試 B2 原本因為 F 冇開到招式選單而「假 PASS」→ 改成先確認選單開咗。
+- home sheet `aria-hidden="true"` 寫死喺 `index.html`、app 從來冇切換 → 讀屏會跳過開咗嘅 sheet。`hidden` 已經負責隱藏，所以直接刪走 6 個 sheet 嘅 aria-hidden（backdrop 係裝飾，保留）。
+- 測試陷阱：隊伍存喺 `st.myTeam`（唔係 `team`）；phone 開機 gate 要先 ↓ 揀 YES 再 Enter。
+- 戰鬥 B1（`F` 開招式）間歇 fail（約一半）：用 MutationObserver 追到「招式選單開咗即刻被 `showMainMenu()`＋`narrate()` 打返轉頭」。源頭係測試 helper（抄自 `test-battle-fit`）：揀隊 loop 開咗局 `break` 之後**仲無條件再撳一次 confirm** → 背景開咗第二場 intro，佢未完嘅 `waitTap()`（聽 `.battle-bottom` click）食咗 FIGHT 嘅 click，intro 收尾重設選單。→ 兩個測試都改做「揀隊窗仲開住先撳」。教訓：間歇 fail 唔好加 sleep／重試，要追到邊個改咗 DOM（MutationObserver 記 style／class 變化次序最快）。

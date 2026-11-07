@@ -184,6 +184,9 @@ class PokemonCaptureScene {
     /* 動畫倍速（Settings → Animation speed）：完結／中斷由 _finish／_resetScene 還原 */
     this._spd = window.AnimSpeed ? AnimSpeed.begin("capture") : 1;
     this._syncSpdBadge();
+    /* WARNING／warp 期間唔可以 tap：未入 encounter 前 state 仲係 idle，而 three 係 lazy load（ball 未起好）
+       → 一撳／一按 Space 就 tap() 讀 this.ball.scale 出錯。開場即刻當 encounter */
+    this._setState(STATE.ENCOUNTER);
 
     /* Show WARNING overlay before any 3D work — keeps it crisp on mobile */
     try { this._showWarning(dexId, name); } catch (e) { /* ignore */ }
@@ -1035,7 +1038,7 @@ class PokemonCaptureScene {
 
   /* ---------- interaction ---------- */
   tap() {
-    if (this.state !== STATE.IDLE) return;
+    if (this.state !== STATE.IDLE || !this.ball) return;
     this.audio.ensure();
     if (this.taps === 0) {
       /* If autoplay was blocked, start BGM now (user gesture unlocks it) */

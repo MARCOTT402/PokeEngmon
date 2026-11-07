@@ -28,6 +28,7 @@
   const PRIMARY_SEL = [
     "[data-kbd-primary]", "[autofocus]",
     "#guard-recover-continue", "#btn-settle-continue", ".capture-continue",
+    "#battle-yesno [data-yn='1']", "#bmp-moves .bmp-move-btn.cur", "#btn-battle-fight",
     ".ph-cta", ".btn-primary", ".btn-big"
   ];
 
@@ -36,10 +37,7 @@
 
   function isVisible(el) {
     if (!el || !el.isConnected) return false;
-    if (el.closest("[hidden], [inert]")) return false;
-    /* home sheet 開咗都仲係 aria-hidden="true"（app 冇切換；真正隱藏靠 hidden），所以 sheet 唔計 */
-    const ah = el.closest("[aria-hidden='true']");
-    if (ah && !ah.classList.contains("ph-sheet")) return false;
+    if (el.closest("[hidden], [inert], [aria-hidden='true']")) return false;
     const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) return false;
     const cs = getComputedStyle(el);
@@ -312,6 +310,9 @@
     const ctx = context();
     if (ctx.kind === "overlay") {
       const root = ctx.roots[0];
+      /* 戰鬥喺橫向外框入面：同 view 一樣，只返上一層選單，唔會離開 */
+      const br = battleRoot(ctx);
+      if (br) { const b = findClose(br); if (b) { b.click(); return true; } return false; }
       const btn = findClose(root);
       if (btn) { btn.click(); return true; }
       /* 扭蛋單抽結果卡冇關閉掣：關成個扭蛋 sheet（行 Gacha.abort，BGM／進化揭示照補） */
@@ -325,8 +326,14 @@
     }
     if (ctx.kind === "view") {
       const v = ctx.roots[0];
-      /* 答題／捕捉／結算／戰鬥：Esc 唔可以當「離開」（各自有自己嘅 Esc 或者冇） */
-      if (/^view-(home|quiz|capture|settlement|battle)$/.test(v.id)) return false;
+      /* 戰鬥：Esc 只係返上一層選單（◀ BACK／換寵 CANCEL），永遠唔會離開戰鬥 */
+      if (v.id === "view-battle" || battleIn(ctx)) {
+        const b = findClose(battleRoot(ctx) || v);
+        if (b) { b.click(); return true; }
+        return false;
+      }
+      /* 答題／捕捉／結算：Esc 唔可以當「離開」（各自有自己嘅 Esc 或者冇） */
+      if (/^view-(home|quiz|capture|settlement)$/.test(v.id)) return false;
       const btn = findClose(v);
       if (btn) { btn.click(); return true; }
       /* 頁內冇 Back（例如 phone 嘅 Leaderboard）→ 經下巴 Home 掣返主頁（同 wide 嘅 Esc 一致，Rule 44 判定照行） */
@@ -354,6 +361,17 @@
   const isHome = c => (c.kind === "view" && c.roots[0].id === "view-home") || c.kind === "sheet";
   const isPage = c => c.kind === "view" && !/^view-(home|quiz|capture|settlement|battle)$/.test(c.roots[0].id);
   const isSetup = c => c.kind === "view" && c.roots[0].id === "view-quiz-setup";
+  /* 戰鬥 UI 可能被 BattleLand 由 #view-battle 搬入橫向外框 .battle-land（body 級 fixed → 會被認做 overlay）：
+     用「情境入面有冇戰鬥底欄 .battle-bottom」判斷，回傳包住佢嘅 root */
+  const battleRoot = c => {
+    if (!document.querySelector("#view-battle.active")) return null;
+    return c.roots.find(r => r.matches(".battle-bottom") || r.querySelector(".battle-bottom")) || null;
+  };
+  const battleIn = c => !!battleRoot(c);
+  const isBattle = c => battleIn(c);
+  const isDexDetail = c => c.kind === "overlay" && !!document.querySelector("#modal-root .dex-detail");
+  /* Pokedex 係 classic script 嘅 top-level const，唔喺 window（Rule 75）→ 用 typeof */
+  const dexStep = d => () => (typeof Pokedex !== "undefined" && Pokedex.stepDetail) ? Pokedex.stepDetail(d) : false;
   /* hidden:true = 目標喺收埋嘅 sheet 入面，照撳（onclick 照行），但唔出 badge */
   const SHORTCUTS = [
     { k: "s", sel: "#btn-start-quiz", when: isHome, label: "Start quiz" },
@@ -367,17 +385,45 @@
     { k: "q", sel: "#btn-bezel-energy", when: isHome, label: "Daily quests" },
     { k: "b", sel: "#btn-home-bag", when: isHome, label: "Bag", hidden: true },
     { k: "s", sel: "#btn-setup-start", when: isSetup, label: "Start the quiz" },
-    { k: "h", sel: "#btn-pd-home", when: isPage, label: "Back to Home" }
+    { k: "h", sel: "#btn-pd-home", when: isPage, label: "Back to Home" },
+    /* 戰鬥（第三期）：目標掣睇得到先生效，所以只有當時顯示緊嗰個選單嘅鍵有用 */
+    { k: "f", sel: "#btn-battle-fight", when: isBattle, label: "Fight" },
+    { k: "b", sel: "#btn-battle-bag", when: isBattle, label: "Bag" },
+    { k: "s", sel: "#btn-battle-pokemon", when: isBattle, label: "Switch Pokémon" },
+    { k: "r", sel: "#btn-battle-run", when: isBattle, label: "Run" },
+    { k: "1", sel: "#bmp-moves .bmp-move-btn[data-idx='0']", when: isBattle, label: "Move 1" },
+    { k: "2", sel: "#bmp-moves .bmp-move-btn[data-idx='1']", when: isBattle, label: "Move 2" },
+    { k: "3", sel: "#bmp-moves .bmp-move-btn[data-idx='2']", when: isBattle, label: "Move 3" },
+    { k: "4", sel: "#bmp-moves .bmp-move-btn[data-idx='3']", when: isBattle, label: "Move 4" },
+    { k: "m", sel: "#bmp-mega", when: isBattle, label: "Mega Evolve" },
+    { k: "y", sel: "#battle-yesno [data-yn='1']", when: isBattle, label: "Yes" },
+    { k: "n", sel: "#battle-yesno [data-yn='0']", when: isBattle, label: "No" },
+    /* act：唔係撳掣，而係直接做嘢（冇 badge）。Shift+←／→ 喺 keydown 另外對應到呢兩條 */
+    { k: "[", act: dexStep(-1), when: isDexDetail, label: "Previous Pokémon (or Shift+←)" },
+    { k: "]", act: dexStep(1), when: isDexDetail, label: "Next Pokémon (or Shift+→)" }
   ];
 
+  /* 捷徑層開關（Settings → Gameplay → Keyboard shortcuts；只存本機）。方向鍵／Enter／Esc 基本層永遠開 */
+  const SC_KEY = "pe_kbd_shortcuts";
+  function shortcutsOn() {
+    try { return localStorage.getItem(SC_KEY) !== "0"; } catch (e) { return true; }
+  }
+  function setShortcutsOn(on) {
+    try { localStorage.setItem(SC_KEY, on ? "1" : "0"); } catch (e) { /* private mode */ }
+    scheduleBadges();
+  }
+
+  /* 回傳要做嘅動作（function），冇就 null */
   function shortcutFor(ctx, key) {
+    if (!shortcutsOn()) return null;
     const k = String(key).toLowerCase();
     for (const sc of SHORTCUTS) {
       if (sc.k !== k || !sc.when(ctx)) continue;
+      if (sc.act) return sc.act;
       const el = document.querySelector(sc.sel);
       if (!el || isDisabled(el)) continue;
       if (!sc.hidden && !isVisible(el)) continue;
-      return el;
+      return () => el.click();
     }
     return null;
   }
@@ -393,12 +439,12 @@
       badgeLayer.setAttribute("aria-hidden", "true");
       document.body.appendChild(badgeLayer);
     }
-    if (!kbdMode || !FINE.matches) { badgeLayer.innerHTML = ""; return; }
+    if (!kbdMode || !FINE.matches || !shortcutsOn()) { badgeLayer.innerHTML = ""; return; }
     const ctx = context();
     let html = "";
     const done = new Set();
     for (const sc of SHORTCUTS) {
-      if (sc.hidden || done.has(sc.sel) || !sc.when(ctx)) continue;
+      if (sc.hidden || sc.act || done.has(sc.sel) || !sc.when(ctx)) continue;
       const el = document.querySelector(sc.sel);
       if (!el || isDisabled(el) || !isVisible(el)) continue;
       const r = el.getBoundingClientRect();
@@ -441,7 +487,8 @@
           ${row(kbd("Space"), "Press button · tap the Poké Ball when catching")}
           ${row(kbd("?"), "Show this list")}
         </table>
-        ${here.length ? `<p class="kbd-help-s">On this screen</p><table class="kbd-help-tb">${here.map(sc => row(kbd(sc.k.toUpperCase()), sc.label)).join("")}</table>` : ""}
+        ${!shortcutsOn() ? `<p class="kbd-help-s">Letter &amp; number shortcuts are off (Settings → Gameplay)</p>` : ""}
+        ${here.length && shortcutsOn() ? `<p class="kbd-help-s">On this screen</p><table class="kbd-help-tb">${here.map(sc => row(kbd(sc.k.toUpperCase()), sc.label)).join("")}</table>` : ""}
         <p class="kbd-help-s">Catching</p>
         <table class="kbd-help-tb">
           ${row(kbd("Space") + kbd("Enter"), "Tap the Poké Ball (3× to throw) · Continue")}
@@ -543,6 +590,11 @@
 
     if (DIRS[k]) {
       if (arrowIsNative(t, k)) return;
+      /* Shift+←／→：圖鑑詳情上／下一隻 */
+      if (e.shiftKey && (k === "ArrowLeft" || k === "ArrowRight")) {
+        const run = shortcutFor(context(), k === "ArrowLeft" ? "[" : "]");
+        if (run) { e.preventDefault(); run(); return; }
+      }
       if (move(DIRS[k])) e.preventDefault();
       return;
     }
@@ -571,11 +623,11 @@
       return;
     }
     if (k.length === 1 && !e.repeat && !isTyping(t)) {
-      const el = shortcutFor(context(), k);
-      if (el) {
+      const run = shortcutFor(context(), k);
+      if (run) {
         setKbdMode(true);
         e.preventDefault();
-        el.click();
+        run();
       }
     }
   });
@@ -588,7 +640,18 @@
     window.addEventListener(ev, () => { setKbdMode(false); }, { capture: true, passive: true }));
 
   /* 監察 DOM 變化，情境變咗先做嘢（只睇 class／hidden／style 同子節點，計算本身好輕） */
+  function bindSettingsToggle() {
+    const cb = document.getElementById("sheet-kbd-shortcuts");
+    if (!cb) return;
+    cb.checked = shortcutsOn();
+    cb.addEventListener("change", () => {
+      setShortcutsOn(cb.checked);
+      if (window.App && App.toast) App.toast(cb.checked ? "Keyboard shortcuts on" : "Keyboard shortcuts off");
+    });
+  }
+
   function startObserver() {
+    bindSettingsToggle();
     const mo = new MutationObserver(scheduleCtxCheck);
     mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden", "style", "inert"] });
     /* 淡入／滑入做完先真正「見到」：opacity／transform 動畫完結都再檢查一次（MutationObserver 睇唔到 CSS 過渡） */
@@ -601,5 +664,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startObserver);
   else startObserver();
 
-  window.Keys = { context, candidates: () => candidates(context()), move, escape, showHelp, shortcuts: SHORTCUTS, focusPrimary: () => { const c = context(); focusEl(primary(c, candidates(c))); }, isKbd: () => kbdMode };
+  window.Keys = { context, candidates: () => candidates(context()), move, escape, showHelp, shortcuts: SHORTCUTS, shortcutsOn, setShortcutsOn, focusPrimary: () => { const c = context(); focusEl(primary(c, candidates(c))); }, isKbd: () => kbdMode };
 })();

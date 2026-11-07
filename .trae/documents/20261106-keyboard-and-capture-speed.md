@@ -127,11 +127,15 @@
 7. 扭蛋結果、結算確認焦點順序。
 
 **第三期：複雜畫面**
+
+> ✅ 2026-11-07：圖鑑（格仔＝button、詳情 Shift+←／→ 或 [ ]、招式卡可聚焦）、背包鍵盤拎起放低（Space／方向鍵／Space、Delete 移出、Esc 取消）、戰鬥 F／B／S／R／1–4／M／Y／N＋對話 Enter 推進（之前鍵盤會卡喺開場白）＋Esc 只返上一層。
 8. 圖鑑格仔方向鍵（roving tabindex）。
 9. 背包鍵盤拎起／放低（重用 drag 嘅 drop 邏輯，唔另寫一套；`aria-live` 讀出「已拎起 Pikachu」）。
 10. 戰鬥：招式／換寵／背包／Mega／是非掣快捷鍵；戰鬥畫面有 `transform: scale` 同手機直向旋轉（Rule 90），焦點框要喺 scale 後都睇得清。
 
 **第四期（可選）**
+
+> ✅ 2026-11-07：Settings → Gameplay → Keyboard shortcuts 開關（只關字母／數字捷徑同 badge）。決定：舊答題 Enter／Esc／Ctrl+P／Ctrl+H 唔搬入 keys.js——運作正常、有測試覆蓋，搬會有回歸風險而用戶睇唔到分別。另修：home sheet `aria-hidden` 讀屏 bug。測試搬入 `tools/responsive/test-keys.mjs`、`test-anim-speed.mjs`。
 11. 收編散落嘅舊 keydown 入 `Keys`，統一 Esc 次序；加快捷鍵設定開關（唔想要嘅用戶可以關）。
 
 ### 驗證（每期）

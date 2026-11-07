@@ -118,6 +118,11 @@ Skill: Rule 102 added
 
 Skill: Rule 103 added
 
+### Rule 104 — 場景按需載入（Rule 103）之後：「可以互動」嘅 state 一定要等場景物件起好先出；輸入 handler 要查 ready
+
+- 2026-11-07：寫 `tools/responsive/test-anim-speed.mjs` 時，測試喺 `play()` 之後即刻等 `state === 'idle'`——開場 state 本身就係 idle，即刻 `tap()` → `Cannot read properties of undefined (reading 'scale')`。追落去係真 bug：Rule 103 將 three.js 改做按需載入之後，WARNING 畫面期間用戶撳畫面都會觸發。鍵盤 Space（Rule 97）都係同一個入口。
+- 第二個陷阱：`CaptureScene` 變咗 Proxy facade，`play()` 先 `await import()`，所以 `play()` 後即刻讀 GSAP timeScale 仲係 1（倍速未 begin）——測試要等 `_real`。
+
 ### Rule 105 — 可揀 BGM（Music track）：buffer 按 url 快取、`stopTownBGM` 要清 `_townPending`、新曲 loudness-match＋crossfade loop、選用大音檔唔 precache
 
 - 2026-11-07：用戶要喺 Setting 揀背景音樂（原有 Flat Water ＋ 兩首 3 小時 focus 音檔 cut 到 3 分鐘 loop），選擇要上雲。

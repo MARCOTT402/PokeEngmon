@@ -9,7 +9,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 | 做緊咩 | 讀邊份 | Rule |
 |---|---|---|
-| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94、101、102、103、105 |
+| release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94、101、102、103、104、105 |
 | SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊、網絡請求／token、sync queue／本機存檔防損 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78、96、98 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
@@ -435,6 +435,10 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
+## Rule 104 — 場景按需載入（Rule 103）之後：「可以互動」嘅 state 一定要等場景物件起好先出；輸入 handler 要查 ready
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
 ## Rule 105 — 可揀 BGM（Music track）：buffer 按 url 快取、`stopTownBGM` 要清 `_townPending`、新曲 loudness-match＋crossfade loop、選用大音檔唔 precache
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
@@ -442,3 +446,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 106 — 單元測試：用 `npm test`（`node:test`）＋`tests/helpers/load.js`；vm 跨 realm 要先 clone 先 deepEqual；timer 要 unref；ESLint 跨檔 global 自動生成
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 107 — App 答題鍵盤：字母／⌫ 喺 `pointerdown` 入字，唔好靠 `click`（快打多指重疊會食字）；Submit 用同一 pointer 放手先算
+
+→ `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。

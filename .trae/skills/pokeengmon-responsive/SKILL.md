@@ -172,6 +172,10 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
   - 「睇唔睇到」要計埋：祖先 opacity 0（`checkVisibility({checkOpacity})`；透明 radio 睇 label）、摺疊咗嘅 overflow 祖先（0 高／闊，例如背包 banner `max-height:0`）。否則 Esc 會撳中隱形嘅 Cancel。
   - overlay 淡入完先睇得到：`transitionend`（opacity／visibility／transform）同 `animationend` 都要再檢查；同一情境但焦點仲喺外面（主掣當時被淡出緊嘅層蓋住）→ 都要拉焦點入嚟。
   - 單抽結果卡（`#gacha-inspect`）冇關閉掣：Esc = `App.closeGachaSheet()`。
+  - 第三期：圖鑑格仔係 `<button>`；詳情 `Shift+←／→` 或 `[` `]` 跟格仔排序行（`Pokedex.stepDetail`，格仔 `data-dex`）；招式卡補 `role=button`＋`tabindex=0`。背包：可拖格仔 `Drag.bind` 自動補 tabindex／role，`Space` 拎起（目標加 `data-kbd-drop`，空格暫時 `tabindex=-1`）→ 方向鍵 → `Space`／`Enter` 放低（同一個 `onDrop`）、`Delete` 移出隊伍、`Esc` 只取消唔關背包。戰鬥：`F` `B` `S` `R`、`1–4` 招式、`M` Mega、`Y`／`N`；Esc 只返上一層，永遠唔離開戰鬥；戰鬥 UI 會被 BattleLand 由 `#view-battle` 搬入 `.battle-land`（body 級 fixed，會被認做 overlay）→ 用「情境入面有冇 `.battle-bottom`」判斷（唔好搵 `#view-battle`，佢已經冇晒子元素）。戰鬥對話 `waitTap` 要聽 Enter／Space（之前淨聽 click，鍵盤會卡死喺開場白）。
+  - 第四期：Settings → Gameplay → Keyboard shortcuts（`pe_kbd_shortcuts`，只滑鼠裝置顯示）關咗淨係停字母／數字捷徑同 badge，方向鍵／Enter／Esc 永遠開。舊答題 Enter／Esc／Ctrl+P／Ctrl+H 刻意留喺 `app.js`（運作正常、搬會有回歸風險）。
+  - classic script 嘅 top-level `const`（`Pokedex`、`BattleUI`、`Gacha`…）唔喺 `window`：keys.js 用 `typeof X !== "undefined"`，唔好用 `window.X`（Rule 75）。
+  - home sheet 已經冇 `aria-hidden="true"`（隱藏靠 `hidden`）；新 sheet 唔好再加。
   - 已知：home sheet 開咗仍然 `aria-hidden="true"`（app 冇切換，讀屏會跳過）→ keys.js 暫時對 `.ph-sheet` 忽略 aria-hidden。
   - 驗收：headless CDP `Input.dispatchKeyEvent` 淨用方向鍵／Enter／Esc 行 wide（1280×800）同 phone（440×956）：入口 gate → 主頁 → Settings sheet（Tab 困住、Esc 還焦點）→ 選題 → 答題 → 設定彈窗；再逐個 bezel／dock 掣開＋↓＋Esc。responsive `test-sheets`／`test-overlay-switch`／`test-pane-locks`／`test-touch-targets` 結果要同 baseline 一樣。
 
@@ -208,8 +212,11 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 | `test-rotate.mjs <out>` | 轉直提示、tablet 唔轉、桌面矮窗唔彈 | — |
 | `test-touch-targets.mjs <out>` | ✕／下巴可撳範圍、<12px 字清單 | — |
 | `test-quiz-fit.mjs <out>` | 答題 7 尺寸 overflow、輸入格 vs 鍵盤 | S1 文字題 21px |
+| `test-quiz-keyboard.mjs` | App 答題鍵盤觸控快打：多指重疊、極快連撳、Submit 放手先算（Rule 107） | — |
 | `test-battle-fit.mjs <out>` | 戰鬥 7 尺寸：tablet／wide 等比例畫布（HP 框、精靈、訓練家同舞台比例 = 手機橫向）、phone 數值不變 | — |
 | `test-capture-fit.mjs <out>` | 捕捉 overlay＋canvas 7 尺寸蓋滿白螢幕／右欄（WARNING 同 3D 場景各影一張） | — |
+| `test-keys.mjs` | 全鍵盤（Rule 97）：真 CDP 按鍵行 gate → 主頁 → sheet（焦點入／還）→ `?` → badge → 捷徑 D/G/C/1/4、開關 → 背包拎起放低 → 圖鑑 Shift+←／→ → 選題／答題 → 扭蛋 → 捕捉 Space → 戰鬥 F/1/Esc；phone Tab 困住 | — |
+| `test-anim-speed.mjs` | 動畫倍速（Rule 95）：進化／扭蛋 1× vs 3× 時間、加速期間 timeScale、完結／中途關閉還原；捕捉只驗加速＋還原 | — |
 
 - 鎖同觸控範圍用 CDP `Input.dispatchMouseEvent`（`el.click()` 唔經 hit-test）；觸控手勢用 `Input.dispatchTouchEvent`。
 - IDE／Browser pane：`resize_window` 可能唔派 `resize`／matchMedia 事件，即時切換用 headless 驗；自動化前先查 `innerWidth/innerHeight` 唔係 0（Rule 20）；改 state 嘅 JS 前 assert localhost（Rule 62）。
