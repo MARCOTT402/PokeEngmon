@@ -13,6 +13,7 @@
 | 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
 | 結算畫面（分數圈／stat／錯題預覽） | `js/app.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
+| 戰鬥特效 prototype（兩邊用 App 真正嘅戰鬥 HTML＋`css/style.css`＋`PokeSprite`＋`MoveAnim`；右邊背景同精靈改由 PixiJS 7 畫，命中先加 hit-stop、白閃、震屏、粒子、傷害數字、HP 殘影、bloom、暴擊推近；總計劃 P1.4，唔部署） | `tools/prototype-battle-fx.html`（要經 http：本地 8080 開 `/tools/prototype-battle-fx.html`；PixiJS／pixi-filters 由 jsDelivr 載入） |
 | 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
 | 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, 死碼掃描 `tools/audit/unused-css.mjs`／`unused-assets.mjs`（Rule 108）, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 總計劃 `.trae/documents/20261107-master-engineering-plan.md`（合併商用級＋現代化） |
@@ -22,6 +23,7 @@
 | 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98；150ms 合併寫入＋`flushState`，Rule 102） | `js/storage.js` |
+| Store（`Store.get`／`select`／`update`／`subscribe`，包住本地存檔；舊式 `saveState()` 都會通知訂閱者；Rule 115） | `js/store.js`（喺 `storage.js` 之後載入）, `js/storage.js`（`saveState` 叫 `Store._changed`）, `tests/unit/store.test.js` |
 | Service Worker 分流（`swRoute`：跨域 API skip、版本化 cache-first、頁面 3 秒 timeout） | `sw.js`, `tests/unit/sw-strategy.test.js`, Rule 102 |
 | 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz.js`, `js/audio.js`, Rule 102 |
 | 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tests/unit/sync-queue.test.js` |

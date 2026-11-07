@@ -177,3 +177,20 @@ if (!e.request.url.startsWith("http")) return;
 - 加新 JS／CSS／資料檔：`index.html` script／link、`sw.js` ASSETS、部署清單三處都要有。`tests/unit/sw-assets.test.js`（真正喺 vm 執行 `sw.js` 攞完整 ASSETS）同 `tests/unit/deploy-manifest.test.js`（漏檔、內部檔外洩、空清單）會擋。
 - 本地預覽正式網址會有乜：`node tools/deploy/build-site.cjs <dir>`，再用 `.claude/launch.json` 嘅 `site-preview`（port 8099）開嗰個目錄。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 114 — 驗收動畫要用 headless Chrome 錄影格；Browser pane 隱藏時瀏覽器會暫停 requestAnimationFrame，截圖睇唔到動畫
+
+- `tabs_context` 話 pane「hidden」嘅時候，背景頁嘅 rAF 會停，Pixi ticker、`MoveAnim`、`PokeSprite` 全部唔郁。`await MoveAnim.play()` 會一直唔返（試過 45 秒 timeout），截圖亦只會影到靜止畫面。
+- 做法：用 `tools/responsive/` 嗰套 headless Chrome＋CDP（`Page.captureScreenshot`）。撳掣之後喺固定時間點（例如 120／260／420／600／850 ms）影相，再砌成對照圖；`Runtime.exceptionThrown` 同 `console.error` 要收集，要係 0。
+- 「current vs 新」對照頁要用 App 真嘅模組（`PokeSprite`、`MoveAnim`），唔好自己抄一份，否則唔係公平比較。PokeRogue 精靈 png 係 atlas，要用 `assets/battle/pkmn/index.json` 嘅 `f` 格資料（`[sx, sy, sw, sh, ox, oy]`、10 fps）裁格。
+- 喺 `tools/` 開嘅頁面要用 `<base href="../">`，素材同 `js/` 先會行返 App 嘅相對路徑。呢類頁面一定要經 http server 開。Browser pane 有時會用 `file:`／`data:` 直接開檔案，咁樣素材同 `fetch` 全部會失敗，所以頁面開頭要檢查 `location.protocol`：唔係 http(s) 就顯示指引同正確連結，唔好繼續載入。錯誤訊息要截短，唔好倒出成段 URL。另外，8080 server 停咗嘅話，Service Worker 會用快取嘅 `index.html` 頂替任何頁面，表面睇落好似開錯咗頁。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 115 — 讀寫本地存檔：新 code 用 `Store`（`get`／`select`／`update`／`subscribe`）；要跟住資料更新畫面就 `subscribe`，唔好喺每個改資料嘅地方自己 call render
+
+- `js/store.js` 包住 `storage.js`：`Store.update(st => { … })` 改完自動 `saveState()`，照用 150 ms 合併寫入（Rule 102）；要即刻寫入 localStorage 就加 `{ now: true }`。
+- `Store.subscribe("diamonds", (value, state) => …)` 會回傳 unsubscribe。佢只會比較有人訂閱嘅頂層欄位（用 JSON 簽名），所以喺物件入面原地改都偵測到；同一輪同步 code 入面幾多次存檔，都只會通知一次，攞到最後嘅值。`"*"` 代表每次存檔批次都通知。
+- 舊 code（`loadState()` 改完再 `saveState()`）一樣會觸發通知，因為 `storage.js` 嘅 `saveState()` 會叫 `Store._changed()`。所以 91 處 `saveState` 唔使一次過改，P2.2 拆 `app.js` 嗰陣先分批換。
+- `Store` 係 classic script 嘅頂層 `const`，**唔會掛上 `window`**（Rule 75）。喺其他檔用 `typeof Store !== "undefined"` 判斷有冇，唔好寫 `window.Store`，否則 typecheck 會報 TS2551。
+- 訂閱者 throw 唔會影響其他訂閱者，錯誤會經 `Guard.report` 上報。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

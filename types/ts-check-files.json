@@ -25,5 +25,6 @@
   "js/quests.js",
   "js/sm2.js",
   "js/storage.js",
+  "js/store.js",
   "js/sync.js"
 ]

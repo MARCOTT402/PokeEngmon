@@ -33,7 +33,7 @@
 | P1.1 typecheck：設定（`163ffd4`）＋ `npm run typecheck`、26／43 個檔 `// @ts-check`、ratchet 測試、CI 步驟 | 現代化 Task 1 | ✅ 設定 `163ffd4`；其餘見下一個 commit |
 | 其餘 | — | ⏳ 見 §3 |
 
-**而家下一步**：P1 完成（P1.4 畫質 prototype 未做，只改 `tools/`，可以隨時並行）。主線下一步係 P2.1 Store。
+**而家下一步**：P2.2 拆 `app.js`（P2.1 Store 已完成；招式動畫忠實度 MoveAnim 2.0 放咗入 P4.1）。
 
 ---
 
@@ -55,7 +55,7 @@
 | P1.1 | **Typecheck**：`npm run typecheck`（`tsc -p tsconfig.json`）；喺已經乾淨嘅檔加 `// @ts-check`，清單只准加唔准減；CI 喺 lint、test 之後跑 | 現代化 T1（做緊） | ✅ 2026-11-07：26 個檔 0 錯；`tests/unit/ts-check-ratchet.test.js`；驗收改用「未定義 global → TS2304」（`Sync` 宣告做 `any`，`Sync.nope()` 唔會紅） |
 | P1.2 | **全域 z-index token**：`:root` 加 `--z-*`（數值同現況一樣）；≥100 嘅字面值換做 token；JS 設 `zIndex` 嘅地方同步 | 現代化 T2 | ✅ 2026-11-07：22 個 token、25 條全域層；`check-z-tokens.mjs` 同 HEAD 逐條一樣；`tests/unit/z-tokens.test.js`；JS 冇 `zIndex` 字面值要同步 |
 | P1.3 | **`html` tagged template**：新檔 `js/core/html.js`，**底層用 `dom.js` 嘅 `escapeHTML`**（唔准再寫一份 escape）。功能：`html```、`raw()`、陣列 join、`null`／`false` 變空字串、`Html.render(el, tpl)` | 現代化 T3（＋商用級 B5a） | ✅ 2026-11-07：`tests/unit/html.test.js` 8 項；瀏覽器實測 XSS 字串只顯示成文字；Rule 111 |
-| P1.4 | **畫質 prototype**：`tools/prototype-battle-fx.html`（現行 vs PixiJS 特效） | 現代化 T4 | 喺 Browser pane 截圖俾你睇 |
+| P1.4 | **畫質 prototype**：`tools/prototype-battle-fx.html`（現行 vs PixiJS 特效） | 現代化 T4 | ✅ 2026-11-07：`tools/prototype-battle-fx.html`（左真 `PokeSprite`＋`MoveAnim`，右 PixiJS 7.4.2＋AdvancedBloom）；headless 錄格桌面同 440 手機都正常、0 error。2026-11-07 用戶視覺上滿意，P4 可以開 spec（按需載入、可關 bloom、reduced-motion、低階機降級） |
 | P1.5 | 插入：**彎撇號判錯（bug）**：`Quiz._norm` 將 `’ ‘ ʼ` 統一做 `'` | 商用級 KNOWN | ✅ 2026-11-07：測試先紅 2 項再綠；瀏覽器輸入 `weren’t` 判啱；Rule 112 |
 | P1.6 | 插入：**部署＋CI 收口**：`deploy` job（`needs: release`，`ref: main`）；`tools/deploy-files.json`；`sw-assets.test.js`、`deploy-manifest.test.js`；CI 次序 lint → test → typecheck → release → deploy。同 P1.1 一齊改 `release.yml`，唔好分兩次 | 商用級 Task 5b | ✅ code 2026-11-07：deploy job、`tools/deploy/*`、兩個測試（順帶補咗 `gym.js`、`supabase-config.js` 冇 precache）；本地模擬正式網址：內部檔 404、App 正常、SW activated。2026-11-07 Pages 已改做 GitHub Actions；`ac28387` 部署 1.71.2，正式網址內部檔 404 |
 
@@ -69,7 +69,7 @@
 
 | # | 內容 | 來源 |
 |---|---|---|
-| P2.1 | **Store**：`Store.get()`／`update(fn)`／`subscribe(key, fn)` 包住 `storage.js`（保留 `saveState` 150ms 合併，Rule 102）。新 code 經 Store，舊 call site 分批換 | 現代化 2.1 |
+| P2.1 | ✅ 2026-11-07 **Store**：`js/store.js`（`get`／`select`／`update`／`subscribe`，Rule 115）。舊式 `saveState()` 都會通知訂閱者，所以舊 call site 留待 P2.2 拆 `app.js` 嗰陣分批換。`tests/unit/store.test.js` 11 項 | 現代化 2.1 |
 | P2.2 | **拆 `app.js`**（classic script，掛返 `App`）：`js/app/{router,layout,settlement,modals,boot}.js`（現代化 spec 嘅分法）；商用級表入面多出嚟嘅 `home`、`setup-custom`、`auth-ui`、`sheets`、`settings` 都按職責放埋入去。每拆一個檔，`tests/unit/app-surface.test.js` 都要確認 `App` 公開方法清單不變，再跑 e2e | 現代化 2.2（＋商用級 Phase D） |
 | P2.3 | **ES modules**：由冇副作用嘅底層開始（`data`、`pokemon`、`sm2`、`core/*`）轉 `type="module"`，過渡期 `window.X = X`，逐層向上推。前置：見 §2 D1 | 現代化 2.3 |
 | P2.4 | **可取消計時**：`Timers.scope(name)` → `after(ms, fn)`／`cancel()`；離開 view 時一次過清（取代散落嘅 token 寫法，Rule 52／64） | 現代化 2.4 |
@@ -89,8 +89,19 @@
 
 ### P4 — 畫質（現代化 Phase 4，prototype 先行）
 
-- 你睇過 P1.4 prototype 話 OK，先另開 spec 決定點接入 `js/battle/`（同 three.js 一樣按需載入）。
-- GIF → animated WebP、Three.js 按機器調畫質，都喺 prototype 通過之後一齊做。
+- **P4.1 MoveAnim 2.0（先做）**：招式動畫跟足 PokeRogue 原作。審計見 `.trae/documents/20261107-move-anim-fidelity-audit.md`：561 招入面有 462 招有損失，41 招睇落同 Tackle 一樣。要做嘅嘢：
+  - 重新匯入原作完整資料：全部影格、出招方／受招方精靈圖層、背景事件（85 張背景圖）、敵我兩個版本，匯入腳本要入 repo。
+  - 播放器支援精靈動作同背景層。
+  - 原作已經有嘅自製動畫換返原作。
+  - 音效（約 3–6 MB）另外決定，按需載入。
+- **P4.2 PixiJS 強化接入**：P1.4 prototype 用戶視覺上滿意（2026-11-07）。開 spec 決定點接入 `js/battle/`，要求包括：
+  - 同 three.js 一樣按需載入，放 `vendor/`，加入 SW 快取。
+  - WebGL 用唔到時退返現行做法。
+  - 低階機自動關 bloom。
+  - `prefers-reduced-motion` 時只保留傷害數字。
+  - 加特效介面 `BattleFx`，令兩種實作可以互換。
+  - 要喺 P4.1 之後做，因為 Pixi 版都係用同一個 `MoveAnim`。
+- **P4.3**：GIF → animated WebP、Three.js 按機器調畫質。
 
 ### P5 — 插入：專業門面（商用級 Phase E；排喺現代化主線之後）
 

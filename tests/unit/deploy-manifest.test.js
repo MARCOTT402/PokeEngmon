@@ -9,7 +9,9 @@ const { execSync } = require("child_process");
 const { loadConfig, selectFiles } = require("../../tools/deploy/site-files.cjs");
 
 const ROOT = path.join(__dirname, "../..");
-const tracked = execSync("git ls-files -z", { cwd: ROOT }).toString("utf8").split("\0").filter(Boolean);
+/* 本地開發：新檔未 git add 都計（--others --exclude-standard），唔好誤報；部署（build-site.cjs）只用 tracked，
+   所以真係漏咗 commit 嘅 runtime 檔，CI 入面個檔根本唔存在，呢個測試照樣會紅、唔會部署。 */
+const tracked = execSync("git ls-files -z --cached --others --exclude-standard", { cwd: ROOT }).toString("utf8").split("\0").filter(Boolean);
 const site = new Set(selectFiles(tracked, loadConfig()));
 const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
 
@@ -42,7 +44,7 @@ test("internal files are never deployed", () => {
   assert.deepEqual(leaked, []);
 });
 
-test("the site is a strict subset of tracked files and is not empty", () => {
+test("the site is a subset of repo files (tracked or not ignored) and is not empty", () => {
   assert.ok(site.size > 1000);
   for (const f of site) assert.ok(tracked.includes(f), f);
 });

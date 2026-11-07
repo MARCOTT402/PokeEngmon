@@ -186,3 +186,20 @@ Skill: Rule 113 added
 - `check-z-tokens.mjs` 嘅「before」一邊用 `Number()` 讀值。`058ab55` 之後 HEAD 嘅 CSS 已經係 `var(--z-*)`，25 條全部變 NaN，所以乾淨 tree 跑預設 HEAD 都會 exit 1（誤報）。修正：兩邊各自用自己 `:root` 嘅 token 解析，邏輯抽出做 `compareZ()`，喺 `tests/unit/z-tokens.test.js` 直接測（自己對自己、字面值轉 token、改咗 token 值、改咗字面值、未定義 token）。
 - `ts-check-ratchet.test.js` 可以俾人繞過：同時拎走 `// @ts-check` 同清單項目，測試照樣全綠。修正：加 `MIN_CHECKED = 27` 下限，加「git HEAD 清單入面嘅檔仍然喺清單」。重試繞過，兩項都紅。
 - 教訓：防倒退嘅測試要試埋「同時改兩邊」嘅繞過方法；核對工具要喺「已經改完、已經 commit」之後再跑一次預設參數，確認唔會誤報。
+
+## Rule 114 — 驗收動畫要用 headless Chrome 錄影格；Browser pane 隱藏時瀏覽器會暫停 requestAnimationFrame，截圖睇唔到動畫
+
+- 2026-11-07 總計劃 P1.4。第一次喺 Browser pane 撳 Thunderbolt，兩邊動畫都好似冇播；`MoveAnim.play()` await 咗 45 秒都冇返。原因係 pane 隱藏，rAF 被暫停，唔係 code 問題。改用 headless Chrome 錄格之後，四個招式 × 5 個時間點全部正常，冇任何 error。
+- 另外兩個坑：精靈 png 係多格 atlas，直接當圖片用會成格 sprite sheet 顯示晒出嚟；8080 server 被 app 停咗之後，SW 用快取 `index.html` 頂替 `/tools/…` 頁面，畫面變咗 App 嘅「System busy」。
+
+- 用戶回報「有 error」：Browser pane 用 `data:`／`file:` 直接開咗 prototype，`<base href="../">` 同 `PIXI.Assets.load` 全部失敗；左邊精靈變爛圖，右邊狀態列倒出咗成段 data URL。我嘅錄格測試一直用 `http://localhost:8080`，所以冇捉到。已加 `location.protocol` 檢查，錯誤訊息亦截短到 160 字。
+
+Skill: Rule 114 added
+
+## Rule 115 — 讀寫本地存檔：新 code 用 `Store`（`get`／`select`／`update`／`subscribe`）；要跟住資料更新畫面就 `subscribe`，唔好喺每個改資料嘅地方自己 call render
+
+- 2026-11-07 總計劃 P2.1。`tests/unit/store.test.js` 11 項先寫，全紅（檔案未存在），實作之後全綠。瀏覽器實測：`Store.update` 同舊式 `saveState()` 都通知到訂閱者。
+- 第一版寫咗 `window.Store`，typecheck 報 TS2551（`Window` 冇呢個屬性）。改成直接用頂層 `const Store`，`storage.js` 用 `typeof Store !== "undefined"`。
+- `deploy-manifest.test.js` 喺本地開發期間誤報：新檔未 `git add`，`git ls-files` 冇佢。改為計埋 `--others --exclude-standard`。CI 入面所有檔都已經 commit，真係漏咗 commit 嘅 runtime 檔照樣會令 CI 紅、唔會部署。
+
+Skill: Rule 115 added

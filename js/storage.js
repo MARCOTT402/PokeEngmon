@@ -183,6 +183,8 @@ let _saveTimer = 0;
 function saveState(opt) {
   if (!_state) return;
   _sanitizeStateNumbers(_state, "saveState");
+  /* Store 訂閱者（js/store.js，Rule 115）：舊 code 直接改 state 再 saveState 都會收到通知 */
+  try { if (typeof Store !== "undefined" && Store._changed) Store._changed(); } catch (e) { /* ignore */ }
   if (opt && opt.now) { _writeState(); return; }
   if (_saveTimer) return;
   _saveTimer = setTimeout(_writeState, SAVE_DEBOUNCE_MS);

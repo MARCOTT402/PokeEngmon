@@ -36,7 +36,7 @@ test("the list is sorted and has no duplicates", () => {
 /* 防「同時拎走檔頭同清單項目」：
    - MIN_CHECKED 只准加。加檔就順手改大；改細一定要喺 review 講清楚原因。
    - 本機：git HEAD 版本清單入面嘅檔，working tree 清單一定仲有（未 commit 嘅刪除即刻紅）。 */
-const MIN_CHECKED = 27;
+const MIN_CHECKED = 28;
 
 test(`at least ${MIN_CHECKED} files are type-checked (the ratchet only goes up)`, () => {
   assert.ok(listed.length >= MIN_CHECKED, `only ${listed.length} files listed; MIN_CHECKED is ${MIN_CHECKED}`);

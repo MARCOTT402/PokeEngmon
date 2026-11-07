@@ -474,3 +474,11 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 113 — 部署：Pages 只發佈 `tools/deploy/site-files.json` 列明嘅 tracked 檔；加新 runtime 檔要同時入 `index.html`、`sw.js` ASSETS 同部署清單（`npm test` 會擋）
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 114 — 驗收動畫要用 headless Chrome 錄影格；Browser pane 隱藏時瀏覽器會暫停 requestAnimationFrame，截圖睇唔到動畫
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 115 — 讀寫本地存檔：新 code 用 `Store`（`get`／`select`／`update`／`subscribe`）；要跟住資料更新畫面就 `subscribe`，唔好喺每個改資料嘅地方自己 call render
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
