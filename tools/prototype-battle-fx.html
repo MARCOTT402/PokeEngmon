@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 原型頁喺 tools/ 入面：base 指返 repo root，素材、css/style.css、js/battle/* 用返 App 同一套路徑 -->
+<base href="../">
+<title>戰鬥特效 Prototype</title>
+<!-- 總計劃 P1.4（現代化 Phase 4 前置）。兩邊用 App 真正嘅戰鬥 HTML 結構同 css/style.css
+     （FRLG HP 框、PokeRogue 文字框、Emerald 字、精靈定位、受擊／暴擊動畫、原裝逐招動畫 MoveAnim），
+     唯一分別係右邊多咗 PixiJS 強化層。只係比較用，唔會部署（tools/ 唔喺 tools/deploy/site-files.json）。
+     要經 http 開：本地 8080 server → /tools/prototype-battle-fx.html -->
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-filters@5.3.0/dist/browser/pixi-filters.min.js"></script>
+<script src="js/battle/sprites.js"></script>
+<script src="js/battle/moveanim.js"></script>
+<style>
+  html, body { height: auto; }
+  body { margin: 0; background: #f4f1ea; color: #23252b; font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif; -webkit-user-select: auto; user-select: auto; }
+  .page-head { padding: 16px 16px 6px; max-width: 1240px; margin: 0 auto; }
+  .page-head h1 { font-size: 20px; margin: 0 0 4px; }
+  .page-head p { margin: 0; color: #6b6f7a; font-size: 13px; line-height: 1.55; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; max-width: 1240px; margin: 0 auto; position: sticky; top: 0; background: #f4f1ea; z-index: 50; }
+  .controls button { font: inherit; font-weight: 700; font-size: 14px; color: #23252b; border: 2px solid #23252b; background: #fff; border-radius: 10px; padding: 8px 12px; min-height: 44px; cursor: pointer; }
+  .controls button:active { transform: translateY(1px); }
+  .controls button:disabled { opacity: .5; cursor: default; }
+  .controls .t-normal { box-shadow: inset 0 -4px 0 #a8a77a; }
+  .controls .t-electric { box-shadow: inset 0 -4px 0 #f7d02c; }
+  .controls .t-fire { box-shadow: inset 0 -4px 0 #ee8130; }
+  .controls .t-crit { box-shadow: inset 0 -4px 0 #ee4035; }
+  .controls label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; min-height: 44px; padding: 0 6px; cursor: pointer; }
+  .controls select { font: inherit; min-height: 36px; border-radius: 8px; }
+  .controls .sep { flex: 0 0 1px; height: 28px; background: #e2ddd2; margin: 0 4px; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 8px 16px 20px; max-width: 1240px; margin: 0 auto; }
+  @media (max-width: 760px) { .panels { grid-template-columns: 1fr; } }
+  .panel { background: #fff; border: 1px solid #e2ddd2; border-radius: 14px; padding: 12px; min-width: 0; display: flex; flex-direction: column; }
+  .panel h2 { font-size: 15px; margin: 0 0 2px; }
+  .panel .sub { font-size: 12px; color: #6b6f7a; margin: 0 0 10px; line-height: 1.5; flex: 1; }
+  /* App 嘅 .battle-view 係全螢幕（負 margin、100vh）；喺 prototype 入面縮返做一個盒 */
+  .proto-view.battle-view { margin: 0; padding: 0; min-height: 0; display: block; border-radius: 10px; overflow: hidden; }
+  .proto-view .battle-stage, .proto-view .battle-bottom { max-width: none; }
+  /* 右邊：Pixi 畫布取代背景同精靈（z 4，同 App 精靈一樣），HP 框（z 5）同 MoveAnim 圖層（z 7）照用 HTML */
+  .fx-stage { background: none !important; }
+  .fx-stage .pixi-host { position: absolute; inset: 0; z-index: 4; }
+  .fx-stage .pixi-host canvas { display: block; width: 100% !important; height: 100% !important; }
+  .fx-stage .battle-sprite.proxy { visibility: hidden; }   /* 只用嚟俾 MoveAnim／Pixi 量位置同尺寸 */
+  .fx-stage.glow .battle-fx { filter: brightness(1.12) drop-shadow(0 0 3px rgba(255, 250, 220, .85)); }
+  /* HP 殘影：主條即刻跌，粉紅殘影隔一陣先追上 */
+  .fx-stage .battle-hpbar { position: relative; z-index: 1; transition: width .12s linear, background .3s ease; }
+  .hp-ghost { position: absolute; left: 0; top: 0; height: 100%; width: 100%; background: #f08070; transition: width .55s ease .38s; }
+  .notes { max-width: 1240px; margin: 0 auto; padding: 0 16px 32px; font-size: 13px; color: #6b6f7a; line-height: 1.6; }
+  .notes b { color: #23252b; }
+  .err { color: #ee4035; font-weight: 700; }
+  .need-server { margin: 16px; padding: 14px 16px; border: 2px solid #ee4035; border-radius: 12px; background: #fff4f2; font-size: 15px; line-height: 1.6; }
+  .need-server a { color: #ee4035; font-weight: 700; word-break: break-all; }
+  body.no-server .page-head, body.no-server .controls, body.no-server .panels, body.no-server .notes { display: none; }
+</style>
+</head>
+<body>
+<div id="need-server" class="need-server" hidden>
+  呢頁要經本地 server 開（直接開檔案嘅話，素材同 PixiJS 都載唔到）。<br>
+  先開 8080 static server，再去 <a href="http://localhost:8080/tools/prototype-battle-fx.html">http://localhost:8080/tools/prototype-battle-fx.html</a>
+</div>
+
+<div class="page-head">
+  <h1>戰鬥特效 Prototype：現行 vs PixiJS 強化</h1>
+  <p>兩邊用 App 真正嘅戰鬥畫面（同一個 HP 框、文字框、字體、精靈大細同位置、同一個原裝招式動畫）。唯一分別：右邊多咗 PixiJS 強化層——命中停格、白閃、震屏、衝擊粒子、傷害數字、HP 殘影、bloom 發光、暴擊鏡頭推近。</p>
+</div>
+
+<div class="controls" role="toolbar" aria-label="招式">
+  <button type="button" class="t-normal" data-move="tackle">Tackle</button>
+  <button type="button" class="t-electric" data-move="thunderbolt">Thunderbolt</button>
+  <button type="button" class="t-fire" data-move="flamethrower">Flamethrower</button>
+  <button type="button" class="t-crit" data-move="thunderbolt" data-crit="1">Critical hit</button>
+  <span class="sep"></span>
+  <label><input type="checkbox" id="opt-bloom" checked> Bloom</label>
+  <label>速度 <select id="opt-speed"><option value="1">1×</option><option value="2">2×</option></select></label>
+  <label><input type="checkbox" id="opt-both" checked> 兩邊一齊播</label>
+  <button type="button" id="btn-reset">重設 HP</button>
+</div>
+
+<div class="panels">
+  <section class="panel">
+    <h2>現行</h2>
+    <p class="sub">同 App 而家一樣：攻方衝前、守方左右震、MoveAnim 播 PokeRogue 原裝動畫；暴擊時舞台震 0.4 秒；HP 條 0.5 秒縮短。</p>
+    <div class="battle-view proto-view">
+      <div class="battle-stage" id="cur-stage">
+        <div class="battle-hpbox battle-hpbox-foe">
+          <span class="battle-pokename">PIKACHU</span><span class="battle-lvnum">50</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="cur-hp"></i></div>
+        </div>
+        <canvas class="battle-sprite battle-foe-sprite" id="cur-foe" width="42" height="42"></canvas>
+        <canvas class="battle-sprite battle-my-sprite" id="cur-me" width="42" height="42"></canvas>
+        <div class="battle-hpbox battle-hpbox-mine">
+          <span class="battle-pokename">CHARMANDER</span><span class="battle-lvnum">50</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar"></i></div>
+          <div class="battle-hpnum">120/120</div>
+          <div class="battle-expbar-clip"><i class="battle-expbar" style="width:40%"></i></div>
+        </div>
+        <div class="battle-fx" id="cur-fx"></div>
+      </div>
+      <div class="battle-bottom"><div class="battle-textbox" id="cur-msg">What will CHARMANDER do?</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>PixiJS 強化（建議方向）</h2>
+    <p class="sub">背景同精靈改由 PixiJS（WebGL）畫，HP 框、文字框、原裝招式動畫照用 HTML；命中嗰刻先加強化特效。Bloom 只套用喺特效，平價機可以關。</p>
+    <div class="battle-view proto-view">
+      <div class="battle-stage fx-stage glow" id="fx-stage">
+        <div class="pixi-host" id="pixi-host"></div>
+        <div class="battle-hpbox battle-hpbox-foe">
+          <span class="battle-pokename">PIKACHU</span><span class="battle-lvnum">50</span>
+          <div class="battle-hpbar-clip"><i class="hp-ghost" id="fx-ghost"></i><i class="battle-hpbar" id="fx-hp"></i></div>
+        </div>
+        <canvas class="battle-sprite battle-foe-sprite proxy" id="fx-foe" width="42" height="42"></canvas>
+        <canvas class="battle-sprite battle-my-sprite proxy" id="fx-me" width="42" height="42"></canvas>
+        <div class="battle-hpbox battle-hpbox-mine">
+          <span class="battle-pokename">CHARMANDER</span><span class="battle-lvnum">50</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar"></i></div>
+          <div class="battle-hpnum">120/120</div>
+          <div class="battle-expbar-clip"><i class="battle-expbar" style="width:40%"></i></div>
+        </div>
+        <div class="battle-fx" id="fx-fx"></div>
+      </div>
+      <div class="battle-bottom"><div class="battle-textbox" id="fx-msg">What will CHARMANDER do?</div></div>
+    </div>
+  </section>
+</div>
+
+<div class="notes">
+  <b>點睇：</b>先用 1× 睇節奏，再開 2× 睇快速模式；關 Bloom 可以比較發光效果。<b>Critical hit</b> 用 Thunderbolt 示範暴擊。兩邊嘅招式動畫係同一套原裝素材，所以分別只係右邊命中嗰刻嘅強化。
+  <span id="status"></span>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+/* 直接開檔案（file:／data:）時 base href、fetch 都用唔到：顯示指引，唔好繼續載入然後報一大堆錯 */
+const SERVED = /^https?:$/.test(location.protocol);
+if (!SERVED) { document.body.classList.add("no-server"); $("need-server").hidden = false; }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const opt = { speed: () => Number($("opt-speed").value) || 1, bloom: () => $("opt-bloom").checked, both: () => $("opt-both").checked };
+const MOVES = {
+  tackle: { name: "Tackle", type: "normal", dmg: 12 },
+  thunderbolt: { name: "Thunderbolt", type: "electric", dmg: 24 },
+  flamethrower: { name: "Flamethrower", type: "fire", dmg: 22 }
+};
+const TYPE_COL = { normal: [0xffffff, 0xe8e4cc], electric: [0xfff26b, 0xffd21f, 0xffffff], fire: [0xfff1a0, 0xffa630, 0xff5a1f] };
+const hpColor = (p) => (p > 50 ? "#58d080" : p > 20 ? "#f0c030" : "#e04040");
+
+/* ======================= 左：現行（同 App js/battle/battle.js moveAnim 一樣嘅次序） ======================= */
+const Cur = {
+  hp: 100,
+  async play(slug, crit) {
+    const spd = opt.speed();
+    const stage = $("cur-stage"), atk = $("cur-me"), def = $("cur-foe"), mv = MOVES[slug];
+    $("cur-msg").textContent = `CHARMANDER used ${mv.name}!`;
+    atk.classList.remove("anim-lunge-mine"); void atk.offsetWidth; atk.classList.add("anim-lunge-mine");
+    await sleep(180);
+    def.classList.remove("anim-hit"); void def.offsetWidth; def.classList.add("anim-hit");
+    try { await MoveAnim.play(slug, { layer: $("cur-fx"), stageEl: stage, attackerEl: atk, defenderEl: def, frameMs: spd > 1 ? 8 : undefined }); } catch (e) {}
+    atk.classList.remove("anim-lunge-mine");
+    setTimeout(() => def.classList.remove("anim-hit"), 250);
+    if (crit) {
+      stage.classList.remove("anim-crit"); void stage.offsetWidth; stage.classList.add("anim-crit");
+      setTimeout(() => stage.classList.remove("anim-crit"), 420);
+      $("cur-msg").textContent = "A critical hit!";
+    }
+    this.hp = Math.max(0, this.hp - mv.dmg * (crit ? 2 : 1));
+    const bar = $("cur-hp"); bar.style.width = this.hp + "%"; bar.style.background = hpColor(this.hp);
+  },
+  reset() { this.hp = 100; const b = $("cur-hp"); b.style.width = "100%"; b.style.background = ""; $("cur-msg").textContent = "What will CHARMANDER do?"; }
+};
+
+/* ======================= 右：PixiJS 強化層 ======================= */
+const Fx = {
+  app: null, world: null, fxLayer: null, ui: null, foe: null, me: null, flash: null, bloom: null,
+  tweens: [], parts: [], hitstop: 0, slowmo: 1, shake: 0, hp: 100, u: 1, ready: false, bg: null,
+
+  async init() {
+    PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
+    const host = $("pixi-host");
+    const app = new PIXI.Application({ resizeTo: host, resolution: window.devicePixelRatio || 1, autoDensity: true, backgroundAlpha: 0, antialias: false });
+    host.appendChild(app.view);
+    this.app = app;
+    /* 精靈尺寸同位置用 App 嘅 PokeSprite.fit()（隱藏 proxy canvas），兩邊一定一樣大 */
+    await Promise.all([PokeSprite.show($("fx-foe"), 25, "front"), PokeSprite.show($("fx-me"), 4, "back")]);
+    const [bgT, foeT, meT, idx] = await Promise.all([
+      PIXI.Assets.load("assets/battle/ui/bg-grass.png"),
+      PIXI.Assets.load("assets/battle/pkmn/front/25.png"),
+      PIXI.Assets.load("assets/battle/pkmn/back/4.png"),
+      fetch("assets/battle/pkmn/index.json").then((r) => r.json()),
+      document.fonts && document.fonts.load('16px "PokeRogueEmerald"').catch(() => null)
+    ]);
+    const frames = (tex, meta) => meta.f.map(([sx, sy, sw, sh, ox, oy]) =>
+      new PIXI.Texture(tex.baseTexture, new PIXI.Rectangle(sx, sy, sw, sh), new PIXI.Rectangle(0, 0, meta.w, meta.h), new PIXI.Rectangle(ox, oy, sw, sh)));
+    const anim = (tex, meta) => { const a = new PIXI.AnimatedSprite(frames(tex, meta)); a.animationSpeed = 10 / 60; a.play(); return a; };
+
+    const world = new PIXI.Container(); app.stage.addChild(world); this.world = world;
+    this.bg = new PIXI.Sprite(bgT); world.addChild(this.bg);
+    this.foe = anim(foeT, idx.front["25"]); this.me = anim(meT, idx.back["4"]);
+    world.addChild(this.foe, this.me);
+    const white = new PIXI.ColorMatrixFilter(); white.matrix = [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0];
+    this.flash = white;
+    this.fxLayer = new PIXI.Container(); this.fxLayer.blendMode = PIXI.BLEND_MODES.ADD; world.addChild(this.fxLayer);
+    this.ui = new PIXI.Container(); app.stage.addChild(this.ui);
+    const F = (PIXI.filters && PIXI.filters.AdvancedBloomFilter) ? PIXI.filters : (window.__filters || {});
+    if (F.AdvancedBloomFilter) this.bloom = new F.AdvancedBloomFilter({ threshold: 0.4, bloomScale: 1.5, brightness: 1.05, blur: 6, quality: 5 });
+    this.applyBloom();
+    this.layout();
+    new ResizeObserver(() => this.layout()).observe(host);
+    app.ticker.add(() => this.tick(app.ticker.deltaMS));
+    this.ready = true;
+  },
+
+  /* 舞台尺寸變（resize／轉機）：背景同 App 一樣 100% 100% 拉滿；精靈跟 proxy canvas 嘅 offset 盒 */
+  layout() {
+    const host = $("pixi-host"), w = host.clientWidth, h = host.clientHeight;
+    if (!w || !h || !this.bg) return;
+    this.u = w / 320;
+    this.bg.width = w; this.bg.height = h;
+    for (const [sp, el] of [[this.foe, $("fx-foe")], [this.me, $("fx-me")]]) {
+      const k = el.offsetWidth / el.width;
+      sp.scale.set(k);
+      sp.home = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+      sp.position.set(sp.home.x, sp.home.y);
+    }
+  },
+  applyBloom() {
+    if (this.fxLayer) this.fxLayer.filters = (opt.bloom() && this.bloom) ? [this.bloom] : null;
+    $("fx-stage").classList.toggle("glow", opt.bloom());
+  },
+
+  /* 時間：速度 × 慢鏡；hit-stop 期間世界停頓，UI（數字、字樣）照行 */
+  tick(ms) {
+    if (this.hitstop > 0) this.hitstop -= ms;
+    const dt = this.hitstop > 0 ? 0 : ms * opt.speed() * this.slowmo;
+    for (const t of [...this.tweens]) {
+      t.t += t.ui ? ms * opt.speed() : dt;
+      const k = Math.min(1, t.t / t.dur);
+      t.fn(t.ease ? t.ease(k) : k);
+      if (k >= 1) { this.tweens.splice(this.tweens.indexOf(t), 1); t.done(); }
+    }
+    for (const p of [...this.parts]) {
+      p.life -= dt; p.vy += p.g * dt / 16; if (p.drag) { p.vx *= p.drag; p.vy *= p.drag; }
+      p.s.x += p.vx * dt / 16; p.s.y += p.vy * dt / 16;
+      const a = Math.max(0, p.life / p.max);
+      p.s.alpha = a; p.s.scale.set(0.4 + 0.6 * a);
+      if (p.life <= 0) { p.s.destroy(); this.parts.splice(this.parts.indexOf(p), 1); }
+    }
+    /* 震屏：整數像素位移；暴擊推近期間由推近 tween 控制位置 */
+    if (this.zooming) return;
+    if (this.shake > 0) {
+      this.shake = Math.max(0, this.shake - dt * 0.03 * this.u);
+      this.world.position.set(Math.round((Math.random() * 2 - 1) * this.shake), Math.round((Math.random() * 2 - 1) * this.shake));
+    } else this.world.position.set(0, 0);
+  },
+  tween(dur, fn, ease, ui) { return new Promise((done) => this.tweens.push({ t: 0, dur, fn, ease, ui, done })); },
+  easeOut: (k) => 1 - Math.pow(1 - k, 3),
+
+  emit(x, y, n, o) {
+    const u = this.u;
+    for (let i = 0; i < n; i++) {
+      const g = new PIXI.Graphics(); const size = (o.size || 2) * u * (0.7 + Math.random() * 0.6);
+      g.beginFill(o.cols[(Math.random() * o.cols.length) | 0]).drawRect(-size / 2, -size / 2, size, size).endFill();
+      g.position.set(x, y); this.fxLayer.addChild(g);
+      const ang = Math.random() * Math.PI * 2, sp = (o.speed || 2) * u * (0.5 + Math.random());
+      const life = (o.life || 400) * (0.6 + Math.random() * 0.6);
+      this.parts.push({ s: g, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, g: (o.g || 0) * u, drag: o.drag, life, max: life });
+    }
+  },
+  ring(x, y, color, r, ms) {
+    const g = new PIXI.Graphics(); this.fxLayer.addChild(g); const u = this.u;
+    return this.tween(ms, (k) => { g.clear().lineStyle((2.5 * (1 - k) + 0.5) * u, color, 1 - k).drawCircle(x, y, (4 + r * k) * u); }, this.easeOut).then(() => g.destroy());
+  },
+  /* 傷害數字／暴擊字樣用 App 同一隻 Emerald 字（PokeRogueEmerald） */
+  text(str, size, fill, stroke, x, y) {
+    const t = new PIXI.Text(str, { fontFamily: "PokeRogueEmerald, DotGothic16, monospace", fontSize: Math.round(size * this.u), fill, stroke, strokeThickness: Math.max(2, Math.round(1.6 * this.u)), lineJoin: "round" });
+    t.anchor.set(0.5); t.position.set(x, y); this.ui.addChild(t); return t;
+  },
+
+  /* 一招：同左邊一樣嘅衝前＋原裝動畫；命中嗰刻先加強化 */
+  async play(slug, crit) {
+    if (!this.ready) return;
+    const spd = opt.speed(), mv = MOVES[slug], cols = TYPE_COL[mv.type], u = this.u;
+    const me = this.me, foe = this.foe;
+    $("fx-msg").textContent = `CHARMANDER used ${mv.name}!`;
+    /* 衝前：同 App lungeMine（.32s，30% 時去到闊度 14%／高度 -10%） */
+    this.tween(320, (k) => {
+      const p = k < 0.3 ? k / 0.3 : 1 - (k - 0.3) / 0.7;
+      me.x = me.home.x + me.home.w * 0.14 * p; me.y = me.home.y - me.home.h * 0.10 * p;
+    }, null, true);
+    await sleep(180);
+    try { await MoveAnim.play(slug, { layer: $("fx-fx"), stageEl: $("fx-stage"), attackerEl: $("fx-me"), defenderEl: $("fx-foe"), frameMs: spd > 1 ? 8 : undefined }); } catch (e) {}
+
+    /* ---- 命中：hit-stop、白閃、震屏、粒子、衝擊圈、傷害數字、HP 殘影 ---- */
+    const cx = foe.home.x + foe.home.w / 2, cy = foe.home.y + foe.home.h * 0.55;
+    const dmg = mv.dmg * (crit ? 2 : 1);
+    this.hitstop = crit ? 160 : 90;
+    foe.filters = [this.flash];
+    this.shake = (crit ? 4.5 : 2.5) * u;
+    this.emit(cx, cy, crit ? 44 : 26, { cols, speed: crit ? 3.2 : 2.4, life: 420, size: 2.4, g: 0.05, drag: 0.98 });
+    this.ring(cx, cy, cols[0], crit ? 34 : 24, 340);
+    if (crit) {
+      /* 暴擊：以受擊點為中心推近 10%＋慢鏡 */
+      this.slowmo = 0.4; this.zooming = true;
+      this.tween(440, (k) => {
+        const s = 1 + 0.1 * Math.sin(Math.PI * k);
+        this.world.scale.set(s);
+        this.world.position.set(-(s - 1) * cx + Math.round((Math.random() * 2 - 1) * this.shake), -(s - 1) * cy + Math.round((Math.random() * 2 - 1) * this.shake));
+      }, null, true).then(() => { this.world.scale.set(1); this.slowmo = 1; this.zooming = false; });
+      const c = this.text("CRITICAL HIT!", 13, 0xffffff, 0xd8261b, this.app.screen.width * 0.42, this.app.screen.height * 0.5);
+      this.tween(950, (k) => { c.scale.set(k < 0.15 ? 1.5 - 3.3 * k : 1); c.alpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1; }, null, true).then(() => c.destroy());
+      $("fx-msg").textContent = "A critical hit!";
+    }
+    const n = this.text(String(dmg), crit ? 18 : 13, crit ? 0xffe14a : 0xffffff, 0x23252b, cx, foe.home.y + foe.home.h * 0.2);
+    const ny = n.y;
+    this.tween(820, (k) => { n.y = ny - 14 * u * this.easeOut(k); n.scale.set(k < 0.12 ? 0.6 + 4 * k : 1.08 - 0.08 * k); n.alpha = k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1; }, null, true).then(() => n.destroy());
+    this.hp = Math.max(0, this.hp - dmg);
+    const bar = $("fx-hp"), ghost = $("fx-ghost");
+    bar.style.width = this.hp + "%"; bar.style.background = hpColor(this.hp);
+    ghost.style.transitionDuration = (0.55 / spd) + "s"; ghost.style.transitionDelay = (0.38 / spd) + "s";
+    ghost.style.width = this.hp + "%";
+    /* 白閃 110ms 之後收，守方左右震（同 hitShake 幅度，但喺命中先開始） */
+    await this.tween(110, () => {}, null, true);
+    foe.filters = null;
+    await this.tween(360, (k) => { foe.x = foe.home.x + Math.round(Math.sin(k * Math.PI * 5) * 7 * (1 - k)); });
+    foe.x = foe.home.x;
+  },
+  reset() {
+    this.hp = 100;
+    const b = $("fx-hp"), g = $("fx-ghost");
+    b.style.width = "100%"; b.style.background = "";
+    g.style.transition = "none"; g.style.width = "100%"; void g.offsetWidth; g.style.transition = "";
+    $("fx-msg").textContent = "What will CHARMANDER do?";
+  }
+};
+
+/* ======================= 操作 ======================= */
+let busy = false;
+async function run(slug, crit) {
+  if (busy) return; busy = true;
+  document.querySelectorAll(".controls button[data-move]").forEach((b) => (b.disabled = true));
+  try {
+    if (opt.both()) await Promise.all([Cur.play(slug, crit), Fx.play(slug, crit)]);
+    else { await Cur.play(slug, crit); await sleep(300); await Fx.play(slug, crit); }
+  } finally {
+    busy = false;
+    document.querySelectorAll(".controls button[data-move]").forEach((b) => (b.disabled = false));
+  }
+}
+if (SERVED) {
+  document.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => run(b.dataset.move, !!b.dataset.crit)));
+  $("btn-reset").addEventListener("click", () => { Cur.reset(); Fx.reset(); });
+  $("opt-bloom").addEventListener("change", () => Fx.applyBloom());
+  PokeSprite.show($("cur-foe"), 25, "front"); PokeSprite.show($("cur-me"), 4, "back");
+  window.addEventListener("resize", () => { ["cur-foe", "cur-me", "fx-foe", "fx-me"].forEach((id) => PokeSprite.refit($(id))); setTimeout(() => Fx.layout(), 80); });
+  Fx.init().catch((e) => {
+    const span = document.createElement("span"); span.className = "err";
+    span.textContent = "PixiJS 載入失敗：" + String((e && e.message) || e).slice(0, 160);
+    $("status").replaceChildren(span);
+  });
+}
+window.__fx = Fx;   /* 方便 console 檢查 */
+</script>
+</body>
+</html>
