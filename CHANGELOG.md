@@ -1,3 +1,10 @@
+# [1.70.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.3...v1.70.0) (2026-11-07)
+
+
+### Features
+
+* selectable background music with cloud-saved choice ([681c33c](https://github.com/MARCOTT402/PokeEngmon/commit/681c33cf887721ae7d1716446ba48ace735577c4))
+
 ## [1.69.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.2...v1.69.3) (2026-11-07)
 
 
