@@ -16,7 +16,7 @@ const BagUI = (() => {
   const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, targetMode: null, itemFilter: "all", battle: null };
   let root = null, rotateEl = null;
   const $ = sel => root.querySelector(sel);
-  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = escapeHTML;
 
   /* 第 1 段只讀顯示現有庫存（食物同藥）；樹果取代食物喺第 3 段 */
   function itemList() {
@@ -283,7 +283,7 @@ const BagUI = (() => {
   const STATUS_NAME = { brn: "Burned", par: "Paralyzed", slp: "Asleep", frz: "Frozen", psn: "Poisoned", tox: "Badly poisoned" };
   const HEART = `<svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2Z"/></svg>`;
   const STAT_FULL = { hp: "HP", atk: "Attack", def: "Defense", spa: "Sp. Atk", spd: "Sp. Def", spe: "Speed" };
-  const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} };
+  const buzz = () => haptic(12);
   const toast = m => window.App && App.toast(m);
   const online = () => !!(window.SupabaseAuth && SupabaseAuth.isLoggedIn && SupabaseAuth.isLoggedIn());
 

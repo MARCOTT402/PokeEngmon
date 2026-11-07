@@ -180,9 +180,7 @@ const Gacha = {
     if (!text) el.classList.remove("almost");
   },
 
-  _haptic(pattern) {
-    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* unsupported */ }
-  },
+  _haptic(pattern) { haptic(pattern); },
 
   _audio() {
     return (window.CaptureScene && CaptureScene.audio) ? CaptureScene.audio : null;

@@ -141,9 +141,3 @@ const Explain = {
   }
 };
 
-/* HTML escape（全域小工具） */
-function escapeHTML(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
-}

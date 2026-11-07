@@ -716,9 +716,7 @@ const Quiz = {
   },
 
   /* 震動（提示 ghost 仍在 / 錯誤）*/
-  _vibrate(ms) {
-    try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {}
-  },
+  _vibrate(ms) { haptic(ms || 40); },
 
   /* 提示字母數：仲要輸入 5 個或以下 → 1 個；6 個或以上 → 2 個 */
   _hintCount(rest) {

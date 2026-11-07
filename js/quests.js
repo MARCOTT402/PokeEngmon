@@ -30,10 +30,7 @@ const Quests = (() => {
   function toast(msg) { if (window.App && App.toast) App.toast(msg); }
 
   function esc(s) {
-    const v = String(s == null ? "" : s);
-    if (typeof escapeHTML === "function") return escapeHTML(v);
-    return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    return escapeHTML(s);
   }
 
   function defClaimable() {

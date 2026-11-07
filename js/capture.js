@@ -1024,9 +1024,7 @@ class PokemonCaptureScene {
     this.flashEl.classList.add("on");
   }
 
-  _haptic(pattern) {
-    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* ignore */ }
-  }
+  _haptic(pattern) { haptic(pattern); }
 
   _glow(level) {
     this.glowSprite.material.opacity = Math.min(1, level);

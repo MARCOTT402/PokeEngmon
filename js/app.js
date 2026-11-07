@@ -1066,7 +1066,7 @@ const App = {
   /* ---------- 瀏覽／編輯／刪除自訂題 ---------- */
   openMyQuestions() {
     const list = (loadState().customQuestions || []).slice();
-    const esc = (s) => escapeHTML(String(s ?? ""));
+    const esc = escapeHTML;
     const rows = list.length === 0
       ? `<p class="my-q-empty">No custom questions yet.</p>`
       : `<div class="my-q-list">${list.map((q, i) => {
@@ -1135,7 +1135,7 @@ const App = {
   openEditCustomQuestion(id) {
     const q = (loadState().customQuestions || []).find(x => x && x.id === id);
     if (!q) { this.toast("Question not found"); this.openMyQuestions(); return; }
-    const escAttr = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    const escAttr = escapeHTML;
     const isWord = q.type === "word";
 
     if (isWord) {
@@ -1716,8 +1716,7 @@ const App = {
     const mist = document.getElementById("settle-mist");
     const misses = (data.results || []).filter(r => !r.correct)
       .map(r => ({ r, q: (typeof findQuestion === "function") ? findQuestion(r.qid) : null })).filter(x => x.q);
-    const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\u0022": "&quot;" };
-    const esc = (t) => String(t == null ? "" : t).replace(/[&<>\u0022]/g, ch => ESC[ch]);
+    const esc = escapeHTML;
     if (misses.length) {
       mist.innerHTML = `<h3>To review <button type="button" id="settle-see-all">See all ›</button></h3><ul>${misses.slice(0, 3).map(({ r, q }) => {
         const ans = q.type === "word" ? q.word : q.answer;
