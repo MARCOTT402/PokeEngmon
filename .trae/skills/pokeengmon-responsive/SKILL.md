@@ -203,7 +203,7 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 | 腳本 | 覆蓋 | 已知 fail |
 |---|---|---|
 | `test-sheets.mjs` | wide／phone sheet 開關、toggle、✕、點外面、Esc、連撳、chin Home、overlay 上開 sheet、layout 互轉 | P9b（同一 tick 三連撳，原有） |
-| `test-pane-locks.mjs` | 左欄鎖、overlay 開住撳左欄、Quests 倒數 | W2／W4（guest 登入提示） |
+| `test-pane-locks.mjs` | 左欄鎖、overlay 開住撳左欄、Quests 倒數；W2／W4 識分 guest（guest：Friends 出登入提示；Leaderboard 撳「Maybe later」先測 CTA） | — |
 | `test-overlay-switch.mjs` | fixed overlay 上撳 bezel／dock 只得一個 sheet | — |
 | `test-rotate.mjs <out>` | 轉直提示、tablet 唔轉、桌面矮窗唔彈 | — |
 | `test-touch-targets.mjs <out>` | ✕／下巴可撳範圍、<12px 字清單 | — |

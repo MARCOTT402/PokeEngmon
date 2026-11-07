@@ -127,5 +127,6 @@ if (!e.request.url.startsWith("http")) return;
 - vm 入面嘅 Array／Object 同 Node 唔同 realm：`assert.deepEqual` 會報「same structure but not reference-equal」→ 先 `JSON.parse(JSON.stringify(x))` 或 `{ ...obj }` 先比較。
 - App 有 `setInterval`／debounce `setTimeout`（Guard 上報、`saveState` 合併）→ loader 已 `unref`，否則測試 process 吊住唔完；自己寫 context 都要照做。
 - Characterization test 記錄**現行為**（`MAX_LEVEL` = 99，唔係 100）；發現疑似 bug 寫 `KNOWN:`，唔好喺測試 task 順手改產品碼。寫完做一次 mutation（故意改壞產品碼 → 測試要紅 → `git checkout --` 還原）。
+- `npm run test:e2e` 有 fail 時，**先對 `.trae/skills/pokeengmon-responsive/SKILL.md`「互動測試」表嘅「已知 fail」欄**（同測試檔第一行註解），唔好淨係對 memory 就話係新 regression。未列入嘅 fail 先用 `elementFromPoint`／toast／modal 狀態搵出實際原因。
 - ESLint：跨檔 global 由 `tools/audit/gen-eslint-globals.mjs` 生成（`prelint`），`no-redeclare` 要 `builtinGlobals: false`、`no-unused-vars` 用 `vars: "local"`；warning 上限喺 `package.json` `--max-warnings`，只准減。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

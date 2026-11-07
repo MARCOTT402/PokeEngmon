@@ -16,7 +16,7 @@
 
 - ✅ **Phase A（Task 1–3）2026-11-07 完成，未 commit**：`npm test`（347 項）、`npm run lint`（0 error／20 warning 上限）、`npm run test:e2e`、CI release 前跑 lint + test。用戶已確認 §10 Q1–Q4 全部照建議。
 - 執行決定（rulings）：舊 script 實際係 10 個（多咗 `_test_sync_queue.js`）；遷移時只換 pass/fail helper、vm 設定原封保留；loader 將 timer `unref`（否則測試 process 唔會完）；`MAX_LEVEL` = 99 係設計；`eslint.globals.json` 由 `prelint` 生成、gitignore；ESLint `no-redeclare` 要 `builtinGlobals: false`。
-- e2e 基線（`npm run test:e2e`，2026-11-07，working tree 包括另一個 session 未 commit 嘅鍵盤改動）：10 個檔 7 過。失敗：`test-sheets` P9b（同一 tick 連撳 3 下，已知舊問題）、`test-quiz-fit` S1 375×667 文字題捲 21px（已知）、**`test-pane-locks` W2／W4（wide：題目設定／Leaderboard 開住時撳左欄掣，左欄冇鎖）— 唔喺已知清單，Phase A 冇改產品碼，要查係咪最近 commit 或鍵盤改動引入**。
+- e2e 基線（`npm run test:e2e`，2026-11-07，working tree 包括另一個 session 未 commit 嘅鍵盤改動）：10 個檔 7 過。失敗：`test-sheets` P9b（同一 tick 連撳 3 下，已知舊問題）、`test-quiz-fit` S1 375×667 文字題捲 21px（已知）、`test-pane-locks` W2／W4。三項全部係 `pokeengmon-responsive` SKILL.md 測試表記錄咗嘅已知 fail。W2／W4 已用 headless 證實原因係 guest 狀態：W2 撳 Friends → 「Log in first」toast＋登入框；W4 CTA 中心點 `elementFromPoint` = `lb-login-modal`（Leaderboard 嘅 guest 登入提示蓋住成個畫面）。唔係 regression。之後已將 W2／W4 改成識分 guest（21/21 pass；mutation：Friends 唔出登入提示 → W2 紅），所以而家 e2e 已知 fail 只剩 P9b 同 S1。（較早一版誤寫成「唔喺已知清單」，因為只對咗 memory，冇對 skill 表。）
 - **Task 5 注意**：`tools/responsive/test-*.mjs` 靠 `_seedtest.html` → 部署衛生只可以「唔發佈」佢，唔可以刪。
 - ⏭ 下一步：Phase B（要等另一個 session 嘅鍵盤改動 commit 咗）或 Task 6（洩漏量度，唔改產品檔，可以即刻做）。
 

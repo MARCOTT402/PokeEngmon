@@ -138,4 +138,6 @@ Skill: Rule 105 added
 - ESLint 第一次跑 209 個 `no-redeclare` error：ESLint 9 預設 `builtinGlobals: true`，將「本檔頂層宣告」同 generated globals 撞 → 關 `builtinGlobals`。
 - 測試發現（未修，記入計劃 §9 KNOWN）：彎撇號 `’` ≠ `'` 會判錯。
 
+- 同日：e2e `test-pane-locks` W2／W4 fail，我只對 memory 清單就報「唔係已知問題」。其實 responsive skill 測試表早已寫明「W2／W4（guest 登入提示）」。Headless 證實：W2 = guest Friends toast＋登入框；W4 = CTA 中心 `elementFromPoint` 撳中 `lb-login-modal`。教訓：e2e fail 先對 skill 表嘅已知 fail 欄。
+
 Skill: Rule 106 added

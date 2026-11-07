@@ -1,4 +1,4 @@
-// Responsive P1 互動測試：wide 左欄鎖（捕捉／Gym 結算 inert）、overlay 開住撳左欄、Quests 倒數。Rule 85。guest 下 W2／W4 fail 屬預期
+// Responsive P1 互動測試：wide 左欄鎖（捕捉／Gym 結算 inert）、overlay 開住撳左欄、Quests 倒數。Rule 85。W2／W4 識分 guest（guest 斷言登入提示，W4 撳 Maybe later 後再測 CTA）
 // 前置：本地 server http://localhost:8080（.claude/launch.json static）；headless Chrome + CDP；非觸控尺寸要排先（Rule 80）。
 // 用法：node tools/responsive/test-pane-locks.mjs
 import { spawn } from "node:child_process";
@@ -64,11 +64,33 @@ const boot = async (w, h) => {
 /* ===== WIDE ===== */
 await boot(1440, 900);
 await check("W1 quiz-setup via CTA", () => realClick("#btn-start-quiz"), 900, s => s.views.includes("view-quiz-setup"));
-await check("W2 left dock Friends while setup open", () => realClick("#btn-bd-friends"), 1200, s => s.views.includes("view-friends") && !s.views.includes("view-quiz-setup"));
+/* guest-aware：_seedtest 預設係 guest。Friends 要登入（toast＋登入框），Leaderboard 第一次開會出 guest 登入提示（#lb-login-modal 蓋住成個畫面）。
+   登入時照測原本行為；guest 時斷言登入提示，W4 先撳「Maybe later」再測 CTA，保留「overlay 開住撳左欄」嘅覆蓋。 */
+const guest = !(await ev("return !!(window.SupabaseAuth && SupabaseAuth.isLoggedIn && SupabaseAuth.isLoggedIn())"));
+const promptState = async () => JSON.parse(await ev(`return JSON.stringify({
+  toast: document.getElementById('toast')?.classList.contains('show') ? document.getElementById('toast').textContent.trim() : '',
+  authOpen: !!document.querySelector('#modal-root .au-title'),
+  lbPrompt: !!document.getElementById('lb-login-modal')})`));
+const checkWith = async (label, fn, wait, expectFn) => {
+  if (fn) await fn();
+  await sleep(wait);
+  const s = await st(); const p = await promptState(); const ok = expectFn(s, p); ok ? pass++ : fail++;
+  results.push(`${ok ? "PASS" : "FAIL"}  ${label}  ${JSON.stringify({ ...s, ...p })}`);
+};
+if (guest) {
+  await checkWith("W2 (guest) left dock Friends while setup open -> login prompt, setup stays", () => realClick("#btn-bd-friends"), 1200,
+    (s, p) => s.views.includes("view-quiz-setup") && !s.views.includes("view-friends") && /log in/i.test(p.toast) && p.authOpen);
+} else {
+  await check("W2 left dock Friends while setup open", () => realClick("#btn-bd-friends"), 1200, s => s.views.includes("view-friends") && !s.views.includes("view-quiz-setup"));
+}
 await hideGate();
-await check("W3 left dock Leaderboard while Friends open", () => realClick("#btn-bd-leaderboard"), 1600, s => s.views.includes("view-leaderboard") && !s.views.includes("view-friends"));
+await check(`W3 left dock Leaderboard while ${guest ? "setup" : "Friends"} open`, () => realClick("#btn-bd-leaderboard"), 1600, s => s.views.includes("view-leaderboard") && !s.views.includes("view-friends") && !s.views.includes("view-quiz-setup"));
 await hideGate();
-await check("W4 CTA while Leaderboard open -> setup", () => realClick("#btn-start-quiz"), 1300, s => s.views.includes("view-quiz-setup"));
+if (guest) {
+  await checkWith("W4a (guest) leaderboard login prompt shown, dismiss via Maybe later", null, 0, (s, p) => s.views.includes("view-leaderboard") && p.lbPrompt);
+  await checkWith("W4b (guest) Maybe later closes prompt, leaderboard stays", () => realClick("#lb-login-cancel"), 500, (s, p) => s.views.includes("view-leaderboard") && !p.lbPrompt);
+}
+await check("W4 CTA while Leaderboard open -> setup", () => realClick("#btn-start-quiz"), 1300, s => s.views.includes("view-quiz-setup") && !s.views.includes("view-leaderboard"));
 await check("W5 normal settlement: left pane free", () => ev("App._gymSettleData=null; App.showView('view-settlement')"), 500, s => s.views.includes("view-settlement") && !s.settleLocked && s.inertLeft === 0 && !s.dexDisabled);
 await check("W6 bezel dex from settlement -> sheet", () => realClick("#btn-bezel-dex"), 900, s => s.open[0] && s.open[0].startsWith("sheet-pokedex") && !s.views.length);
 await check("W7 gym settlement locks bezel+left, chin free", () => ev("App._gymSettleData={fake:true}; App.showView('view-settlement')"), 500, s => s.settleLocked && s.inertLeft > 0 && s.dexDisabled && !s.homeDisabled);
