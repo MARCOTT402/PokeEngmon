@@ -37,7 +37,7 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
 - `grantKOExp` 收 EXP 名單用 `team.filter(p => p.participated && p.hp > 0)`；fainted 唔派 EXP（Gen 5 規則）。
 - Inferno Level Sync 用 `Math.min(e.level, levelSyncLevel)` **只降唔升**：本身低過 sync 值嘅寵唔應該被升。
 - 以弱勝強加成用 `expLevel`（sync 前真實等級），唔好用 `level`，否則被壓低等級嘅寵會被誤加乘。
-- 改 EXP 相關流程後，跑 `node tools/_test_battle.js`（應 97 PASS）。
+- 改 EXP 相關流程後，跑 `npm test`（`tests/unit/battle.test.js`）（應 97 PASS）。
 
 ### Rule 63 — 一件道具有「育成效果」同「戰鬥效果」兩套：使用路徑一定要按場景分支，兩邊都要測
 
@@ -58,7 +58,7 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
 ### Rule 79 — 新 Mega 特性：去 Pokémon Champions 資料搵效果；`statLabel` 只收 PokeAPI stat 名
 
 - 新 Mega／新特性效果：先睇 Serebii Pokémon Champions 新特性頁；Z-A 搵唔到唔等於冇效果。
-- 寫完用 `tools/_test_mega_abilities.js` 嘅 Node 腳本列出 `MEGA_STONES` 特性有邊啲未出現喺 `state.js`／`engine.js`，逐個確認係「單打本來冇效果」（Stalwart、Healer；本 engine 冇 Protect → Piercing Drill、Unseen Fist）定真係漏咗。
+- 寫完用 `tests/unit/mega-abilities.test.js` 入面嘅 MEGA_STONES 檢查列出 `MEGA_STONES` 特性有邊啲未出現喺 `state.js`／`engine.js`，逐個確認係「單打本來冇效果」（Stalwart、Healer；本 engine 冇 Protect → Piercing Drill、Unseen Fist）定真係漏咗。
 - 防守方特性要諗埋 Mold Breaker：加入 `BREAKABLE`。Levitate 類用 `LEVITATING` set／`grounded()`，唔好再寫死 `=== "levitate"`。
 - Log 能力名：engine key（atk/def/spa/spd/spe）要先轉做 PokeAPI 名再 call `statLabel`。
 
@@ -72,4 +72,4 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
 - 存檔：`_sanitizeStateNumbers()` 喺 `loadState()`／`saveState()` 檢查 `diamonds`、`normalPulls`、`totalSets`、`totalCorrect`、`totalQuestions`、`bestStreak`：數字字串轉數字；其他非有限值 → 還原上一次好嘅值（冇就 0）＋`Guard.report`。所以 `st.diamonds = r.balance` 呢類直接賦值，就算 RPC 少咗欄位都唔會壞存檔（但新 code 仍然應該先檢查 `typeof === "number"`）。
 - CSS 外殼幾何（`--frame-*`）只喺 CSS `:root` 定義、JS 冇寫，唔會變 NaN，唔使加 fallback；JS 寫入嘅 CSS 變數先要檢查。
 - 通用 helper：`Guard.num／clamp／posDim／safeJSON`（Rule 94）。
-- 驗收：`node tools/_test_numeric_guards.js`（30 項：7 種壞輸入傷害有限、RNG 次序不變、NaN／Infinity／越界 HP、戰鬥可以完、存檔計數還原、helpers）；`tools/_test_battle.js` 97 PASS＋其餘戰鬥測試全過；`tools/responsive/test-rotate.mjs`、`test-battle-fit.mjs` 全過。
+- 驗收：`npm test`（`tests/unit/numeric-guards.test.js`）（30 項：7 種壞輸入傷害有限、RNG 次序不變、NaN／Infinity／越界 HP、戰鬥可以完、存檔計數還原、helpers）；`tests/unit/battle.test.js` 97 PASS＋其餘戰鬥測試全過；`tools/responsive/test-rotate.mjs`、`test-battle-fit.mjs` 全過。

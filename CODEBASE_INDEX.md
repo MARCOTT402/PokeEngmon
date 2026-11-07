@@ -11,14 +11,15 @@
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 自訂題（CSV／App 內加句／加圖／View·Edit·Delete） | `js/app.js`, `js/data.js` (`customQuestions`), `js/qimg-db.js` (圖片 IndexedDB) |
 | SRS / session（解析快取 Rule 93） | `js/sm2.js`, `tools/_test_sm2_cache.js` |
+| 自動測試／lint／CI（`npm test`＝`node:test` 單元測試；vm loader；舊存檔 fixture；ESLint 跨檔 globals 自動生成；e2e 總 runner；release 前跑 lint+test） | `tests/unit/*.test.js`, `tests/helpers/load.js`, `tests/fixtures/state-old.json`（`tools/make-old-state-fixture.mjs`）, `eslint.config.mjs`, `tools/audit/gen-eslint-globals.mjs`→`eslint.globals.json`, `tools/responsive/run-all.mjs`, `.github/workflows/release.yml`, 計劃 `.trae/documents/20261106-commercial-grade-engineering.md` |
 | 效能基線（CPU 降速量入題／答題寫入／sheet 切換） | `tools/perf/bench.mjs`, 計劃 `.trae/documents/20261106-stability-performance.md` |
 | 題目圖片清單（`findQuestionImage` 讀 `index.json`；加／刪圖要重跑） | `tools/gen_grammar_image_index.py`, `Q_folder/grammar/grammar_images/index.json`, `js/data.js`, Rule 101 |
 | 開機預載（戰鬥 BGM idle 預載 `preloadBattleBGM`；捕捉場景 `CaptureScene.preload`） | `js/app.js`（entry gate `unlockAudio`）, `js/audio.js`（`_loadBGMBuffer`、facade `preload/load`）, Rule 101／103 |
 | Power Up 改錯 | `js/powerup.js` |
 | 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98；150ms 合併寫入＋`flushState`，Rule 102） | `js/storage.js` |
-| Service Worker 分流（`swRoute`：跨域 API skip、版本化 cache-first、頁面 3 秒 timeout） | `sw.js`, `tools/_test_sw_strategy.js`, Rule 102 |
+| Service Worker 分流（`swRoute`：跨域 API skip、版本化 cache-first、頁面 3 秒 timeout） | `sw.js`, `tests/unit/sw-strategy.test.js`, Rule 102 |
 | 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz.js`, `js/audio.js`, Rule 102 |
-| 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tools/_test_sync_queue.js` |
+| 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tests/unit/sync-queue.test.js` |
 | Auth + RPC（鑽石/捕捉/扭蛋/exp；`authedFetch`、single-flight token 續期，Rule 96） | `js/supabase-auth.js` |
 | 網絡層（timeout／離線／錯誤分類／連線 toast／離線 pill `#net-offline`） | `js/core/net.js`（`Net.request`、`NetError`、`syncPill`），Rule 96／98 |
 | Schema / RPC SQL | `supabase/supabase-schema.sql`, `supabase/migrations/` |
@@ -32,19 +33,19 @@
 | 圖鑑 | `js/pokedex.js` |
 | 育成（飽肚值／拍檔／道具） | `js/pet.js` |
 | 戰鬥畫面轉橫（橫向紅框 host #view-battle） | `js/battle/landscape.js` |
-| 攜帶樹果戰鬥觸發（HELD 表、checkHeld／custapCheck） | `js/battle/state.js`, `tools/_test_held_berries.js`, `supabase/migrations/supabase-migrate-20261105g-held-berries.sql`（hold_berry） |
+| 攜帶樹果戰鬥觸發（HELD 表、checkHeld／custapCheck） | `js/battle/state.js`, `tests/unit/held-berries.test.js`, `supabase/migrations/supabase-migrate-20261105g-held-berries.sql`（hold_berry） |
 | 攜帶道具規則（第 5 項：只限樹果／Mega 石；進化石只可以「使用」；held_item 只經 RPC） | `js/bag.js`（`giveStone`、`returnHeldStones`）, `supabase/migrations/supabase-migrate-20261105k-held-item-lock.sql`（trigger + 收回 grant） |
-| Mega 進化（70 粒 Mega 石資料、MEGA 掣、megaEvolve） | `js/mega-data.js`（`tools/fetch_mega.py` 產生）, `js/battle/state.js`, `tools/_test_mega.js`, `assets/battle/pkmn/{front,back}/<dex>-mega*.png`（`tools/fetch_pkmn_sprites.py --mega`）, `supabase/migrations/supabase-migrate-20261105h-mega.sql` |
-| Mega 特性（Tough Claws／Drought／Pixilate／Parental Bond／Mold Breaker 等，招式分類表） | `js/battle/engine.js`（`abilityPowerMult`、`isContact`）, `js/battle/state.js`（`onSwitchIn`、`priorityOf`、`trappedBy`、Electric Terrain）, `tools/_test_mega_abilities.js` |
+| Mega 進化（70 粒 Mega 石資料、MEGA 掣、megaEvolve） | `js/mega-data.js`（`tools/fetch_mega.py` 產生）, `js/battle/state.js`, `tests/unit/mega.test.js`, `assets/battle/pkmn/{front,back}/<dex>-mega*.png`（`tools/fetch_pkmn_sprites.py --mega`）, `supabase/migrations/supabase-migrate-20261105h-mega.sql` |
+| Mega 特性（Tough Claws／Drought／Pixilate／Parental Bond／Mold Breaker 等，招式分類表） | `js/battle/engine.js`（`abilityPowerMult`、`isContact`）, `js/battle/state.js`（`onSwitchIn`、`priorityOf`、`trappedBy`、Electric Terrain）, `tests/unit/mega-abilities.test.js` |
 | 擊倒對手後問換 Pokémon（第 16 項；AI 戰免回合、PvP 當下回合 action） | `js/battle/battle.js`（`askYesNo`、`offerShift`、`shiftPick`） |
 | Trainer Avatar（第 14 項；104 個原作角色全身像、揀選器、雲端同步） | `js/avatars.js`, `assets/trainers/avatars/`（`tools/fetch_trainer_avatars.py`）, `js/sync.js`（`pushAvatar`）, `js/friends.js`（頁頭）, `supabase/migrations/supabase-migrate-20261105i-trainer-avatar.sql` |
 | PvP pre-battle 頁（第 13 項；雙方頭像、隊伍、戰績、對戰紀錄） | `js/battle/battle.js`（`showPreBattle`）, RPC `get_trainer_cards` |
 | PvP 結算核對（狀態第二期；兩邊報告對勝方） | `js/battle/battle.js`（`reportPvpResult`、`settleFriendV2`）, `supabase/migrations/supabase-migrate-20261105j-pvp-crosscheck.sql`（`battle_reports`、`report_battle_result`、`settle_friend_battle_v2`） |
 | 防作弊：進化石／Revival RPC、隨機 PvP 報告結算、battles 收權 | `js/care.js`（`awardStone`、`useStone`、`awardRevive`）, `supabase/migrations/supabase-migrate-20261106b-revive-award.sql`（`award_revive`）, `js/battle/battle.js`（`settleRandomPvp`）, `supabase/migrations/supabase-migrate-20261106-anticheat-stones-pvp.sql`（`award_stone`、`use_stone`、`settle_pvp_battle`、`_battles_guard` trigger） |
 | 背包（橫向紅框、三欄、轉手機提示） | `js/bag.js`, `tools/prototype-bag.html`（設計稿） |
-| HP／狀態／用藥規則（server RPC + guest 本地） | `js/care.js`, `tools/_test_care.js`, `supabase/migrations/supabase-migrate-20261105c-care-status-phase1.sql` |
+| HP／狀態／用藥規則（server RPC + guest 本地） | `js/care.js`, `tests/unit/care.test.js`, `supabase/migrations/supabase-migrate-20261105c-care-status-phase1.sql` |
 | 數值 / 進化 / moves | `js/pokemon.js`, `js/data.js`, `js/gens-data.js` |
-| 數值兜底（傷害 `_fin`、`sanitizeHp`、`hpRatio`、fit 重試、存檔計數 `_sanitizeStateNumbers`） | `js/battle/engine.js`, `js/battle/state.js`, `js/battle/battle.js`, `js/bag.js`, `js/battle/landscape.js`, `js/quiz.js`, `js/storage.js`, `tools/_test_numeric_guards.js`, Rule 99 |
+| 數值兜底（傷害 `_fin`、`sanitizeHp`、`hpRatio`、fit 重試、存檔計數 `_sanitizeStateNumbers`） | `js/battle/engine.js`, `js/battle/state.js`, `js/battle/battle.js`, `js/bag.js`, `js/battle/landscape.js`, `js/quiz.js`, `js/storage.js`, `tests/unit/numeric-guards.test.js`, Rule 99 |
 | GenPack | `js/genpack.js` |
 | Streak / Gym | `js/gym.js` |
 | Leaderboard | `js/leaderboard.js` |

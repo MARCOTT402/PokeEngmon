@@ -1,11 +1,15 @@
+"use strict";
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+process.chdir(require("path").join(__dirname, "../.."));   /* data／js 路徑以 repo root 為準 */
 /* Sync queue 持久化／backoff／毒批丟棄 + 存檔損壞備份 測試（Rule 98）
-   用法：node tools/_test_sync_queue.js */
+   用法：npm test（tests/unit/sync_queue.test.js） */
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-let pass = 0, fail = 0;
-const ok = (c, name) => { if (c) pass++; else { fail++; console.log("FAIL", name); } };
+
+const ok = (c, name) => { test(String(name), () => assert.ok(c, String(name))); };
 const tick = (ms) => new Promise(r => setTimeout(r, ms));
 
 function makeEnv(store) {
@@ -43,7 +47,7 @@ function makeEnv(store) {
   ctx._listeners = listeners;
   ctx._docListeners = docListeners;
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "../js/sync.js"), "utf8"), ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "../../js/sync.js"), "utf8"), ctx);
   return ctx;
 }
 
@@ -137,13 +141,11 @@ function makeEnv(store) {
   vm.createContext(sctx);
   /* Object.keys(localStorage) 喺真瀏覽器列 key；vm 版本用 store 模擬 */
   Object.defineProperty(sctx.localStorage, "__keys", { value: () => [...sstore.keys()] });
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "../js/storage.js"), "utf8").replace(
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "../../js/storage.js"), "utf8").replace(
     "Object.keys(localStorage)", "localStorage.__keys()"), sctx);
   const st = vm.runInContext("loadState()", sctx);
   const backups = [...sstore.keys()].filter(k => k.startsWith("pokeengmon_state_corrupt_"));
   ok(backups.length === 1 && sstore.get(backups[0]) === "{broken json", "corrupt state backed up verbatim");
   ok(st && typeof st === "object" && sctx.__stateRecovered === true && sctx.reported === 1, "default state + flagged + reported");
 
-  console.log(`sync queue / storage: ${pass} passed, ${fail} failed`);
-  process.exit(fail ? 1 : 0);
 })();

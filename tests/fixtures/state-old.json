@@ -1,0 +1,61 @@
+{
+  "device_id": "",
+  "playerName": "The PokéEngmon Trainer",
+  "nameCustomized": false,
+  "diamonds": 0,
+  "normalPulls": 0,
+  "totalSets": 0,
+  "totalCorrect": 0,
+  "totalQuestions": 0,
+  "bestStreak": 0,
+  "practiceDays": {},
+  "entries": [
+    {
+      "uid": "old-1",
+      "chainKey": "bulbasaur",
+      "exp": "4000",
+      "ivs": {
+        "hp": 20,
+        "atk": 10,
+        "def": 31,
+        "spa": 5,
+        "spd": 0,
+        "spe": 15
+      },
+      "evs": {},
+      "evPoints": 2,
+      "candies": 1,
+      "dupes": 3,
+      "stage": 1,
+      "ownedSpecies": [
+        1
+      ],
+      "obtainedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "uid": "old-2",
+      "chainKey": "eevee",
+      "exp": 120,
+      "ivs": {},
+      "evs": {},
+      "evPoints": 0,
+      "candies": 0,
+      "dupes": 0,
+      "stage": 1,
+      "ownedSpecies": [
+        133
+      ],
+      "obtainedAt": "2026-10-21T00:00:00.000Z"
+    }
+  ],
+  "activeUid": "old-1",
+  "records": {},
+  "customQuestions": [],
+  "unlockedGen": 1,
+  "gymBadges": [],
+  "items": {
+    "food": 0,
+    "premium": 0,
+    "revive": 0
+  }
+}

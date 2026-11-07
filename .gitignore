@@ -17,3 +17,6 @@ tools/.cache_pkmn/
 
 # Headless Chrome user-data-dir for CDP capture script
 prototype/**/.chrome-tmp/
+
+# ESLint globals：npm run lint 前由 tools/audit/gen-eslint-globals.mjs 自動生成
+eslint.globals.json

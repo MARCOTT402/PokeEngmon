@@ -27,11 +27,12 @@
 - **文件位置**：spec／design 寫入 `.trae/specs/`，plan／task 寫入 `.trae/documents/`（檔名 `YYYYMMDD-<topic>.md`）；唔好開 `docs/superpowers/`。
 - **Commit**：plan 入面唔好有自動 commit 步驟；只喺用戶要求時用 `python tools/git_commit_push.py` commit，唔好手動 bump 版本（semantic-release 負責）。
 - **Worktree／分支**：預設直接喺 `main` 工作，唔開 worktree；只有用戶要求或大型實驗性改動先開。
-- **TDD／驗證**：project 冇 `npm test`，唔好為咗 TDD 起 test framework。驗證用題目 skill 指定嘅方法（瀏覽器 preview 檢查、console 冇 error、必要時一次性 Node script）；verification-before-completion 照用，證據就係呢啲檢查結果。
+- **TDD／驗證**：單元測試用 Node 內建 `node:test`（零依賴，唔好加 Jest／Vitest 等 framework）。`npm test` 跑 `tests/unit/*.test.js`（用 `tests/helpers/load.js` 喺 vm 載入 global script）；新邏輯／修 bug 要加測試入 `tests/unit/`，唔好再開 `tools/_test_*.js` 一次性 script。`npm run lint`（ESLint，warning 只准減）。UI／版面用 `npm run test:e2e`（要先開 8080 static server）＋瀏覽器 preview、console 冇 error。CI 喺 release 前跑 lint + `npm test`，失敗唔會 release。verification-before-completion 照用，證據就係呢啲檢查結果。
 - **同現有規則嘅次序**：改碼前照讀 preop 總索引指向嘅題目 skill；修完 bug 照做 post-fix lesson capture（加 Rule N）。Superpowers 指引同本檔或 `.cursor/rules/*` 衝突時，以本檔為準。
 
 ## 常用指令
 
+- 測試：`npm test`（單元）、`npm run test:coverage`、`npm run lint`、`npm run test:e2e`（版面，要 8080 server）
 - 本地 iPhone 外框預覽：`npm run preview:iphone`（`tools/device-preview.html`，基準 iPhone 17 Pro Max 440×956，見 Rule 30）
 - 本地改版本號預覽：改 `package.json` version → `npm run sync-version`（release 由 CI semantic-release 自動 bump，唔好手改 `js/app.js`／`sw.js`／`index.html` 版本）
 - Commit／push（只喺用戶要求時）：`python tools/git_commit_push.py --paths …`，Conventional Commits（`feat:`／`fix:`／`docs:`／`chore:`）

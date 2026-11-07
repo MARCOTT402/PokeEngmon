@@ -110,7 +110,7 @@ function moveInfo(slug) {
 }
 
 /* 已實作效果嘅特性白名單 —— 引擎（engine.js / state.js）真係會影響戰鬥嘅 slug。
-   新增特性嘅唯一流程：① 引擎寫邏輯 ② 加入呢個清單 ③ tools/_test_battle.js 加測試。
+   新增特性嘅唯一流程：① 引擎寫邏輯 ② 加入呢個清單 ③ tests/unit/battle.test.js 加測試。
    唔喺清單嘅特性一律唔會派俾精靈，避免「有特性名但打落去冇反應」嘅死功能。 */
 const IMPLEMENTED_ABILITIES = [
   /* 能力值類 */

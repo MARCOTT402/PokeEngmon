@@ -1,11 +1,15 @@
-/* sw.js fetch 策略自測（Rule 102）：node tools/_test_sw_strategy.js
+"use strict";
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+process.chdir(require("path").join(__dirname, "../.."));   /* data／js 路徑以 repo root 為準 */
+/* sw.js fetch 策略自測（Rule 102）：npm test（tests/unit/sw_strategy.test.js）
    喺 vm 入面載 sw.js，stub self／caches／fetch，驗 swRoute 分流同 networkFirst 3 秒 timeout。 */
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-let pass = 0, fail = 0;
-const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log("FAIL:", m); } };
+
+const ok = (c, m) => { test(String(m), () => assert.ok(c, String(m))); };
 
 function load(host) {
   const store = new Map();               /* key: url（冇 query 版本都存） */
@@ -31,7 +35,7 @@ function load(host) {
     fetch: (...a) => fetchImpl(...a)
   };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "sw.js"), "utf8") + "\n;this.__swRoute = swRoute; this.__ver = SW_VERSION; this.__nf = networkFirst;", ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "../..", "sw.js"), "utf8") + "\n;this.__swRoute = swRoute; this.__ver = SW_VERSION; this.__nf = networkFirst;", ctx);
   return { ctx, store, setFetch: f => { fetchImpl = f; } };
 }
 
@@ -88,6 +92,4 @@ const R = (url, o = {}) => ({ url, method: o.method || "GET", mode: o.mode || "c
   res = await P.ctx.__nf(R(O + "data/late.json"), O + "data/late.json");
   ok((await res.text()) === "late", "slow network + no cache → wait for network");
 
-  console.log(`${pass} passed, ${fail} failed`);
-  process.exit(fail ? 1 : 0);
 })();

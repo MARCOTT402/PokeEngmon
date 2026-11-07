@@ -95,7 +95,7 @@ if (!e.request.url.startsWith("http")) return;
 
 - **SW 唔可以 cache 跨域 API**：`sw.js` 舊做法係跨域請求全部 cache-first，Supabase 嘅 `GET /rest/v1/user_account?select=*`（Sync.pull）、`/battles?id=eq.…`（PvP poll）會返**上一次**嘅回應，同一部機換帳號甚至會見到上個帳號嘅資料。而家 `swRoute()`：跨域只 cache `request.destination` 係 image／audio／font／video 嘅；其他（fetch() 出去嘅 API）`skip`，交返瀏覽器。加新跨域 fetch 唔使改 SW。
 - **分流表**（`swRoute`）：navigate／`/`／`index.html` → `page`（network-first，`cache: "no-cache"`，3 秒冇回應用 cache，fallback `./index.html`）；`?v=<SW_VERSION>` → `versioned`（cache-first，precache key 冇 query 所以 `ignoreSearch`）；`/assets/` → cache-first；其他同源（CSV、`data/*.json`）→ network-first＋3 秒；`sw.js` 本身 skip。`SW_VERSION` 由 `CACHE_NAME` 切出嚟，semantic-release 一齊 bump（Rule 70），唔使另外改。
-- **localhost 唔行 versioned cache-first**（`IS_DEV`）：本地改 code 唔 bump 版本，cache-first 會食舊檔。所以本地 bench 唔反映 SW 收益；SW 邏輯用 `node tools/_test_sw_strategy.js`（vm stub，20 項：分流、慢網 3 秒轉 cache、離線即刻 cache、離線冇 cache 回 `Response.error()` 唔 hang）。
+- **localhost 唔行 versioned cache-first**（`IS_DEV`）：本地改 code 唔 bump 版本，cache-first 會食舊檔。所以本地 bench 唔反映 SW 收益；SW 邏輯用 `npm test`（`tests/unit/sw-strategy.test.js`）（vm stub，20 項：分流、慢網 3 秒轉 cache、離線即刻 cache、離線冇 cache 回 `Response.error()` 唔 hang）。
 - **`saveState()` 合併寫入**（`js/storage.js`）：記憶體 `_state` 一直最新（`loadState` 讀記憶體），只係延後落 localStorage；150 ms 內多次 call 合併一次（重度存檔 190 KB 每次寫 ~4 ms @4× CPU）。`pagehide`／`beforeunload`／`visibilitychange: hidden` 即刻 `flushState()`。**之後即刻要讀 localStorage 原文、或者會 `removeItem` 其他 key 嘅流程**（reset、登出清進度）用 `saveState({ now: true })`。Node 測試 stub 咗 `setTimeout` 嘅要改用 `{ now: true }`／`flushState()`。
 - **預載下一題**（`Quiz._preloadNext`，render 後 400 ms）：只預載 `queue[1]`；word 題 `new Image()`＋`CaptureScene.audio.preloadWord(wordAudioURL(word))`（只 fetch＋decode 入 `_oneShotBufs`，冇 AudioContext 唔做）；句子題 `findQuestionImage`。`playWord` 撞正預載緊會排隊（`waiters`／`failers`），預載失敗唔快取，照行 fallback。
 - 驗收：headless 連續 20 次 `saveState` → localStorage 寫 1 次、hidden 即刻落地、NaN 照兜底；word 題答第 1 題時 `_oneShotBufs[下一題].buf` 已有、下一題圖片已 request；SW controller 之後離線 reload 開到（冇 fatal）；`_test_sm2_cache`、`_test_sync_queue`、`_test_numeric_guards`、`_test_battle` 全過。
@@ -119,3 +119,13 @@ if (!e.request.url.startsWith("http")) return;
 - 新音檔：ffmpeg 揀中段（`-ss 120`）、尾 3 秒 qsin crossfade 入頭 3 秒做無縫 loop、`ebur128` 量 loudness 對齊 Flat Water（約 -13～-15 LUFS，連續噪音寧願細少少）、`alimiter` 防 clip、80k 44.1k。指令見 incidents。
 - 選用嘅大音檔（每首 ~1.8 MB）**唔加 sw.js precache**（開機減重，Rule 103）；`/assets/` 本身 cache-first，播過一次就離線可用。sw.js 留註解講明。
 - 驗收：headless 切歌 → `_townSrcUrl` 換、`buffer.duration === 180`、`loop`；`stopTownBGM` 後切歌 → 冇 `_townSrc`、冇 pending；`startTownBGM` → 播新曲；reload 後 radio 保持；SQL 查 `role_column_grants` 有 `bgm_track`（Rule 54）；`test-sheets`、`test-touch-targets` 照過。
+
+### Rule 106 — 單元測試：用 `npm test`（`node:test`）＋`tests/helpers/load.js`；vm 跨 realm 要先 clone 先 deepEqual；timer 要 unref；ESLint 跨檔 global 自動生成
+
+- 新邏輯／修 bug 嘅測試一律寫入 `tests/unit/<topic>.test.js`（`node:test` + `node:assert/strict`），**唔好再開 `tools/_test_*.js` 一次性 script**；CI release 前跑 `npm run lint` + `npm test`。
+- 載入 App script 用 `loadScripts(files, { expose: [...] })`：每次 call 係全新 vm context（`storage.js` 嘅 `_state` 等模組級快取唔會跨測試污染）；`fetch` 讀 repo 檔；`localStorage` 替身支援 `Object.keys`（`_backupCorruptState` 靠佢）。
+- vm 入面嘅 Array／Object 同 Node 唔同 realm：`assert.deepEqual` 會報「same structure but not reference-equal」→ 先 `JSON.parse(JSON.stringify(x))` 或 `{ ...obj }` 先比較。
+- App 有 `setInterval`／debounce `setTimeout`（Guard 上報、`saveState` 合併）→ loader 已 `unref`，否則測試 process 吊住唔完；自己寫 context 都要照做。
+- Characterization test 記錄**現行為**（`MAX_LEVEL` = 99，唔係 100）；發現疑似 bug 寫 `KNOWN:`，唔好喺測試 task 順手改產品碼。寫完做一次 mutation（故意改壞產品碼 → 測試要紅 → `git checkout --` 還原）。
+- ESLint：跨檔 global 由 `tools/audit/gen-eslint-globals.mjs` 生成（`prelint`），`no-redeclare` 要 `builtinGlobals: false`、`no-unused-vars` 用 `vars: "local"`；warning 上限喺 `package.json` `--max-warnings`，只准減。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

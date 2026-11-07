@@ -1,10 +1,14 @@
+"use strict";
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+process.chdir(require("path").join(__dirname, "../.."));   /* data／js 路徑以 repo root 為準 */
 /* 數值兜底測試（Rule 99）：傷害公式、HP、存檔計數、Guard helpers 遇到 undefined／NaN／字串都要回有限值
-   用法：node tools/_test_numeric_guards.js */
+   用法：npm test（tests/unit/numeric_guards.test.js） */
 const fs = require("fs");
 const vm = require("vm");
 
-let pass = 0, fail = 0;
-const t = (name, cond) => { if (cond) pass++; else { fail++; console.log("FAIL:", name); } };
+
+const t = (name, cond) => { test(String(name), () => assert.ok(cond, String(name))); };
 const fin = v => typeof v === "number" && Number.isFinite(v);
 
 /* ---------- 戰鬥 ---------- */
@@ -121,6 +125,3 @@ t("posDim(0,100)=100", G.posDim(0, 100) === 100);
 t("posDim(-3)=1", G.posDim(-3) === 1);
 t("safeJSON bad", G.safeJSON("{bad", "fb") === "fb");
 t("safeJSON null", G.safeJSON("null", "fb") === "fb");
-
-console.log(`numeric guards: ${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);

@@ -128,3 +128,14 @@ Skill: Rule 103 added
 - Migration `supabase-migrate-20261107-bgm-track.sql` 經 MCP 執行，查 `role_column_grants`／check constraint 確認。
 
 Skill: Rule 105 added
+
+## Rule 106 — 單元測試：用 `npm test`（`node:test`）＋`tests/helpers/load.js`；vm 跨 realm 要先 clone 先 deepEqual；timer 要 unref；ESLint 跨檔 global 自動生成
+
+- 2026-11-07 商用級計劃 Phase A：10 個 `tools/_test_*.js`（308 項）遷移去 `tests/unit/`，只換 pass/fail helper，數目 308 = 308；新增 39 項 characterization。
+- 第一次跑 probe：`loadState()` 之後 process 唔完（Guard／`saveState` timer）→ loader `unref`。
+- `_buildCells` 測試 6 個「失敗」全部係 vm 跨 realm array 比較，唔係產品 bug → clone 後比。
+- `expAtLevel(25, 100)` 回 970299（99³）：`MAX_LEVEL = 99` 係設計，測試假設錯。
+- ESLint 第一次跑 209 個 `no-redeclare` error：ESLint 9 預設 `builtinGlobals: true`，將「本檔頂層宣告」同 generated globals 撞 → 關 `builtinGlobals`。
+- 測試發現（未修，記入計劃 §9 KNOWN）：彎撇號 `’` ≠ `'` 會判錯。
+
+Skill: Rule 106 added
