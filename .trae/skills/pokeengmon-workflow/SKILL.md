@@ -195,7 +195,7 @@ if (!e.request.url.startsWith("http")) return;
 - 訂閱者 throw 唔會影響其他訂閱者，錯誤會經 `Guard.report` 上報。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
-### Rule 116 — `App` 方法分喺 `js/app/*.js`（`Object.assign(App, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
+### Rule 116 — `App`／`Quiz`／`Gacha` 方法分喺 `js/app/`、`js/quiz/`、`js/gacha/`（`Object.assign(X, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
 
 - `js/app.js` 只剩 `APP_VERSION`、`App` 嘅狀態屬性同常數（`SHEET_MS` 等）、loading watchdog、`DOMContentLoaded` 開機。所有方法都喺 `js/app/`，`index.html` 會喺 `js/app.js` 之後順序載入：
   - `router.js`：`showView`、畫面鎖
@@ -210,8 +210,13 @@ if (!e.request.url.startsWith("http")) return;
   - `boot.js`：`init` 只負責次序，順序 call 13 個 `_boot*` 步驟：`_bootSession` → `_bootSheets(st)` → `_bootHomeButtons` → `_bootLoginState` → `_bootNavButtons` → `_bootQuizControls` → `_bootKeyboardAndClicks` → `_bootCalendarAndReview` → `await _bootLoadData` → `_bootAfterFirstRender(st)` → `_bootClickFeedback` → `_bootAudio` → `_bootServiceWorker`。加新開機邏輯就放入啱嘅步驟；各步驟之間唯一共用嘅係 `st`（用參數傳入），唔好開新嘅跨步驟局部變數。
 - Skill／舊文件寫住「`js/app.js` 嘅 `_xxx`」：用方法名 grep `js/app/` 搵。
 - 寫法：每個檔係 `Object.assign(App, { 方法… });`，`this`／`App.xxx` 照用。App 冇 getter，所以 `Object.assign` 安全；如果將來加 getter，要改用 `Object.defineProperties`。
-- `tests/unit/app-surface.test.js` 會跟 `index.html` 嘅載入次序載入 `app.js` 同 `js/app/*.js`，核對 `App` 嘅成員清單，同埋每個方法原始碼嘅 SHA-1 指紋（`tests/fixtures/app-surface.json`）。漏咗 `<script>`、搬漏方法、搬嗰陣改咗代碼都會紅。**指紋計之前一定要將換行統一做 `
-`**：Windows checkout 係 CRLF、CI（Linux）係 LF，唔統一嘅話本機綠、CI 全紅。驗證時要真係將副本轉成 LF 再跑；Windows 上 `git archive` 匯出嘅都仲係 CRLF。**刻意改 App 方法之後**要跑 `node tests/unit/app-surface.test.js --update` 更新指紋，喺 commit 講明原因。
+- `tests/unit/app-surface.test.js` 會跟 `index.html` 嘅載入次序載入 `app.js` 同 `js/app/*.js`，核對 `App` 嘅成員清單，同埋每個方法原始碼嘅 SHA-1 指紋（`tests/fixtures/app-surface.json`）。漏咗 `<script>`、搬漏方法、搬嗰陣改咗代碼都會紅。**指紋計之前一定要將換行統一做 `\n`**：Windows checkout 係 CRLF、CI（Linux）係 LF，唔統一嘅話本機綠、CI 全紅。驗證時要真係將副本轉成 LF 再跑；Windows 上 `git archive` 匯出嘅都仲係 CRLF。**刻意改 App 方法之後**要跑 `node tests/unit/app-surface.test.js --update` 更新指紋，喺 commit 講明原因。
+- 同一做法（P2.5）亦用咗喺 `Quiz` 同 `Gacha`：`js/quiz.js`／`js/gacha.js` 只剩狀態屬性（`Quiz._phys*`、`_catchThreshold`；`Gacha` 嘅拖拉／充能／10 連狀態）同頂層常數（`GACHA_BALL`、`GACHA_*`），方法喺：
+  - `js/quiz/`：`session.js`（`start`、`startGym`、`_renderQuestion`、`next`、`quit`、`finish`）、`hud.js`（進度段、連擊、確認掣）、`cells.js`（逐字格、`_norm`、`_onInput`）、`keyboard.js`（App 鍵盤，Rule 107）、`hints.js`、`catch.js`（捕捉模式物理）、`check.js`（`check`、`_complete`）、`media.js`（字卡、圖片、`_preloadNext`、讀音）、`dialogs.js`（`confirmQuit`、`openReport`、`openSettings`）
+  - `js/gacha/`：`core.js`（`open`、`abort`、`_setT`、`_refreshControls`、`rollRarity`）、`pull.js`（單抽結算、`_applyServerPull`／`_applyLocalPull`）、`charge.js`（充能 10 連）、`multi.js`（10 連）、`arm.js`（手臂拉動、`_fitStage`）、`scene.js`（單抽演出、檢視卡）
+- `app-surface.test.js` 用 `OBJECTS` 清單同時核對 App、Quiz、Gacha（fixture 按物件分 key）。新增大物件分檔：加一行入 `OBJECTS`，拆之前先 `--update` 記錄指紋。
+- 直接載入主檔嘅測試（例如 `quiz-answer.test.js`）要跟 `index.html` 載埋全部 mixin，唔係淨係 `js/quiz.js`，否則方法係 `undefined`。
+- `battle/battle.js` 係 IIFE closure（方法共用幾十個閉包變數），**唔可以**用 `Object.assign` 搬；要另外設計（state object），唔好硬套。
 - 搬方法唔好人手剪貼：用 TypeScript AST（`node_modules/typescript`）攞成員範圍（`getFullStart()` 包埋前面嘅註解，再加後面嘅逗號）。陷阱：上一行**行尾**嘅註解會被計做下一個成員嘅前置註解，搬完要逐行比對，例如 `OVERLAY_EXIT_MS` 嘅註解試過跟咗去 `router.js`。
 - 新檔要同時加 `index.html`（`js/app.js` 之後）同 `sw.js` ASSETS；`sw-assets.test.js` 同 `deploy-manifest.test.js` 會擋。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

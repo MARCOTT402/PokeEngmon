@@ -483,6 +483,6 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
-## Rule 116 — `App` 方法分喺 `js/app/*.js`（`Object.assign(App, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
+## Rule 116 — `App`／`Quiz`／`Gacha` 方法分喺 `js/app/`、`js/quiz/`、`js/gacha/`（`Object.assign(X, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

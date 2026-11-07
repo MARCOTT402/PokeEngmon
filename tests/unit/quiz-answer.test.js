@@ -4,7 +4,10 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { loadScripts } = require("../helpers/load.js");
 
-const { Quiz } = loadScripts(["js/quiz.js"], { expose: ["Quiz"] });
+/* Quiz 方法分喺 js/quiz/*.js（P2.5）：跟 index.html 次序載入主檔＋全部 mixin */
+const QUIZ_SCRIPTS = [...require("fs").readFileSync(require("path").join(__dirname, "../../index.html"), "utf8")
+  .matchAll(/<script src="(js\/quiz(?:\.js|\/[^"?]+))\?/g)].map((m) => m[1]);
+const { Quiz } = loadScripts(QUIZ_SCRIPTS, { expose: ["Quiz"] });
 /* vm context 嘅 Array 同 Node 唔同 realm → 先 JSON clone 先 deepEqual */
 const plain = (v) => JSON.parse(JSON.stringify(v));
 const tokensOf = (q) => plain(Quiz._buildCells(q).map((c) => [...c.tokens].sort()));

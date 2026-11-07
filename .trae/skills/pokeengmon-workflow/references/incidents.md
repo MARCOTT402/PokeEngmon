@@ -204,7 +204,7 @@ Skill: Rule 114 added
 
 Skill: Rule 115 added
 
-## Rule 116 — `App` 方法分喺 `js/app/*.js`（`Object.assign(App, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
+## Rule 116 — `App`／`Quiz`／`Gacha` 方法分喺 `js/app/`、`js/quiz/`、`js/gacha/`（`Object.assign(X, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
 
 - 2026-11-07 總計劃 P2.2（現代化 2.2）。`js/app.js` 4,149 行 → 72 行，加 10 個 `js/app/*.js`（共約 4,160 行）。用 TypeScript AST 搬 96 個方法（104 個成員入面，狀態屬性同常數留喺 `app.js`）。
 - 驗證：
@@ -220,3 +220,15 @@ Skill: Rule 115 added
 - `init`（828 行）拆做 13 個 `_boot*` 步驟：用 AST 列出 111 句頂層語句，同埋每句宣告／用到嘅局部變數。跨段共用只有 `st`（第 86 句入面嘅 `st` 係區塊內重新宣告嘅），冇頂層 `return`、冇 `arguments`。每個步驟只包連續語句，所以執行次序唔變；腳本重新 parse 之後核對 110 句語句一字不差。指紋 diff：舊成員只有 `init` 改咗，新增 13 個 `_boot*`。瀏覽器實測：開機、登入閘、各步驟綁定嘅掣、sheet、Esc、Service Worker 都正常。
 
 Skill: Rule 116 added
+
+### 2026-11-07 P2.5：`Quiz`／`Gacha` 用同一方法拆
+
+- `js/quiz.js` 2,012 → 33 行＋9 個 `js/quiz/*.js`（76 個方法）；`js/gacha.js` 1,737 → 44 行＋6 個 `js/gacha/*.js`（66 個方法）。狀態屬性同頂層常數留喺主檔。
+- 驗證：
+  - `app-surface.test.js` 擴展到 App／Quiz／Gacha，拆之前記錄指紋，拆完全部一樣（App 嘅指紋同上一版 fixture 完全相同）。
+  - 逐行多重集合比對：只有每個檔最後一個方法嘅 `},` 變 `}`（Quiz 8、Gacha 5），另外多咗檔頭。
+  - 397 個測試全過、lint 0、typecheck 0；e2e 10/11（只有已知嘅 P9b）；瀏覽器實際答一題（判對、記錄、下一題）、提示、離開、開扭蛋同拉手臂，冇 JS error。
+- 新陷阱：`quiz-answer.test.js` 原本淨係載 `js/quiz.js`，拆完會 `_buildCells is not a function`；改做跟 `index.html` 載主檔＋全部 mixin。
+- 拆檔 script 加咗「行尾註解會跟住下一個成員搬走」嘅自動警告，今次冇觸發。
+
+Skill: already covered by Rule 116（已擴展）

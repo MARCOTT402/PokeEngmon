@@ -11,7 +11,7 @@
 | 砌 HTML（`html``` tagged template 自動 escape、`Html.raw()` 可信 markup、`Html.render(el, tpl)`；新 code 一律用，Rule 111） | `js/core/html.js`（喺 `dom.js` 之後載入）, `tests/unit/html.test.js` |
 | 型別檢查（`npm run typecheck` = `tsc` noEmit；classic script 共用 global；逐檔 `// @ts-check`，清單只准加；CI release 前跑；Rule 109） | `tsconfig.json`, `types/globals.d.ts`（`window.X` 模組＋`module.exports` 檔；頂層已有 `const X` 嘅唔可以再 declare，TS2451）, `types/ts-check-files.json`, `tests/unit/ts-check-ratchet.test.js`, 總計劃 P1.1 |
 | z-index 層級 token（全域層 `--z-*`，數值同註解集中喺 `:root`；Rule 110） | `css/style.css`（`:root`）, `tests/unit/z-tokens.test.js`, `tools/audit/check-z-tokens.mjs`（同 git 版本逐條比較） |
-| 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
+| 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`（狀態）＋`js/quiz/*.js`（`session`、`hud`、`cells`、`keyboard`、`hints`、`catch`、`check`、`media`、`dialogs`；Rule 116）, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
 | 結算畫面（分數圈／stat／錯題預覽） | `js/app/settlement.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 戰鬥特效 prototype（兩邊用 App 真正嘅戰鬥 HTML＋`css/style.css`＋`PokeSprite`＋`MoveAnim`；右邊背景同精靈改由 PixiJS 7 畫，命中先加 hit-stop、白閃、震屏、粒子、傷害數字、HP 殘影、bloom、暴擊推近；總計劃 P1.4，唔部署） | `tools/prototype-battle-fx.html`（要經 http：本地 8080 開 `/tools/prototype-battle-fx.html`；PixiJS／pixi-filters 由 jsDelivr 載入） |
@@ -26,7 +26,7 @@
 | 本地存檔（壞存檔先備份 `pokeengmon_state_corrupt_*`、寫唔落提示，Rule 98；150ms 合併寫入＋`flushState`，Rule 102） | `js/storage.js` |
 | Store（`Store.get`／`select`／`update`／`subscribe`，包住本地存檔；舊式 `saveState()` 都會通知訂閱者；Rule 115） | `js/store.js`（喺 `storage.js` 之後載入）, `js/storage.js`（`saveState` 叫 `Store._changed`）, `tests/unit/store.test.js` |
 | Service Worker 分流（`swRoute`：跨域 API skip、版本化 cache-first、頁面 3 秒 timeout） | `sw.js`, `tests/unit/sw-strategy.test.js`, Rule 102 |
-| 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz.js`, `js/audio.js`, Rule 102 |
+| 答題預載下一題（`Quiz._preloadNext`、`CaptureScene.audio.preloadWord`） | `js/quiz/media.js`, `js/audio.js`, Rule 102 |
 | 雲端 sync（持久化 queue `pokeengmon_sync_queue_v1`、backoff、keepalive，Rule 98） | `js/sync.js`, `tests/unit/sync-queue.test.js` |
 | Auth + RPC（鑽石/捕捉/扭蛋/exp；`authedFetch`、single-flight token 續期，Rule 96） | `js/supabase-auth.js` |
 | 網絡層（timeout／離線／錯誤分類／連線 toast／離線 pill `#net-offline`） | `js/core/net.js`（`Net.request`、`NetError`、`syncPill`），Rule 96／98 |
@@ -35,8 +35,8 @@
 | 音效引擎（BGM、SFX、單字錄音；`window.CaptureScene` facade） | `js/audio.js`, Rule 103 |
 | 背景音樂選擇（Settings → Audio → Music track：Flat Water／Brown Noise／Focus Tones，3 分鐘 loop；`state.bgmTrack` ↔ 雲端 `user_account.bgm_track`） | `js/storage.js`（`BGM_TRACKS`、`getBgmTrack/setBgmTrack`）, `js/audio.js`（`_townUrl`、`switchTownTrack`）, `js/app/settings.js`（`_syncBgmTrack`）, `js/sync.js`（pull／`patchAccount`）, `assets/bgm/focus-*.mp3`, migration `supabase-migrate-20261107-bgm-track.sql` |
 | 對戰字型（emerald 拉丁子集 woff2＋原 ttf 互補 `unicode-range`） | `assets/fonts/pokemon-emerald-pro-latin.woff2`, `css/style.css` `@font-face`, Rule 103 |
-| 扭蛋 | `js/gacha.js` |
-| 動畫倍速 1×／2×／3×（捕捉、扭蛋、進化；Settings → Gameplay；只存本機 `pe_anim_speed`；GSAP `globalTimeline.timeScale` + `<html>` `--anim-spd`，Rule 95） | `js/anim-speed.js`（`AnimSpeed.begin/end/ms/badge`）, `js/capture.js`（`_after`）, `js/gacha.js`（`_setT`、`_spdBegin/_spdEnd`）, `js/evolve-scene.js`（`_later`）, `js/app/settings.js`（`_syncAnimSpeed`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
+| 扭蛋 | `js/gacha.js`（狀態、`GACHA_*` 常數）＋`js/gacha/*.js`（`core`、`pull`、`charge`、`multi`、`arm`、`scene`；Rule 116） |
+| 動畫倍速 1×／2×／3×（捕捉、扭蛋、進化；Settings → Gameplay；只存本機 `pe_anim_speed`；GSAP `globalTimeline.timeScale` + `<html>` `--anim-spd`，Rule 95） | `js/anim-speed.js`（`AnimSpeed.begin/end/ms/badge`）, `js/capture.js`（`_after`）, `js/gacha/core.js`（`_setT`、`_spdBegin/_spdEnd`）, `js/evolve-scene.js`（`_later`）, `js/app/settings.js`（`_syncAnimSpeed`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
 | 全鍵盤操作（↑↓←→ 空間導航、Enter、Esc 關 overlay／返回、開 sheet／modal 自動焦點＋還焦點、overlay Tab 困住、`?` 快捷鍵一覽；捷徑層 `SHORTCUTS`（主頁 S／1–4／D／G／C／Q／B、選題 S、頁面 H、戰鬥 F／B／S／R／1–4／M／Y／N、圖鑑詳情 Shift+←／→）＋鍵盤模式 badge＋開關（`pe_kbd_shortcuts`）；捕捉 Space／Enter；背包 Space 拎起放低；戰鬥對話 Enter 推進；Settings → Help → Keyboard shortcuts 只喺滑鼠裝置顯示；Rule 97） | `js/keys.js`（`Keys.context/move/escape/showHelp`、`SHORTCUTS`、`renderBadges`）, `js/capture.js`（keydown Space／Enter）, `js/bag.js`（`Drag` kbd carry）, `js/pokedex.js`（`stepDetail`）, `js/battle/battle.js`（`waitTap` 鍵盤）, 測試 `tools/responsive/test-keys.mjs`、`test-anim-speed.mjs`, `css/style.css`（`[data-kbd-auto]:focus-visible`、`.kbd-only`、`.kbd-help`）, `js/app/boot.js`（答題 Enter 讓位畀焦點掣、`btn-kbd-help`）, 計劃 `.trae/documents/20261106-keyboard-and-capture-speed.md` |
 | 圖鑑 | `js/pokedex.js` |
 | 育成（飽肚值／拍檔／道具） | `js/pet.js` |
