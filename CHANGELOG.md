@@ -1,3 +1,10 @@
+## [1.69.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.2...v1.69.3) (2026-11-07)
+
+
+### Performance Improvements
+
+* lazy-load the 3D capture scene and slim first-load assets ([ee59776](https://github.com/MARCOTT402/PokeEngmon/commit/ee5977607f4ac4f44672da30500c2cd50adc1bc3))
+
 ## [1.69.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.69.1...v1.69.2) (2026-11-07)
 
 
