@@ -84,3 +84,20 @@ Skill: Rule 92 added
 - 驗證：新 `tools/_test_numeric_guards.js` 30/30；battle 97 PASS、battle_care／care／held_berries／mega／mega_abilities 全過；test-rotate 18/18、test-battle-fit 7/7；browser 答題＋返主頁＋即時 diamonds undefined → 0 有記錄。
 
 Skill: Rule 99 added
+
+## Rule 117 — `battle.js` 分喺 `js/battle/ui/*.js`：閉包狀態喺 `BattleUI._.S`、跨檔 call 用 `B.xxx`；改戰鬥邏輯前後跑固定 seed 重播測試
+
+- 2026-11-08 總計劃 P2.5。`js/battle/battle.js` 係 IIFE 閉包（131 個 function、34 個 `let`、11 個數據表），唔可以好似 App／Quiz／Gacha 咁用 `Object.assign` 搬。
+- 做法：用 TypeScript checker 逐個 identifier 查佢指向邊個宣告，自動改寫 663 處（狀態 434、跨檔 function 219、數據 10），分 450 行；同名局部變數 41 處（`foe` 25、`mode` 8、`me` 6、`state` 2）自動避開。
+- 驗證：
+  - 還原比對：143 個 statement 將 `S.`／`B.` 還原之後同原本逐字一樣。
+  - 固定 seed 重播：改之前錄基準，連續 3 次比較全部一致（證明測試本身穩定）；拆完 3 場 255 條記錄、133 次隨機數完全一樣。
+  - 397 個單元測試、lint 0（`no-undef` 證明冇漏改跨檔名）、typecheck 0；e2e；瀏覽器開選單、訓練員、難度、開戰。
+- 寫重播測試時撞到嘅非決定性（全部係測試問題，唔係 app bug）：
+  1. 開場對白出 caret 之後 650ms 先開始等 tap，太早撳會被食咗 → caret 喺度就一直撳。
+  2. 冷啟動慢，訓練員列表多 render 一次，用多咗隨機數 → 撳難度前重新播種，並等寶可夢／招式資料載完。
+  3. `natureFor` 經 `pokemon.js` 嘅 `randomNature()` 攞隨機數，只睇直接 caller 會漏 → 改為睇成條 call stack。
+  4. Yes／No 掣出現時問題仲打緊字，記錄到半句 → 等 caret 先答。
+- 另外：8080 static server 中途停咗，headless 載到錯誤頁扮成 timeout → test 開頭先檢查 server。
+
+Skill: Rule 117 added

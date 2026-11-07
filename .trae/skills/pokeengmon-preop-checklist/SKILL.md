@@ -486,3 +486,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 116 — `App`／`Quiz`／`Gacha` 方法分喺 `js/app/`、`js/quiz/`、`js/gacha/`（`Object.assign(X, {…})`）；搬方法要用 AST 工具、用方法指紋證明冇改；新方法放啱職責嘅檔
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 117 — `battle.js` 分喺 `js/battle/ui/*.js`：閉包狀態喺 `BattleUI._.S`、跨檔 call 用 `B.xxx`；改戰鬥邏輯前後跑固定 seed 重播測試
+
+→ `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。

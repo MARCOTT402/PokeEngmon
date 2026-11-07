@@ -1,0 +1,2033 @@
+{
+ "1": {
+  "done": true,
+  "rngCalls": 113,
+  "rec": [
+   {
+    "init": {
+     "p1": [
+      {
+       "name": "Charmander",
+       "level": 15,
+       "hp": 39,
+       "maxHp": 39,
+       "stats": {
+        "hp": 39,
+        "atk": 23,
+        "def": 20,
+        "spa": 26,
+        "spd": 23,
+        "spe": 27
+       },
+       "ability": "blaze",
+       "held": null,
+       "status": null,
+       "moves": [
+        "growl",
+        "scratch",
+        "ember",
+        "smokescreen"
+       ]
+      },
+      {
+       "name": "Pikachu",
+       "level": 1,
+       "hp": 11,
+       "maxHp": 11,
+       "stats": {
+        "hp": 11,
+        "atk": 6,
+        "def": 6,
+        "spa": 6,
+        "spd": 6,
+        "spe": 7
+       },
+       "ability": "static",
+       "held": null,
+       "status": null,
+       "moves": [
+        "charm",
+        "growl",
+        "nasty-plot",
+        "nuzzle"
+       ]
+      },
+      {
+       "name": "Weepinbell",
+       "level": 25,
+       "hp": 72,
+       "maxHp": 72,
+       "stats": {
+        "hp": 72,
+        "atk": 55,
+        "def": 35,
+        "spa": 52,
+        "spd": 32,
+        "spe": 37
+       },
+       "ability": "chlorophyll",
+       "held": null,
+       "status": null,
+       "moves": [
+        "vine-whip",
+        "growth",
+        "wrap",
+        "sleep-powder"
+       ]
+      },
+      {
+       "name": "Eevee",
+       "level": 1,
+       "hp": 12,
+       "maxHp": 12,
+       "stats": {
+        "hp": 12,
+        "atk": 6,
+        "def": 6,
+        "spa": 6,
+        "spd": 6,
+        "spe": 6
+       },
+       "ability": "adaptability",
+       "held": null,
+       "status": null,
+       "moves": [
+        "covet",
+        "growl",
+        "helping-hand",
+        "tackle"
+       ]
+      }
+     ],
+     "p2": [
+      {
+       "name": "Caterpie",
+       "level": 8,
+       "hp": 26,
+       "maxHp": 26,
+       "stats": {
+        "hp": 26,
+        "atk": 8,
+        "def": 11,
+        "spa": 11,
+        "spd": 10,
+        "spe": 12
+       },
+       "ability": "shield-dust",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "string-shot"
+       ]
+      },
+      {
+       "name": "Metapod",
+       "level": 8,
+       "hp": 27,
+       "maxHp": 27,
+       "stats": {
+        "hp": 27,
+        "atk": 8,
+        "def": 16,
+        "spa": 10,
+        "spd": 10,
+        "spe": 11
+       },
+       "ability": "shed-skin",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "harden"
+       ]
+      },
+      {
+       "name": "Weedle",
+       "level": 8,
+       "hp": 24,
+       "maxHp": 24,
+       "stats": {
+        "hp": 24,
+        "atk": 10,
+        "def": 12,
+        "spa": 8,
+        "spd": 9,
+        "spe": 12
+       },
+       "ability": "shield-dust",
+       "held": null,
+       "status": null,
+       "moves": [
+        "poison-sting",
+        "string-shot",
+        "tackle"
+       ]
+      },
+      {
+       "name": "Kakuna",
+       "level": 8,
+       "hp": 25,
+       "maxHp": 25,
+       "stats": {
+        "hp": 25,
+        "atk": 8,
+        "def": 15,
+        "spa": 10,
+        "spd": 11,
+        "spe": 11
+       },
+       "ability": "shed-skin",
+       "held": null,
+       "status": null,
+       "moves": [
+        "poison-sting",
+        "harden"
+       ]
+      },
+      {
+       "name": "Paras",
+       "level": 8,
+       "hp": 25,
+       "maxHp": 25,
+       "stats": {
+        "hp": 25,
+        "atk": 17,
+        "def": 15,
+        "spa": 13,
+        "spd": 13,
+        "spe": 10
+       },
+       "ability": "effect-spore",
+       "held": null,
+       "status": null,
+       "moves": [
+        "scratch",
+        "stun-spore",
+        "absorb"
+       ]
+      },
+      {
+       "name": "Venonat",
+       "level": 8,
+       "hp": 30,
+       "maxHp": 30,
+       "stats": {
+        "hp": 30,
+        "atk": 14,
+        "def": 14,
+        "spa": 11,
+        "spd": 14,
+        "spe": 13
+       },
+       "ability": "compound-eyes",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "confusion",
+        "supersonic"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "say": "BUG CATCHER WADE\nwould like to battle!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "say": "BUG CATCHER WADE sent out\nCATERPIE!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "say": "Go! CHARMANDER!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie's Attack fell!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie used String Shot!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Charmander's Speed fell!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie took 13 damage!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie used String Shot!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie's attack missed!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie took 50 damage! It's super effective!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Caterpie fainted!",
+    "hp": [
+     "CATERPIE 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "ask": "BUG CATCHER WADE is about to use METAPOD. Switch Pokémon?",
+    "answer": "NO"
+   },
+   {
+    "say": "BUG CATCHER WADE sent out\nMETAPOD!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Charmander used Smokescreen!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Metapod's accuracy fell!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Metapod used Tackle!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Charmander took 2 damage!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod's Attack fell!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod used Harden!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod's Defense rose!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod took 7 damage!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod used Harden!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod's Defense rose!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "A critical hit!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod took 76 damage! It's super effective!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Metapod fainted!",
+    "hp": [
+     "METAPOD 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "ask": "BUG CATCHER WADE is about to use WEEDLE. Switch Pokémon?",
+    "answer": "NO"
+   },
+   {
+    "say": "BUG CATCHER WADE sent out\nWEEDLE!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Charmander used Smokescreen!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Weedle's accuracy fell!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Weedle used String Shot!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Charmander's Speed fell!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Weedle used String Shot!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Charmander's Speed fell!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Weedle's Attack fell!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Weedle used String Shot!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Charmander's Speed fell!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Weedle took 13 damage!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Weedle used Tackle!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 37/39"
+    ]
+   },
+   {
+    "say": "Charmander took 2 damage!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Weedle took 57 damage! It's super effective!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Weedle fainted!",
+    "hp": [
+     "WEEDLE 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "ask": "BUG CATCHER WADE is about to use KAKUNA. Switch Pokémon?",
+    "answer": "NO"
+   },
+   {
+    "say": "BUG CATCHER WADE sent out\nKAKUNA!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Kakuna used Harden!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna's Defense rose!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Smokescreen!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna's accuracy fell!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Kakuna used Harden!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna's Defense rose!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna's Attack fell!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Kakuna used Harden!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna's Defense rose!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna took 4 damage!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Kakuna used Harden!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna's Defense rose!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna took 45 damage! It's super effective!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Kakuna fainted!",
+    "hp": [
+     "KAKUNA 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "ask": "BUG CATCHER WADE is about to use PARAS. Switch Pokémon?",
+    "answer": "NO"
+   },
+   {
+    "say": "BUG CATCHER WADE sent out\nPARAS!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Paras used Stun Spore!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander is paralyzed!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Smokescreen!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Paras's accuracy fell!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Paras used Scratch!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Paras's attack missed!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Paras's Attack fell!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Paras used Scratch!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 35/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 32/39"
+    ]
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 32/39"
+    ]
+   },
+   {
+    "say": "Paras took 9 damage!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 32/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Paras used Scratch!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 32/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 29/39"
+    ]
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 29/39"
+    ]
+   },
+   {
+    "say": "Paras took 82 damage! It's super effective!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 29/39"
+    ]
+   },
+   {
+    "say": "Paras fainted!",
+    "hp": [
+     "PARAS 8",
+     "CHARMANDER 15 29/39"
+    ]
+   },
+   {
+    "ask": "BUG CATCHER WADE is about to use VENONAT. Switch Pokémon?",
+    "answer": "NO"
+   },
+   {
+    "say": "BUG CATCHER WADE sent out\nVENONAT!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 29/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 29/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 26/39"
+    ]
+   },
+   {
+    "say": "Charmander is paralyzed! It can't move!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 26/39"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 26/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 23/39"
+    ]
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 23/39"
+    ]
+   },
+   {
+    "say": "Venonat's Attack fell!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 23/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 23/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 20/39"
+    ]
+   },
+   {
+    "say": "Charmander is paralyzed! It can't move!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 20/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 20/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 17/39"
+    ]
+   },
+   {
+    "say": "Charmander is paralyzed! It can't move!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 17/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 17/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 14/39"
+    ]
+   },
+   {
+    "say": "Charmander is paralyzed! It can't move!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 14/39"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 14/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 11/39"
+    ]
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 11/39"
+    ]
+   },
+   {
+    "say": "Venonat's Attack fell!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 11/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 11/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 8/39"
+    ]
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 8/39"
+    ]
+   },
+   {
+    "say": "Venonat took 11 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 8/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Venonat used Confusion!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 8/39"
+    ]
+   },
+   {
+    "say": "Charmander took 3 damage!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 5/39"
+    ]
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 5/39"
+    ]
+   },
+   {
+    "say": "Venonat took 50 damage! It's super effective!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 5/39"
+    ]
+   },
+   {
+    "say": "Venonat fainted!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 5/39"
+    ]
+   },
+   {
+    "say": "You won the battle!",
+    "hp": [
+     "VENONAT 8",
+     "CHARMANDER 15 5/39"
+    ]
+   },
+   {
+    "result": "WIN BUG CATCHER WADE was defeated! EXP ×1 +392 Charmander Lv.15 → 16 ⚡ ENERGY 49 / undefined CONTINUE"
+   }
+  ]
+ },
+ "2": {
+  "done": true,
+  "rngCalls": 19,
+  "rec": [
+   {
+    "init": {
+     "p1": [
+      {
+       "name": "Charmander",
+       "level": 15,
+       "hp": 39,
+       "maxHp": 39,
+       "stats": {
+        "hp": 39,
+        "atk": 23,
+        "def": 20,
+        "spa": 26,
+        "spd": 23,
+        "spe": 27
+       },
+       "ability": "blaze",
+       "held": null,
+       "status": null,
+       "moves": [
+        "growl",
+        "scratch",
+        "ember",
+        "smokescreen"
+       ]
+      },
+      {
+       "name": "Pikachu",
+       "level": 1,
+       "hp": 11,
+       "maxHp": 11,
+       "stats": {
+        "hp": 11,
+        "atk": 6,
+        "def": 6,
+        "spa": 6,
+        "spd": 6,
+        "spe": 7
+       },
+       "ability": "static",
+       "held": null,
+       "status": null,
+       "moves": [
+        "charm",
+        "growl",
+        "nasty-plot",
+        "nuzzle"
+       ]
+      },
+      {
+       "name": "Weepinbell",
+       "level": 25,
+       "hp": 72,
+       "maxHp": 72,
+       "stats": {
+        "hp": 72,
+        "atk": 55,
+        "def": 35,
+        "spa": 52,
+        "spd": 32,
+        "spe": 37
+       },
+       "ability": "chlorophyll",
+       "held": null,
+       "status": null,
+       "moves": [
+        "vine-whip",
+        "growth",
+        "wrap",
+        "sleep-powder"
+       ]
+      }
+     ],
+     "p2": [
+      {
+       "name": "Geodude",
+       "level": 22,
+       "hp": 54,
+       "maxHp": 54,
+       "stats": {
+        "hp": 54,
+        "atk": 46,
+        "def": 50,
+        "spa": 18,
+        "spd": 24,
+        "spe": 18
+       },
+       "ability": "rock-head",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "rock-throw",
+        "defense-curl",
+        "low-kick"
+       ]
+      },
+      {
+       "name": "Onix",
+       "level": 22,
+       "hp": 50,
+       "maxHp": 50,
+       "stats": {
+        "hp": 50,
+        "atk": 29,
+        "def": 80,
+        "spa": 16,
+        "spd": 30,
+        "spe": 37
+       },
+       "ability": "rock-head",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "rock-throw",
+        "harden",
+        "screech"
+       ]
+      },
+      {
+       "name": "Machop",
+       "level": 22,
+       "hp": 65,
+       "maxHp": 65,
+       "stats": {
+        "hp": 65,
+        "atk": 49,
+        "def": 30,
+        "spa": 18,
+        "spd": 25,
+        "spe": 22
+       },
+       "ability": "guts",
+       "held": null,
+       "status": null,
+       "moves": [
+        "low-kick",
+        "leer",
+        "focus-energy",
+        "tackle"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "say": "HIKER MARCOS\nwould like to battle!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "say": "HIKER MARCOS sent out\nGEODUDE!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "say": "Go! CHARMANDER!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "GEODUDE 22",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Geodude's Attack fell!",
+    "hp": [
+     "GEODUDE 22",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Geodude used Rock Throw!",
+    "hp": [
+     "GEODUDE 22",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Charmander took 48 damage! It's super effective!",
+    "hp": [
+     "GEODUDE 22",
+     "CHARMANDER 15 0/39"
+    ]
+   },
+   {
+    "say": "Charmander fainted!",
+    "hp": [
+     "GEODUDE 22",
+     "CHARMANDER 15 0/39"
+    ]
+   },
+   {
+    "say": "Charmander fainted! Choose your next Pokémon.",
+    "hp": [
+     "GEODUDE 22",
+     "CHARMANDER 15 0/39"
+    ]
+   },
+   {
+    "say": "Go! PIKACHU!",
+    "hp": [
+     "GEODUDE 22",
+     "PIKACHU 1 11/11"
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Geodude used Rock Throw!",
+    "hp": [
+     "GEODUDE 22",
+     "PIKACHU 1 11/11"
+    ]
+   },
+   {
+    "say": "A critical hit!",
+    "hp": [
+     "GEODUDE 22",
+     "PIKACHU 1 0/11"
+    ]
+   },
+   {
+    "say": "Pikachu took 123 damage!",
+    "hp": [
+     "GEODUDE 22",
+     "PIKACHU 1 0/11"
+    ]
+   },
+   {
+    "say": "Pikachu fainted!",
+    "hp": [
+     "GEODUDE 22",
+     "PIKACHU 1 0/11"
+    ]
+   },
+   {
+    "say": "Pikachu fainted! Choose your next Pokémon.",
+    "hp": [
+     "GEODUDE 22",
+     "PIKACHU 1 0/11"
+    ]
+   },
+   {
+    "say": "Go! WEEPINBELL!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 72/72"
+    ]
+   },
+   {
+    "move": "Wrap"
+   },
+   {
+    "say": "Weepinbell used Wrap!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 72/72"
+    ]
+   },
+   {
+    "say": "Geodude took 1 damage! It's not very effective...",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 72/72"
+    ]
+   },
+   {
+    "say": "Geodude is trap!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 72/72"
+    ]
+   },
+   {
+    "say": "Geodude used Rock Throw!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 72/72"
+    ]
+   },
+   {
+    "say": "Weepinbell took 15 damage!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 57/72"
+    ]
+   },
+   {
+    "move": "Sleep Powder"
+   },
+   {
+    "say": "Weepinbell used Sleep Powder!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 57/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's attack missed!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 57/72"
+    ]
+   },
+   {
+    "say": "Geodude used Rock Throw!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 57/72"
+    ]
+   },
+   {
+    "say": "Weepinbell took 15 damage!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "move": "Vine Whip"
+   },
+   {
+    "say": "Weepinbell used Vine Whip!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "Geodude took 70 damage! It's super effective!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "Geodude fainted!",
+    "hp": [
+     "GEODUDE 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "HIKER MARCOS sent out\nONIX!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "move": "Growth"
+   },
+   {
+    "say": "Weepinbell used Growth!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Attack rose!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Sp. Atk rose!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "Onix used Rock Throw!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 42/72"
+    ]
+   },
+   {
+    "say": "Weepinbell took 13 damage!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 29/72"
+    ]
+   },
+   {
+    "move": "Wrap"
+   },
+   {
+    "say": "Weepinbell used Wrap!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 29/72"
+    ]
+   },
+   {
+    "say": "Onix took 1 damage! It's not very effective...",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 29/72"
+    ]
+   },
+   {
+    "say": "Onix is trap!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 29/72"
+    ]
+   },
+   {
+    "say": "Onix used Rock Throw!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 29/72"
+    ]
+   },
+   {
+    "say": "Weepinbell took 13 damage!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 16/72"
+    ]
+   },
+   {
+    "move": "Sleep Powder"
+   },
+   {
+    "say": "Weepinbell used Sleep Powder!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 16/72"
+    ]
+   },
+   {
+    "say": "Onix used Rock Throw!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 16/72"
+    ]
+   },
+   {
+    "say": "Weepinbell took 12 damage!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "move": "Vine Whip"
+   },
+   {
+    "say": "Weepinbell used Vine Whip!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Onix took 75 damage! It's super effective!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Onix fainted!",
+    "hp": [
+     "ONIX 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "HIKER MARCOS sent out\nMACHOP!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "move": "Growth"
+   },
+   {
+    "say": "Weepinbell used Growth!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Attack rose!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Sp. Atk rose!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop used Leer!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Defense fell!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "move": "Wrap"
+   },
+   {
+    "say": "Weepinbell used Wrap!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop took 14 damage!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop is trap!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop used Leer!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Defense fell!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "move": "Sleep Powder"
+   },
+   {
+    "say": "Weepinbell used Sleep Powder!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop used Leer!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Weepinbell's Defense fell!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "move": "Vine Whip"
+   },
+   {
+    "say": "Weepinbell used Vine Whip!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop took 56 damage!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "Machop fainted!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "say": "You won the battle!",
+    "hp": [
+     "MACHOP 22",
+     "WEEPINBELL 25 4/72"
+    ]
+   },
+   {
+    "result": "WIN HIKER MARCOS was defeated! EXP ×1 +997 ⚡ ENERGY 49 / undefined CONTINUE"
+   }
+  ]
+ },
+ "3": {
+  "done": true,
+  "rngCalls": 7,
+  "rec": [
+   {
+    "init": {
+     "p1": [
+      {
+       "name": "Charmander",
+       "level": 15,
+       "hp": 39,
+       "maxHp": 39,
+       "stats": {
+        "hp": 39,
+        "atk": 23,
+        "def": 20,
+        "spa": 26,
+        "spd": 23,
+        "spe": 27
+       },
+       "ability": "blaze",
+       "held": null,
+       "status": null,
+       "moves": [
+        "growl",
+        "scratch",
+        "ember",
+        "smokescreen"
+       ]
+      }
+     ],
+     "p2": [
+      {
+       "name": "Eevee",
+       "level": 14,
+       "hp": 43,
+       "maxHp": 43,
+       "stats": {
+        "hp": 43,
+        "atk": 36,
+        "def": 23,
+        "spa": 18,
+        "spd": 27,
+        "spe": 33
+       },
+       "ability": "run-away",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "quick-attack",
+        "bite",
+        "sand-attack"
+       ]
+      },
+      {
+       "name": "Pidgey",
+       "level": 14,
+       "hp": 39,
+       "maxHp": 39,
+       "stats": {
+        "hp": 39,
+        "atk": 33,
+        "def": 20,
+        "spa": 17,
+        "spd": 19,
+        "spe": 33
+       },
+       "ability": "keen-eye",
+       "held": null,
+       "status": null,
+       "moves": [
+        "tackle",
+        "gust",
+        "quick-attack",
+        "sand-attack"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "say": "LASS DANA\nwould like to battle!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "say": "LASS DANA sent out\nEEVEE!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "say": "Go! CHARMANDER!",
+    "hp": [
+     "",
+     ""
+    ]
+   },
+   {
+    "move": "Growl"
+   },
+   {
+    "say": "Eevee used Quick Attack!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 39/39"
+    ]
+   },
+   {
+    "say": "Charmander took 15 damage!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "say": "Charmander used Growl!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "say": "Eevee's Attack fell!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "move": "Scratch"
+   },
+   {
+    "say": "Eevee used Sand Attack!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "say": "Charmander's accuracy fell!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "say": "Charmander used Scratch!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "say": "Charmander's attack missed!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "move": "Ember"
+   },
+   {
+    "say": "Eevee used Tackle!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 24/39"
+    ]
+   },
+   {
+    "say": "A critical hit!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 6/39"
+    ]
+   },
+   {
+    "say": "Charmander took 18 damage!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 6/39"
+    ]
+   },
+   {
+    "say": "Charmander used Ember!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 6/39"
+    ]
+   },
+   {
+    "say": "A critical hit!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 6/39"
+    ]
+   },
+   {
+    "say": "Eevee took 24 damage!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 6/39"
+    ]
+   },
+   {
+    "move": "Smokescreen"
+   },
+   {
+    "say": "Eevee used Tackle!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 6/39"
+    ]
+   },
+   {
+    "say": "Charmander took 12 damage!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 0/39"
+    ]
+   },
+   {
+    "say": "Charmander fainted!",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 0/39"
+    ]
+   },
+   {
+    "say": "You lost...",
+    "hp": [
+     "EEVEE 14",
+     "CHARMANDER 15 0/39"
+    ]
+   },
+   {
+    "result": "LOSE You lost the battle... REWARD None ⚡ ENERGY 49 / undefined CONTINUE"
+   }
+  ]
+ }
+}

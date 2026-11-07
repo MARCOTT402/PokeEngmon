@@ -73,3 +73,24 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
 - CSS 外殼幾何（`--frame-*`）只喺 CSS `:root` 定義、JS 冇寫，唔會變 NaN，唔使加 fallback；JS 寫入嘅 CSS 變數先要檢查。
 - 通用 helper：`Guard.num／clamp／posDim／safeJSON`（Rule 94）。
 - 驗收：`npm test`（`tests/unit/numeric-guards.test.js`）（30 項：7 種壞輸入傷害有限、RNG 次序不變、NaN／Infinity／越界 HP、戰鬥可以完、存檔計數還原、helpers）；`tests/unit/battle.test.js` 97 PASS＋其餘戰鬥測試全過；`tools/responsive/test-rotate.mjs`、`test-battle-fit.mjs` 全過。
+
+### Rule 117 — `battle.js` 分喺 `js/battle/ui/*.js`：閉包狀態喺 `BattleUI._.S`、跨檔 call 用 `B.xxx`；改戰鬥邏輯前後跑固定 seed 重播測試
+
+- `js/battle/battle.js` 而家只係核心（約 160 行）：`const B = { S: {…} }`（原本 34 個閉包 `let` 狀態，例如 `state`、`mode`、`mySide`、`acting`、`pvpBattle`、`partySel`）、`openMenu`、`sleep`、`syncSpeedButton`、`bind`、對外 `BattleUI`。其餘 7 個檔喺之後載入（`index.html`）：
+  - `ui/menu.js`：選單、配額、`AI_TRAINERS`、難度、整對手隊伍（`buildFoeTeam`、`ivsFor`、`natureFor`）
+  - `ui/match.js`：PvP 配對、好友戰、戰前投票
+  - `ui/team.js`：揀隊、`launchBattle`、`showPreBattle`、`withCare`、戰鬥背包
+  - `ui/stage.js`：打字機、`waitTap`、`say`、擲波、HP 框滑入、招式動畫、`playIntro`
+  - `ui/hud.js`：`me`／`foe`／`myActive`、`narrate`、`render`、招式／換隻／背包選單、`askYesNo`、`offerShift`
+  - `ui/turn.js`：`resolveTurn`、`runTurnResolution`、`pickAIAction`
+  - `ui/result.js`：`finishBattle`、`showResult`、`forfeitBattle`、`applyRewards`、PvP 結算
+- 寫法：每個 ui 檔係 `(() => { const B = BattleUI._, S = B.S; …function…; Object.assign(B, { 本檔全部 function／數據 }); })();`。
+  - 讀寫狀態一律 `S.xxx`（唔好再開檔內 `let` 做跨函數狀態，否則其他檔睇唔到）；新狀態加入 `battle.js` 嘅 `B.S`。
+  - call **其他檔**嘅 function 用 `B.xxx()`；同一個檔入面照直接 call。
+  - 數據表（`AI_TRAINERS`、`FX_BY_TYPE` 等）唔好放頂層：classic script 共用全域，撞名會成個 app 開唔到。
+  - 對外 API 照舊係 `BattleUI.openMenu／bind／renderMenu／openAITrainers／openFriendMatch`；`BattleUI._` 只供 `js/battle/ui/*` 用。
+- **重播測試**：`node tools/responsive/test-battle-replay.mjs`（要 8080 server；`run-all.mjs` 會一齊跑）。固定 seed 自動打 3 場 AI 戰（Bug Catcher Normal、Hiker Hard、Lass Inferno），逐句對比 `tests/fixtures/battle-replay.json`（開戰隊伍能力值、每句對白＋HP、結果、隨機數次數）。
+  - 刻意改戰鬥邏輯（傷害、AI、對白）會紅：喺 commit 講明原因，再 `--update` 重錄。純重構一定要全綠。
+  - 只有 call stack 入面有 `js/battle/battle.js` 或 `js/battle/ui/` 嘅 `Math.random` 先用固定數列；搬戰鬥代碼去其他路徑要同時改 test 入面個 regex。
+  - 換隻行 battle.js 自己嘅 `#battle-party` 後備介面（test 會停用 `BagUI.openBattle`），BagUI 嘅換隻介面唔喺覆蓋範圍。
+→ `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。
