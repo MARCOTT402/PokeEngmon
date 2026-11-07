@@ -171,3 +171,12 @@ Skill: Rule 109 added
 - 改 `sw.js` 之後，第一次重新載入 preview 會被新 Service Worker 再 reload 一次，所以喺 Browser pane 跑嘅腳本會中途斷，要再跑一次。
 
 Skill: Rule 111 added
+
+## Rule 113 — 部署：Pages 只發佈 `tools/deploy/site-files.json` 列明嘅 tracked 檔；加新 runtime 檔要同時入 `index.html`、`sw.js` ASSETS 同部署清單（`npm test` 會擋）
+
+- 2026-11-07 總計劃 P1.6。新測試 `sw-assets.test.js` 第一次跑就捉到 `js/gym.js` 同 `supabase/supabase-config.js` 喺 `index.html` 有載，但從來冇入 `sw.js` precache。即係首次安裝之後未上過線就離線開 App，呢兩個檔會載唔到。已補入 ASSETS。
+- 同一個測試另一個紅係 vm 跨 realm 陣列比較（Rule 106），唔係真問題；clone 之後就冇事。
+- 本地用 `site-preview` 開 `_site`：App 開到（1.71.1）、同源請求冇 4xx；`CLAUDE.md`、`_seedtest.html`、`tools/`、`.trae/`、migrations、`Q_folder` 指引全部 404；Service Worker 喺呢個環境 `activated`，快取咗 379 項。
+- 部署：5,540 個檔、96 MB（tracked 檔總共 7,601 個）。
+
+Skill: Rule 113 added

@@ -1,0 +1,21 @@
+{
+  "_comment": "GitHub Pages 只發佈呢度列明嘅檔（總計劃 P1.6）。include：檔案或者以 / 結尾嘅目錄；exclude：檔名結尾。只會揀 git 有追蹤嘅檔。改完跑 npm test（deploy-manifest.test.js）。",
+  "include": [
+    "index.html",
+    "manifest.json",
+    "sw.js",
+    "css/",
+    "js/",
+    "vendor/",
+    "icons/",
+    "assets/",
+    "data/",
+    "supabase/supabase-config.js",
+    "Q_folder/grammar/grammar.csv",
+    "Q_folder/grammar/grammar_images/",
+    "Q_folder/vocab/vocab.csv",
+    "Q_folder/vocab/vocab_audio/",
+    "Q_folder/vocab/vocab_images/"
+  ],
+  "excludeSuffixes": [".md", ".py", ".txt", ".sql", ".gitkeep"]
+}

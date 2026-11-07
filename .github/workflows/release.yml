@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  # 手動重新部署（例如改完 Pages 設定之後）：Actions → Release → Run workflow
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -35,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 測試或 lint 失敗 → 唔會 release（e2e 要 Chrome + 本地 server，只喺本機跑 npm run test:e2e）
+      # 測試或 lint 失敗 → 唔會 release，亦唔會 deploy（e2e 要 Chrome + 本地 server，只喺本機跑 npm run test:e2e）
       - name: Lint
         run: npm run lint
 
@@ -50,3 +52,46 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+  # GitHub Pages 只發佈 App 檔（清單 tools/deploy/site-files.json，總計劃 P1.6）。
+  # 要 repo Settings → Pages → Source =「GitHub Actions」；改返「Deploy from a branch」即刻還原。
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      # ref: main：攞埋 semantic-release 啱啱 push 嘅版本號 commit（release commit 帶 [skip ci]，唔會自己觸發 workflow）
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build site (copy only, no build step)
+        run: node tools/deploy/build-site.cjs _site
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

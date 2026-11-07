@@ -20,3 +20,6 @@ prototype/**/.chrome-tmp/
 
 # ESLint globals：npm run lint 前由 tools/audit/gen-eslint-globals.mjs 自動生成
 eslint.globals.json
+
+# GitHub Pages 部署嘅暫存輸出（node tools/deploy/build-site.cjs）
+_site/

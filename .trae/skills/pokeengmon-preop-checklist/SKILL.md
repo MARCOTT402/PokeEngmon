@@ -470,3 +470,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 112 — 答案比對一律經 `Quiz._norm`（包括 `_buildCells` 嘅答案 token）；彎／修飾撇號 `’ ‘ ʼ` 當直撇號 `'`
 
 → `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。
+
+## Rule 113 — 部署：Pages 只發佈 `tools/deploy/site-files.json` 列明嘅 tracked 檔；加新 runtime 檔要同時入 `index.html`、`sw.js` ASSETS 同部署清單（`npm test` 會擋）
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

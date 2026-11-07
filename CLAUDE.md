@@ -1,6 +1,6 @@
 # PokeEngmon — Claude Code 項目記憶
 
-寶可夢主題英文學習 PWA。純前端（原生 HTML/CSS/JS，無框架、無 build step）+ Supabase（Postgres + Auth + RPC），deploy 去 GitHub Pages（`main` root）。用戶以廣東話溝通，回覆用廣東話（技術詞可保留英文）。
+寶可夢主題英文學習 PWA。純前端（原生 HTML/CSS/JS，無框架、無 build step）+ Supabase（Postgres + Auth + RPC），deploy 去 GitHub Pages：push `main` → CI（lint／test／typecheck）→ semantic-release → `deploy` job 只發佈 `tools/deploy/site-files.json` 列明嘅檔（repo Settings → Pages → Source 要係「GitHub Actions」；Rule 113）。用戶以廣東話溝通，回覆用廣東話（技術詞可保留英文）。
 
 ## 開工前必讀（按次序）
 

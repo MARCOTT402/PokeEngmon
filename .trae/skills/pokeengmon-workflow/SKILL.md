@@ -168,3 +168,12 @@ if (!e.request.url.startsWith("http")) return;
 - 函數入面已經有局部變數叫 `html`（例如 `let html = ""`，`avatars`／`bag`／`battle`／`calendar`／`explain`／`keys`／`leaderboard` 都有）會遮住個 tag；嗰度照舊用 `escapeHTML`，或者將局部變數改名。
 - 舊 `innerHTML`（約 170 處）唔做大搬遷：改到嗰段先順手換。總計劃 P5 會做一次審計，處理含用戶資料嘅位。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 113 — 部署：Pages 只發佈 `tools/deploy/site-files.json` 列明嘅 tracked 檔；加新 runtime 檔要同時入 `index.html`、`sw.js` ASSETS 同部署清單（`npm test` 會擋）
+
+- 流程：push `main` → `release` job（lint → test → typecheck → semantic-release）→ `deploy` job（`needs: release`，checkout `ref: main` 攞埋 release commit 嘅新版本號）→ `node tools/deploy/build-site.cjs _site` 照搬原檔（冇 build step）→ upload-pages-artifact → deploy-pages。測試唔過就唔會部署。
+- 要 repo Settings → Pages → Source =「GitHub Actions」。想還原，改返「Deploy from a branch: main」即刻生效。改完設定可以喺 Actions → Release → Run workflow 手動部署。
+- 部署清單（`include` 用檔案或者以 `/` 結尾嘅目錄；`excludeSuffixes` 排除 `.md`／`.py`／`.txt`／`.sql`／`.gitkeep`）。只揀 `git ls-files` 有嘅檔，所以未 commit 嘅檔唔會上線。`Q_folder` 入面嘅 AI 指引、prompt、改名腳本唔會發佈；`_seedtest.html` 唔發佈但唔好刪（e2e 要用）。
+- 加新 JS／CSS／資料檔：`index.html` script／link、`sw.js` ASSETS、部署清單三處都要有。`tests/unit/sw-assets.test.js`（真正喺 vm 執行 `sw.js` 攞完整 ASSETS）同 `tests/unit/deploy-manifest.test.js`（漏檔、內部檔外洩、空清單）會擋。
+- 本地預覽正式網址會有乜：`node tools/deploy/build-site.cjs <dir>`，再用 `.claude/launch.json` 嘅 `site-preview`（port 8099）開嗰個目錄。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
