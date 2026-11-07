@@ -42,6 +42,10 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # tsc --noEmit：有 // @ts-check 嘅檔（清單 types/ts-check-files.json）要 0 錯
+      - name: Type check
+        run: npm run typecheck
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

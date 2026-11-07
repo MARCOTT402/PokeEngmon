@@ -29,11 +29,11 @@
 | 穩定性＋效能（Guard、Net、SW、SM-2 快取、轉場、開機減重） | 穩定性計劃 | ✅ 完成 |
 | A：`npm test`（node:test）、ESLint、CI 擋 release、e2e runner | 商用級 Phase A | ✅ `c12b3b1`、`4c5aa8e` |
 | B4：清死碼（JS -204、CSS -286、audit 工具） | 商用級 Task 4 | ✅ `478b921` |
-| B5a（P1.3 前置）：`js/core/dom.js`（統一 `escapeHTML`、`haptic`） | 商用級 Task 5 | 🟡 完成，**未 commit** |
-| M1（= P1.1）：typecheck（`tsconfig.json`、`types/globals.d.ts`、`typescript@5.9.3` devDep、12 處 JSDoc cast） | 現代化 Task 1 | 🟡 **2026-11-07 由「GitHub skills」session 交接俾本 session**，對面已停手；未 commit。`tsc` 0 錯（`checkJs: false`）；未加 `npm run typecheck`、`@ts-check`、CI |
+| B5a（P1.3 前置）：`js/core/dom.js`（統一 `escapeHTML`、`haptic`） | 商用級 Task 5 | ✅ `93a02b9` |
+| P1.1 typecheck：設定（`163ffd4`）＋ `npm run typecheck`、26／43 個檔 `// @ts-check`、ratchet 測試、CI 步驟 | 現代化 Task 1 | ✅ 設定 `163ffd4`；其餘見下一個 commit |
 | 其餘 | — | ⏳ 見 §3 |
 
-**而家第一步**：兩批未 commit 嘅改動要先分開 commit。B5a 只涉及 `js/core/dom.js`、`tests/unit/dom.test.js`，同埋 `app/bag/friends/quests/explain/capture/gacha/quiz.js`、`index.html`、`sw.js` 入面嘅 escape／vibrate 幾行；M1 係 JSDoc cast 加 tsconfig／types。兩批而家都由本 session 負責；建議照樣分開兩個 commit（B5a `refactor:`、M1 `chore:`），共用檔（`quests.js`）要逐段分開 stage。
+**而家下一步**：P1.2 z-index token（`css/style.css` ＋ JS `zIndex`）。P1.4 畫質 prototype 只改 `tools/`，可以並行。
 
 ---
 
@@ -52,7 +52,7 @@
 
 | # | 內容 | 來源 | 驗收 |
 |---|---|---|---|
-| P1.1 | **Typecheck**：`npm run typecheck`（`tsc -p tsconfig.json`）；喺已經乾淨嘅檔加 `// @ts-check`，清單只准加唔准減；CI 喺 lint、test 之後跑 | 現代化 T1（做緊） | 0 錯；故意喺有 `@ts-check` 嘅檔寫 `Sync.nope()` 會紅 |
+| P1.1 | **Typecheck**：`npm run typecheck`（`tsc -p tsconfig.json`）；喺已經乾淨嘅檔加 `// @ts-check`，清單只准加唔准減；CI 喺 lint、test 之後跑 | 現代化 T1（做緊） | ✅ 2026-11-07：26 個檔 0 錯；`tests/unit/ts-check-ratchet.test.js`；驗收改用「未定義 global → TS2304」（`Sync` 宣告做 `any`，`Sync.nope()` 唔會紅） |
 | P1.2 | **全域 z-index token**：`:root` 加 `--z-*`（數值同現況一樣）；≥100 嘅字面值換做 token；JS 設 `zIndex` 嘅地方同步 | 現代化 T2 | `tools/audit/check-z-tokens.mjs`；`shots --compare` 零差異 |
 | P1.3 | **`html` tagged template**：新檔 `js/core/html.js`，**底層用 `dom.js` 嘅 `escapeHTML`**（唔准再寫一份 escape）。功能：`html```、`raw()`、陣列 join、`null`／`false` 變空字串、`Html.render(el, tpl)` | 現代化 T3（＋商用級 B5a） | `tests/unit/html.test.js`（XSS、巢狀、陣列、raw） |
 | P1.4 | **畫質 prototype**：`tools/prototype-battle-fx.html`（現行 vs PixiJS 特效） | 現代化 T4 | 喺 Browser pane 截圖俾你睇 |

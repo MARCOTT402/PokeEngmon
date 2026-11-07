@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    PokeEngmon Battle - PvP 網絡層（Task 9）
    純 fetch + REST；等待對手改用 Supabase Realtime（WebSocket）先行，

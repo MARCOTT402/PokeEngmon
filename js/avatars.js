@@ -1,3 +1,4 @@
+// @ts-check
 /* =====================================================================
    Trainer Avatar（第 14 項）：原作角色全身像（Pokémon Showdown 80×80 trainer sprites）
    - 圖檔：assets/trainers/avatars/<id>.png（tools/fetch_trainer_avatars.py 下載）

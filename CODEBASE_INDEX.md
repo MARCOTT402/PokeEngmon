@@ -7,7 +7,7 @@
 | 入口 / 路由 / modal / 版本 | `index.html`, `js/app.js`, `sw.js` |
 | 全域錯誤邊界（error／rejection handler、ErrorLog 上報、恢復卡、開機兜底畫面、`Guard.asyncClick`／`fetchGet`／`num`） | `js/core/guard.js`, `index.html`（head 內聯樣式＋shim、`#fatal-screen`、`#guard-recover`）, `supabase/migrations/supabase-migrate-20261106d-client-errors.sql`（`client_errors`、`log_client_errors`）, Rule 94 |
 | HTML escape／震動（全 App 唯一：`escapeHTML`、`haptic`；任何用戶／server 字串砌入 innerHTML 前都要經佢，只 escape 一次） | `js/core/dom.js`（喺 `guard.js` 之後載入）, `tests/unit/dom.test.js` |
-| 型別檢查（`tsc` noEmit、classic script 共用 global；`checkJs` 逐檔用 `// @ts-check` 開） | `tsconfig.json`, `types/globals.d.ts`（`window.X` 模組＋`module.exports` 檔；頂層已有 `const X` 嘅唔可以再 declare，TS2451）, 總計劃 P1.1 |
+| 型別檢查（`npm run typecheck` = `tsc` noEmit；classic script 共用 global；逐檔 `// @ts-check`，清單只准加；CI release 前跑；Rule 109） | `tsconfig.json`, `types/globals.d.ts`（`window.X` 模組＋`module.exports` 檔；頂層已有 `const X` 嘅唔可以再 declare，TS2451）, `types/ts-check-files.json`, `tests/unit/ts-check-ratchet.test.js`, 總計劃 P1.1 |
 | 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
 | 結算畫面（分數圈／stat／錯題預覽） | `js/app.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |

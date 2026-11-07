@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    PokeEngmon Battle - 可播種亂數（PvP 同步地基，Task 9）
    mulberry32 PRNG：同一個 seed 逐 call 順序攞數，兩邊客戶端

@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    PokeEngmon - 每日任務板 Daily Quests（v1.25.0）
    - 每 10 題 = 完成 1 次任務，手動 CLAIM 1⚡
@@ -420,7 +421,7 @@ const Quests = (() => {
     const defs = el("quests-defs");
     if (defs) {
       defs.onclick = (ev) => {
-        const btn = /** @type {Element} */ (ev.target).closest(".qd-claim[data-quest]");
+        const btn = /** @type {HTMLElement | null} */ (/** @type {Element} */ (ev.target).closest(".qd-claim[data-quest]"));
         if (!btn) return;
         claimDef(btn.dataset.quest, btn);
       };

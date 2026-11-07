@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    PokeEngmon — SM-2 Spaced Repetition Core (v3)
 

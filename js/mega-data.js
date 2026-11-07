@@ -1,3 +1,4 @@
+// @ts-check
 /* 自動產生：python tools/fetch_mega.py（PokéAPI *-mega 形態 + mega-stones）。唔好手改。
    背包第 4c 段：Gen 1–5 物種嘅 Mega 進化（包括 Legends Z-A 新 Mega）；key = Mega 石 slug */
 const MEGA_STONES = {

@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    PokeEngmon — Supabase Sync（v2：綁定 auth.uid / device_id）
 

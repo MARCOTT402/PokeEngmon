@@ -154,3 +154,11 @@ Skill: Rule 106 added
 - Asset：第一版報 2,258 個冇引用嘅檔，全部係 `BASE + id` 呢種動態載入。改咗規則之後剩 5 個戰鬥 UI 原始 atlas（54 KB），保留。
 
 Skill: Rule 108 added
+
+## Rule 109 — 型別檢查：`npm run typecheck` 要 0 錯；改／加檔就順手開 `// @ts-check`，加入 `types/ts-check-files.json`（清單只准加）；只可以用 JSDoc cast，唔准為過 check 改行為
+
+- 2026-11-07 總計劃 P1.1。設定由「GitHub skills」session 起（`163ffd4`），交接俾呢個 session 做完。
+- 26 個候選檔一次過加 `// @ts-check`，得 1 個錯：`quests.js:426` 用 `closest()` 拎到 `Element`，再讀 `.dataset` → TS2339。加 `HTMLElement | null` cast 解決。
+- 原計劃嘅驗收「寫 `Sync.nope()` 會紅」行唔通，因為 `Sync` 係 `any`；改用未定義 global（TS2304）同拎走檔頭（ratchet 測試）兩個方法，兩個都會紅。
+
+Skill: Rule 109 added

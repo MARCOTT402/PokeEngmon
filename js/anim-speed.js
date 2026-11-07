@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    AnimSpeed — 捕捉／扭蛋／進化動畫倍速（Settings → Animation speed）
    - 只存本機 localStorage（pe_anim_speed），唔上雲；只接受 1／2／3。

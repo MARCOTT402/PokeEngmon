@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    PokeEngmon Battle - 狀態模型 + 招式執行
    依賴全域：Battle (engine.js) / moveInfo

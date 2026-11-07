@@ -1,3 +1,4 @@
+// @ts-check
 /* Custom picture-question images — IndexedDB (not localStorage; avoid ~5MB quota). */
 const QImgDB = (() => {
   const DB_NAME = "pokeengmon_qimg_v1";

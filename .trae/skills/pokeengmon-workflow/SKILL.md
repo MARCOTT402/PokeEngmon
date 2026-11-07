@@ -146,3 +146,15 @@ if (!e.request.url.startsWith("http")) return;
 - 改 repo 檔唔好用 Git Bash 嘅 `sed -i`：會將 CRLF 檔成個轉行尾（`tests/unit/battle.test.js` 試過 538 行全部變）。要用 Edit 工具，或者用 Python 讀寫 bytes。commit 前用 `git diff --numstat` 睇吓有冇「全檔 +N/−N」。
 - 刪 CSS 前要先 `node tools/responsive/shots.mjs --out <before>`，刪完再影 `<after>`，然後 `--compare` rects 加逐像素比較；兩者都要零差異（每次全套大約 12 分鐘，要喺背景跑）。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 109 — 型別檢查：`npm run typecheck` 要 0 錯；改／加檔就順手開 `// @ts-check`，加入 `types/ts-check-files.json`（清單只准加）；只可以用 JSDoc cast，唔准為過 check 改行為
+
+- 設定：`tsconfig.json`（`allowJs`、`checkJs: false`、`noEmit`、`moduleDetection: legacy`，classic script 共用一個 global scope，同 `index.html` 載入方式一樣；排除 `js/capture.js`）。只有第一行係 `// @ts-check` 嘅檔先會檢查。2026-11-07 有 26／43 個檔開咗。
+- 新增 global：
+  - 只係 `window.X = …` 嘅模組，或者檔尾有 `module.exports` 嘅檔（TS 當佢 CommonJS，`const` 唔係 global），要喺 `types/globals.d.ts` 加 `declare var X: any;`。
+  - 頂層已經有 `const X` 嘅檔**唔准**再 declare，會撞 TS2451。
+- 開 `// @ts-check`：用 Python bytes 加喺第一行，保留 BOM 同行尾（Rule 108），然後加入 `types/ts-check-files.json`（排好序）。`tests/unit/ts-check-ratchet.test.js` 會擋住「拎走檔頭」同「加咗檔頭但冇入清單」。
+- 修錯只可以用 JSDoc cast，例如 `/** @type {HTMLElement | null} */ (el.closest(...))`。唔准為咗過 check 改邏輯。
+- 驗收要用「未定義 global → TS2304」嚟證明 check 生效。`Sync.nope()` 呢類**唔會**紅，因為 `globals.d.ts` 將大部分模組宣告做 `any`。
+- 仲未開嘅大檔（`checkJs: true` 時 345 個錯，主要係 DOM 型別收窄）：`app.js` 173、`battle.js` 56、`quiz.js` 28、`bag.js` 24。改到嗰個檔先順手清，唔做大搬遷。
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
