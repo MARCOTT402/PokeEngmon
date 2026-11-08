@@ -972,3 +972,13 @@ if (typeof window !== "undefined" && window.addEventListener) {
   window.addEventListener("beforeunload", flushState);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushState(); });
 }
+
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, {
+  questionsToday, loadState, BGM_TRACKS, STONE_KINDS, saveState, mergePracticeDaysFromCloud, mergeRecordsFromCloud,
+  localEntryFromServer, applyMoveLoadout, deriveEntryFields, dateKey, getCurveMode, addEntryExp, getActiveEntry,
+  canStoneEvolve, STONE_LABELS, STONE_ICONS, calcStreak, setEntryMoves, loadAudioPrefs, ensureDeviceId,
+  saveAudioPrefs, adoptServerEntry, obtainPokemon, MAX_GEN, useEntryCandy, dayLevel, getBgmTrack, collectedCount,
+  entryNextEvolution, canEvolveNow, resetState, TRADE_LIKES_REQUIRED, addPracticeRecord, setCurveMode, setBgmTrack,
+  clearGameProgress, recomputeUnlockedGen, migrateEntries
+});

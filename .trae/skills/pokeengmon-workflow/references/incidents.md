@@ -266,6 +266,12 @@ Skill: Rule 119 added
 - 揀咗冇 UI 嘅服務檔（每個只公開一個物件），strict mode 解析冇問題，冇用 `document.currentScript`。
 - 驗證：467 個測試（`esm-bridge` 64 項）、lint 0、typecheck 0；瀏覽器 21 個 module 載入、登入畫面、Energy、開一場戰鬥（精靈、HP 框、招式）冇 error；e2e 連戰鬥重播。
 
+### 2026-11-08 第四批：`battle/state`＋`care`、`storage`＋`pet`
+
+- 量度：`care.js:591` 載入時用 `BattleState`（`typeof` 檢查），`pet.js:25` 載入時用 `STONE_KINDS`。兩對一齊轉，次序不變。
+- 新測試規則：先只轉 `state.js`，測試即刻列出 `js/care.js:591 BattleState`。
+- 同時有另一個 session 喺共用 working tree 做 trainer level（改緊 `index.html`、`storage.js` 等），所以喺 HEAD 開 worktree 驗證：504 個測試、lint 0、typecheck 0；瀏覽器樹果 15 粒、道具 23 件（同正式網站一樣）、存檔讀寫、背包、答題冇 error；e2e 喺 worktree 用 8104 跑。
+
 ## Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
 
 - 2026-11-08 push `88534eb`（ESM 第一批，`refactor`，冇出新版本）之後，打開正式網站第一次載入：7 個 `js/battle/ui/*.js` 全部 `Cannot read properties of undefined (reading 'S')`（舊 `battle.js` 冇 `BattleUI._`）、`bag.js` `escapeHTML is not defined`、登入畫面 `escapeHTML is not defined`（新 `index.html` 用 module 載入**舊** `dom.js`，舊版冇 bridge）。
