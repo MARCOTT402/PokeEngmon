@@ -1,3 +1,10 @@
+# [1.72.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.3...v1.72.0) (2026-11-08)
+
+
+### Features
+
+* **battle:** add Trainer Lv and redesign the battle menu ([6de711e](https://github.com/MARCOTT402/PokeEngmon/commit/6de711e81f9a39b0a790c5044096698a70f80e3c))
+
 ## [1.71.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.2...v1.71.3) (2026-11-08)
 
 
