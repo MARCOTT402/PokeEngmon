@@ -1,3 +1,10 @@
+# [1.73.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.72.0...v1.73.0) (2026-11-08)
+
+
+### Features
+
+* **gacha:** add the Dragonite drop single pull and the egg incubator ([952c875](https://github.com/MARCOTT402/PokeEngmon/commit/952c87517b6dabc0de8c8b831d2835bcb525e352))
+
 # [1.72.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.3...v1.72.0) (2026-11-08)
 
 
