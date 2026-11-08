@@ -35,6 +35,33 @@ function bridged(sf) {
   }
   return out;
 }
+/* Object.defineProperties(globalThis, { NAME: { get: () => NAME, … } })：會被重新賦值嘅 let 用呢個 */
+function getterBridged(sf) {
+  const out = new Set();
+  for (const s of sf.statements) {
+    const e = ts.isExpressionStatement(s) && s.expression;
+    if (e && ts.isCallExpression(e) && e.expression.getText() === "Object.defineProperties" && e.arguments[0] && e.arguments[0].getText() === "globalThis") {
+      const obj = e.arguments[1];
+      if (obj && ts.isObjectLiteralExpression(obj)) obj.properties.forEach((p) => {
+        const d = ts.isPropertyAssignment(p) && p.initializer;
+        const hasGet = d && ts.isObjectLiteralExpression(d) && d.properties.some((q) => q.name && q.name.getText() === "get");
+        if (hasGet) out.add(p.name.getText());
+      });
+    }
+  }
+  return out;
+}
+/* 自己檔入面喺宣告之後再賦值嘅 let／var */
+function reassignedLets(sf) {
+  const lets = new Set();
+  for (const s of sf.statements) if (ts.isVariableStatement(s) && !(s.declarationList.flags & ts.NodeFlags.Const)) s.declarationList.declarations.forEach((d) => ts.isIdentifier(d.name) && lets.add(d.name.text));
+  const out = new Set();
+  (function walk(n) {
+    if (ts.isBinaryExpression(n) && ts.isIdentifier(n.left) && lets.has(n.left.text) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) out.add(n.left.text);
+    ts.forEachChild(n, walk);
+  })(sf);
+  return out;
+}
 function isIIFE(fn) {
   if (!(ts.isFunctionExpression(fn) || ts.isArrowFunction(fn))) return false;
   let p = fn.parent; while (p && ts.isParenthesizedExpression(p)) p = p.parent;
@@ -65,18 +92,21 @@ function usesOf(names, file) {
   return out;
 }
 
-test("index.html has at least the first batch of ES modules", () => {
-  for (const f of ["js/core/dom.js", "js/core/html.js", "js/battle/rng.js", "js/mega-data.js", "js/dex-sort.js", "js/store.js"]) assert.ok(modules.includes(f), f);
+test("index.html loads the converted base files as ES modules (batch 1 + 2)", () => {
+  for (const f of ["js/core/dom.js", "js/core/html.js", "js/battle/rng.js", "js/mega-data.js", "js/dex-sort.js", "js/store.js",
+    "js/sm2.js", "js/gens-data.js", "js/data.js", "js/pokemon.js"]) assert.ok(modules.includes(f), f);
   assert.equal(classic[0], "js/core/guard.js", "Guard must stay the first classic script (Rule 94)");
 });
 
 for (const f of modules) {
   test(`${f}: every name other scripts use is bridged to globalThis`, () => {
     const sf = parse(f);
-    const names = topNames(sf), br = bridged(sf);
+    const names = topNames(sf), br = bridged(sf), gb = getterBridged(sf), re = reassignedLets(sf);
     const used = new Set(usesOf(names, f).map((u) => u.name));
-    assert.deepEqual([...used].filter((n) => !br.has(n)), [], "used elsewhere but not in Object.assign(globalThis, …)");
-    assert.deepEqual([...br].filter((n) => !names.has(n)), [], "bridged name not declared at top level");
+    assert.deepEqual([...used].filter((n) => !br.has(n) && !gb.has(n)), [], "used elsewhere but not bridged to globalThis");
+    assert.deepEqual([...br, ...gb].filter((n) => !names.has(n)), [], "bridged name not declared at top level");
+    /* Object.assign 只係抄一次值：之後 MOVES = … 呢類重新賦值，其他檔睇唔到 → 一定要用 getter */
+    assert.deepEqual([...used].filter((n) => re.has(n) && !gb.has(n)), [], "reassigned let used elsewhere must be a getter (Object.defineProperties)");
   });
 
   test(`${f}: no classic script touches it at load time (modules run after all classic scripts)`, () => {

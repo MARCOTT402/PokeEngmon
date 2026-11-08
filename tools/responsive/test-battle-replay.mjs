@@ -121,7 +121,7 @@ async function runSeed(seed) {
   /* 解鎖全部訓練員同 Hard／Inferno（本地測試存檔） */
   await ev("const st=loadState(); st.trainerProgress={}; for (const c of ['youngster','bugcatcher','lass','hiker','gentleman','swimmer','ace','jasmine','psychic','cynthia','alder','drake','anabel','red']) st.trainerProgress[c]={easy:1,normal:1,hard:1,inferno:0,flawless:[]}; saveState(st);");
   /* 等寶可夢／招式資料載完（冷啟動會慢；未載完嘅話傷害、AI 評分會唔同） */
-  for (let i = 0; i < 60 && !(await ev("return typeof POKEMON_DEX !== 'undefined' && !!POKEMON_DEX && typeof MOVES !== 'undefined' && !!MOVES && Object.keys(MOVES).length > 100")); i++) await sleep(250);
+  for (let i = 0; i < 60 && !(await ev("return typeof POKEMON_DEX !== 'undefined' && !!POKEMON_DEX && typeof moveInfo === 'function' && moveInfo('tackle').power != null")); i++) await sleep(250);
   await ev("BattleUI.openMenu()"); await sleep(900);
   await ev(`document.querySelector('.ai-trainer-card[data-id="${sc.trainer}"]').click()`); await sleep(600);
   await ev(`window.__replayReseed(); document.querySelector('.tier-card[data-tier="${sc.tier}"]').click()`); await sleep(1500);

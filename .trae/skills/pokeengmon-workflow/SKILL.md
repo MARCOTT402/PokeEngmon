@@ -230,6 +230,10 @@ if (!e.request.url.startsWith("http")) return;
 - `mega-data.js` 係 `tools/fetch_mega.py` 產生，bridge 行寫喺 generator 入面。
 - `tests/unit/esm-bridge.test.js` 會檢查：每個 module 嘅名有冇漏 bridge、classic script 載入時（包括 IIFE）有冇用到 module 嘅名、有冇 `import`／`export`、Guard 仲係第一個 classic script。
 - 轉下一個檔之前：跑 `npm test`（呢個測試會列出載入時用到嘅位置），再開瀏覽器睇 console 有冇 `is not defined`。
+- 第二批（2026-11-08）：`js/sm2.js`（本身已經係 `window.SM2`）、`js/gens-data.js`、`js/data.js`、`js/pokemon.js`。
+- **會被重新賦值嘅 `let`**（例如 `POKEMON_DEX`、`SITE_QUESTIONS`：載入資料之後先有值）唔可以放入 `Object.assign`，因為只係抄一次舊值。要用 getter：`Object.defineProperties(globalThis, { POKEMON_DEX: { get: () => POKEMON_DEX, configurable: true } })`。測試會擋。
+- 冇其他檔用到嘅名（例如 `MOVES`、`TYPE_CHART`）唔會公開。工具或測試要喺瀏覽器讀資料，就用已公開嘅 function，例如 `moveInfo("tackle")`，唔好直接讀內部變數。
+- 自動產生嘅檔，generator 要一齊改：`gens-data.js` ← `tools/fetch_gen_data.py`，`mega-data.js` ← `tools/fetch_mega.py`。讀呢啲檔嘅 tool（例如 `tools/gen_chain_sql.py` 嘅 regex）唔可以再假設資料喺檔尾。
 → 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
 ### Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`

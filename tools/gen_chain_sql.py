@@ -17,7 +17,7 @@ GENS_JS = ROOT / "js" / "gens-data.js"
 OUT = ROOT / "supabase-migrate-20261026-gen-expansion.sql"
 
 text = GENS_JS.read_text(encoding="utf-8")
-m = re.search(r"const EVOLUTION_CHAINS_G25 = (\[.*\]);\s*$", text, re.S)
+m = re.search(r"const EVOLUTION_CHAINS_G25 = (\[.*?\n\]);", text, re.S)   # 檔尾之後有 globalThis bridge（Rule 119）
 if not m:
     raise SystemExit("EVOLUTION_CHAINS_G25 not found")
 chains = json.loads(m.group(1))

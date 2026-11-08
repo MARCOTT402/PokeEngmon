@@ -803,3 +803,16 @@ function questionsFromCSV(text) {
 
   return { questions, skipped };
 }
+
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, {
+  questionTopicKey, SPECIES, genOfChain, entryCurrentSpecies, spriteURL, animatedURL, chainsOfGen, EVOLUTION_CHAINS,
+  chainMaxStage, drawMixedSet, GAME_CONFIG, questionBankFailed, loadSiteQuestions, loadPictureWords, getAllQuestions,
+  findQuestionImage, wordAudioURL, pullablePool, artworkURL, genRange, RARITY, findQuestion, getCategories,
+  addCustomSentenceQuestion, addCustomPictureQuestion, clearCustomQuestionsAndImages, deleteCustomQuestion,
+  updateCustomQuestion, questionsFromCSV, questionKey
+});
+/* 會被重新賦值嘅 let（載入資料之後先有值）用 getter 公開，其他檔先會讀到最新值 */
+Object.defineProperties(globalThis, {
+  SITE_QUESTIONS: { get: () => SITE_QUESTIONS, configurable: true },
+});

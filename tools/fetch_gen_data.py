@@ -417,13 +417,16 @@ def main():
         "dataFile": "data/pokemon-151.json" if g == 1 else f"data/pokemon-gen{g}.json",
     } for g in range(1, 6)]
     js = (
+        "// @ts-check\n"
         "/* ============================================================\n"
         "   PokeEngmon - 世代資料（Gen 1-5）\n"
         "   由 tools/fetch_gen_data.py 自動生成，請勿手改。\n"
         "   GENS: 世代元資料；EVOLUTION_CHAINS_G25: Gen 2-5 進化鏈\n"
         "   ============================================================ */\n\n"
         f"const GENS = {json.dumps(gens_meta, ensure_ascii=False, indent=2)};\n\n"
-        f"const EVOLUTION_CHAINS_G25 = {json.dumps(chains, ensure_ascii=False, indent=2)};\n"
+        f"const EVOLUTION_CHAINS_G25 = {json.dumps(chains, ensure_ascii=False, indent=2)};\n\n"
+        "/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type=\"module\" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */\n"
+        "Object.assign(globalThis, { GENS, EVOLUTION_CHAINS_G25 });\n"
     )
     out = os.path.join(ROOT, "js", "gens-data.js")
     with open(out, "w", encoding="utf-8") as f:

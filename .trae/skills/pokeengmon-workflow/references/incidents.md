@@ -244,6 +244,13 @@ Skill: already covered by Rule 116（已擴展）
 
 Skill: Rule 119 added
 
+### 2026-11-08 第二批：`sm2`、`gens-data`、`data`、`pokemon`
+
+- 測試新加規則：會被重新賦值、又俾其他檔用到嘅 `let` 一定要用 getter bridge。刻意將 `POKEMON_DEX` 改放入 `Object.assign`，測試即刻紅。
+- 瀏覽器：載入 Gen 2 之後，`POKEMON_DEX` 由 151 隻變成 251 隻（證明 getter 讀到最新值）；`SITE_QUESTIONS` 570 題；答題、圖鑑冇 error。
+- 陷阱：`tools/gen_chain_sql.py` 用 `const EVOLUTION_CHAINS_G25 = (\[.*\]);\s*$` 讀 `gens-data.js`，檔尾加咗 bridge 就會讀唔到 → 改做 `(\[.*?\n\]);`。驗證時跑咗佢一次，佢會將 SQL 寫去 repo 根目錄（舊路徑），內容同 `supabase/migrations/` 嗰份一模一樣，已經刪走。
+- 重播測試原本直接讀 `MOVES`（冇公開）等資料載完 → 改用 `moveInfo('tackle').power`。
+
 ## Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
 
 - 2026-11-08 push `88534eb`（ESM 第一批，`refactor`，冇出新版本）之後，打開正式網站第一次載入：7 個 `js/battle/ui/*.js` 全部 `Cannot read properties of undefined (reading 'S')`（舊 `battle.js` 冇 `BattleUI._`）、`bag.js` `escapeHTML is not defined`、登入畫面 `escapeHTML is not defined`（新 `index.html` 用 module 載入**舊** `dom.js`，舊版冇 bridge）。

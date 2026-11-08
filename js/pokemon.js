@@ -422,3 +422,16 @@ function ensureEntryPokemonData(entry) {
   }
   return changed;
 }
+
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, {
+  loadPokemonDex, ensureGenDataLoaded, dexOf, typeIconURL, typeLabel, typeMultiplier, calcStats, moveInfo, abilityOf,
+  natureInfo, MAX_IV, STAT_KEYS, emptyEvs, randomNature, MAX_LEVEL, expAtLevel, levelSpan, ensureEntryPokemonData,
+  randomIvs, rollEntryAbility, initialMoves, levelFromExp, movesBetween, learnsetOf, evTotal, STAT_LABELS,
+  damageClassInfo, abilityName, typeColor, statsForEntry, moveCardHTML, IMPLEMENTED_ABILITIES, ivTotal, MAX_EV_TOTAL,
+  moveLabel
+});
+/* 會被重新賦值嘅 let（載入資料之後先有值）用 getter 公開，其他檔先會讀到最新值 */
+Object.defineProperties(globalThis, {
+  POKEMON_DEX: { get: () => POKEMON_DEX, configurable: true },
+});
