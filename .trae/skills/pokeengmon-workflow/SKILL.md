@@ -221,6 +221,15 @@ if (!e.request.url.startsWith("http")) return;
 - 新檔要同時加 `index.html`（`js/app.js` 之後）同 `sw.js` ASSETS；`sw-assets.test.js` 同 `deploy-manifest.test.js` 會擋。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 
+### Rule 118 — 新功能 prototype 要高保真：直接載 `css/style.css` 同 `index.html` 嘅真 markup，行為照搬現有模組（提示、輸入格、鍵盤），唔好人手仿製外觀
+
+- 起點：`<base href="../">` ＋ `<link href="css/style.css">`，開頁時 `fetch("index.html")` 用 DOMParser 攞 `#app`（刪晒 `<script>`）插入頁面；用 `<html data-layout>` 同 `App.layout()` 一樣嘅 media query。範例：`tools/prototype-ted.html`。
+- 現有畫面（`#view-quiz`、`#view-settlement`、外框）只填資料、唔重寫 CSS；新增 overlay 要抄 `#view-quiz-setup.active` 嗰套 `--frame-screen-*` 定位同 `.hub-bar` 覆寫。
+- 行為照搬，唔好自己發明：輸入格用 `.qb-cell`＋量度闊度（`cells.js`）、提示係 L1／L2 兩段＋`1/2`／`2/2`＋提示題重排（`hints.js`、`check.js`）、App 鍵盤只喺 `(pointer: coarse)` 先出（`keyboard.js`，Rule 107）、回饋字眼用 `_setAction` 嗰套。
+- 交俾用戶試之前，自己用 phone（440×956，觸控）同 desktop（1280×800）各行一次完整流程，逐張截圖檢查對齊、重疊、字級。
+- 完整做法（真 app 植入、seed、遊戲素材清單、反 AI 味、狀態清單、交付）：`.trae/skills/pokeengmon-prototype/SKILL.md`（Rule 122）。
+→ 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
 ### Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
 
 - 第一批（2026-11-08，總計劃 P2.3）：`js/core/dom.js`、`js/core/html.js`、`js/battle/rng.js`、`js/mega-data.js`、`js/dex-sort.js`、`js/store.js`。`index.html` 寫法係 `<script src="…?v=…" type="module">`，**`type` 放喺 `src` 後面**：好多工具／測試用 `<script src="` 搵 script。
@@ -247,4 +256,12 @@ if (!e.request.url.startsWith("http")) return;
   - 過渡期舊 SW 見到新 `?v=` 對唔上自己嘅版本 → 行 network-first，唔會攞到舊檔。
 - 只改 `_site`，repo 入面嘅 `sw.js`／`index.html` 照舊係純版本號（`npm run sync-version` 管）。`tests/unit/deploy-stamp.test.js` 檢查標記邏輯，亦檢查 repo 入面 `package.json`、`sw.js`、`index.html` 三個版本一致（唔一致 deploy 會失敗，唔會靜靜雞發佈冇標記嘅版本）。
 - 本地重現回訪用戶：`localhost` 會停用 versioned 路線（`IS_DEV`），要用 `http://pe.localhost:<port>/`（Chrome 當本機、當安全環境，但唔中 `IS_DEV`）。先載入 build A 等 SW 接管（第一次到訪會延遲 8 秒＋idle 先註冊），換 build B 再 reload。
+→ 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 121 — 喺 localhost 開 prototype 頁（唔係 index.html）之前，要先註銷真 app 嘅 SW：SW 對頁面請求係「3 秒冇回應就用快取 index.html」，prototype 頁會變成舊 index、卡喺 loading
+
+- 原因：真 app 嘅 SW scope 係 `/`，所有同源導航（包括 `tools/prototype/*.html`）都行 `networkFirst(..., "./index.html")`。本機 Python server 慢過 3 秒，SW 就用快取嘅 `index.html` 回應 prototype 網址；嗰份 index 冇 `<base>`，相對路徑變成 `/tools/prototype/js/...`，全部 `ERR_FAILED`，畫面停喺「Setting up your adventure」。
+- 而家：植入真 app 嘅 prototype（例如 `tools/prototype/incubator/early.js`）喺 `<head>` 最前：停用 `register()`，並喺 localhost 註銷現有 SW（真 app 下次開會自動再註冊）。
+- 用戶話「一直 loading」：先睇 `document.title`／network：如果 URL 係 prototype 但 title 係真 app、資源路徑多咗 `tools/prototype/` → 就係 SW 回咗快取 index。即時處理：`Ctrl+Shift+R`（略過 SW）或者 DevTools → Application → Service Workers → Unregister。
+- 自己驗收時唔好只用冇開過真 app 嘅 port（例如 8097）：用戶慣用嘅 8080 已經有 SW，兩邊結果唔同。
 → 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

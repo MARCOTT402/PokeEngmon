@@ -250,6 +250,8 @@ window.Sync = (() => {
         /* PvP 戰績（settle_battle RPC 喺 server 累積；本地只讀顯示用） */
         st.pvpWins = acct.pvp_wins ?? st.pvpWins ?? 0;
         st.pvpLosses = acct.pvp_losses ?? st.pvpLosses ?? 0;
+        /* Trainer Lv EXP（server 權威，_grant_trainer_exp 先改得；未跑 migration 冇欄就保留本地） */
+        if (acct.trainer_exp != null && Number.isFinite(Number(acct.trainer_exp))) st.trainerExp = Number(acct.trainer_exp);
         /* 每日對戰配額（server 記，跨機一致）＋累積場數（leaderboard / friends 用） */
         if (acct.battle_days && typeof acct.battle_days === "object") st.battleDays = acct.battle_days;
         if (acct.battle_ai_total != null) st.battleAiTotal = acct.battle_ai_total | 0;

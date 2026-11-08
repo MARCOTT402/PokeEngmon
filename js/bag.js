@@ -161,11 +161,12 @@ const BagUI = (() => {
   const isPhone = () => !(window.App && App.layout) || App.layout() === "phone";
   const isLandscape = () => window.matchMedia("(orientation: landscape)").matches;
   let rotateMode = null, rotateDone = null;
-  function showRotate(mode, done) {
+  /* msg：自訂第二行（例如戰鬥用 "Battles work in landscape"）；冇就用背包預設 */
+  function showRotate(mode, done, msg) {
     rotateMode = mode; rotateDone = done || null;
     rotateEl.classList.toggle("back", mode === "portrait");
     rotateEl.querySelector(".bag-rot-title").textContent = mode === "portrait" ? "Turn your phone upright" : "Please rotate your device";
-    rotateEl.querySelector(".bag-rot-msg").textContent = mode === "portrait" ? "Home works in portrait" : "The Bag works in landscape";
+    rotateEl.querySelector(".bag-rot-msg").textContent = msg || (mode === "portrait" ? "Home works in portrait" : "The Bag works in landscape");
     rotateEl.classList.add("show");
     rotateEl.querySelector(".bag-rot-btn").onclick = hideRotate;
   }
@@ -1244,7 +1245,7 @@ const BagUI = (() => {
   }
 
   return { open, close, isOpen: () => S.open, getTeam, openBattle,
-    showRotate: (mode, done) => { if (!root) build(); showRotate(mode, done); } };
+    showRotate: (mode, done, msg) => { if (!root) build(); showRotate(mode, done, msg); } };
 })();
 
 window.BagUI = BagUI;

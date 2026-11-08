@@ -122,13 +122,17 @@ async function runSeed(seed) {
   await ev("const st=loadState(); st.trainerProgress={}; for (const c of ['youngster','bugcatcher','lass','hiker','gentleman','swimmer','ace','jasmine','psychic','cynthia','alder','drake','anabel','red']) st.trainerProgress[c]={easy:1,normal:1,hard:1,inferno:0,flawless:[]}; saveState(st);");
   /* 等寶可夢／招式資料載完（冷啟動會慢；未載完嘅話傷害、AI 評分會唔同） */
   for (let i = 0; i < 60 && !(await ev("return typeof POKEMON_DEX !== 'undefined' && !!POKEMON_DEX && typeof moveInfo === 'function' && moveInfo('tackle').power != null")); i++) await sleep(250);
+  /* 打 AI 唔再開揀隊頁（spec 20261108-trainer-level §5），改用 My Team 頭 N 隻。舊揀隊頁 My Team 空嗰陣係揀「排序後頭 N 隻」：
+     My Team 空就照呢個次序填返，令開戰隊伍同舊 fixture 一樣，重播先比較得到戰鬥邏輯 */
+  await ev("const st=loadState(); if(!(st.myTeam||[]).length){ const pool=st.entries.filter(e=>Array.isArray(e.ownedSpecies)&&e.ownedSpecies.length&&!(window.Pet&&Pet.isFaint(e))); const p=DEXSORT.load(BattleUI._.TEAM_SORT_KEY); DEXSORT.sortList(pool,p.sort,p.dir,e=>{const c=entryCurrentSpecies(e); return {dexId:c[0], level:e.level||1};}); st.myTeam=pool.slice(0,6).map(e=>e.uid); saveState({now:true}); }");
   await ev("BattleUI.openMenu()"); await sleep(900);
   await ev(`document.querySelector('.ai-trainer-card[data-id="${sc.trainer}"]').click()`); await sleep(600);
-  await ev(`window.__replayReseed(); document.querySelector('.tier-card[data-tier="${sc.tier}"]').click()`); await sleep(1500);
+  /* 撳 tier 即刻開戰（唔再經揀隊頁），所以記錄鈎要喺撳 tier 之前裝 */
   /* 開戰一刻記錄雙方隊伍（等級、能力值、特性、道具、招式），做第一條記錄 */
   await ev(`window.__init = null; const c0 = BattleState.create; BattleState.create = function (...a) { const st = c0.apply(this, a);
     const pick = (p) => ({ name: p.name, level: p.level, hp: p.hp, maxHp: p.maxHp, stats: p.stats, ability: p.ability || null, held: p.held || null, status: p.status || null, moves: (p.moves || []).map(m => m.slug) });
     window.__init = { p1: st.p1.team.map(pick), p2: st.p2.team.map(pick) }; return st; };`);
+  await ev(`window.__replayReseed(); document.querySelector('.tier-card[data-tier="${sc.tier}"]').click()`); await sleep(1500);
   await ev("const c=document.getElementById('team-select-confirm'), m=document.getElementById('team-select-modal'); const open=()=>m.style.display!=='none'; for(const s of document.querySelectorAll('.team-slot')){ c.click(); if(!open()) break; s.click(); } if (open()) c.click();");
   await sleep(300);
   if (process.env.REPLAY_DEBUG) console.log("after team:", await ev("return JSON.stringify({ path: location.pathname, title: document.title, ready: document.readyState, bodyLen: document.body?.innerHTML.length, hasApp: typeof App, hasBattle: typeof BattleUI, views: [...document.querySelectorAll('.view')].filter(v=>getComputedStyle(v).display!=='none').map(v=>v.id), text: document.getElementById('battle-text')?.textContent, team: document.getElementById('team-select-modal')?.style.display, cards: document.querySelectorAll('.ai-trainer-card').length, tiers: document.querySelectorAll('.tier-card').length, rng: window.__replayRngCalls })"));

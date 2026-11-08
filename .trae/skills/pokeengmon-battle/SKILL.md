@@ -94,3 +94,11 @@ description: PokeEngmon battle rules: hand-made animations, the fainted/switch g
   - 只有 call stack 入面有 `js/battle/battle.js` 或 `js/battle/ui/` 嘅 `Math.random` 先用固定數列；搬戰鬥代碼去其他路徑要同時改 test 入面個 regex。
   - 換隻行 battle.js 自己嘅 `#battle-party` 後備介面（test 會停用 `BagUI.openBattle`），BagUI 嘅換隻介面唔喺覆蓋範圍。
 → `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。
+
+### Rule 124 — 改開戰流程（例如跳過揀隊頁）：重播測試嘅記錄鈎要喺「觸發開戰嗰下」之前裝；隊伍來源改咗要令開戰隊伍對返舊 fixture
+
+- `tools/responsive/test-battle-replay.mjs` 喺開戰一刻用包住 `BattleState.create` 嘅鈎記錄雙方隊伍（`window.__init`），之後先開 driver。邊一下 click 會即刻開戰，鈎就要喺嗰下之前裝；開戰觸發點搬咗（例如 tier 卡直接開戰），測試步驟要跟住搬。
+- 隊伍來源改咗（揀隊頁 → 背包 My Team）：測試要令開戰隊伍同舊 fixture 一樣（例如 My Team 空就按舊揀隊頁排序填返頭 N 隻），咁重播先比較到「戰鬥邏輯有冇變」；唔好隨手 `--update` fixture 蓋過去。
+- 所有走「AI 開戰」嘅 e2e 都要喺開戰前 seed 背包 My Team（`_seedtest.html` 存檔 My Team 係空）：`test-battle-replay.mjs`、`test-battle-fit.mjs`、`test-keys.mjs`；新加呢類測試照抄。
+- 症狀：seed `TIMEOUT — 0 records`（鈎裝遲／driver 冇起）。`REPLAY_DEBUG=1` 每個 seed 只等 15 秒，TIMEOUT 係正常，睇 `after team` 同 records 數就得。
+→ 事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。

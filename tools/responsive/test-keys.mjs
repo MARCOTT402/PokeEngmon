@@ -195,6 +195,8 @@ await home();
 /* 戰鬥：F → 招式 1 可用；Esc 返主選單；Y／N 唔會出錯（重新開機，免得前面流程殘留） */
 await boot(1280, 800); await press("ArrowDown"); await press("Enter"); await sleep(1200);
 await ev("if(location.hostname!=='localhost') throw 1; const st=loadState(); Energy.status(st); st.energy.points=50; saveState(st); return 1");
+/* 打 AI 唔再開揀隊頁，用背包 My Team（spec 20261108-trainer-level §5）：My Team 空就填返健康嘅頭 6 隻 */
+await ev("const st=loadState(); if(!(st.myTeam||[]).length){ st.myTeam=st.entries.filter(e=>Array.isArray(e.ownedSpecies)&&e.ownedSpecies.length&&!(window.Pet&&Pet.isFaint(e))).slice(0,6).map(e=>e.uid); saveState({now:true}); } return 1");
 await ev("BattleUI.openMenu(); return 1"); await sleep(900);
 await ev("document.querySelector('.ai-trainer-card').click(); return 1"); await sleep(600);
 await ev("document.querySelector('.tier-card:not([disabled])').click(); return 1"); await sleep(1500);

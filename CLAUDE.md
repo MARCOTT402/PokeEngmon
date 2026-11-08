@@ -8,7 +8,8 @@
 2. `arch.md` — 詳細架構（index 唔夠先睇）。
 3. `.trae/skills/pokeengmon-preop-checklist/SKILL.md` — **總索引（Rule 1–88+）**：按「做緊咩」揀題目 skill（workflow／supabase／auth／game-data／battle／quiz／ui-sheets／responsive），再讀嗰份 `SKILL.md`。改碼、改 SQL、改 UI、release 之前必做；可以 Grep Rule 編號或關鍵字。事故原文喺各題目 skill 嘅 `references/incidents.md`，要查來龍去脈先開。
 4. `.trae/skills/pokeengmon-responsive/SKILL.md` — **響應式／版面嘅唯一來源**（已整合原 `webapp-mobile-dev` 同 preop 嘅相關 Rule）。改版面、紅框、safe-area、sheet 定位、display-window overlay、modal／toast、轉機提示、觸控範圍，或者加新 view／sheet／overlay 之前必讀；附必跑嘅 `tools/responsive/` 測試。
-5. 產品需求：`prd.md`；功能 spec／tasks：`spec.md`、`tasks.md`、`.trae/specs/`；設計／計劃文件：`.trae/documents/`（最新 backlog：`backlog-20261104-items-1-16.md`）。
+5. `.trae/skills/pokeengmon-prototype/SKILL.md` — **做任何 prototype／設計稿之前必讀**：喺真 app 上面植入（`tools/prototype/<名>/build.mjs`）、用遊戲現有素材同設定位置、反 AI 味同狀態清單、用 localhost URL 交付（Rule 118／121／122）。
+6. 產品需求：`prd.md`；功能 spec／tasks：`spec.md`、`tasks.md`、`.trae/specs/`；設計／計劃文件：`.trae/documents/`（最新 backlog：`backlog-20261104-items-1-16.md`）。
 
 ## 永遠生效嘅規則（同 Cursor 共用）
 

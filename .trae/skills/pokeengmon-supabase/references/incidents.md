@@ -147,3 +147,10 @@ Skill: Rule 96 added
 - 驗證：Node 18/18；browser 壞存檔重開；headless phone／wide 斷網／返線上；sm2 15/15；overlay-switch 10/10；sheets 28/29（P9b 已知）。
 
 Skill: Rule 98 added
+
+## Rule 123 — 獎勵／積分設計只 reward、唔 punish：輸、失敗、答錯都唔扣 EXP／RP／鑽石／等級（最多係 0 或者細額獎勵）
+
+- 2026-11-08 battle menu 訓練員卡方案文件（`.trae/documents/20261108-trainer-level-plan.md`）方案 B 寫「贏 +25 RP、輸 −15 RP」。用戶即時糾正：「輸 −15（唔好扣，只 reward 唔 punish）」。
+- 修正：plan 劃走 −15 改「輸唔扣」；Trainer Lv spec（`.trae/specs/20261108-trainer-level.md`）開頭寫明原則，PvP 輸 +5 EXP、好友戰 0、防刷用每日上限。
+
+Skill: Rule 123 added

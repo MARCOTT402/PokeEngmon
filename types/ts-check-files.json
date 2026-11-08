@@ -26,5 +26,6 @@
   "js/sm2.js",
   "js/storage.js",
   "js/store.js",
-  "js/sync.js"
+  "js/sync.js",
+  "js/trainer-level.js"
 ]

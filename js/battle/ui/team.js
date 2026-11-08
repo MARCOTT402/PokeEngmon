@@ -52,6 +52,20 @@
       ? B.playerSlots(S.foeTeamEntries.length, S.aiTier)
       : fixedSize;
     const teamSize = Math.min(want || 1, pool.length);
+    /* 打 AI：唔再開揀隊頁，直接用背包 My Team 頭 N 隻健康嘅（spec 20261108-trainer-level §5）；PvP 照舊揀隊 */
+    if (S.mode === "ai" && S.aiTrainer && !fixedSize && B.teamLineup) {
+      const go = B.teamLineup(want || 1);
+      if (!go.length) {
+        const hasTeam = (typeof BagUI !== "undefined" && BagUI.getTeam ? BagUI.getTeam() : (st.myTeam || [])).length > 0;
+        B.toast(hasTeam ? "Your team has all fainted — heal them in the Bag first." : "Set up your team in the Bag first.");
+        B.openMenu();
+        setTimeout(() => { if (B.openTeamBag) B.openTeamBag(); }, 300);
+        return;
+      }
+      S.teamEntries = go;
+      cb();
+      return;
+    }
     renderBattleInfo();
     document.getElementById("team-size-label").textContent = teamSize;
     const lvSync = S.levelSyncLevel;
@@ -237,10 +251,13 @@
     const myRec = { w: mine.wins != null ? mine.wins : (st.pvpWins || 0), l: mine.losses != null ? mine.losses : (st.pvpLosses || 0) };
     const teamHTML = side => S.state[side].team.map(p =>
       `<div class="pb-mon"><img src="${spriteURL(p.dexId)}" alt="${escapeHTML(p.name)}"><span>Lv.${p.level}</span></div>`).join("");
-    const side = (who, av, name, rec, teamSide) => `
+    /* Trainer Lv：自己用本地 trainerExp（server 權威，pull／RPC 更新）；對手用 get_trainer_cards 嘅 exp */
+    const lvOf = exp => (window.TrainerLevel && exp != null) ? TrainerLevel.levelFromExp(exp).lv : null;
+    const myLv = lvOf(mine.exp != null ? mine.exp : st.trainerExp), foeLv = lvOf(theirs.exp);
+    const side = (who, av, name, rec, teamSide, lv) => `
       <div class="pb-side pb-${who}">
         <div class="pb-avatar">${window.Avatars ? Avatars.img(av) : ""}</div>
-        <div class="pb-name">${escapeHTML(name)}</div>
+        <div class="pb-name">${escapeHTML(name)}${window.TrainerLevel ? TrainerLevel.badgeHTML(lv) : ""}</div>
         <div class="pb-rec">PvP <b>${rec.w}W</b> – <b>${rec.l}L</b></div>
         <div class="pb-team">${teamHTML(teamSide)}</div>
       </div>`;
@@ -250,9 +267,9 @@
     box.innerHTML = `<div class="pb-card">
         <div class="pb-kicker">${S.pvpIsFriend ? "FRIEND BATTLE" : "PVP BATTLE"} · ${S.state[S.mySide].team.length} vs ${S.state[S.foeSide].team.length}</div>
         <div class="pb-row">
-          ${side("me", myAv, st.playerName || "You", myRec, S.mySide)}
+          ${side("me", myAv, st.playerName || "You", myRec, S.mySide, myLv)}
           <div class="pb-vs">VS</div>
-          ${side("foe", foeAv, theirs.name || S.pvpFoeName || "Opponent", { w: theirs.wins || 0, l: theirs.losses || 0 }, S.foeSide)}
+          ${side("foe", foeAv, theirs.name || S.pvpFoeName || "Opponent", { w: theirs.wins || 0, l: theirs.losses || 0 }, S.foeSide, foeLv)}
         </div>
         ${h2h}
         <button type="button" class="btn-big btn-primary pb-go" id="pb-go">Continue (${PRE_BATTLE_SECONDS})</button>

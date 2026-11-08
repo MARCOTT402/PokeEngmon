@@ -55,6 +55,8 @@ const M = `const q=s=>document.querySelector(s); const R=e=>{const b=e.getBoundi
 const startBattle = async () => {
   /* 本地測試頁先補能量（Rule 62：只限 localhost） */
   await ev("if(location.hostname!=='localhost') throw 1; const st=loadState(); Energy.status(st); st.energy.points=50; saveState(st);");
+  /* 打 AI 唔再開揀隊頁，用背包 My Team（spec 20261108-trainer-level §5）：測試存檔 My Team 空就填返健康嘅頭 6 隻 */
+  await ev("const st=loadState(); if(!(st.myTeam||[]).length){ st.myTeam=st.entries.filter(e=>Array.isArray(e.ownedSpecies)&&e.ownedSpecies.length&&!(window.Pet&&Pet.isFaint(e))).slice(0,6).map(e=>e.uid); saveState({now:true}); }");
   await ev("BattleUI.openMenu()"); await sleep(900);
   await ev("document.querySelector('.ai-trainer-card').click()"); await sleep(600);
   await ev("document.querySelector('.tier-card:not([disabled])').click()"); await sleep(1500);

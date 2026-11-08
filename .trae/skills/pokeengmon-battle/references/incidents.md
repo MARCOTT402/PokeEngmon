@@ -101,3 +101,11 @@ Skill: Rule 99 added
 - 另外：8080 static server 中途停咗，headless 載到錯誤頁扮成 timeout → test 開頭先檢查 server。
 
 Skill: Rule 117 added
+
+## Rule 124 — 改開戰流程（例如跳過揀隊頁）：重播測試嘅記錄鈎要喺「觸發開戰嗰下」之前裝；隊伍來源改咗要令開戰隊伍對返舊 fixture
+
+- 2026-11-08 Trainer Lv／battle menu 重做：打 AI 唔再開揀隊頁（`team.js` `openTeamSelect` AI 分支用 `B.teamLineup`）。跑重播測試：seed 1 `TIMEOUT — 0 records, 309s`。
+- 原因：測試喺撳 tier **之後**先裝 `BattleState.create` 記錄鈎；舊流程要等揀隊確認先開戰所以趕得切，新流程撳 tier 即刻開戰。另外 seed 存檔 My Team 係空，新流程會 toast「Set up your team in the Bag」唔開戰。
+- 修正：鈎搬去撳 tier 之前；開戰前 My Team 空就用舊揀隊頁嘅排序（`DEXSORT.load(TEAM_SORT_KEY)`）填頭 N 隻，開場隊伍同 fixture 一樣（Charmander Lv15…）。
+
+Skill: Rule 124 added

@@ -1022,28 +1022,22 @@
     <!-- ============ 對戰選單 ============ -->
     <section id="view-battle-menu" class="view battle-menu-view">
       <div class="battle-menu-inner">
-        <div class="bm-hero">
-          <div class="bm-hero-glow" aria-hidden="true"></div>
-          <div class="bm-hero-text">
-            <span class="bm-kicker">BATTLE</span>
-            <span class="bm-title">Trainer Ladder</span>
-            <span class="bm-sub">14 challengers · 4 tiers each · ⚡1 per battle</span>
-          </div>
-        </div>
-
-        <div class="battle-mode-grid">
+        <!-- PvP／Friends：戰鬥指令框（pr-window-1；原 hero 已拎走，見 spec 20261108-trainer-level §5） -->
+        <div class="battle-mode-grid bm-cmd">
           <button id="battle-menu-pvp" class="battle-mode-card mode-pvp">
-            <span class="bmc-icon">🌐</span>
-            <span class="bmc-title">PvP Battle</span>
+            <span class="tcm-icon" aria-hidden="true"><img src="assets/battle/ui/poke-ball-big.png" alt=""><img class="vs" src="assets/battle/ui/poke-ball-big.png" alt=""></span>
+            <span class="bmc-title">PVP BATTLE</span>
             <span class="bmc-sub" id="battle-menu-pvp-sub">Online match · random team size</span>
-            <span class="fire-band" aria-hidden="true"><i></i><i></i><b></b></span>
           </button>
           <button id="battle-menu-friends" class="battle-mode-card mode-friends">
-            <span class="bmc-icon">👥</span>
-            <span class="bmc-title">Friends <span id="battle-menu-friends-badge" class="bmt-badge" hidden>0</span></span>
+            <span class="tcm-icon" aria-hidden="true"><img src="assets/trainers/avatars/blue.png" alt=""><img src="assets/trainers/avatars/leaf.png" alt=""></span>
+            <span class="bmc-title">FRIENDS <span id="battle-menu-friends-badge" class="bmt-badge" hidden>0</span></span>
             <span class="bmc-sub" id="battle-menu-friends-sub">Log in to add friends</span>
           </button>
         </div>
+
+        <!-- 訓練員卡：頭像企喺戰鬥草地台（撳頭像換）、資料牌（名＋Trainer Lv＋PvP 勝率）、My Team 6 格（只讀 → 背包）；BattleUI renderTrainerCard 填 -->
+        <section id="bm-trainer-card" class="bm-tcard" aria-label="Your trainer and team"></section>
 
         <div class="ladder-head">
           <span>Trainer Ladder</span>
@@ -1276,6 +1270,7 @@
   <script src="js/mega-data.js?v=1.71.3" type="module"></script>
   <script src="js/avatars.js?v=1.71.3" type="module"></script>
   <script src="js/dex-sort.js?v=1.71.3" type="module"></script>
+  <script src="js/trainer-level.js?v=1.71.3" type="module"></script>
   <script src="js/battle/rng.js?v=1.71.3" type="module"></script>
   <script src="js/battle/energy.js?v=1.71.3" type="module"></script>
   <script src="js/battle/realtime.js?v=1.71.3" type="module"></script>
@@ -1286,6 +1281,7 @@
   <script src="js/battle/sprites.js?v=1.71.3" type="module"></script>
   <script src="js/battle/battle.js?v=1.71.3"></script>
   <script src="js/battle/ui/menu.js?v=1.71.3"></script>
+  <script src="js/battle/ui/trainer-card.js?v=1.71.3"></script>
   <script src="js/battle/ui/match.js?v=1.71.3"></script>
   <script src="js/battle/ui/team.js?v=1.71.3"></script>
   <script src="js/battle/ui/stage.js?v=1.71.3"></script>

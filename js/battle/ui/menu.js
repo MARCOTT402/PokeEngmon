@@ -77,6 +77,8 @@
     /* 梯隊一入 Battle 頁就列出，唔使先撳 AI Trainers 先見到 */
     if (trainerList) trainerList.hidden = false;
     renderTrainerList();
+    /* 訓練員卡（頭像、Trainer Lv、PvP 勝率、My Team）：js/battle/ui/trainer-card.js */
+    if (B.renderTrainerCard) B.renderTrainerCard();
   }
 
   /* ---------- AI Trainers 梯隊：14 位，等級同隊伍數刻意脫鈎 ---------- */
@@ -424,6 +426,7 @@
         <span class="tc-stats">${open
           ? `Foe Lv. ${lv} · ${trainer.team.length} Pokémon · You bring ${slots}`
           : need}</span>
+        ${open && B.bringHTML ? B.bringHTML(slots) : ""}
         ${open ? `<span class="tc-note">${meta.note}</span>` : ""}
         ${open && tier === "inferno" ? `<span class="tc-sync">Level Sync → Lv. ${infernoSyncLevel(trainer)} <small>(levels restored after battle)</small></span>` : ""}
         ${open ? `<span class="tc-foot"><span class="tc-reward">First clear 💎10 · EXP ×${meta.mult}</span><span class="tc-ep">⚡ 1</span></span>` : ""}

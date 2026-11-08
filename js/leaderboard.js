@@ -121,7 +121,7 @@ const Leaderboard = {
       <div class="lb-rank">${medal}</div>
       ${img}
       <div class="lb-mid">
-        <div class="lb-name">${escapeHTML(r.name)}${badgeHTML}${r.isYou ? ' <span class="lb-you-tag">YOU</span>' : ""}</div>
+        <div class="lb-name">${escapeHTML(r.name)}${r.accountUuid ? `<span class="tl-slot" data-lvuid="${escapeHTML(r.accountUuid)}"></span>` : ""}${badgeHTML}${r.isYou ? ' <span class="lb-you-tag">YOU</span>' : ""}</div>
         <div class="lb-partner">${escapeHTML(r.partnerName)} · Lv.${r.partnerLevel}</div>
       </div>
       <div class="lb-count"><b>${r.totalOwned}</b><span>Pokémon</span></div>${addBtn}
@@ -164,6 +164,10 @@ const Leaderboard = {
       `;
     } else {
       list.innerHTML = top.map((r, i) => this._rowHTML(r, i + 1)).join("");
+      /* Trainer Lv：畫完先攞，填入 [data-lvuid] 空位（唔使重綁＋掣） */
+      if (window.TrainerLevel) {
+        TrainerLevel.fetchLevels(top.map(r => r.accountUuid)).then(m => TrainerLevel.fillBadges(list, m)).catch(() => {});
+      }
     }
 
     /* 榜上＋掣：事件委派式逐粒綁，撳咗就送好友邀請 */

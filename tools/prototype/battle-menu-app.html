@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../../">
+  <script src="tools/prototype/battle-menu/early.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PokeEngmon">
+  <meta name="theme-color" content="#ffcb05">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>Battle Menu Trainer Card — Prototype (real app)</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+  <!-- 首屏 Loading：內聯樣式 + 純 CSS 精靈球，零外部依賴。
+       必須排喺 style.css 之前 —— stylesheet 係 render-blocking，
+       排後面就要等 CSS 下載完先畫得出（2G/3G 下會變白屏）。 -->
+  <style>
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 99999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 26px;
+      background-color: #ffcb05;
+      background-image:
+        radial-gradient(circle at 18% 16%, rgba(238, 21, 21, .5) 0 6px, transparent 7px),
+        radial-gradient(circle at 80% 24%, rgba(238, 21, 21, .4) 0 5px, transparent 6px),
+        radial-gradient(circle at 32% 38%, rgba(238, 21, 21, .3) 0 4px, transparent 5px),
+        radial-gradient(circle at 66% 64%, rgba(255, 255, 255, .65) 0 5px, transparent 6px),
+        radial-gradient(circle at 14% 78%, rgba(255, 255, 255, .5) 0 4px, transparent 5px),
+        radial-gradient(circle at 88% 84%, rgba(255, 255, 255, .45) 0 4px, transparent 5px);
+    }
+    .ld-ball {
+      position: relative; width: 80px; height: 80px;
+      border-radius: 50%; border: 4px solid #1a1a1a;
+      background: linear-gradient(to bottom,
+        #ee1515 0 45%, #1a1a1a 45% 55%, #ffffff 55% 100%);
+      box-shadow:
+        0 6px 20px rgba(0, 0, 0, .25),
+        inset 0 -3px 8px rgba(0, 0, 0, .18),
+        inset 0 3px 6px rgba(255, 255, 255, .25);
+      animation: ld-spin 1.2s linear infinite;
+    }
+    .ld-ball::after {
+      content: ""; position: absolute; top: 50%; left: 50%;
+      width: 22px; height: 22px; transform: translate(-50%, -50%);
+      border-radius: 50%; background: #ffffff; border: 4px solid #1a1a1a;
+      box-shadow: inset 0 -1px 3px rgba(0, 0, 0, .2);
+    }
+    .ld-ball::before {
+      content: ""; position: absolute; top: 6px; left: 14px;
+      width: 18px; height: 10px; border-radius: 50%;
+      background: rgba(255, 255, 255, .35); transform: rotate(-30deg);
+    }
+    .ld-text {
+      font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      font-size: 20px; font-weight: 700; color: #1a1a1a;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .ld-sub {
+      font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      font-size: 13px; font-weight: 500; color: rgba(26, 26, 26, .62);
+      margin-top: -12px; letter-spacing: .04em;
+      text-align: center; padding: 0 24px;
+    }
+    @keyframes ld-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    #loading-screen.ld-out { animation: ld-fade .4s ease-out forwards; }
+    @keyframes ld-fade {
+      to { opacity: 0; visibility: hidden; pointer-events: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ld-ball { animation: none; }
+      #loading-screen.ld-out { animation-duration: .01s; }
+    }
+    /* 兜底畫面（Guard，Rule 94）：內聯 —— style.css 載唔到都要顯示到；z 高過 loading-screen 99999 */
+    #fatal-screen {
+      position: fixed; inset: 0; z-index: 100000;
+      display: flex; align-items: center; justify-content: center;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      background: #ffcb05; font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    #fatal-screen[hidden], #guard-recover[hidden] { display: none !important; }
+    .fatal-card {
+      width: 100%; max-width: 360px; box-sizing: border-box;
+      background: #fff; border: 3px solid #1a1a1a; border-radius: 18px;
+      padding: 24px 20px 20px; text-align: center; color: #1a1a1a;
+      box-shadow: 0 8px 0 rgba(0, 0, 0, .18);
+    }
+    .fatal-ball {
+      width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; border: 4px solid #1a1a1a;
+      background: linear-gradient(to bottom, #ee1515 0 45%, #1a1a1a 45% 55%, #fff 55% 100%);
+    }
+    .fatal-card h1 { font-size: 20px; margin: 0 0 6px; }
+    .fatal-card p { font-size: 14px; line-height: 1.45; margin: 0 0 18px; color: #4a4a4a; }
+    .fatal-btn {
+      display: block; width: 100%; min-height: 48px; margin: 0 0 10px; box-sizing: border-box;
+      border: 3px solid #1a1a1a; border-radius: 14px; background: #ee1515; color: #fff;
+      font: 800 16px/1 "Inter", sans-serif; cursor: pointer;
+    }
+    .fatal-btn.ghost { background: #fff; color: #1a1a1a; font-size: 14px; min-height: 44px; margin: 0; }
+    .fatal-btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+    /* 答題／捕捉／對戰中出錯嘅恢復卡：z 2700（高過 battle-land 2400／bag-rotate 2600，低過 toast 3000；Rule 46） */
+    #guard-recover {
+      position: fixed; inset: 0; z-index: 2700;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: rgba(0, 0, 0, .45); font-family: "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    #guard-recover .fatal-btn { margin-bottom: 10px; }
+    /* 離線提示（Net，Rule 98）：白螢幕區右上角細 pill；唔擋操作；z 2550（低過 bag-rotate 2600／toast 3000，高過 battle-land 2400；Rule 46／81） */
+    #net-offline {
+      position: fixed; z-index: 2550; pointer-events: none;
+      top: calc(var(--frame-screen-top, 0px) + 6px);
+      left: calc(var(--frame-screen-left, 0px) + var(--frame-screen-w, 100vw) - 8px);
+      transform: translateX(-100%);
+      padding: 3px 10px; border-radius: 999px; border: 2px solid #1a1a1a; white-space: nowrap;
+      background: #fff3cd; color: #7a5c00; box-shadow: 0 2px 0 rgba(0, 0, 0, .18);
+      font: 800 12px/1.3 "Inter", "PingFang TC", "Microsoft JhengHei", sans-serif; letter-spacing: .02em;
+    }
+    #net-offline[hidden] { display: none !important; }
+  </style>
+  <!-- Guard 一定要第一個 script（喺 style.css／supabase-config 之前），先捉得到其他檔案嘅錯（Rule 94） -->
+  <script src="js/core/guard.js?v=1.71.3"></script>
+  <!-- guard.js 自己都載唔到時嘅最細後備：其他模組直接用 Guard.asyncClick／busy，唔可以因為佢冇咗而 ReferenceError -->
+  <script>window.Guard||(window.Guard={asyncClick:function(f){return f},busy:function(b,f){return f()},safe:function(w,f,d){try{return f()}catch(e){return d}},safeAsync:function(w,f){return f()},report:function(){},fatal:function(){location.reload()},toast:function(){},fetchGet:function(u,i){return fetch(u,i)},num:function(v,d){v=Number(v);return isFinite(v)?v:(d||0)},clamp:function(v,a,b,d){v=Number(v);v=isFinite(v)?v:(d===undefined?a:d);return Math.min(b,Math.max(a,v))},posDim:function(v,d){v=Number(v);return v>0?v:(d||1)},safeJSON:function(r,d){try{var v=JSON.parse(r);return v==null?d:v}catch(e){return d}}});</script>
+  <!-- 共用 HTML escape／震動（escapeHTML、haptic），所有模組之前載入 -->
+  <script src="js/core/dom.js?v=1.71.3" type="module"></script>
+  <!-- html`` tagged template（自動 escape，用 escapeHTML；Rule 111） -->
+  <script src="js/core/html.js?v=1.71.3" type="module"></script>
+  <!-- Net：統一網絡層（timeout／離線／錯誤提示；Rule 96），SupabaseAuth／Sync／PvP 都經佢 -->
+  <script src="js/core/net.js?v=1.71.3"></script>
+  <link rel="stylesheet" href="css/style.css?v=1.71.3">
+</head>
+<body>
+  <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
+  <div id="loading-screen" aria-live="polite">
+    <div class="ld-ball" aria-hidden="true"></div>
+    <div class="ld-text">Loading...</div>
+    <div class="ld-sub" id="loading-sub">Setting up your adventure</div>
+  </div>
+
+  <!-- 兜底畫面（Guard.fatal）：開機失敗／核心 script 載唔到 -->
+  <div id="fatal-screen" role="alertdialog" aria-modal="true" aria-labelledby="fatal-title" hidden>
+    <div class="fatal-card">
+      <div class="fatal-ball" aria-hidden="true"></div>
+      <h1 id="fatal-title">System busy</h1>
+      <p>Something stopped the app from loading. Your progress is saved on this device — please try again.</p>
+      <button type="button" id="fatal-retry" class="fatal-btn">Retry</button>
+      <button type="button" id="fatal-repair" class="fatal-btn ghost">Still stuck? Repair app</button>
+    </div>
+  </div>
+  <!-- 恢復卡（Guard.report）：答題／捕捉／對戰中出錯，保證可以返主頁 -->
+  <!-- 離線 pill（Net 控制；Rule 98） -->
+  <div id="net-offline" role="status" aria-live="polite" title="You're offline — progress is saved on this device" hidden>● Offline</div>
+  <div id="guard-recover" role="alertdialog" aria-modal="true" aria-labelledby="guard-recover-title" hidden>
+    <div class="fatal-card">
+      <h1 id="guard-recover-title">Something went wrong</h1>
+      <p>This screen hit a problem. You can keep going, or head back to Home — your answers so far are saved.</p>
+      <button type="button" id="guard-recover-continue" class="fatal-btn">Continue</button>
+      <button type="button" id="guard-recover-home" class="fatal-btn ghost">Back to Home</button>
+    </div>
+  </div>
+
+  <div id="app">
+
+    <!-- ============ 主畫面（P1 Pokedex Shell） ============ -->
+    <section id="view-home" class="view ph-shell-parent">
+      <!-- Pokedex shell（safe-area 五列 Grid） -->
+      <div class="pd-shell" id="pd-shell">
+        <!-- 機頂裝飾列：經典 Pokédex 鏡頭 + 階梯凹槽線 + 品牌字 + 精靈球（純裝飾） -->
+        <div class="pd-deco" aria-hidden="true">
+          <svg class="pd-deco-seam" viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 24 H11 L15 34 H100" fill="none" stroke="#8a1712" stroke-width="2.5"
+                  stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <span class="pd-deco-lens"></span>
+          <span class="pd-deco-brand">POKÉDEX OF ANOMALIES</span>
+          <span class="pd-ball pd-deco-ball"></span>
+        </div>
+        <!-- 上框 48px：4 個數據入口（左：鑽石 / 連續天數；右：圖鑑 / 能量） -->
+        <div class="pd-bezel">
+          <div class="pd-stats pd-stats-l">
+            <!-- 連續天數（金色金屬閃電 icon）— 位置對調去左一 -->
+            <button class="pd-stat" id="btn-bezel-streak" type="button" aria-label="Practice calendar">
+              <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <linearGradient id="bolt-gold" x1="30%" y1="0%" x2="70%" y2="100%">
+                    <stop offset="0%" stop-color="#fff9c4"/>
+                    <stop offset="30%" stop-color="#ffd54f"/>
+                    <stop offset="60%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#b45309"/>
+                  </linearGradient>
+                  <linearGradient id="bolt-outline" x1="50%" y1="0%" x2="50%" y2="100%">
+                    <stop offset="0%" stop-color="#1a0f00"/>
+                    <stop offset="100%" stop-color="#3d1f00"/>
+                  </linearGradient>
+                </defs>
+                <!-- 閃電主體（填充） -->
+                <path d="M13 2 L7.5 11.5 L11 12 L8 22 L16.5 10.5 L12 10.8 L14.5 2 Z"
+                      fill="url(#bolt-gold)" stroke="url(#bolt-outline)" stroke-width="1.4" stroke-linejoin="round"/>
+                <!-- 高光（左上側） -->
+                <path d="M13 2 L7.5 11.5 L11 12 L9 18 L15 9.5 L12 10.8 L14.5 2 Z"
+                      fill="#fff8d0" opacity="0.5"/>
+                <!-- 尖端亮光 -->
+                <circle cx="14.5" cy="2.2" r="1" fill="#ffffff" opacity="0.8"/>
+              </svg>
+              <span class="pd-num pd-num-x" id="home-streak-label">x0</span>
+            </button>
+            <!-- 鑽石（圓形藍色寶石 + 數值貼右上角）— 位置對調去左二 -->
+            <button class="pd-stat pd-stat-diamond" id="btn-bezel-diamond" type="button" aria-label="Open Dragonite Draw">
+              <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <radialGradient id="gem-blue" cx="40%" cy="35%" r="70%">
+                    <stop offset="0%" stop-color="#e6f6ff"/>
+                    <stop offset="25%" stop-color="#5ec8f5"/>
+                    <stop offset="60%" stop-color="#1e7fbf"/>
+                    <stop offset="100%" stop-color="#0a3d6b"/>
+                  </radialGradient>
+                </defs>
+                <!-- 外圈深藍邊框 -->
+                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/>
+                <!-- 藍色寶石本體 -->
+                <circle cx="12" cy="12" r="10" fill="url(#gem-blue)"/>
+                <!-- 左上大高光 -->
+                <ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/>
+                <!-- 右上小高光 -->
+                <ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/>
+                <!-- 底部陰影 -->
+                <ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/>
+              </svg>
+              <!-- 鑽石數值貼 gem 嘅 top-right corner -->
+              <span class="pd-topdiamond" id="topbar-diamonds">0</span>
+            </button>
+          </div>
+          <div class="pd-stats pd-stats-r">
+            <!-- Pokédex（Ultra Ball icon + 去底） -->
+            <button class="pd-stat" id="btn-bezel-dex" type="button" aria-label="Pokédex">
+              <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <clipPath id="ub-clip">
+                    <circle cx="12" cy="12" r="10.5"/>
+                  </clipPath>
+                  <radialGradient id="ub-top" cx="50%" cy="30%" r="70%">
+                    <stop offset="0%" stop-color="#c469e8"/>
+                    <stop offset="45%" stop-color="#7a1eaa"/>
+                    <stop offset="100%" stop-color="#3b0d55"/>
+                  </radialGradient>
+                  <radialGradient id="ub-bot" cx="50%" cy="70%" r="70%">
+                    <stop offset="0%" stop-color="#f0f0f0"/>
+                    <stop offset="100%" stop-color="#a8a8a8"/>
+                  </radialGradient>
+                </defs>
+                <!-- 外圈黑框 -->
+                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#1a1a1a" stroke-width="1.6"/>
+                <!-- 上半紫色漸變 -->
+                <g clip-path="url(#ub-clip)">
+                  <rect x="1.5" y="1.5" width="21" height="10.5" fill="url(#ub-top)"/>
+                  <!-- 兩側粉紅 wedge -->
+                  <path d="M1.5 9 L6 3 L4.5 1.5 Z" fill="#e83a7a" opacity="0.85"/>
+                  <path d="M22.5 9 L18 3 L19.5 1.5 Z" fill="#e83a7a" opacity="0.85"/>
+                </g>
+                <!-- 中間粗黑橫線 -->
+                <rect x="1.5" y="11.3" width="21" height="1.4" fill="#1a1a1a"/>
+                <!-- 下半銀白漸變 -->
+                <g clip-path="url(#ub-clip)">
+                  <rect x="1.5" y="12.7" width="21" height="10.5" fill="url(#ub-bot)"/>
+                </g>
+                <!-- 中心圈（灰外圈 + 白球） -->
+                <circle cx="12" cy="12" r="2.5" fill="#5a5a5a" stroke="#1a1a1a" stroke-width="1.2"/>
+                <circle cx="12" cy="12" r="1.5" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.8"/>
+                <!-- 頂部白色 A 字 -->
+                <path d="M12 3.2 L10.2 6.8 L11.1 6.8 L11.6 5.8 L12.4 5.8 L12.9 6.8 L13.8 6.8 Z M11.4 5.2 L12.6 5.2 L12 6.6 Z" fill="#ffffff" opacity="0.95"/>
+              </svg>
+              <span class="pd-num" id="home-dex-progress">0/151</span>
+            </button>
+            <!-- Energy（單一數值） -->
+            <button class="pd-stat" id="btn-bezel-energy" type="button" aria-label="Energy">
+              <svg class="pd-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <!-- 去底電池 icon -->
+                <rect x="2" y="7" width="18" height="10" rx="2" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+                <rect x="20.5" y="9.5" width="2" height="5" rx="1" fill="#1a1a1a"/>
+                <rect x="3.5" y="8.5" width="12" height="7" rx="1" fill="#ffe259"/>
+              </svg>
+              <span class="pd-num" id="td-energy-val">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 屏幕列 -->
+        <div class="pd-screen2">
+          <!-- Signature 卡：直立置中版（精靈圖 / 名稱 / 稀有度+等級 / 血量 / EXP） -->
+          <div class="ph-sign card ph-anim-partner">
+            <img id="hero-sprite" class="ph-sign-sprite" alt="My Pokémon">
+            <span class="ph-sign-name" id="hero-name">No Pokémon yet</span>
+            <div class="ph-sign-meta">
+              <span class="ph-sign-rarity" id="hero-rarity">—</span>
+              <span class="ph-sign-lv" id="hero-lv">Lv.1</span>
+              <span class="ph-sign-star" aria-hidden="true">★</span>
+            </div>
+            <!-- 兩條棒：Fullness（飽肚值，舊 id hero-hpbar）／HP（戰鬥 HP）；等級顯示喺稀有度旁邊 -->
+            <div class="ph-sign-stat">
+              <span class="ph-sign-stat-k">Fullness</span>
+              <div class="ph-sign-hpbar" aria-hidden="true"><i id="hero-hpbar"></i></div>
+              <span class="ph-sign-stat-v" id="hero-full-val">—</span>
+            </div>
+            <span class="ph-sign-note" id="hero-pet-note"></span>
+            <div class="ph-sign-stat">
+              <span class="ph-sign-stat-k">HP <button type="button" class="ph-sign-status" id="hero-status" hidden aria-label="Status"><img alt=""></button></span>
+              <div class="ph-sign-hpbar ph-sign-battlehp" aria-hidden="true"><i id="hero-battlehp"></i></div>
+              <span class="ph-sign-stat-v" id="hero-battlehp-val">—</span>
+            </div>
+          </div>
+
+          <!-- TodayStrip 44 -->
+          <div class="ph-today" id="ph-today" hidden>
+            <span class="ph-today-t" id="ph-today-streak">🔥 12 day streak</span>
+            <span class="ph-today-sep">·</span>
+            <button class="ph-today-btn" id="btn-home-quests" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5.5" y="4.5" width="13" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 4.5V3h6v1.5M9.3 12.5l2.2 2.2 4-4.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span id="ph-today-quests">3/5 quests</span>
+            </button>
+          </div>
+
+          <!-- Gym Challenge 入口：閃動圖字，夠條件先出現（Gym.refreshHomeUI 控制） -->
+          <button id="btn-gym-challenge" class="ph-gym" type="button" hidden>
+            <span class="ph-gym-inner">
+              <span class="ph-gym-tag" id="gym-challenge-tag">⚔ GYM</span>
+              <span class="ph-gym-txt">CHALLENGE</span>
+              <span class="ph-gym-tag">⚔</span>
+            </span>
+          </button>
+
+          <!-- 彈性空白（大機多出空間） -->
+          <div class="ph-spacer" aria-hidden="true"></div>
+
+          <!-- CTA 60 sticky -->
+          <button id="btn-start-quiz" class="ph-cta" type="button">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5.5 17.5 12 8 18.5Z" fill="#fff"/></svg>
+            START QUIZ <span>(10 questions)</span>
+          </button>
+
+          <!-- 底部 dock 4 格：Battle / Leaderboard / Friends / Setting -->
+          <nav class="ph-bottomdock" aria-label="Bottom dock">
+            <button class="ph-bd" data-bd="battle" type="button" id="btn-bd-battle" aria-label="Battle">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="leaderboard" type="button" id="btn-bd-leaderboard" aria-label="Leaderboard">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4v16M7 8h4M7 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 16l2.5 2.5L17 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="friends" type="button" id="btn-bd-friends" aria-label="Friends">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="9" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="9" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M17 14.5c2.4 0 4.3 1.8 4.5 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ph-bd" data-bd="setting" type="button" id="btn-bd-setting" aria-label="Settings">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.51 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.18a1.7 1.7 0 0 0 1-1.51V2.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.82V9a1.7 1.7 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            </button>
+          </nav>
+
+          <!-- Sheet 容器（setting / battle）：定位喺白色螢幕區內，由框內邊捲出 -->
+          <div class="ph-sheets">
+        <!-- 頂部捲入 sheets：Practice Calendar / Pokédex / Quests / Gacha -->
+        <!-- Streak（閃電按鈕）— 兩層展開：預覽 → 點底部箭咀 → full calendar -->
+        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-calendar" hidden aria-label="Streak">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Streak</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body">
+            <div id="sheet-calendar-content"></div>
+          </div>
+          <!-- 底部箭咀：點選展開完整 Calendar -->
+          <button class="ph-sheet-expand" id="btn-calendar-expand" type="button" aria-label="Expand full calendar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Pokédex（Pokéball 按鈕） -->
+        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-pokedex" hidden aria-label="Pokédex">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Pokédex</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body">
+            <div id="sheet-pokedex-content"></div>
+          </div>
+          <button class="ph-sheet-expand" id="btn-pokedex-expand" type="button" aria-label="Expand full Pokédex">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Quests / Daily Tasks（Energy 按鈕） -->
+        <div class="ph-sheet ph-sheet-down ph-sheet-content" id="sheet-quests" hidden aria-label="Daily Quests">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t">Daily Quests</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body">
+            <div id="sheet-quests-content"></div>
+          </div>
+          <button class="ph-sheet-expand" id="btn-quests-expand" type="button" aria-label="Expand full quests board">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 7.5L10 13.5L16 7.5" stroke="#7d786c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Setting sheet：bottom-up -->
+        <div class="ph-backdrop" hidden aria-hidden="true"></div>
+        <div class="ph-sheet ph-sheet-up" id="sheet-setting" hidden aria-label="Settings">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-grip"></span>
+            <span class="ph-sheet-t">Settings</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body">
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Trainer</div>
+              <button class="ph-sitem" id="btn-name-edit" type="button">
+                <span class="ph-sitem-t">Name</span>
+                <span class="ph-sitem-v" id="setting-name">—</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-login" type="button">
+                <span class="ph-sitem-t">Account</span>
+                <span class="ph-sitem-v" id="login-state">Sign in</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Audio</div>
+              <label class="ph-sitem ph-sitem-col" for="sheet-bgm">
+                <span class="ph-sitem-t">Music <b id="sheet-bgm-pct">100%</b></span>
+                <input id="sheet-bgm" type="range" min="0" max="100" step="1" value="100" aria-label="Music volume">
+              </label>
+              <div class="ph-sitem ph-sitem-col">
+                <span class="ph-sitem-t" id="sheet-bgm-track-t">Music track</span>
+                <div class="ph-speed-seg ph-track-seg" id="sheet-bgm-track" role="radiogroup" aria-labelledby="sheet-bgm-track-t">
+                  <label><input type="radio" name="bgmTrackSheet" value="flat-water"><span>Flat Water</span></label>
+                  <label><input type="radio" name="bgmTrackSheet" value="brown-noise"><span>Brown Noise</span></label>
+                  <label><input type="radio" name="bgmTrackSheet" value="isochronic"><span>Focus Tones</span></label>
+                </div>
+                <small class="ph-speed-note">Brown Noise &amp; Focus Tones help you concentrate</small>
+              </div>
+              <label class="ph-sitem ph-sitem-col" for="sheet-sfx">
+                <span class="ph-sitem-t">Sound Effects <b id="sheet-sfx-pct">100%</b></span>
+                <input id="sheet-sfx" type="range" min="0" max="100" step="1" value="100" aria-label="Sound effects volume">
+              </label>
+              <label class="ph-sitem ph-sitem-col" for="sheet-voice">
+                <span class="ph-sitem-t">Voice <b id="sheet-voice-pct">100%</b></span>
+                <input id="sheet-voice" type="range" min="0" max="100" step="1" value="100" aria-label="Voice volume">
+              </label>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Gameplay</div>
+              <div class="ph-sitem ph-sitem-col">
+                <span class="ph-sitem-t" id="sheet-anim-speed-t">Animation speed</span>
+                <div class="ph-speed-seg" id="sheet-anim-speed" role="radiogroup" aria-labelledby="sheet-anim-speed-t">
+                  <label><input type="radio" name="animSpeedSheet" value="1"><span>1×</span></label>
+                  <label><input type="radio" name="animSpeedSheet" value="2"><span>2×</span></label>
+                  <label><input type="radio" name="animSpeedSheet" value="3"><span>3×</span></label>
+                </div>
+                <small class="ph-speed-note">Catching, gacha &amp; evolution</small>
+              </div>
+              <label class="ph-sitem kbd-only" for="sheet-kbd-shortcuts">
+                <span class="ph-sitem-t">Keyboard shortcuts <small class="ph-speed-note">(letter &amp; number keys)</small></span>
+                <input id="sheet-kbd-shortcuts" class="ph-check" type="checkbox" checked>
+              </label>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Forgetting Curve</div>
+              <div class="curve-mode-grid" id="sheet-curve-grid">
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="standard">
+                  <span class="cm-label">📘 Standard</span>
+                  <small class="cm-desc">Balanced review for most learners</small>
+                </label>
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="junior">
+                  <span class="cm-label">🧒 Junior</span>
+                  <small class="cm-desc">Gentle curve with extra attempts & hints</small>
+                </label>
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="teen">
+                  <span class="cm-label">🎓 Teen</span>
+                  <small class="cm-desc">Steadier pace for secondary learners</small>
+                </label>
+                <label class="curve-mode-opt">
+                  <input type="radio" name="curveModeSheet" value="adult">
+                  <span class="cm-label">🧑 Adult</span>
+                  <small class="cm-desc">Longer intervals for faster recall</small>
+                </label>
+              </div>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Questions</div>
+              <button class="ph-sitem" id="btn-import-sheet" type="button">
+                <span class="ph-sitem-t">Import CSV Questions</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-myq-sheet" type="button">
+                <span class="ph-sitem-t">View my questions</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+            </div>
+            <div class="ph-ssec">
+              <div class="ph-ssec-t">Help</div>
+              <button class="ph-sitem kbd-only" id="btn-kbd-help" type="button">
+                <span class="ph-sitem-t">Keyboard shortcuts</span>
+                <span class="ph-sitem-v">?</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <button class="ph-sitem" id="btn-disclaimer" type="button">
+                <span class="ph-sitem-t">Copyright &amp; Disclaimer</span>
+                <span class="ph-s-arrow">›</span>
+              </button>
+              <div class="ph-sitem-sites">
+                <p>Unofficial fan-made educational site.</p>
+                <p>Pokémon © Nintendo / Creatures Inc. / GAME FREAK inc.</p>
+                <p class="ph-site-ver" id="app-version">v0.0.0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Battle sheet：bottom-up -->
+        <div class="ph-sheet ph-sheet-up" id="sheet-battle" hidden aria-label="Battle hub">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-grip"></span>
+            <span class="ph-sheet-t">Battle</span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="ph-sheet-body">
+            <button class="ph-sitem" id="btn-home-battle" type="button">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4.5 4.5 15 15M15 15l-3.2.7M15 15l.7-3.2M19.5 4.5 9 15M9 15l3.2.7M9 15l-.7-3.2M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="ph-sitem-t">Battle Menu</span>
+              <span class="ph-s-arrow">›</span>
+            </button>
+            <button class="ph-sitem" id="btn-home-bag" type="button">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="7" width="16" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h16M10 12v2h4v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              <span class="ph-sitem-t">Bag <small class="ph-sitem-sub">landscape</small></span>
+              <span class="ph-s-arrow">›</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Gacha sheet：top-down，由白色螢幕內上邊向下捲出 -->
+        <div class="ph-sheet ph-sheet-down" id="sheet-gacha" hidden aria-label="Lucky Draw">
+          <div class="ph-sheet-head">
+            <span class="ph-sheet-t" id="gacha-title">
+              <svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <radialGradient id="gem-blue-gt" cx="40%" cy="35%" r="70%">
+                    <stop offset="0%" stop-color="#e6f6ff"/>
+                    <stop offset="25%" stop-color="#5ec8f5"/>
+                    <stop offset="60%" stop-color="#1e7fbf"/>
+                    <stop offset="100%" stop-color="#0a3d6b"/>
+                  </radialGradient>
+                </defs>
+                <circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/>
+                <circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/>
+                <ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/>
+                <ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/>
+                <ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/>
+              </svg>
+              <span>Lucky Draw</span>
+            </span>
+            <button class="ph-sheet-x" type="button" aria-label="Close">✕</button>
+          </div>
+          <section id="view-gacha" class="gacha-view">
+            <div class="gacha-info">
+              <div class="gacha-odds-row">
+                <span class="rarity-chip" style="background:#e3f2fd;color:#42a5f5">Rare 80%</span>
+                <span class="rarity-chip" style="background:#fff8e1;color:#b8860b">Epic 15%</span>
+                <span class="rarity-chip" style="background:#f3e5f5;color:#ab47bc">Legend 5%</span>
+              </div>
+              <p class="gacha-info-note">Duplicate pull → 🍬 Candy +1 ・ ⚡ EV point +1</p>
+            </div>
+            <div class="gacha-stage" id="gacha-stage">
+              <div class="gacha-prompt" id="gacha-prompt"></div>
+              <span class="chip gacha-cost" id="gacha-cost">Cost: <svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/><circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/><ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/><ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/></svg> ×3</span>
+              <div class="gacha-machine dragonite-art" id="gacha-machine">
+                <img class="dm-art" src="assets/gacha/dragonite.png" alt="Dragonite" draggable="false" loading="lazy" decoding="async">
+                <div class="dm-belly" id="dm-belly">
+                  <span class="dm-cavity"></span>
+                  <span class="dm-door left"></span>
+                  <span class="dm-door right"></span>
+                </div>
+                <div class="dm-arm" id="dm-arm" role="slider" tabindex="0"
+                     aria-label="Pull Dragonite's hand" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <svg class="dm-charge" viewBox="0 0 100 100" aria-hidden="true">
+                    <circle class="dmc-track" cx="50" cy="50" r="44"/>
+                    <circle class="dmc-bar" cx="50" cy="50" r="44"/>
+                  </svg>
+                  <span class="dm-bracket"></span>
+                  <span class="dm-arm-upper"></span>
+                  <span class="dm-hand"><i></i><i></i><i></i></span>
+                  <span class="dm-10x" aria-hidden="true">10×</span>
+                </div>
+              </div>
+              <div class="gacha-dropzone" id="gacha-dropzone"></div>
+            </div>
+          </section>
+        </div>
+          </div>
+        </div>
+
+        <!-- 下巴：放大精靈球做 Home 鍵（Grid 第四列） -->
+        <div class="pd-chin">
+          <button class="pd-home-ball" id="btn-pd-home" type="button" aria-label="Home">
+            <svg class="pd-home-ball-art" viewBox="40 40 420 420" aria-hidden="true" focusable="false">
+              <defs>
+                <clipPath id="pdHomeBallClip"><circle cx="250" cy="250" r="210" /></clipPath>
+                <radialGradient id="pdHomeRedGrad" cx="45%" cy="25%" r="70%">
+                  <stop offset="0%" stop-color="#FF3E3E"/>
+                  <stop offset="55%" stop-color="#DD0000"/>
+                  <stop offset="85%" stop-color="#990000"/>
+                  <stop offset="100%" stop-color="#550000"/>
+                </radialGradient>
+                <radialGradient id="pdHomeWhiteGrad" cx="45%" cy="55%" r="70%">
+                  <stop offset="0%" stop-color="#FFFFFF"/>
+                  <stop offset="55%" stop-color="#F1F5F9"/>
+                  <stop offset="85%" stop-color="#CBD5E1"/>
+                  <stop offset="100%" stop-color="#94A3B8"/>
+                </radialGradient>
+                <linearGradient id="pdHomeBezelGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2D3748"/>
+                  <stop offset="100%" stop-color="#1A202C"/>
+                </linearGradient>
+                <radialGradient id="pdHomeCoreGrad" cx="42%" cy="28%" r="58%">
+                  <stop offset="0%" stop-color="#FFFFFF"/>
+                  <stop offset="25%" stop-color="#F8FAFC"/>
+                  <stop offset="70%" stop-color="#CBD5E1"/>
+                  <stop offset="100%" stop-color="#516173"/>
+                </radialGradient>
+                <filter id="pdHomeGlossBlur" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="12"/>
+                </filter>
+              </defs>
+
+              <!-- 球體外圈底色 -->
+              <circle cx="250" cy="250" r="210" fill="#0A0C10" />
+
+              <!-- 紅白半球（圓形遮罩裁切） -->
+              <g clip-path="url(#pdHomeBallClip)">
+                <path d="M 30 250 A 210 210 0 0 0 470 250 Z" fill="url(#pdHomeWhiteGrad)" />
+                <path d="M 30 250 A 210 210 0 0 1 470 250 Z" fill="url(#pdHomeRedGrad)" />
+                <ellipse cx="250" cy="85" rx="110" ry="35" fill="#ffffff" opacity="0.15" filter="url(#pdHomeGlossBlur)" />
+              </g>
+
+              <!-- 水平黑色分割腰帶 -->
+              <path d="M 38 244 L 196 244 A 54 54 0 0 1 304 244 L 462 244 L 462 256 L 304 256 A 54 54 0 0 1 196 256 L 38 256 Z" fill="#0A0C10" />
+
+              <!-- 中央按鈕總成 -->
+              <circle cx="250" cy="250" r="52" fill="#0B1017" />
+              <circle cx="250" cy="250" r="43" fill="url(#pdHomeBezelGrad)" />
+              <circle cx="250" cy="250" r="32" fill="#05070B" />
+              <circle cx="250" cy="250" r="26" fill="#000000" opacity="0.35" transform="translate(1, 2)" />
+              <circle cx="250" cy="250" r="26" fill="url(#pdHomeCoreGrad)" />
+              <circle cx="250" cy="250" r="25.5" fill="none" stroke="#ffffff" stroke-width="0.7" stroke-opacity="0.8" />
+              <circle cx="258" cy="242" r="2.5" fill="#FFFFFF" opacity="0.5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Gym challenge 佔位（保留 id，renderHome 會寫內容） -->
+      <div id="home-gym-wrap" hidden></div>
+      <div id="home-streak-wrap" class="ph-hidden-inline" hidden>
+        <canvas id="home-streak-bolt" width="22" height="28" aria-hidden="true"></canvas>
+      </div>
+      <div id="home-gym-badges" hidden></div>
+      <button id="btn-home-pokedex" type="button" hidden></button>
+      <button id="btn-home-battle" type="button" hidden></button>
+      <button id="btn-home-quests-old" type="button" hidden></button>
+      <button id="btn-home-friends-old" type="button" hidden></button>
+      <button id="btn-home-calendar-old" type="button" hidden></button>
+    </section>
+
+    <!-- ============ 題型選擇（做題前） ============ -->
+    <section id="view-quiz-setup" class="view">
+      <h2 class="setup-title">📚 Choose Categories & Topics</h2>
+      <div class="setup-mini-row">
+        <button id="btn-topic-all" class="btn-mini">Select all</button>
+        <button id="btn-topic-none" class="btn-mini">Clear all</button>
+      </div>
+      <div id="topic-list" class="topic-list"></div>
+      <div id="custom-q-count" class="custom-q-count"></div>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="btn-setup-start" class="btn-big btn-primary">▶ Start</button>
+      </div>
+    </section>
+
+    <!-- ============ 做題 ============ -->
+    <section id="view-quiz" class="view">
+      <div class="quiz-top">
+        <button id="btn-quiz-exit" class="quiz-x-btn" type="button" aria-label="Quit this set" title="Quit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="quiz-segs" id="quiz-segs" role="progressbar" aria-label="Set progress" aria-valuemin="0">
+          <span class="bar-runner" id="quiz-bar-runner" aria-hidden="true"></span>
+        </div>
+        <span class="quiz-progress sr-only" id="quiz-progress">1 / 10</span>
+        <div class="quiz-combo" id="quiz-combo" aria-live="polite"><span class="qc-flame" aria-hidden="true">🔥</span><b id="quiz-combo-n">0</b></div>
+        <button id="btn-quiz-settings" class="quiz-gear-btn" type="button" aria-label="Quiz settings" title="Quiz settings (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+        </button>
+      </div>
+      <div class="quiz-scroll" id="quiz-scroll"><div class="quiz-col">
+      <div class="quiz-head">
+        <span class="quiz-type-chip" id="quiz-type-chip"></span>
+        <h2 class="quiz-prompt" id="quiz-prompt">Fill in the blank</h2>
+      </div>
+      <div class="quiz-image-box" id="quiz-image-box">
+        <img id="quiz-image" class="quiz-image" alt="Question image">
+      </div>
+      <div class="word-card" id="quiz-word-card">
+        <div class="word-frame">
+          <button id="quiz-word-image-btn" class="word-image-btn" aria-label="Play the word again">
+            <img id="quiz-word-image" class="word-image" alt="Tap to listen">
+          </button>
+          <!-- 播放掣疊喺圖片右下角：唔額外佔高度，iPhone 都睇到輸入格 -->
+          <div class="word-audio">
+            <button id="btn-word-slow" class="word-audio-btn slow" type="button" aria-label="Play slowly" title="Play slowly">🐢</button>
+            <button id="btn-word-say" class="word-audio-btn" type="button" aria-label="Play the word" title="Play (Ctrl P)">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div id="quiz-word-status" class="word-status" role="status">🔊 Tap the picture to hear the word</div>
+        </div>
+      </div>
+      <div class="quiz-card" id="quiz-card">
+        <div class="quiz-chip" id="quiz-chip"></div>
+        <div class="quiz-sentence" id="quiz-sentence"></div>
+        <button id="btn-quiz-more" class="quiz-more-arrow" type="button" aria-label="More options" aria-expanded="false">▾</button>
+      </div>
+      <div class="quiz-card-drawer hidden" id="quiz-card-drawer">
+        <button id="btn-report-issue" class="drawer-item" type="button">⚠️ Report a problem</button>
+      </div>
+      <div class="quiz-catch-area hidden" id="quiz-catch-area">
+        <p class="catch-hint">🎯 Drag the right Poké Ball to the blank!</p>
+        <div class="catch-balls" id="catch-balls"></div>
+      </div>
+      <div class="quiz-toolbar" id="quiz-toolbar-before">
+        <button id="btn-quiz-hint" class="quiz-tool" type="button">💡 Hint <span class="qt-count" id="quiz-hint-count" hidden></span><kbd>Ctrl H</kbd></button>
+        <button id="btn-quiz-voice" class="quiz-tool" type="button" disabled hidden>🎤 Voice mode</button>
+      </div>
+      </div></div>
+      <!-- 底部行動區：回饋（綠／紅／黃）同主掣一體，固定喺拇指區 -->
+      <div class="quiz-action" id="quiz-action">
+        <div class="qa-fb"><div class="qa-fb-in" aria-live="polite">
+          <span class="qa-icon" id="quiz-fb-icon" aria-hidden="true">✓</span>
+          <div class="qa-text">
+            <div class="quiz-feedback" id="quiz-feedback"></div>
+            <div class="qa-sub" id="quiz-fb-sub"></div>
+          </div>
+          <div class="qa-side hidden" id="quiz-toolbar-after">
+            <button id="btn-quiz-replay" class="qa-icon-btn" type="button" aria-label="Pronounce" title="Pronounce">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div></div>
+        <button id="btn-quiz-check" class="qa-main" type="button" disabled><span>Check</span><kbd>Enter</kbd></button>
+        <button id="btn-quiz-next" class="qa-main hidden" type="button"><span>Continue</span><kbd>Enter</kbd></button>
+      </div>
+      <!-- App 自帶虛擬鍵盤：觸控裝置先顯示（桌面用實體鍵盤） -->
+      <div id="quiz-keyboard" class="quiz-keyboard" aria-label="On-screen keyboard" hidden></div>
+    </section>
+
+    <!-- ============ 結算 ============ -->
+    <section id="view-settlement" class="view">
+      <!-- settle-col：phone／tablet 係 display:contents（等於冇呢層）；wide 變左右兩欄（Responsive P1 Task 8） -->
+      <div class="settle-col settle-col-a">
+        <h2 class="settle-title" id="settle-title">Set complete!</h2>
+        <p class="settle-sub" id="settle-sub"></p>
+        <div class="settle-score" id="settle-score"></div>
+        <div class="settle-stats" id="settle-stats"></div>
+      </div>
+      <div class="settle-col settle-col-b">
+        <div class="settle-rewards" id="settle-rewards"></div>
+        <div class="settle-mist" id="settle-mist"></div>
+      </div>
+      <div class="settle-buttons">
+        <button id="btn-settle-continue" class="qa-main" type="button"><span>Continue</span><kbd>Enter</kbd></button>
+        <div class="settle-btn-row">
+          <button id="btn-pull-rare" class="btn-big btn-rare">Lucky Draw</button>
+          <button id="btn-review" class="btn-big btn-secondary">📖 Review Mistakes</button>
+        </div>
+      </div>
+      <div class="settle-confetti" id="settle-confetti" aria-hidden="true"></div>
+    </section>
+
+    <!-- ============ 錯題解釋 ============ -->
+    <section id="view-review" class="view">
+      <h2 class="review-title">📖 Mistake Review</h2>
+      <div id="review-list" class="review-list"></div>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="btn-review-back" class="btn-big btn-secondary">‹ Back</button>
+      </div>
+    </section>
+
+    <!-- ============ 圖鑑 ============ -->
+    <section id="view-pokedex" class="view">
+      <nav class="gen-hub" id="gen-hub" aria-label="Generations"></nav>
+      <h2 class="dex-title">📕 Pokédex</h2>
+      <div class="dex-progress" id="dex-progress"></div>
+      <div class="gen-lock-banner" id="gen-lock-banner" hidden>
+        <div class="glb-icon">🔒</div>
+        <h3 id="gen-lock-title">Locked</h3>
+        <p id="gen-lock-desc"></p>
+      </div>
+      <div class="dex-tools" id="dex-tools">
+        <div class="dex-search-row">
+          <input id="dex-search" class="dex-search" type="search" placeholder="Search name or No." autocomplete="off" aria-label="Search Pokémon">
+          <select id="dex-sort" class="dex-sort" aria-label="Sort Pokémon"></select>
+          <button id="dex-sort-dir" class="dex-dir" type="button" aria-label="Toggle sort direction">↑</button>
+        </div>
+        <button id="dex-filter-toggle" class="dex-filter-toggle" type="button" aria-expanded="false">
+          <span>⚙ Filters</span>
+          <b id="dex-filter-count" hidden>0</b>
+          <span class="dft-arrow">▾</span>
+        </button>
+        <div class="dex-filter-body" id="dex-filter-body" hidden>
+          <div class="dex-chip-row" id="dex-own-chips">
+            <button class="dex-chip active" data-own="all" type="button">All</button>
+            <button class="dex-chip" data-own="owned" type="button">Owned</button>
+            <button class="dex-chip" data-own="unowned" type="button">Missing</button>
+          </div>
+          <div class="dex-chip-row dex-type-row" id="dex-type-chips"></div>
+        </div>
+        <div class="dex-result" id="dex-result"></div>
+      </div>
+      <div id="pokedex-grid" class="pokedex-grid"></div>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="btn-dex-back" class="btn-big btn-secondary">Back to Home</button>
+      </div>
+    </section>
+
+    <!-- ============ 排行榜 ============ -->
+    <section id="view-leaderboard" class="view">
+      <h2 class="dex-title">🏅 Leaderboard</h2>
+      <p class="lb-subtitle">Top 50 Trainers · Ranked by Pokémon owned</p>
+      <div id="lb-you" class="lb-you-card" hidden></div>
+      <div id="leaderboard-list" class="lb-list"></div>
+    </section>
+
+    <!-- ============ 日曆 ============ -->
+    <section id="view-calendar" class="view">
+      <div class="cal-header">
+        <button id="btn-cal-prev" class="btn-nav">‹</button>
+        <h2 id="cal-month-label">October 2026</h2>
+        <button id="btn-cal-next" class="btn-nav">›</button>
+      </div>
+      <div class="cal-weekdays" id="cal-weekdays"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend" id="cal-legend"></div>
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="btn-cal-back" class="btn-big btn-secondary">Back to Home</button>
+      </div>
+    </section>
+
+    <!-- ============ 3D 捕捉場景 ============ -->
+    <section id="view-capture" class="view capture-view" aria-label="Pokémon capture">
+      <!-- WARNING encounter screen (Evangelion style) -->
+      <div id="capture-warning" class="capture-warning" aria-hidden="true">
+        <div class="cw-bg">
+          <div class="cw-stripes"></div>
+          <div class="cw-grid"></div>
+        </div>
+        <div class="cw-banner-top">
+          <span>WARNING</span><span>WARNING</span><span>WARNING</span><span>WARNING</span>
+        </div>
+        <div class="cw-banner-bot">
+          <span>WARNING</span><span>WARNING</span><span>WARNING</span><span>WARNING</span>
+        </div>
+        <div class="cw-body">
+          <span class="cw-subtitle">Wild Pokémon Encountered!</span>
+          <span class="cw-title">WILD POKÉMON<br>ENCOUNTERED!</span>
+        </div>
+        <div class="cw-banner-side cw-side-l">WARNING</div>
+        <div class="cw-banner-side cw-side-r">WARNING</div>
+      </div>
+
+      <!-- Spiral warp transition overlay -->
+      <div id="capture-warp" class="capture-warp" aria-hidden="true">
+        <div class="cwarp-layer cwarp-l1"></div>
+        <div class="cwarp-layer cwarp-l2"></div>
+        <div class="cwarp-layer cwarp-l3"></div>
+        <div class="cwarp-iris"></div>
+      </div>
+
+      <div id="capture-host" class="capture-host"></div>
+      <img id="capture-mon" class="capture-mon" alt="">
+      <div class="capture-vignette" aria-hidden="true"></div>
+      <div id="capture-flash" class="capture-flash" aria-hidden="true"></div>
+      <div class="capture-hud">
+        <div id="capture-prompt" class="capture-prompt"></div>
+        <div id="capture-taps" class="capture-taps" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <div id="capture-result" class="capture-result">
+        <div class="capture-result-card">
+          <div class="capture-result-rays" aria-hidden="true"></div>
+          <img id="capture-result-img" class="capture-result-img" alt="">
+          <div class="capture-result-title">Gotcha!</div>
+          <div id="capture-result-name" class="capture-result-name"></div>
+          <div id="capture-result-sub" class="capture-result-sub"></div>
+          <button id="capture-continue" class="btn-big btn-primary">Continue</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 好友 ============ -->
+    <section id="view-friends" class="view friends-view">
+      <header class="topbar">
+        <div class="topbar-name">Friends</div>
+      </header>
+      <!-- 1. 我的訓練家卡：partner + 名 + 好友碼 -->
+      <div id="friends-identity" class="friends-identity">
+        <div id="friends-avatar" class="friends-avatar" aria-hidden="true">T</div>
+        <div class="friends-identity-main">
+          <div class="friends-trainer-name" id="friends-trainer-name">Trainer</div>
+          <div class="friends-code">Code <b id="friends-code">——</b></div>
+        </div>
+        <button id="friends-copy-code" class="friends-btn">COPY</button>
+      </div>
+
+      <div id="friends-banner" class="friends-banner" hidden>
+        <span id="friends-banner-text">Could not refresh friends</span>
+        <button id="friends-banner-retry" class="friends-banner-retry">RETRY</button>
+      </div>
+
+      <!-- 2. Action Center：invites → requests → outgoing，最多先顯示 3 行 -->
+      <section id="friends-actions" class="friends-actions" hidden aria-live="polite">
+        <div class="friends-actions-head">
+          <span class="friends-actions-title">Needs your attention</span>
+          <span class="friends-count-pill" id="friends-action-count">0</span>
+        </div>
+        <div id="friends-action-list" class="friends-action-list"></div>
+      </section>
+
+      <!-- 3. 好友名單：搜尋 + 排序 -->
+      <div class="friends-roster-head">
+        <div class="friends-roster-title">
+          <h3 class="friends-section-title">Your friends <span id="friends-count" class="friends-count-pill">0</span></h3>
+        </div>
+        <div class="friends-tools">
+          <input id="friends-search" class="friends-search-input" type="search"
+                 placeholder="Search friends" autocomplete="off" spellcheck="false" aria-label="Search friends">
+          <select id="friends-sort" class="dex-sort" aria-label="Sort friends"></select>
+          <button id="friends-sort-dir" class="dex-dir" aria-label="Sort direction">↑</button>
+        </div>
+      </div>
+      <div id="friends-list" class="friends-list"><div class="friends-empty">Loading…</div></div>
+
+      <!-- 4. 加好友：預設收起 -->
+      <button id="friends-add-toggle" class="friends-add-toggle" type="button">＋ Add friend</button>
+      <div id="friends-add-panel" class="friends-add-panel" hidden>
+        <div id="friends-add-row" class="friends-add-row">
+          <input id="friends-add-input" class="friends-add-input" type="text" maxlength="24"
+                 placeholder="Friend code or trainer name" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false">
+          <button id="friends-add-btn" class="friends-btn friends-btn-add">ADD</button>
+        </div>
+        <div id="friends-search-results" class="friends-search-results"></div>
+      </div>
+    </section>
+
+    <!-- ============ 每日任務板 ============ -->
+    <section id="view-quests" class="view quests-view">
+      <header class="topbar">
+        <button class="icon-btn" id="quests-back" aria-label="Back home">‹</button>
+        <div class="topbar-name">Quests</div>
+        <span class="chip quests-reset-chip" id="quests-reset">resets 0:00:00</span>
+      </header>
+
+      <div class="quests-hero">
+        <div class="quests-energy">
+          <span class="quests-energy-num" id="quests-energy">0</span>
+          <span class="quests-energy-unit">⚡ Energy</span>
+        </div>
+        <div class="quests-sub" id="quests-sub">Answer 10 questions to complete your first quest</div>
+      </div>
+
+      <section class="quests-panel">
+        <div class="quests-head">
+          <h3 class="quests-title">Today's quest</h3>
+          <span class="friends-count-pill" id="quests-done-count">0 / 8</span>
+        </div>
+        <div class="quests-track" id="quests-track" role="list"></div>
+        <button class="quests-claim-all" id="quests-claim-all" type="button" hidden>CLAIM 1⚡</button>
+        <div class="quests-note">ⓘ 10 questions = 1⚡ · max 8 per day · unclaimed rewards roll over</div>
+      </section>
+
+      <section class="quests-panel quests-defs-panel">
+        <div class="quests-head">
+          <h3 class="quests-title">Quest board</h3>
+          <span class="friends-count-pill" id="quests-defs-count" hidden>0</span>
+        </div>
+        <div id="quests-defs" class="quests-defs"></div>
+      </section>
+
+      <div class="hub-spacer"></div>
+      <div class="hub-bar">
+        <button id="quests-back-bottom" class="btn-big btn-plain">‹ Home</button>
+      </div>
+    </section>
+
+    <!-- ============ 對戰選單 ============ -->
+    <section id="view-battle-menu" class="view battle-menu-view">
+      <div class="battle-menu-inner">
+        <div class="bm-hero">
+          <div class="bm-hero-glow" aria-hidden="true"></div>
+          <div class="bm-hero-text">
+            <span class="bm-kicker">BATTLE</span>
+            <span class="bm-title">Trainer Ladder</span>
+            <span class="bm-sub">14 challengers · 4 tiers each · ⚡1 per battle</span>
+          </div>
+        </div>
+
+        <div class="battle-mode-grid">
+          <button id="battle-menu-pvp" class="battle-mode-card mode-pvp">
+            <span class="bmc-icon">🌐</span>
+            <span class="bmc-title">PvP Battle</span>
+            <span class="bmc-sub" id="battle-menu-pvp-sub">Online match · random team size</span>
+            <span class="fire-band" aria-hidden="true"><i></i><i></i><b></b></span>
+          </button>
+          <button id="battle-menu-friends" class="battle-mode-card mode-friends">
+            <span class="bmc-icon">👥</span>
+            <span class="bmc-title">Friends <span id="battle-menu-friends-badge" class="bmt-badge" hidden>0</span></span>
+            <span class="bmc-sub" id="battle-menu-friends-sub">Log in to add friends</span>
+          </button>
+        </div>
+
+        <div class="ladder-head">
+          <span>Trainer Ladder</span>
+          <small>Tap a trainer, then pick a tier</small>
+        </div>
+        <div id="ai-trainer-list" class="ai-trainer-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ 對戰（火紅版 UI） ============ -->
+    <section id="view-battle" class="view battle-view">
+      <div class="battle-stage">
+        <!-- AI 對戰速度切換（NORMAL／FAST），PvP 會自動隱藏；貼舞台右上角 -->
+        <button id="btn-battle-speed" class="battle-speed-btn" hidden></button>
+        <!-- 敵方 HP box（左上）：FRLG 原裝框 + overlay -->
+        <div class="battle-hpbox battle-hpbox-foe">
+          <span class="battle-pokename" id="foe-name">FOE</span>
+          <img class="battle-status" id="foe-status" alt="" hidden>
+          <span class="battle-lvnum" id="foe-level">5</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="foe-hpbar"></i></div>
+        </div>
+        <!-- 傷害加乘提示（PokeRogue updateEffectiveness：指住招式時喺敵方資料牌右邊彈出） -->
+        <div id="foe-eff" class="battle-eff" style="display:none">x2</div>
+        <!-- 場地狀態 chip 列（天氣 + 釘子/壁標記），無場地效果時隱藏 -->
+        <div id="battle-field" class="battle-field" style="display:none"></div>
+        <!-- 敵方 sprite（右上）：PokeRogue 動畫圖集（canvas 逐幀播放） -->
+        <canvas class="battle-sprite battle-foe-sprite" id="foe-sprite" width="42" height="42"></canvas>
+
+        <!-- 我方 sprite（左下）：PokeRogue 背面動畫圖集 -->
+        <canvas class="battle-sprite battle-my-sprite" id="my-sprite" width="42" height="42"></canvas>
+        <!-- 我方 HP box（右下）：FRLG 原裝框 + overlay -->
+        <div class="battle-hpbox battle-hpbox-mine">
+          <span class="battle-pokename" id="my-name">POKéMON</span>
+          <img class="battle-status" id="my-status" alt="" hidden>
+          <span class="battle-lvnum" id="my-level">5</span>
+          <div class="battle-hpbar-clip"><i class="battle-hpbar" id="my-hpbar"></i></div>
+          <div class="battle-hpnum"><span id="my-hp-cur">22</span>/<span id="my-hp-max">22</span></div>
+          <div class="battle-expbar-clip"><i class="battle-expbar" id="my-expbar"></i></div>
+        </div>
+
+        <!-- 開場 intro 層：訓練家見面 → 拋球 -->
+        <div class="battle-fx" id="move-fx"></div>
+        <div id="battle-intro" class="battle-intro" style="display:none">
+          <div class="intro-balls intro-balls-mine" id="intro-balls-mine"></div>
+          <div class="intro-balls intro-balls-foe" id="intro-balls-foe"></div>
+          <img class="intro-trainer intro-foe-trainer" id="intro-foe-trainer" alt="foe trainer">
+          <div class="intro-trainer intro-my-trainer" id="intro-my-trainer"></div>
+          <img class="intro-ball" id="intro-ball" src="assets/battle/ui/poke-ball-big.png" alt="" style="display:none">
+          <div class="intro-flash" id="intro-flash" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- 底部：文字框 + 選單 -->
+      <div class="battle-bottom">
+        <div class="battle-textbox" id="battle-text">What will POKéMON do?</div>
+        <div class="battle-menubox">
+          <!-- 主選單 2×2 -->
+          <div id="battle-action-menu" class="battle-menu-grid">
+            <button id="btn-battle-fight" class="battle-menu-btn">FIGHT</button>
+            <button id="btn-battle-bag" class="battle-menu-btn battle-menu-bag" disabled>BAG</button>
+            <button id="btn-battle-pokemon" class="battle-menu-btn">POKéMON</button>
+            <button id="btn-battle-run" class="battle-menu-btn">RUN</button>
+          </div>
+        </div>
+        <!-- FIGHT：左邊招式列表 ＋ 右邊招式資料（PokeRogue FightUiHandler 排版） -->
+        <div id="battle-move-menu" class="battle-move-panel" style="display:none">
+          <div class="bmp-moves">
+            <div class="bmp-move-grid" id="bmp-moves"></div>
+            <button class="bmp-back" id="bmp-back">◀ BACK</button>
+          </div>
+          <div class="bmp-info">
+            <div class="bmp-info-body" id="bmp-info"></div>
+          </div>
+        </div>
+        <!-- BAG：Inferno 限定，玩家有 1 支 Full Restore -->
+        <div id="battle-bag-menu" class="battle-move-panel" style="display:none">
+          <div class="bmp-moves">
+            <div class="bmp-move-grid" id="bbp-list"></div>
+            <button class="bmp-back" id="bbp-back">◀ BACK</button>
+          </div>
+          <div class="bmp-info">
+            <div class="bmp-info-body" id="bbp-info"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PokeRogue 換精靈頁（party select，320×240 design 等比縮放） -->
+      <div id="battle-party" class="battle-party" style="display:none">
+        <div class="party-frame">
+          <div class="party-bg"></div>
+          <div id="party-slots"></div>
+          <div class="party-msgbox">
+            <div class="party-msg-text" id="party-msg-text">Choose a Pokémon.</div>
+          </div>
+          <div class="party-cancel" id="party-cancel" role="button">
+            <span class="party-cancel-pb"></span>
+            <span class="party-cancel-text">CANCEL</span>
+          </div>
+          <div class="party-options" id="party-options" style="display:none">
+            <button class="party-opt" id="party-opt-send">SEND OUT</button>
+            <button class="party-opt" id="party-opt-cancel">CANCEL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 戰鬥結算（PokeRogue 風格）：撳 CONTINUE 先返訓練家列表 -->
+      <div id="battle-result" class="battle-result" style="display:none">
+        <div class="br-card">
+          <div id="br-title" class="br-title br-win">WIN</div>
+          <div id="br-sub" class="br-sub"></div>
+          <div id="br-rows" class="br-rows"></div>
+          <button id="br-add-foe" class="br-add-foe" style="display:none">＋ Add opponent</button>
+          <button id="br-continue" class="br-continue">CONTINUE</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 隊伍選擇彈窗 -->
+    <div id="team-select-modal" class="team-select-modal" style="display:none">
+      <div class="team-select-card">
+        <div class="ts-title">Choose your team · <span id="team-size-label">3</span> Pokémon</div>
+        <div id="ts-battle-info" class="ts-battle-info" hidden></div>
+        <div class="ts-sortbar">
+          <select id="team-sort" class="dex-sort" aria-label="Sort Pokémon in team picker"></select>
+          <button id="team-sort-dir" class="dex-dir" type="button" aria-label="Toggle sort direction">↑</button>
+        </div>
+        <div id="team-select-grid" class="team-select-grid"></div>
+        <div class="ts-lineup-label">Battle order <span>(first Pokémon goes out first)</span></div>
+        <div id="team-lineup" class="ts-lineup" hidden></div>
+        <div class="ts-actions">
+          <button id="team-select-cancel" class="btn-big btn-plain">Cancel</button>
+          <button id="team-select-confirm" class="btn-big btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 難度選擇彈窗（Trainer → Easy/Normal/Hard/Inferno） -->
+    <div id="tier-select-modal" class="tier-select-modal" style="display:none">
+      <div class="tier-select-card">
+        <div class="tier-select-head">
+          <div class="tier-select-title" id="tier-select-title">Trainer</div>
+          <button id="tier-select-close" class="tier-select-close" aria-label="Close">✕</button>
+        </div>
+        <div id="tier-select-body" class="tier-select-body"></div>
+      </div>
+    </div>
+
+    <!-- Inferno 解鎖演出（一次性彩虹火） -->
+    <div id="inferno-unlock" class="inferno-unlock" aria-hidden="true">
+      <div class="iu-flames" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="iu-text">
+        <span class="iu-kicker">INFERNO UNLOCKED</span>
+        <span class="iu-name"></span>
+        <span class="iu-sub">Clear the challenge to master this trainer</span>
+      </div>
+    </div>
+
+    <!-- PvP 配對面板：matching → 戰前投票 → 公佈結果 → 揀隊 -->
+    <div id="pvp-match-panel" class="pvp-match-panel" style="display:none">
+      <div class="pvp-match-card">
+        <div id="pvp-matching" class="pvp-matching">
+          <div class="pvp-spinner" aria-hidden="true"></div>
+          <div class="pvp-match-text">Searching for opponent…</div>
+          <button id="pvp-match-cancel" class="btn-big btn-plain">Cancel</button>
+        </div>
+        <div id="pvp-matched" class="pvp-matched" style="display:none">
+          <div class="pvp-found-title">Opponent found!</div>
+          <div id="pvp-vote" class="pvp-vote">
+            <div class="pvp-vote-head">
+              <span class="pvp-format-label">Vote on the battle rules</span>
+              <span class="pvp-vote-timer" id="pvp-vote-timer">30s</span>
+            </div>
+            <div class="pvp-vote-row">
+              <div class="pvp-vote-label">Team size</div>
+              <div class="pvp-seg" data-key="size">
+                <button type="button" data-v="1">1v1</button><button type="button" data-v="2">2v2</button><button type="button" data-v="3">3v3</button><button type="button" data-v="4">4v4</button><button type="button" data-v="5">5v5</button><button type="button" data-v="6">6v6</button>
+              </div>
+            </div>
+            <div class="pvp-vote-row">
+              <div class="pvp-vote-label">Medicine</div>
+              <div class="pvp-seg" data-key="items">
+                <button type="button" data-v="1">Allowed</button><button type="button" data-v="0">Off</button>
+              </div>
+            </div>
+            <div class="pvp-vote-row">
+              <div class="pvp-vote-label">Switching</div>
+              <div class="pvp-seg" data-key="switch">
+                <button type="button" data-v="1">Allowed</button><button type="button" data-v="0">Off</button>
+              </div>
+            </div>
+            <p class="pvp-vote-hint">If you disagree, the rule is picked at random from both votes. A fainted Pokémon can always be replaced.</p>
+            <button id="pvp-vote-submit" type="button" class="btn-big btn-primary">Vote</button>
+          </div>
+          <div id="pvp-vote-wait" class="pvp-vote-wait" style="display:none">
+            <div class="pvp-spinner" aria-hidden="true"></div>
+            <div class="pvp-match-text">Waiting for your opponent's vote…</div>
+          </div>
+          <div id="pvp-vote-result" class="pvp-vote-result" style="display:none">
+            <div class="pvp-format-value" id="pvp-format-value">3v3</div>
+            <table class="pvp-vote-table" id="pvp-vote-table"></table>
+            <button id="pvp-format-confirm" type="button" class="btn-big btn-primary">Choose team</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entry gate: one tap unlocks audio + starts BGM -->
+    <div id="entry-gate" class="entry-gate hidden">
+      <div class="entry-gate-card">
+        <div class="entry-gate-icon">⚡</div>
+        <div class="entry-gate-title">ARE YOU READY TO TRAIN<br>YOUR POKÉMON TODAY?</div>
+        <button id="btn-entry-yes" class="entry-gate-btn">YES!</button>
+      </div>
+    </div>
+
+    <!-- Modal / Toast / Sync banner -->
+    <div id="sync-banner" class="sync-banner hidden"></div>
+    <div id="modal-root"></div>
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="supabase/supabase-config.js?v=1.71.3"></script>
+  <script src="js/supabase-auth.js?v=1.71.3"></script>
+  <script src="js/sm2.js?v=1.71.3" type="module"></script>
+  <script src="js/sync.js?v=1.71.3"></script>
+  <script src="js/gens-data.js?v=1.71.3" type="module"></script>
+  <script src="js/data.js?v=1.71.3" type="module"></script>
+  <script src="js/qimg-db.js?v=1.71.3"></script>
+  <script src="js/pokemon.js?v=1.71.3" type="module"></script>
+  <script src="js/mega-data.js?v=1.71.3" type="module"></script>
+  <script src="js/avatars.js?v=1.71.3"></script>
+  <script src="js/dex-sort.js?v=1.71.3" type="module"></script>
+  <script src="js/battle/rng.js?v=1.71.3" type="module"></script>
+  <script src="js/battle/energy.js?v=1.71.3"></script>
+  <script src="js/battle/realtime.js?v=1.71.3"></script>
+  <script src="js/battle/pvp.js?v=1.71.3"></script>
+  <script src="js/battle/engine.js?v=1.71.3"></script>
+  <script src="js/battle/state.js?v=1.71.3"></script>
+  <script src="js/battle/moveanim.js?v=1.71.3"></script>
+  <script src="js/battle/sprites.js?v=1.71.3"></script>
+  <script src="js/battle/battle.js?v=1.71.3"></script>
+  <script src="js/battle/ui/menu.js?v=1.71.3"></script>
+  <script src="js/battle/ui/match.js?v=1.71.3"></script>
+  <script src="js/battle/ui/team.js?v=1.71.3"></script>
+  <script src="js/battle/ui/stage.js?v=1.71.3"></script>
+  <script src="js/battle/ui/hud.js?v=1.71.3"></script>
+  <script src="js/battle/ui/turn.js?v=1.71.3"></script>
+  <script src="js/battle/ui/result.js?v=1.71.3"></script>
+  <script src="js/genpack.js?v=1.71.3"></script>
+  <script src="js/storage.js?v=1.71.3"></script>
+  <!-- Store：get／update／subscribe 包住 storage.js（Rule 115） -->
+  <script src="js/store.js?v=1.71.3" type="module"></script>
+  <script src="js/anim-speed.js?v=1.71.3"></script>
+  <script src="js/keys.js?v=1.71.3"></script>
+  <script src="js/pet.js?v=1.71.3"></script>
+  <script src="js/care.js?v=1.71.3"></script>
+  <script src="js/bag.js?v=1.71.3"></script>
+  <script src="js/battle/landscape.js?v=1.71.3"></script>
+  <script src="js/explain.js?v=1.71.3"></script>
+  <script src="js/quiz.js?v=1.71.3"></script>
+  <script src="js/quiz/session.js?v=1.71.3"></script>
+  <script src="js/quiz/hud.js?v=1.71.3"></script>
+  <script src="js/quiz/cells.js?v=1.71.3"></script>
+  <script src="js/quiz/keyboard.js?v=1.71.3"></script>
+  <script src="js/quiz/hints.js?v=1.71.3"></script>
+  <script src="js/quiz/catch.js?v=1.71.3"></script>
+  <script src="js/quiz/check.js?v=1.71.3"></script>
+  <script src="js/quiz/media.js?v=1.71.3"></script>
+  <script src="js/quiz/dialogs.js?v=1.71.3"></script>
+  <script src="js/gacha.js?v=1.71.3"></script>
+  <script src="js/gacha/core.js?v=1.71.3"></script>
+  <script src="js/gacha/pull.js?v=1.71.3"></script>
+  <script src="js/gacha/charge.js?v=1.71.3"></script>
+  <script src="js/gacha/multi.js?v=1.71.3"></script>
+  <script src="js/gacha/arm.js?v=1.71.3"></script>
+  <script src="js/gacha/scene.js?v=1.71.3"></script>
+  <script src="js/pokedex.js?v=1.71.3"></script>
+  <script src="js/gym.js?v=1.71.3"></script>
+  <script src="js/leaderboard.js?v=1.71.3"></script>
+  <script src="js/friends.js?v=1.71.3"></script>
+  <script src="js/quests.js?v=1.71.3"></script>
+  <script src="js/calendar.js?v=1.71.3"></script>
+  <script src="js/evolve-scene.js?v=1.71.3"></script>
+  <script src="js/audio.js?v=1.71.3"></script>
+  <script src="js/app.js?v=1.71.3"></script>
+  <!-- App 方法按職責拆開（Object.assign mixin，總計劃 P2.2；Rule 116）：一定要喺 js/app.js 之後 -->
+  <script src="js/app/router.js?v=1.71.3"></script>
+  <script src="js/app/layout.js?v=1.71.3"></script>
+  <script src="js/app/home.js?v=1.71.3"></script>
+  <script src="js/app/setup-custom.js?v=1.71.3"></script>
+  <script src="js/app/settlement.js?v=1.71.3"></script>
+  <script src="js/app/settings.js?v=1.71.3"></script>
+  <script src="js/app/auth-ui.js?v=1.71.3"></script>
+  <script src="js/app/sheets.js?v=1.71.3"></script>
+  <script src="js/app/modals.js?v=1.71.3"></script>
+  <script src="js/app/boot.js?v=1.71.3"></script>
+  <script src="vendor/gsap/gsap.min.js?v=1.71.3"></script>
+  <!-- ===== Battle menu prototype（唔部署） ===== -->
+  <link rel="stylesheet" href="tools/prototype/battle-menu/proto.css?v=1794101984527">
+  <script src="tools/prototype/battle-menu/proto.js?v=1794101984527"></script>
+</body>
+</html>
+

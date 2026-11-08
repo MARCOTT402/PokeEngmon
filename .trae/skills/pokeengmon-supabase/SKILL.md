@@ -122,3 +122,11 @@ The `_api()` helper in `js/sync.js` auto-adds this header when the path contains
 - `saveState()` 寫唔落（quota／私密模式）→ `Guard.report`＋toast「Couldn't save on this device — storage may be full.」（5 分鐘一次），唔准 `catch (e) {}` 吞咗。
 - 離線：`#net-offline` pill（`index.html` 內聯樣式，右上角、`pointer-events: none`、z 2550、`white-space: nowrap`、位置用 `--frame-screen-*`，Rule 81／46），由 `Net.syncPill()` 跟 `online`／`offline` 事件同步；toast 只喺轉離線／返線上各彈一次。舊 `.sync-banner`（`top: 0; translateX(-50%)`）唔好再用。
 - 驗收：`npm test`（`tests/unit/sync-queue.test.js`）（18 項：持久化、重開還原、離線唔送、2s／4s backoff、成功清空、400 丟棄、401 保留、換帳戶唔送、hidden → keepalive、clearQueue、壞存檔備份原文）；headless `Network.emulateNetworkConditions offline` → pill 出、RPC 即刻 null、返線上 pill 收；壞 JSON 存檔重開 → App 正常、有備份、有 toast。
+
+### Rule 123 — 獎勵／積分設計只 reward、唔 punish：輸、失敗、答錯都唔扣 EXP／RP／鑽石／等級（最多係 0 或者細額獎勵）
+
+- 用戶 2026-11-08 定嘅產品原則（PvP 段位方案「輸 −15 RP」被否決）：呢個係小朋友學英文 app，任何積分系統都唔可以因為輸而扣分、降級、跌段。
+- 設計新積分（Trainer EXP、PvP RP、任務分等）：輸／失敗 = 0 或者細額參與獎（例如 PvP 輸 +5 EXP）；段位只升唔跌。
+- 防刷靠「每日上限」「好友戰唔計」「server 計」，唔靠扣分。
+- 寫 spec／RPC 前檢查有冇 `- ` 減分、`greatest(0, x - …)` 之類扣減邏輯；有就要用戶明確同意。
+→ 事故原文 `.trae/skills/pokeengmon-supabase/references/incidents.md`；應用例子 `.trae/specs/20261108-trainer-level.md`。

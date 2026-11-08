@@ -431,7 +431,12 @@ const SupabaseAuth = {
         throw new Error(name + " RPC failed: " + res.status + " " + body);
       }
       const data = await res.json();
-      return Array.isArray(data) ? data[0] : data;
+      const out = Array.isArray(data) ? data[0] : data;
+      /* Trainer Lv：結算 RPC（答題／AI／PvP／捕捉／扭蛋）回應帶 trainer 欄 → 一個位統一更新 EXP、升級提示 */
+      if (out && out.trainer && globalThis.TrainerLevel) {
+        try { globalThis.TrainerLevel.adopt(out.trainer); } catch (e) { console.warn("[TrainerLevel] adopt failed:", e && e.message); }
+      }
+      return out;
     } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
   },
 

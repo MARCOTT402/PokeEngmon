@@ -92,7 +92,8 @@
     /* 能量點（打完先扣，顯示返剩幾多） */
     if (reward && reward.energy) {
       const e = reward.energy;
-      rows.push(`<div class="br-row"><span>⚡ ENERGY</span><b>${e.points} / ${e.max}</b></div>`);
+      /* v1.25 起能量冇上限，Energy.status() 冇 max → 只顯示剩幾多（之前會變「3 / undefined」） */
+      rows.push(`<div class="br-row"><span>⚡ ENERGY</span><b>${e.points}${Number.isFinite(e.max) ? ` / ${e.max}` : " left"}</b></div>`);
     }
     document.getElementById("br-rows").innerHTML = rows.join("");
     /* 隨機 PvP 完場：可加對手做朋友（好友局已經係朋友，照 spec 只睇 foeUid） */

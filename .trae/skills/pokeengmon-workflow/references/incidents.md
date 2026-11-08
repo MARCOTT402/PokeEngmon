@@ -213,7 +213,8 @@ Skill: Rule 115 added
   - 393 個測試全過、lint 0、typecheck 0。
 - 陷阱：`OVERLAY_EXIT_MS: 200,     /* … */` 行尾註解被 AST 當成 `showView` 嘅前置註解，搬咗去 `router.js`。逐行比對冇捉到（行仍然存在），係睇 `router.js` 開頭先發現，已經搬返。
 
-- push 之後 CI 紅（只有 `app-surface` 一項）：96 個方法指紋全部對唔上。原因係 fixture 喺 Windows 用 CRLF 生成，CI checkout 係 LF。修正：hash 之前將 `
+- push 之後 CI 紅（只有 `app-surface` 一項）：96 個方法指紋全部對唔上。原因係 fixture 喺 Windows 用 CRLF 生成，CI checkout 係 LF。修正：hash 之前將 `
+
 ` 統一做 `
 `，用拆檔前嘅代碼重新生成 fixture，再喺 LF 副本同 CRLF working tree 兩邊都測過。CI 測試唔過，`deploy` job 就自動 skipped，正式網址一直係舊版，P1.6 嘅部署閘門第一次發揮作用。
 
@@ -232,6 +233,14 @@ Skill: Rule 116 added
 - 拆檔 script 加咗「行尾註解會跟住下一個成員搬走」嘅自動警告，今次冇觸發。
 
 Skill: already covered by Rule 116（已擴展）
+
+### 2026-11-08 TED prototype 第二版被打回：人手仿製外觀，細節同遊戲唔一致
+
+- 用戶指出：填字格高低唔齊、桌面都顯示 App 鍵盤、Voice mode icon 同遊戲唔同、提示唔係遊戲嘅兩段式。原因係 prototype 自己寫一套 CSS 同邏輯「扮」遊戲，冇用真 `style.css`、冇照 `js/quiz/*` 行為。
+- 修正：第三版直接載 `css/style.css`＋`index.html` 嘅 `#app` markup，答題照搬 `cells.js`／`hints.js`／`check.js`／`keyboard.js`／`hud.js`；結算用真 `#view-settlement`。phone 同 desktop 各行一次全流程先交。
+- 附帶：Browser pane 隱藏時截圖會停喺過場動畫第一格（Rule 114），見到半透明畫面要再截一次先判斷。
+
+Skill: Rule 118 added
 
 ## Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
 
@@ -265,3 +274,11 @@ Skill: Rule 119 added
 - 驗證：422 個測試（新加 6 個 stamp 測試）、lint 0；本地 `build-site` 輸出 `1.71.2-88534eb`，79 個 `?v=` 全部標記，`index.html` BOM 保留。
 
 Skill: Rule 120 added
+
+## Rule 121 — 喺 localhost 開 prototype 頁（唔係 index.html）之前，要先註銷真 app 嘅 SW：SW 對頁面請求係「3 秒冇回應就用快取 index.html」，prototype 頁會變成舊 index、卡喺 loading
+
+- 2026-11-08 孵化器 prototype（`tools/prototype/incubator-app.html`，由真 `index.html` 生成、`<base href="../../">`）：我喺 8097（從未行過真 app）驗收全部正常；用戶喺 8080 開就「係咁 loading」。
+- 原因：8080 有真 app 嘅 SW。導航請求行 page 路線（network-first、3 秒 timeout、fallback `./index.html`）；本機 server 慢，SW 回咗快取嘅真 `index.html`（title「The PokéEngmon Trainer」、冇 `<base>`），80 個 script 以 `/tools/prototype/js/...` 請求，全部 `net::ERR_FAILED`，`App` 未定義，loading 永遠唔收。
+- 修正：`early.js` 喺 localhost `getRegistrations()` → `unregister()`；喺 8080 註銷一次後重開：title 變返 prototype、loading 收走、冇 SW controller、console 冇 error。
+
+Skill: Rule 121 added

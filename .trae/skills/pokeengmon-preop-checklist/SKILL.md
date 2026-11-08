@@ -10,12 +10,13 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 做緊咩 | 讀邊份 | Rule |
 |---|---|---|
 | release、commit、資產、`sw.js`、browser 跑 state JS、改 SKILL.md、錯誤處理／Guard | `.trae/skills/pokeengmon-workflow/` | 1、6、10、12、25、33、62、70、94、101、102、103、104、105 |
-| SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊、網絡請求／token、sync queue／本機存檔防損 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78、96、98 |
+| SQL／migration、RPC、sync、鑽石／道具／獎勵、防作弊、網絡請求／token、sync queue／本機存檔防損 | `.trae/skills/pokeengmon-supabase/` | 2、3、5、9、11、14、24、54、57、66、75、76、78、96、98、123 |
 | 登入／註冊／登出、Login Gate、Auth UI | `.trae/skills/pokeengmon-auth/` | 8、48、50、51、55、73 |
 | 寶可夢／進化資料、本地 state、資料抽取 | `.trae/skills/pokeengmon-game-data/` | 4、13、15、16、18、19、69 |
-| 戰鬥、EXP、道具效果、特性、戰鬥測試、數值兜底（NaN） | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92、99 |
+| 戰鬥、EXP、道具效果、特性、戰鬥測試、數值兜底（NaN） | `.trae/skills/pokeengmon-battle/` | 21、22、61、63、68、79、92、99、117、124 |
 | 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77、93 |
 | home sheet、binder、overlay 點擊、手勢、按鈕、icon、場景動畫倍速 | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91、95、100 |
+| prototype／設計稿／mock-up（`tools/prototype/*`）、俾用戶睇樣 | `.trae/skills/pokeengmon-prototype/` | 118、121、122 |
 | 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具、全鍵盤操作 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90、97 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
@@ -491,6 +492,10 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 
 → `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。
 
+## Rule 118 — 新功能 prototype 要高保真：直接載 `css/style.css` 同 `index.html` 嘅真 markup，行為照搬現有模組（提示、輸入格、鍵盤），唔好人手仿製外觀
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
 ## Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
@@ -498,3 +503,19 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 121 — 喺 localhost 開 prototype 頁（唔係 index.html）之前，要先註銷真 app 嘅 SW：SW 對頁面請求係「3 秒冇回應就用快取 index.html」，prototype 頁會變成舊 index、卡喺 loading
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 122 — Prototype 要喺真 app 上面做（build.mjs 植入）、用遊戲現有素材同設定位置、過反「AI 味」檢查；交付用 localhost URL，唔好用檔案預覽
+
+→ `.trae/skills/pokeengmon-prototype/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-prototype/references/incidents.md`。
+
+## Rule 123 — 獎勵／積分設計只 reward、唔 punish：輸、失敗、答錯都唔扣 EXP／RP／鑽石／等級（最多係 0 或者細額獎勵）
+
+→ `.trae/skills/pokeengmon-supabase/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-supabase/references/incidents.md`。
+
+## Rule 124 — 改開戰流程（例如跳過揀隊頁）：重播測試嘅記錄鈎要喺「觸發開戰嗰下」之前裝；隊伍來源改咗要令開戰隊伍對返舊 fixture
+
+→ `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。

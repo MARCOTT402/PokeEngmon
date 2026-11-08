@@ -96,7 +96,7 @@ const BattleLand = (() => {
     document.body.classList.add("battle-landscape");
     fit();
     const phone = !(window.App && App.layout) || App.layout() === "phone";
-    if (phone && window.innerHeight > window.innerWidth && typeof BagUI !== "undefined" && BagUI.showRotate) BagUI.showRotate("landscape");
+    if (phone && window.innerHeight > window.innerWidth && typeof BagUI !== "undefined" && BagUI.showRotate) BagUI.showRotate("landscape", null, "Battles work in landscape");
     if (window.App && App._syncRotateHint) App._syncRotateHint(); /* 戰鬥豁免「請轉返直向」 */
   }
 

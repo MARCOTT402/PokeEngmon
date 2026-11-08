@@ -37,6 +37,8 @@ const Friends = (() => {
   let lastRequests = [];
   let lastOutgoing = [];
   let roster = [];
+  /** Trainer Lv（get_trainer_levels）：uid（細楷）→ Lv；名單載完先攞，畫完再填 */
+  let lvMap = new Map();
   let rosterSearch = "";
   let rosterSort = loadRosterSort();
   let actionsExpanded = false;
@@ -357,6 +359,13 @@ const Friends = (() => {
     renderRoster();
     refreshBadge();
     ensureTicker();
+    if (window.TrainerLevel && roster.length) {
+      TrainerLevel.fetchLevels(roster.map(r => r.account_uuid)).then(m => {
+        if (seq !== loadSeq) return;
+        lvMap = m;
+        TrainerLevel.fillBadges(el("friends-list"), lvMap);
+      }).catch(() => {});
+    }
 
     if (!Array.isArray(friendsRes) || !Array.isArray(reqRes) || !Array.isArray(invitesRes)) {
       showBanner("Could not load friends data");
@@ -774,7 +783,8 @@ const Friends = (() => {
       + '<span class="friends-row-avatar" style="background:hsl(' + hue + ',70%,93%);color:hsl(' + hue + ',45%,32%)">'
       + avatarInner + "</span>"
       + '<div class="friends-row-main">'
-      + '<div class="friends-row-name"><span class="friends-name-text">' + name + "</span>" + dot + "</div>"
+      + '<div class="friends-row-name"><span class="friends-name-text">' + name + "</span>"
+      + '<span class="tl-slot" data-lvuid="' + uid + '"></span>' + dot + "</div>"
       + '<div class="friends-meta">' + meta + "</div>"
       + "</div>"
       + '<div class="friends-row-actions">'
@@ -825,6 +835,7 @@ const Friends = (() => {
     });
 
     box.innerHTML = list.map(rosterRow).join("");
+    if (window.TrainerLevel) TrainerLevel.fillBadges(box, lvMap);
     box.onclick = (e) => {
       const b = e.target.closest("button[data-act]");
       if (!b) return;

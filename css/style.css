@@ -2978,37 +2978,6 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   padding: 14px 14px 22px; max-width: 560px; margin: 0 auto; width: 100%;
 }
 
-/* 頂部 hero */
-.bm-hero {
-  position: relative; overflow: hidden;
-  border-radius: 18px; padding: 18px 18px 16px;
-  background:
-    radial-gradient(120% 150% at 12% -20%, #35589b 0%, #1b2b49 52%, #0d1526 100%);
-  border: 2px solid rgba(140, 175, 235, .3);
-  box-shadow: 0 10px 26px rgba(12, 22, 44, .3), inset 0 1px 0 rgba(255, 255, 255, .09);
-  color: #eaf2ff;
-}
-.bm-hero-glow {
-  position: absolute; inset: auto -20% -70% -20%; height: 150%;
-  background: radial-gradient(closest-side, rgba(96, 165, 250, .35), transparent 70%);
-  animation: heroGlow 6s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes heroGlow {
-  0%, 100% { transform: translateY(6%) scale(1); opacity: .55; }
-  50% { transform: translateY(-2%) scale(1.08); opacity: .9; }
-}
-.bm-hero-text { position: relative; display: flex; flex-direction: column; gap: 3px; }
-.bm-kicker {
-  font-size: .62rem; font-weight: 800; letter-spacing: .32em;
-  color: #8fb4ee; text-transform: uppercase;
-}
-.bm-title {
-  font-size: 1.5rem; font-weight: 900; letter-spacing: .01em; line-height: 1.1;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, .35);
-}
-.bm-sub { font-size: .78rem; color: #a8bde0; }
-
 /* 能量點卡 */
 /* 已完成、未 CLAIM */
 
@@ -3036,6 +3005,249 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .mode-pvp .bmc-title { color: #eaf2ff; }
 .bmc-sub { font-size: .7rem; line-height: 1.35; color: #6b7590; }
 .mode-pvp .bmc-sub { color: #a8bde0; }
+
+/* ----- 訓練員卡＋PvP／Friends 指令框（spec .trae/specs/20261108-trainer-level.md；js/battle/ui/trainer-card.js）
+   全部用遊戲素材：bg-grass.png 戰鬥草地台、pr-window-1.png 9-slice、PokeRogueEmerald、背包 .bag-minihp、status-*.png ----- */
+.bm-tcard {
+  position: relative; overflow: hidden;
+  border: 2px solid #1b1b22; border-radius: 16px;
+  background: #fbf7ec;
+  box-shadow: 0 3px 0 #1b1b22;
+}
+
+/* ---------- 上半：戰鬥場景 ---------- */
+.tc-field {
+  position: relative;
+  aspect-ratio: 240 / 104;
+  background: url("../assets/battle/ui/bg-grass.png") 0 100% / 100% auto no-repeat, #e0f8e0;
+  image-rendering: pixelated;
+  border-bottom: 2px solid #1b1b22;
+}
+
+/* 訓練員：直接用頭像全身像，企喺左下草地台（台中心 ≈ 26%） */
+.tc-trainer {
+  position: absolute; left: 26%; bottom: 3%;
+  transform: translateX(-50%);
+  width: 34%; aspect-ratio: 1; padding: 0;
+  border: 0; background: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tc-trainer img {
+  display: block; width: 100%; height: 100%;
+  object-fit: contain; object-position: 50% 100%;
+  image-rendering: pixelated;
+  animation: tcIdle 1.6s steps(1, end) infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes tcIdle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.25%); } }
+.tc-trainer:active img { transform: scale(.96); animation: none; }
+.tc-trainer:focus-visible { outline: 3px solid #e03a32; outline-offset: 2px; border-radius: 8px; }
+
+/* 資料牌：右邊，位置同戰鬥畫面我方資料牌一樣；闊到冚晒對面草地台（圖 x 46.7%→100%） */
+.tc-win {
+  position: absolute; right: 0; top: 8%; left: 45%;
+  padding: 3px 8px 5px;
+  border: 8px solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  color: #f8f8f8; text-shadow: 1px 1px 0 #6b5a73;
+  display: flex; flex-direction: column; gap: 3px;
+}
+/* 第 1 行：名 ＋ Lv（同戰鬥資料牌「名 …… Lv」一樣） */
+.tc-row1 { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.tc-name { flex: 1 1 auto; min-width: 0; font-size: 17px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-lvtag { flex: none; font-size: 17px; line-height: 1; }
+.tc-lvtag i { font-style: normal; font-size: 12px; color: #f8d878; margin-right: 1px; }
+.tc-ranktag {
+  flex: none; font-size: 11px; line-height: 1; padding: 2px 4px 3px; border-radius: 3px;
+  text-shadow: none; color: #1b1b22; background: #f8f8f8;
+}
+.tc-ranktag.poke { background: #f05848; color: #fff; }
+.tc-ranktag.great { background: #4890f8; color: #fff; }
+.tc-ranktag.ultra { background: #f8d030; color: #1b1b22; }
+.tc-ranktag.master { background: #a058f8; color: #fff; }
+/* 第 2 行：PvP WIN RATE …… 62% */
+.tc-row2 { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.tc-wr-lbl { font-size: 11px; line-height: 1; color: #f8d878; letter-spacing: .04em; white-space: nowrap; }
+.tc-wr-big { font-size: 26px; line-height: .9; letter-spacing: -.01em; }
+.tc-wr-big small { font-size: 15px; margin-left: 1px; }
+.tc-wr-big.none { color: #b8a8c8; }
+.tc-wr-wl { font-size: 12px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-wr-wl .w { font-weight: 400; color: #88f0a8; }
+.tc-wr-wl .l { font-weight: 400; color: #f8a0a0; margin-left: 2px; }
+.tc-wr-wl span { color: #c8bcd8; }
+/* 方案條：A = Trainer EXP（戰鬥資料牌 EXP 藍）；B = PvP Rank RP */
+.tc-xp { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.tc-xp .lbl { font-size: 10px; line-height: 1; color: #f8d878; min-width: 18px; }
+.tc-xp .track {
+  flex: 1; height: 5px; background: #484058;
+  border: 1px solid #201828; border-radius: 3px; overflow: hidden;
+}
+.tc-xp .track i { display: block; height: 100%; background: #48c8f8; }
+.tc-xp.rank .track i { background: #f8b050; }
+.tc-xp-note { font-size: 10px; line-height: 1; color: #c8bcd8; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 下半：My Team ---------- */
+.tc-team { padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.tc-team-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tc-team-title {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: 15px; line-height: 1; color: #1b1b22; letter-spacing: .04em;
+}
+.tc-team-title img { width: 14px; height: 14px; image-rendering: pixelated; }
+.tc-team-title em { font-style: normal; color: #8a8372; margin-left: 2px; }
+.tc-bag-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 32px; padding: 0 10px 0 12px;
+  border: 2px solid #1b1b22; border-radius: 10px;
+  background: #e03a32; color: #fff;
+  font: inherit; font-size: 12px; font-weight: 900; letter-spacing: .02em;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .2), 0 2px 0 #1b1b22;
+  cursor: pointer;
+}
+.tc-bag-btn span { font-size: 16px; line-height: 1; margin-top: -1px; }
+.tc-bag-btn:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .2); }
+
+.tc-slots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+.tc-slot {
+  position: relative; min-width: 0; padding: 12px 3px 5px;
+  border: 2px solid #1b1b22; border-radius: 10px;
+  background: #fff;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tc-slot.lead { background: #fff4ec; border-color: #e03a32; box-shadow: inset 0 0 0 1px #e03a32; }
+.tc-no {
+  position: absolute; left: 2px; top: 2px;
+  font-size: 8.5px; font-weight: 900; line-height: 1;
+  background: #2b5cb8; color: #fff; border-radius: 4px; padding: 2px 4px;
+}
+.tc-slot.lead .tc-no { background: #e03a32; }
+.tc-st { position: absolute; right: 2px; top: 3px; height: 8px; image-rendering: pixelated; }
+.tc-spr {
+  width: 100%; height: 34px; object-fit: contain; object-position: 50% 100%;
+  image-rendering: pixelated;
+}
+.tc-pname {
+  max-width: 100%; margin-top: 3px;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: 11px; line-height: 1; color: #1b1b22;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tc-lv {
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace;
+  font-size: 10px; line-height: 1; color: #6b6556; margin-top: 1px;
+}
+.tc-slot .bag-minihp { width: 88%; height: 4px; margin-top: 2px; }
+.tc-slot.fnt { background: #efece4; }
+.tc-slot.fnt .tc-spr { filter: grayscale(1); opacity: .45; }
+.tc-slot.fnt .tc-lv, .tc-slot.fnt .tc-pname { color: #9a9486; }
+
+/* 空格：虛線＋淡色 Poké Ball（items/poke-ball.png） */
+.tc-slot.empty {
+  border-style: dashed; border-color: #c9c5b8; background: #f6f2e7;
+  justify-content: center; min-height: 86px; padding: 0;
+}
+.tc-ball {
+  width: 22px; height: 22px; opacity: .35;
+  background: url("../assets/items/poke-ball.png") center / contain no-repeat;
+  image-rendering: pixelated; filter: grayscale(1);
+}
+
+.tc-hint { font-size: 11px; line-height: 1.35; color: #6b6556; text-align: center; }
+.tc-hint b { color: #1b1b22; }
+.tc-hint.warn { color: #b3261e; font-weight: 700; }
+.tc-hint.warn b { color: #b3261e; }
+
+@media (hover: hover) and (pointer: fine) {
+  .tc-slot:not(.empty):hover { transform: translateY(-2px); }
+  .tc-slot.empty:hover { border-color: #e03a32; }
+  .tc-slot.empty:hover .tc-ball { opacity: .6; filter: none; }
+  .tc-bag-btn:hover { filter: brightness(1.06); }
+  .tc-trainer:hover img { animation-duration: .8s; }
+}
+.tc-slot { transition: transform .14s ease, border-color .14s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .tc-trainer img { animation: none; }
+  .tc-slot { transition: none; }
+}
+
+/* 較闊（frame 入面 > 480px）：場景唔好太高 */
+@media (min-width: 620px) {
+  .tc-field { aspect-ratio: 240 / 88; }
+  .tc-trainer { width: 28%; left: 24%; }
+}
+
+/* ---------- 頂部：PvP／Friends 戰鬥指令框（取代原 hero；spec 20261108-trainer-level §5） ---------- */
+.bm-cmd {
+  position: relative;
+  grid-template-columns: 1fr 1fr; gap: 0;
+  border: 10px solid transparent;
+  border-image: url("../assets/battle/ui/pr-window-1.png") 8 fill stretch;
+  border-radius: 0; padding: 0;
+}
+.bm-cmd::after {   /* 中間分隔線 */
+  content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px; width: 2px;
+  background: rgba(200, 188, 216, .25);
+}
+.bm-cmd .battle-mode-card {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+  column-gap: 8px; row-gap: 4px; align-items: start; align-content: start;
+  min-height: 56px; padding: 7px 8px 6px 18px;
+  background: none; border: 0; border-radius: 6px; box-shadow: none;
+  color: #f8f8f8; overflow: visible;
+}
+.bm-cmd .battle-mode-card::before {   /* 戰鬥選單嘅紅色 ▶ 游標 */
+  content: "▶"; position: absolute; left: 3px; top: 50%; transform: translateY(-50%);
+  font-size: 10px; color: #ff4040; opacity: 0; transition: opacity .12s;
+}
+.bm-cmd .battle-mode-card:hover::before, .bm-cmd .battle-mode-card:focus-visible::before { opacity: 1; }
+.bm-cmd .battle-mode-card:focus-visible { outline: 2px solid #f8d878; outline-offset: -2px; }
+.bm-cmd .battle-mode-card:active { background: rgba(0, 0, 0, .25); transform: none; }
+.bm-cmd .fire-band { display: none; }
+.tcm-icon { grid-row: 1 / span 2; align-self: center; position: relative; width: 34px; height: 34px; }
+.tcm-icon img { position: absolute; image-rendering: pixelated; }
+#battle-menu-pvp .tcm-icon img { width: 20px; height: 20px; left: 0; top: 2px; }
+#battle-menu-pvp .tcm-icon img.vs { left: 13px; top: 12px; }
+#battle-menu-friends .tcm-icon img { width: 34px; height: 34px; top: 0; }
+#battle-menu-friends .tcm-icon img:first-child { left: -6px; }
+#battle-menu-friends .tcm-icon img:last-child { left: 8px; }
+.bm-cmd .bmc-title {
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace; font-weight: 400;
+  font-size: 18px; line-height: 1; color: #f8f8f8; text-shadow: 1px 1px 0 #6b5a73;
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+.bm-cmd .bmc-sub {
+  font-size: 10.5px; line-height: 1.25; color: #c8bcd8; font-weight: 600;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bm-cmd .bmt-badge { font-family: "Inter", sans-serif; }
+
+/* ---------- Tier 卡：「You bring N」實際出場嘅 Pokémon ---------- */
+.tc-bring {
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+  margin-top: 5px; padding: 3px 7px 3px 4px; border-radius: 9px;
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(168, 189, 224, .22);
+}
+.tc-bring img { width: 28px; height: 26px; object-fit: contain; image-rendering: pixelated; }
+.tc-bring small { font-size: .62rem; font-weight: 800; color: #a8bde0; margin-left: 4px; }
+.tc-bring.short { background: rgba(240, 88, 72, .12); border-color: rgba(240, 88, 72, .4); }
+.tc-bring.short small { color: #ffb4a8; }
+.bm-cmd .battle-mode-card:hover:not(:disabled) { transform: none; box-shadow: none; border-color: transparent; }
+.bm-cmd .bmc-sub { color: #c8bcd8; }
+
+/* Trainer Lv 細牌（Friends 名單、排行榜、PvP 戰前頁；TrainerLevel.badgeHTML） */
+.tl-slot:empty { display: none; }
+.tl-badge {
+  display: inline-flex; align-items: baseline; gap: 1px;
+  margin-left: 6px; padding: 1px 5px 2px; border-radius: 6px;
+  background: #2a2438; color: #f8f8f8; vertical-align: 1px;
+  font-family: "PokeRogueEmerald", "DotGothic16", monospace; font-weight: 400;
+  font-size: 12px; line-height: 1; letter-spacing: 0; white-space: nowrap;
+}
+.tl-badge i { font-style: normal; font-size: 9px; color: #f8d878; }
 
 /* 梯隊標題 */
 .ladder-head {
@@ -3829,7 +4041,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 
 /* 減少動態：關掉鬼火／hero 光暈／轉場 */
 @media (prefers-reduced-motion: reduce) {
-  .fire-band, .bm-hero-glow, .iu-flames { display: none; }
+  .fire-band, .iu-flames { display: none; }
   .energy-pip, .mastery-bar, .ai-trainer-card, .battle-mode-card, .tier-card { transition: none; }
 }
 
