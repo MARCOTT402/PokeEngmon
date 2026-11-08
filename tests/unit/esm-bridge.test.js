@@ -92,13 +92,10 @@ function usesOf(names, file) {
   return out;
 }
 
-test("index.html loads the converted base files as ES modules (batches 1–4)", () => {
-  for (const f of ["js/core/dom.js", "js/core/html.js", "js/battle/rng.js", "js/mega-data.js", "js/dex-sort.js", "js/store.js",
-    "js/sm2.js", "js/gens-data.js", "js/data.js", "js/pokemon.js",
-    "js/supabase-auth.js", "js/sync.js", "js/qimg-db.js", "js/avatars.js", "js/genpack.js", "js/battle/energy.js",
-    "js/battle/realtime.js", "js/battle/pvp.js", "js/battle/engine.js", "js/battle/moveanim.js", "js/battle/sprites.js",
-    "js/battle/state.js", "js/storage.js", "js/pet.js", "js/care.js"]) assert.ok(modules.includes(f), f);
-  assert.equal(classic[0], "js/core/guard.js", "Guard must stay the first classic script (Rule 94)");
+test("every js/ script except core/guard.js loads as an ES module (P2.3 done)", () => {
+  assert.deepEqual(classic, ["js/core/guard.js"], "new or leftover classic scripts — load them with type=\"module\" (Rule 119)");
+  assert.ok(modules.length > 70);
+  assert.equal(tags[0].file, "js/core/guard.js", "Guard must stay the first script (Rule 94)");
 });
 
 for (const f of modules) {
@@ -125,6 +122,12 @@ for (const f of modules) {
     const me = tags.findIndex((t) => t.file === f);
     const early = usesOf(topNames(sf), f).filter((u) => !u.inFn && modules.includes(u.file) && tags.findIndex((t) => t.file === u.file) < me);
     assert.deepEqual(early.map((u) => `${u.file}:${u.line} ${u.name}`), []);
+  });
+
+  /* module 入面 document.currentScript 係 null：用嚟計相對路徑（例如 audio.js 搵 capture.js）會靜靜雞錯 */
+  test(`${f}: does not rely on document.currentScript (null in modules)`, () => {
+    const src = fs.readFileSync(path.join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    assert.ok(!/document\.currentScript/.test(src), "use document.querySelector('script[src*=\"…\"]') instead");
   });
 
   test(`${f}: no import/export yet (tests and prototypes still load it as a classic script)`, () => {

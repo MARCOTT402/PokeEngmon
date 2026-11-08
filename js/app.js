@@ -69,3 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* 其他模組（friends.js / quests.js）用 window.App 判斷，補返個全域引用 */
 window.App = App;
+
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, { App, APP_VERSION });

@@ -968,7 +968,8 @@ class CaptureAudio {
 
 /* ---------- CaptureScene facade ---------- */
 (function () {
-  const self = document.currentScript;
+  /* 唔用 document.currentScript：type="module" 入面佢係 null（Rule 119），capture.js 會變成 /capture.js 兼冇咗 ?v= 標記 */
+  const self = document.querySelector('script[src*="js/audio.js"]');
   const query = (self && self.src && self.src.indexOf("?") >= 0) ? self.src.slice(self.src.indexOf("?")) : "";
   const moduleURL = new URL("capture.js" + query, (self && self.src) || location.href).href;
   const audio = new CaptureAudio();
