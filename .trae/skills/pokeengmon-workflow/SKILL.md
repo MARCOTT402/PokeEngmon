@@ -231,3 +231,13 @@ if (!e.request.url.startsWith("http")) return;
 - `tests/unit/esm-bridge.test.js` 會檢查：每個 module 嘅名有冇漏 bridge、classic script 載入時（包括 IIFE）有冇用到 module 嘅名、有冇 `import`／`export`、Guard 仲係第一個 classic script。
 - 轉下一個檔之前：跑 `npm test`（呢個測試會列出載入時用到嘅位置），再開瀏覽器睇 console 有冇 `is not defined`。
 → 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
+
+- 背景：`refactor`／`docs`／`chore` 唔會出新版本，但 deploy job 每次 push 都發佈。SW 對 `?v=<SW 版本>` 嘅檔係 cache-first（Rule 102）；版本冇變、`sw.js` 又冇變，就唔會裝新 SW。結果回訪用戶用**新 `index.html` 配快取入面嘅舊 JS**，而且會一直卡住，等到下次出新版本先好。
+- 而家：`tools/deploy/build-site.cjs` 打包完會用 `tools/deploy/stamp.cjs` 嘅 `stampBuild()`，將 `_site/sw.js` 嘅 `CACHE_NAME` 同 `_site/index.html` 全部 `?v=` 由 `1.71.2` 改做 `1.71.2-<commit 頭 7 位>`。
+  - `sw.js` 每次 deploy 都唔同 → 一定裝新 SW，activate 時刪舊快取，`controllerchange` 自動 reload；
+  - 過渡期舊 SW 見到新 `?v=` 對唔上自己嘅版本 → 行 network-first，唔會攞到舊檔。
+- 只改 `_site`，repo 入面嘅 `sw.js`／`index.html` 照舊係純版本號（`npm run sync-version` 管）。`tests/unit/deploy-stamp.test.js` 檢查標記邏輯，亦檢查 repo 入面 `package.json`、`sw.js`、`index.html` 三個版本一致（唔一致 deploy 會失敗，唔會靜靜雞發佈冇標記嘅版本）。
+- 本地重現回訪用戶：`localhost` 會停用 versioned 路線（`IS_DEV`），要用 `http://pe.localhost:<port>/`（Chrome 當本機、當安全環境，但唔中 `IS_DEV`）。先載入 build A 等 SW 接管（第一次到訪會延遲 8 秒＋idle 先註冊），換 build B 再 reload。
+→ 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

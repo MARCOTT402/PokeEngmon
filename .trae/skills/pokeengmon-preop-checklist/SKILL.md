@@ -494,3 +494,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
 
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+## Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

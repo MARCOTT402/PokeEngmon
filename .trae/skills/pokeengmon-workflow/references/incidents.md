@@ -243,3 +243,12 @@ Skill: already covered by Rule 116（已擴展）
 - 另外：其他 chat 佔用咗 8080／8091／8094／8097，`autoPort` 改咗 port 但 python 參數仍然係舊 port，server 其實冇開到 → `.claude/launch.json` 加 `static-esm`（8102，`autoPort: false`）。
 
 Skill: Rule 119 added
+
+## Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
+
+- 2026-11-08 push `88534eb`（ESM 第一批，`refactor`，冇出新版本）之後，打開正式網站第一次載入：7 個 `js/battle/ui/*.js` 全部 `Cannot read properties of undefined (reading 'S')`（舊 `battle.js` 冇 `BattleUI._`）、`bag.js` `escapeHTML is not defined`、登入畫面 `escapeHTML is not defined`（新 `index.html` 用 module 載入**舊** `dom.js`，舊版冇 bridge）。
+- 原因：`?v=1.71.2` 同 SW 快取名 `pokeengmon-1.71.2` 喺幾次 refactor deploy 之間都冇變；SW 對呢啲檔 cache-first，而 `sw.js` 冇改嗰次（ESM 第一批）根本唔會裝新 SW。之前拆 `app.js`／`quiz`／`gacha`／`battle` 幾次 deploy 都有同一個風險（新檔冇快取所以攞新嘅，舊檔照用快取）。
+- 重現（`pe.localhost`）：舊做法 A → B（同版本、B 嘅 `bag.js` 有記號），reload 兩次仍然係舊 `bag.js`。新做法（標記 `-aaaaaaa` → `-bbbbbbb`）：reload 一次（SW 再自動 reload）就用緊 B，舊快取已經刪走，console 冇 error。
+- 驗證：422 個測試（新加 6 個 stamp 測試）、lint 0；本地 `build-site` 輸出 `1.71.2-88534eb`，79 個 `?v=` 全部標記，`index.html` BOM 保留。
+
+Skill: Rule 120 added

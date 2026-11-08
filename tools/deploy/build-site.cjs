@@ -21,3 +21,13 @@ for (const f of files) {
   bytes += fs.statSync(dst).size;
 }
 console.log(`site: ${files.length} files, ${(bytes / 1048576).toFixed(1)} MB → ${path.relative(ROOT, OUT) || OUT}`);
+
+/* 每次 deploy 嘅獨一無二版本標記（Rule 120）：sw.js 快取名＋index.html 全部 ?v= 加 commit id */
+const { stampBuild } = require("./stamp.cjs");
+const version = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
+const id = (process.env.GITHUB_SHA || execSync("git rev-parse HEAD", { cwd: ROOT }).toString()).trim().slice(0, 7);
+const swPath = path.join(OUT, "sw.js"), indexPath = path.join(OUT, "index.html");
+const stamped = stampBuild({ sw: fs.readFileSync(swPath, "utf8"), index: fs.readFileSync(indexPath, "utf8") }, version, id);
+fs.writeFileSync(swPath, stamped.sw);
+fs.writeFileSync(indexPath, stamped.index);
+console.log(`stamped build ${stamped.tag}: sw.js cache name + ${stamped.count} ?v= in index.html`);
