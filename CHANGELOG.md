@@ -1,3 +1,10 @@
+## [1.71.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.2...v1.71.3) (2026-11-08)
+
+
+### Bug Fixes
+
+* **deploy:** stamp each deploy so returning users never mix new HTML with cached JS ([06e03fe](https://github.com/MARCOTT402/PokeEngmon/commit/06e03fe37ae8ad57dc5f8097017511c7f22c82a8))
+
 ## [1.71.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.71.1...v1.71.2) (2026-11-07)
 
 
