@@ -70,18 +70,19 @@ check("A1 evolution 3× ≈ 1/3 of 1×", evo[1].ms && evo[3].ms && Math.abs(evo[
 check("A2 evolution speeds GSAP while playing", evo[3].during && evo[3].during.ts === 3, evo[3].during);
 check("A3 evolution resets speed when the animation ends and on close", reset(evo[3].afterArm) && reset(evo[3].afterClose), evo[3]);
 
-/* 扭蛋 */
+/* 扭蛋（v2 快龍空投：撳 1× 大掣；去到「撳 3 下」即刻撳，等測量淨係計動畫） */
+const TAP3 = `const tap3 = () => { const sg = document.getElementById('gacha-stage2'); const b = sg && sg.querySelector('.gs2-balls .gfx-ball'); if (!b) return; const r = b.getBoundingClientRect(); for (let i = 0; i < 3; i++) sg.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); };`;
 const gacha = {};
 for (const spd of [1, 3]) {
   gacha[spd] = await ev(`${PRE}
     const st = loadState(); st.diamonds = 999; saveState(st);
     AnimSpeed.set(${spd});
     Gacha.open('rare'); await sleep(800);
-    Gacha._setPull(1);
+    ${TAP3}
     const t0 = performance.now();
-    Gacha._triggerPull(); await sleep(50);
+    Gacha.pullOne(); await sleep(50);
     const during = snap();
-    while (Gacha.phase !== 'inspect') { await sleep(10); if (performance.now() - t0 > 60000) return { timeout: true, phase: Gacha.phase }; }
+    while (Gacha.phase !== 'inspect') { if (Gacha._tapCleanup) tap3(); await sleep(10); if (performance.now() - t0 > 60000) return { timeout: true, phase: Gacha.phase }; }
     const ms = performance.now() - t0; const atReveal = snap();
     App.closeGachaSheet(); await sleep(400);
     return { ms: Math.round(ms), during, atReveal, afterClose: snap() };`);
@@ -91,7 +92,7 @@ check("A5 gacha resets speed at the result card and on close", reset(gacha[3].at
 
 /* 扭蛋中途離開 */
 const abort = await ev(`${PRE}
-  AnimSpeed.set(3); Gacha.open('rare'); await sleep(800); Gacha._setPull(1); Gacha._triggerPull(); await sleep(400);
+  AnimSpeed.set(3); Gacha.open('rare'); await sleep(800); Gacha.pullOne(); await sleep(400);
   const during = snap(); App.closeGachaSheet(); await sleep(300);
   return { during, after: snap() };`);
 check("A6 gacha aborted mid-animation resets speed", abort.during.ts === 3 && reset(abort.after), abort);

@@ -12,6 +12,7 @@
  * Files that already say `const X = …` at top level (App, BagUI, BattleLand, EvolveScene, Friends,
  * GenPack, Pet, PvpRealtime, SupabaseAuth) must NOT be listed here: TS2451 redeclare. */
 declare var AnimSpeed: any;
+declare var Gacha: any;
 declare var Avatars: any;
 declare var CaptureAudio: any;
 declare var CaptureScene: any;

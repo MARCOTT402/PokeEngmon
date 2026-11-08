@@ -11,12 +11,9 @@ Object.assign(Gacha, {
     this._townStopped = false;   /* 開場會即刻再停，避免 abort 先恢復再停嘅閃爍 */
     this.abort();      // 清走上次殘留；未結算就補結算，唔會「食咗鑽但冇派寵」
     App.openGachaSheet();
-    this._bindArm();
-    this._bindStageFit();
+    this._bindLobby();     /* v2：1×／10× 大掣＋大堂快龍 rig（取代拉手杆／按住充能） */
     this._resetStage();
-    this._setCostChip(false);
     this._refreshControls();
-    requestAnimationFrame(() => this._fitStage());
     /* 扭蛋係全屏演出：入場即收城鎮 BGM，避免同音效疊聲 */
     const audio = this._audio();
     if (audio) {
@@ -29,6 +26,7 @@ Object.assign(Gacha, {
   abort() {
     const flow = this._flow;
     this._flowId++;
+    this._s2seq++;          /* 作廢進行中嘅快龍空投演出 */
     this._clearTimers();
     this._spdEnd();
     this._flow = null;
@@ -106,16 +104,11 @@ Object.assign(Gacha, {
     this._updateDiamondDisplay();
     const afford = this._canPull();
     const affordMulti = this._canMultiPull();
-    const m = this._machine();
-    if (m) m.classList.toggle("cant-afford", !afford);
-    /* idle 待機提示：夠鑽就教拉手杆，唔夠就提住去賺 */
-    if (this.phase === "idle" && !this._charging && !this._charged) {
-      if (affordMulti) {
-        this._prompt("⇣ DRAG FOR 1 PULL ・ HOLD 3s FOR 10×");
-      } else {
-        this._prompt(afford ? "⇣ DRAG DRAGONITE'S HAND ⇣" : "Not enough gems — earn more in quizzes!");
-      }
-    }
+    /* v2：大掣永遠顯示價錢；唔夠鑽就變灰（撳落會提示去答題賺） */
+    const b1 = document.getElementById("btn-gacha-1"), b10 = document.getElementById("btn-gacha-10");
+    if (b1) b1.classList.toggle("poor", !afford);
+    if (b10) b10.classList.toggle("poor", !affordMulti);
+    if (this.phase === "idle") this._prompt(afford ? "" : "Not enough gems — earn more in quizzes!");
   },
 
   /* ---------- 機率 ---------- */
@@ -159,13 +152,6 @@ Object.assign(Gacha, {
     return window.gsap || null;
   },
 
-  _machine() {
-    return document.getElementById("gacha-machine");
-  },
-
-  _arm() {
-    return document.getElementById("dm-arm");
-  },
 
   /* dev hook（只限 localhost）：覆寫視覺稀有度方便驗收，經濟結果不變 */
   _visualRarity(s) {

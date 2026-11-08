@@ -73,6 +73,7 @@ function defaultState() {
     trainerLikes: 0,        // 未來 leaderboard likes；≥20 = trade 進化條件
     moveLoadouts: {},       // uid -> [招式 slug ×≤4]：玩家自訂持有招式（pull 重推後還原用）
     trainerExp: 0,          // Trainer Lv 嘅 EXP（server 權威：user_account.trainer_exp；client 只讀）
+    incubator: { eggs: [null, null], s2: { ever: false, on: false, last: 0 } },   // 孵化器（js/incubator/incubator.js；登入時 server 權威 get_incubator）
     myTeam: [],             // 我的隊伍：entry uid ×≤6（AI／PvP／好友戰共用；雲端 user_account.my_team）
     bagPrefs: {},           // 背包設定（排序 chip 次序等；雲端 user_account.bag_prefs）
     dexCaught: [],          // 曾經捕捉過嘅圖鑑號（送走都保留「已捕捉」；雲端 user_account.dex_caught）

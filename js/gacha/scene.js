@@ -6,107 +6,8 @@
    ============================================================ */
 
 Object.assign(Gacha, {
-  /* 拉過閾值：扣 3 寶石開獎 → 手臂回彈 → 180ms 艙門開 → 等結算 → 600ms 跌球 */
-  async _triggerPull() {
-    if (this._triggered) return;
-    /* 扣鑽 + 起 flow（server RPC 背景進行）；唔夠鑽就回彈唔扣 */
-    if (!this._beginPull()) {
-      this._refreshControls();
-      const g0 = this._gsap();
-      if (g0 && !this._rm()) {
-        const proxy0 = { p: this._curP };
-        g0.to(proxy0, { p: 0, duration: .5, ease: "elastic.out(1,.45)", onUpdate: () => this._setPull(proxy0.p) });
-      } else {
-        this._setPull(0);
-      }
-      return;
-    }
-    const flow = this._flow;
-    this._triggered = true;
-    this._dragging = false;
-    this.phase = "opening";
-    document.getElementById("view-gacha").classList.add("playing");
-    const fid = flow.id;
-    const machine = this._machine();
-    machine.classList.remove("dragging");
-    this._prompt("");
-    const audio = this._audio();
-    if (audio) audio.pullSnap();
-    this._haptic(20);
-
-    /* 手臂回彈 */
-    const g = this._gsap();
-    if (g && !this._rm()) {
-      const proxy = { p: this._curP };
-      g.to(proxy, { p: 0, duration: .3, ease: "power3.out", onUpdate: () => this._setPull(proxy.p) });
-    } else {
-      this._setPull(0);
-    }
-
-    /* 艙門打開 */
-    this._spdBegin();
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      machine.classList.add("belly-open");
-      if (audio) audio.bellyOpen();
-      this._haptic([30, 40, 30]);
-    }, 180);
-
-    /* 經濟結算：RPC 未完成時 _settleResult 會自己顯示「…」hold 狀態 */
-    let s = null;
-    try {
-      s = await this._settleResult(flow);
-    } catch (err) {
-      console.error("[Gacha] settlement failed", err);
-    }
-    if (!s) {
-      /* 結算失敗：解鎖 UI，唔可以卡死 */
-      if (fid === this._flowId) {
-        this.busy = false;
-        this._flow = null;
-        this._resetStage();
-        this._refreshControls();
-        this._prompt("Something went wrong — try again.");
-      }
-      return;
-    }
-    if (fid !== this._flowId) return;
-
-    this._setT(() => { if (fid === this._flowId) this._dropBall(flow, s); }, 600);
-  },
-
   _ballHTML() {
     return `<span class="pb-top"></span><span class="pb-bottom"></span><span class="pb-mid"></span><span class="pb-btn"></span><span class="pb-shine"></span>`;
-  },
-
-  /* 肚仔跌球：彈出 → 彈跳 → 滾走 → 入背景 A */
-  _dropBall(flow, s) {
-    this.phase = "drop";
-    const fid = flow.id;
-    const rarity = this._visualRarity(s);
-    const cfg = GACHA_BALL[rarity];
-    const dz = document.getElementById("gacha-dropzone");
-    const belly = document.getElementById("dm-belly");
-    if (!dz || !belly) return;
-
-    const ball = document.createElement("div");
-    ball.className = `eject-ball pokeball ${cfg.cls}`;
-    ball.innerHTML = this._ballHTML();
-    const bRect = belly.getBoundingClientRect();
-    const dzRect = dz.getBoundingClientRect();
-    ball.style.left = (bRect.left - dzRect.left + bRect.width / 2 - 32) + "px";
-    ball.style.top = (bRect.top - dzRect.top + bRect.height * .3) + "px";
-    dz.appendChild(ball);
-
-    const audio = this._audio();
-    /* 時間點對齊 ball-eject 1.7s：第一落點 ~38%（650ms）、滾動 ~68%（1160ms）、完結 1700ms */
-    this._setT(() => { if (audio) audio.ballLand(); }, 650);
-    this._setT(() => { if (audio) audio.ballRoll(); }, 1160);
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      ball.remove();
-      this._openSceneB(flow, s);
-    }, 1750);
   },
 
   /* 背景 A overlay（lazy 建立，fixed 掛 body 避免 containing block 問題） */
@@ -135,166 +36,511 @@ Object.assign(Gacha, {
     return el;
   },
 
-  _openSceneB(flow, s) {
-    this.phase = "sceneB";
-    const fid = flow.id;
-    const rarity = this._visualRarity(s);
-    const cfg = GACHA_BALL[rarity];
-    const sc = this._ensureSceneB();
-    if (window.AnimSpeed) AnimSpeed.badge(sc, this._spd || 1);
-    const wrap = sc.querySelector(".gsb-ball-wrap");
-    const particles = sc.querySelector(".gsb-particles");
-    const prompt = sc.querySelector(".gsb-prompt");
+  /* ============================================================
+     v2「快龍空投」單抽（spec §4；prototype tools/prototype/gacha-v2-prototype.html）
+     大掣 → _beginPull（扣 3 寶石＋server RPC 背景跑）→ 快龍飛近（遮住 RPC 延遲）→ 擲波 → 落地
+     → 升級／tease → 撳 3 下 → riser＋靜默 → 爆發 → 剪影 → 上色 → _revealInspect
+     經濟結算同演出解耦：任何時候 abort()／SKIP 都唔影響已扣鑽／派寵。
+     ============================================================ */
 
-    sc.classList.remove("hidden");
-    requestAnimationFrame(() => sc.classList.add("show"));
-
-    /* 上升金粉粒子 */
-    particles.innerHTML = "";
-    if (!this._rm()) {
-      for (let i = 0; i < 22; i++) {
-        const sp = document.createElement("span");
-        sp.style.left = (Math.random() * 100) + "%";
-        sp.style.animationDuration = (5 + Math.random() * 7) + "s";
-        sp.style.animationDelay = (-Math.random() * 8) + "s";
-        sp.style.transform = "scale(" + (0.5 + Math.random()) + ")";
-        particles.appendChild(sp);
-      }
+  /* 大堂：1×／10× 大掣（只綁一次）＋idle 快龍 rig（拍翼、手攬住一粒 Great Ball） */
+  _bindLobby() {
+    if (!this._lobbyBound) {
+      this._lobbyBound = true;
+      const b1 = document.getElementById("btn-gacha-1");
+      const b10 = document.getElementById("btn-gacha-10");
+      if (b1) b1.onclick = () => this.pullOne();
+      if (b10) b10.onclick = () => this.pullTen();
     }
-
-    prompt.textContent = "It's rolling…";
-    wrap.innerHTML = `<span class="leak ${cfg.glow}"></span><div class="pokeball giant ${cfg.cls}">${this._ballHTML()}<span class="pb-light"></span></div>`;
-    wrap.classList.add("roll-in");
-    const audio = this._audio();
-    if (audio) audio.ballRoll();
-
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      wrap.classList.remove("roll-in");
-      prompt.textContent = "Something is moving…";
-      this._sceneBTimeline(flow, s);
-    }, this._rm() ? 200 : 750);
+    const host = document.getElementById("gacha-lobby-rig");
+    if (!host || !window.DragoniteRig || !window.GachaFX) return;
+    if (!this._lobbyRig) {
+      this._lobbyRig = DragoniteRig.make(host);
+      this._lobbyRig.speed(.6);
+    } else if (this._lobbyRig.flapTl) {
+      this._lobbyRig.flapTl.resume();
+    }
+    requestAnimationFrame(() => {
+      if (!this._lobbyRig) return;
+      this._lobbyRig.hold(GachaFX.makeBall("great", Math.max(10, host.offsetWidth * .17)));
+    });
   },
 
-  /* 背景 A 時間線：搖 2 下 → 分級爆發 → 開球 → 光柱 zoom → 檢視卡 */
-  _sceneBTimeline(flow, s) {
-    const fid = flow.id;
-    const rarity = this._visualRarity(s);
-    const sc = this._sceneB;
-    const ball = sc.querySelector(".pokeball");
-    const leak = sc.querySelector(".leak");
-    const magic = sc.querySelector(".gsb-magic");
-    const beam = sc.querySelector(".gsb-beam");
-    const flash = sc.querySelector(".gsb-flash");
-    const rings = sc.querySelector(".gsb-rings");
-    const prompt = sc.querySelector(".gsb-prompt");
+  /* 大掣：唔夠鑽 → 掣震一下＋提示（唔扣鑽） */
+  pullOne() {
+    if (this.busy) return;
+    if (!this._canPull()) { this._poorButton("btn-gacha-1"); return; }
+    this._triggerPull();
+  },
+  pullTen() {
+    if (this.busy) return;
+    if (!this._canMultiPull()) { this._poorButton("btn-gacha-10"); return; }
+    this._triggerMultiPull();
+  },
+  _poorButton(id) {
+    const b = document.getElementById(id);
+    if (b) { b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); }
+    this._haptic(40);
+    this._prompt("Not enough gems — earn more in quizzes!");
+  },
+
+  /* 單抽主時間線 */
+  async _triggerPull() {
+    if (this.busy) return;
+    if (!this._beginPull()) { this._refreshControls(); return; }
+    const flow = this._flow;
+    const fid = flow.id, seq = ++this._s2seq;
+    const live = () => fid === this._flowId && seq === this._s2seq;
+    this.phase = "stage";
+    document.getElementById("view-gacha").classList.add("playing");
+    this._prompt("");
     const audio = this._audio();
-    const k = this._rm() ? 0.25 : 1;   // reduced-motion 壓縮時間
+    if (audio) audio.pullSnap();
+    this._haptic(20);
+    this._spdBegin();
+    if (this._lobbyRig && this._lobbyRig.flapTl) this._lobbyRig.flapTl.pause();
 
-    const wobbleOnce = (n) => {
-      if (!document.body.contains(ball)) return;
-      ball.classList.remove("wob"); void ball.offsetWidth;   // 重啟 CSS 動畫
-      ball.classList.add("wob");
-      if (audio) audio.wobble(n);
-      this._haptic(n === 2 ? 26 : 18);
-      leak.classList.remove("lk1", "lk2"); void leak.offsetWidth;
-      leak.classList.add(n === 2 ? "lk2" : "lk1");
-    };
-    const spawnRings = (count, color) => {
-      for (let i = 0; i < count; i++) {
-        const r = document.createElement("i");
-        r.className = "gsb-ring";
-        r.style.borderColor = color;
-        r.style.animationDelay = (i * 0.12 / (this._spd || 1)) + "s";
-        rings.appendChild(r);
-        this._setT(() => r.remove(), 1100 + i * 120);
-      }
-    };
-    const spawnStars = (n, color) => {
-      for (let i = 0; i < n; i++) {
-        const sp = document.createElement("span");
-        sp.className = "gsb-star";
-        sp.textContent = "✦";
-        sp.style.color = color;
-        const ang = Math.random() * Math.PI * 2;
-        const dist = 90 + Math.random() * 160;
-        sp.style.setProperty("--dx", Math.cos(ang) * dist + "px");
-        sp.style.setProperty("--dy", Math.sin(ang) * dist + "px");
-        sp.style.fontSize = (12 + Math.random() * 18) + "px";
-        rings.appendChild(sp);
-        this._setT(() => sp.remove(), 1000);
-      }
-    };
-    /* 震屏只震 overlay 本身 —— 唔好震 body，否則 .hub-bar fixed 定位會移位 */
-    const shake = (strength) => {
-      const g = this._gsap();
-      if (this._rm() || !g || strength <= 0) return;
-      g.fromTo(sc, { x: -strength }, { x: 0, duration: .5, ease: "elastic.out(1.2,.3)",
-        onComplete: () => { sc.style.transform = ""; } });
-    };
-    const doFlash = (big) => {
-      flash.classList.remove("on", "big"); void flash.offsetWidth;
-      flash.classList.add("on");
-      if (big) flash.classList.add("big");
-    };
+    /* 經濟結算同步開始：快龍飛近嗰 ~2.5 秒就係 RPC 嘅時間 */
+    const settling = this._settleResult(flow).catch((err) => { console.error("[Gacha] settlement failed", err); return null; });
 
-    this._setT(() => { if (fid === this._flowId) wobbleOnce(1); }, 350 * k);
-    this._setT(() => { if (fid === this._flowId) { wobbleOnce(2); if (audio) audio.leakHum(2); } }, 1050 * k);
+    const st = this._ensureStage();
+    this._stageOpen();
+    const held = await this._flyIn(live);
+    const s = await settling;
+    if (!live()) return;
+    if (!s) {
+      /* 結算失敗：收場、解鎖，唔可以卡死 */
+      this._stageClose(true);
+      this.busy = false;
+      this._flow = null;
+      this._resetStage();
+      this._refreshControls();
+      this._prompt("Something went wrong — try again.");
+      return;
+    }
+    const rarity = this._visualRarity(s);
+    const plan = GachaTells.plan(rarity);
+    GachaFX.setBallType(held, plan.start);
 
-    /* 分級爆發 */
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      prompt.textContent = "";
-      const starColor = rarity === "rare" ? "#8ecbff" : rarity === "epic" ? "#d8a4ff" : "#ffe28a";
-      if (rarity === "rare") {
-        if (audio) audio.gotcha();
-        doFlash(false);
-        spawnRings(1, "#bfe0ff");
-        spawnStars(10, starColor);
-      } else if (rarity === "epic") {
-        magic.classList.remove("hidden");
-        magic.style.filter = "blur(.4px) drop-shadow(0 0 14px rgba(200,120,255,.8))";
-        if (audio) audio.upgradeSting(1);
-        this._setT(() => { if (audio) audio.gotcha(); }, 140);
-        doFlash(false);
-        spawnRings(2, "#d8a4ff");
-        spawnStars(16, starColor);
-        shake(5);
-      } else {
-        magic.classList.remove("hidden");
-        magic.style.filter = "blur(.4px) drop-shadow(0 0 18px rgba(255,210,90,.95))";
-        if (audio) audio.upgradeSting(2);
-        this._setT(() => { if (audio) audio.gotcha(); }, 180);
-        doFlash(true);
-        spawnRings(3, "#ffe28a");
-        spawnStars(24, starColor);
-        shake(8);
-        this._haptic([40, 60, 60]);
-      }
-    }, 1800 * k);
+    await this._windAndThrow(live);
+    if (!live()) return;
+    const size = Math.round(st.clientWidth * .3);
+    const ball = this._releaseHeld(held, plan.start, size);
+    this._track(this._exitRig());
+    await this._arcTo(ball, plan.trail, live);
+    if (!live()) return;
+    await this._landBall(ball, live);
+    if (!live()) return;
+    await this._upgradeBall(ball, plan, live);
+    if (!live()) return;
+    await this._tapPhase(ball, rarity, live);
+    if (!live()) return;
+    await this._burstReveal(ball, s, rarity, live);
+    if (!live()) return;
+    this._revealInspect(flow, s);
+  },
 
-    /* 開球：上下分離 + 內光 */
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      ball.classList.add("open");
-      leak.classList.remove("lk1", "lk2");
-      if (audio) audio.ballLand();
-    }, 2450 * k);
+  /* SKIP：作廢時間線，等結算（通常已完成）就直接出檢視卡 */
+  async _skipStage() {
+    const flow = this._flow;
+    if (!flow || flow.multi) return;
+    this._s2seq++;
+    this._stageClear();
+    const s = await this._settleResult(flow).catch(() => null);
+    if (flow !== this._flow) return;
+    if (!s) { this.abort(); return; }
+    this._revealInspect(flow, s);
+  },
 
-    /* 光柱沖天 + zoom */
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      beam.classList.add("rise");
-      if (audio) audio.beamWhoosh();
-      const g = this._gsap();
-      if (g && !this._rm()) {
-        g.to(sc.querySelector(".gsb-stage"), { scale: 1.12, duration: .4, ease: "power2.in" });
-        g.to(sc.querySelector(".gsb-ball-wrap"), { scale: 1.8, duration: .4, ease: "power2.in" });
-      }
-      doFlash(true);
-    }, 2850 * k);
+  /* ---------- 演出 overlay（display window；lazy 掛 body） ---------- */
+  _ensureStage() {
+    if (this._stage) return this._stage;
+    const el = document.createElement("div");
+    el.id = "gacha-stage2";
+    el.className = "hidden";
+    el.innerHTML = `
+      <div class="gs2-night"><div class="gs2-twinkle"></div></div>
+      <div class="gs2-ground"></div>
+      <div class="gs2-ring"></div>
+      <div class="gs2-gshadow"></div>
+      <div class="gs2-dim"></div>
+      <div class="gs2-rays"></div>
+      <div class="gs2-rig"></div>
+      <div class="gs2-balls"></div>
+      <div class="gs2-reveal">
+        <div class="gs2-halo"></div><div class="gs2-pillar"></div>
+        <div class="gs2-monwrap"><img class="gs2-mon" alt=""></div>
+        <div class="gs2-stars"></div>
+        <div class="gs2-name"><span class="gs2-rlabel"></span><b class="gs2-rname"></b></div>
+        <div class="gs2-stamp"></div>
+      </div>
+      <canvas class="gs2-fx"></canvas>
+      <div class="gs2-flash"></div>
+      <div class="gs2-callout"></div>
+      <div class="gs2-hint"></div>
+      <button class="gs2-skip" type="button">SKIP ⏭</button>`;
+    document.body.appendChild(el);
+    const tw = el.querySelector(".gs2-twinkle");
+    for (let i = 0; i < 50; i++) {
+      const s = document.createElement("i");
+      s.style.left = (Math.random() * 100) + "%";
+      s.style.top = (Math.random() * 100) + "%";
+      s.style.animationDelay = (-Math.random() * 3) + "s";
+      tw.appendChild(s);
+    }
+    el.querySelector(".gs2-skip").addEventListener("click", (e) => { e.stopPropagation(); this._skipStage(); });
+    this._stage = el;
+    this._stageRig = DragoniteRig.make(el.querySelector(".gs2-rig"));
+    this._stageRig.flapTl.pause();
+    this._stageFx = GachaFX.makeParticles(el.querySelector(".gs2-fx"));
+    GachaFX.ensureDefs();
+    return el;
+  },
+  _q(sel) { return this._stage.querySelector(sel); },
+  _W() { return this._stage.clientWidth; },
+  _H() { return this._stage.clientHeight; },
+  _center(node) {
+    const r = node.getBoundingClientRect(), s = this._stage.getBoundingClientRect();
+    return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2, w: r.width, h: r.height };
+  },
+  /* 進行中嘅 GSAP timeline：清場時一次過 kill */
+  _track(tl) { (this._s2tls = this._s2tls || []).push(tl); return tl; },
+  _play(tl) { this._track(tl); return new Promise((res) => tl.eventCallback("onComplete", res)); },
+  _wait(ms) { return new Promise((res) => this._setT(res, ms * (this._rm() ? .25 : 1))); },
+  _hint(txt) {
+    const h = this._q(".gs2-hint");
+    h.textContent = txt || "";
+    h.classList.toggle("on", !!txt);
+  },
+  _callout(txt, color) {
+    const c = this._q(".gs2-callout");
+    c.textContent = txt;
+    c.style.setProperty("--rc", color);
+    this._track(gsap.timeline()
+      .fromTo(c, { opacity: 0, scale: 2.2, rotate: -8 }, { opacity: 1, scale: 1, rotate: -4, duration: .28, ease: "back.out(2.5)" })
+      .to(c, { opacity: 0, y: -20, duration: .3, delay: .45 }).set(c, { y: 0 }));
+  },
+  _shake(px, dur = .5) {
+    if (this._rm() || px <= 0) return;
+    this._track(gsap.fromTo(this._stage, { x: px * (Math.random() < .5 ? -1 : 1), y: px * .6 },
+      { x: 0, y: 0, duration: dur, ease: "elastic.out(1.3,.25)", clearProps: "x,y" }));
+  },
+  _flashOn(peak = .9, dur = .5) {
+    this._track(gsap.fromTo(this._q(".gs2-flash"), { opacity: peak }, { opacity: 0, duration: dur, ease: "power2.out" }));
+  },
 
-    this._setT(() => { if (fid === this._flowId) this._revealInspect(flow, s); }, 3250 * k);
+  _stageOpen() {
+    const st = this._ensureStage();
+    this._stageClear();
+    st.classList.remove("hidden");
+    this._stageFx.reduced = this._rm();
+    requestAnimationFrame(() => { st.classList.add("show"); this._stageFx.resize(); });
+    if (window.AnimSpeed) AnimSpeed.badge(st, this._spd || 1);
+    this._stageRig.flapTl.resume();
+  },
+  /* 清場：kill timeline、tap listener、粒子、球、reveal 狀態（唔隱藏 overlay） */
+  _stageClear() {
+    (this._s2tls || []).forEach((t) => { try { t.kill(); } catch (e) { /* ignore */ } });
+    this._s2tls = [];
+    if (this._tapCleanup) { this._tapCleanup(); this._tapCleanup = null; }
+    if (!this._stage) return;
+    this._stageFx.clear();
+    this._q(".gs2-balls").innerHTML = "";
+    this._q(".gs2-stars").innerHTML = "";
+    this._hint("");
+    gsap.set([".gs2-dim", ".gs2-rays", ".gs2-halo", ".gs2-pillar", ".gs2-mon", ".gs2-name", ".gs2-stamp", ".gs2-flash", ".gs2-callout", ".gs2-gshadow", ".gs2-ring"]
+      .map((s) => this._q(s)), { clearProps: "all" });
+    this._q(".gs2-mon").className = "gs2-mon";
+    this._q(".gs2-rays").classList.remove("rainbow");
+    const rig = this._stageRig;
+    gsap.killTweensOf([rig.el, rig.face, rig.arm, rig.bob]);
+    gsap.set(rig.el, { opacity: 0, xPercent: -50, yPercent: -50, rotate: 0, scale: 1, filter: "none" });
+    gsap.set([rig.arm, rig.bob], { rotate: 0, scaleX: 1, scaleY: 1 });
+    gsap.set(rig.face, { scaleX: 1 }); rig.dir = 1;
+    rig.hand.innerHTML = "";
+    rig.onDown = null;
+    this._stage.style.transform = "";
+  },
+  _stageClose(instant) {
+    const st = this._stage;
+    if (!st) return;
+    this._stageClear();
+    this._stageRig.flapTl.pause();
+    st.classList.remove("show");
+    if (instant) st.classList.add("hidden");
+    else this._setT(() => { if (!st.classList.contains("show")) st.classList.add("hidden"); }, 450);
+  },
+
+  /* 幕 2a：快龍由天邊飛近（bezier、轉身、傾側、空氣透視、拍翼聲、飛掠聲）→ 懸停 → 吼 */
+  async _flyIn(live) {
+    const rig = this._stageRig, el = rig.el, w = this._W(), h = this._H(), audio = this._audio();
+    gsap.set(el, { xPercent: -50, yPercent: -50, opacity: 1 });
+    const held = rig.hold(GachaFX.makeBall("great", Math.max(10, el.offsetWidth * .17)));
+    rig.speed(1.6);
+    rig.onDown = () => { if (audio) audio.gachaFlap(Math.min(1, rig.pos.s)); };
+    const P = [{ x: w * .78, y: h * .1 }, { x: w * 1.25, y: h * .34 }, { x: -w * .3, y: h * .46 }, { x: w * .5, y: h * .3 }];
+    const o = { t: 0 }, sh = this._q(".gs2-gshadow");
+    let px = P[0].x, lean = 0, passed = false;
+    rig.place(P[0].x, P[0].y, .1, 0, 0);
+    await this._play(gsap.timeline().to(o, { t: 1, duration: 2, ease: "sine.inOut", onUpdate: () => {
+      const p = DragoniteRig.bez(P, o.t), vx = p.x - px; px = p.x;
+      const k = Math.pow(o.t, 1.4), s = .1 + .92 * k;
+      lean += (Math.max(-22, Math.min(22, vx * 1.2)) - lean) * .18;
+      if (Math.abs(vx) > 1.2) rig.faceTo(vx < 0 ? 1 : -1);
+      rig.place(p.x, p.y, s, lean, k);
+      gsap.set(sh, { left: p.x, scale: Math.max(.1, s), opacity: Math.min(.85, k * .9) });
+      if (!passed && o.t > .5) { passed = true; if (audio) audio.gachaFlyby(); this._shake(3, .4); this._haptic(15); }
+    } }));
+    if (!live()) return held;
+    rig.faceTo(1);
+    rig.speed(.8);
+    const sx = rig.pos.x;
+    rig.onDown = () => { if (audio) audio.gachaFlap(1); this._stageFx.dust(sx, h * .645, 5); };
+    try { Pokedex.playCry(149); } catch (e) { /* audio unavailable */ }
+    this._haptic(20);
+    await this._play(gsap.timeline()
+      .to(el, { rotate: 0, filter: DragoniteRig.depthFilter(1), duration: .35, ease: "power2.out" }, 0)
+      .fromTo(rig.bob, { scaleY: 1.07, scaleX: .95 }, { scaleY: 1, scaleX: 1, duration: .55, ease: "elastic.out(1.2,.4)" }, 0));
+    await this._wait(380);
+    return held;
+  },
+
+  /* 幕 2b：舉手儲力 → 擲（身體反扭） */
+  async _windAndThrow(live) {
+    const rig = this._stageRig, audio = this._audio();
+    await this._play(gsap.timeline().to(rig.arm, { rotate: 42, duration: .3, ease: "power2.out" }, 0).to(rig.bob, { rotate: 5, duration: .3, ease: "power2.out" }, 0));
+    if (!live()) return;
+    await this._wait(110);
+    if (audio) audio.throwBall();
+    this._haptic(15);
+    await this._play(gsap.timeline().to(rig.arm, { rotate: -38, duration: .13, ease: "power3.in" }, 0).to(rig.bob, { rotate: -6, duration: .13, ease: "power3.in" }, 0));
+    this._track(gsap.timeline().to([rig.arm, rig.bob], { rotate: 0, duration: .6, ease: "elastic.out(1,.45)" }, .05));
+  },
+  /* 手中波 → 同位置開一粒正式波 */
+  _releaseHeld(held, type, size) {
+    const c = this._center(held), s0 = held.getBoundingClientRect().width / size;
+    held.remove();
+    const b = GachaFX.makeBall(type, size);
+    this._q(".gs2-balls").appendChild(b);
+    gsap.set(b, { xPercent: -50, yPercent: -50, left: c.x, top: c.y, scale: s0 });
+    b._from = c;
+    return b;
+  },
+  /* 幕 2c：轉身斜上飛走 */
+  _exitRig() {
+    const rig = this._stageRig, el = rig.el, w = this._W(), h = this._H(), audio = this._audio();
+    const o = { x: rig.pos.x, y: rig.pos.y, s: rig.pos.s, r: 0 }, sh = this._q(".gs2-gshadow");
+    return gsap.timeline()
+      .call(() => { rig.speed(2); rig.faceTo(-1); rig.onDown = () => { if (audio) audio.gachaFlap(.45); }; }, null, .1)
+      .to(o, { x: w * 1.25, y: -h * .22, s: .45, r: -18, duration: 1.15, ease: "power2.in", onUpdate: () => {
+        rig.pos = { x: o.x, y: o.y, s: o.s };
+        gsap.set(el, { left: o.x, top: o.y, scale: o.s, rotate: o.r });
+        gsap.set(sh, { left: o.x, scale: o.s });
+      } }, .2)
+      .call(() => { if (audio) audio.gachaFlyby(.6); }, null, .35)
+      .to(sh, { opacity: 0, duration: .5 }, .25)
+      .set(el, { opacity: 0 })
+      .call(() => { rig.onDown = null; rig.speed(1); });
+  },
+  /* 拋物線落地點（地面中間）＋拖光 */
+  _arcTo(ball, trail, live) {
+    const w = this._W(), h = this._H(), from = ball._from, gx = w / 2, gy = h * .62, d = .9;
+    const peak = Math.min(from.y, gy) - h * .09, fx = this._stageFx;
+    let t0 = 0;
+    return this._play(gsap.timeline()
+      .to(ball, { left: gx, duration: d, ease: "none" }, 0)
+      .to(ball, { top: peak, duration: d * .38, ease: "power2.out" }, 0)
+      .to(ball, { top: gy, duration: d * .62, ease: "power2.in" }, d * .38)
+      .to(ball, { scale: 1, rotate: 720, duration: d, ease: "power1.in", onUpdate: () => {   /* 轉兩圈：落地一定正面（540° 會倒轉） */
+        if (!live()) return;
+        const c = this._center(ball);
+        fx.trail(c.x, c.y, trail === "rainbow" ? `hsl(${(t0++ * 15) % 360} 100% 65%)` : trail);
+      } }, 0));
+  },
+  /* 幕 3：落地（hit-stop＋震 overlay＋塵） */
+  async _landBall(ball, live) {
+    const audio = this._audio(), size = ball.offsetWidth, c = this._center(ball);
+    if (audio) audio.impact();
+    this._haptic(35);
+    this._shake(10, .55);
+    this._stageFx.dust(c.x, c.y + size * .45, 22);
+    await this._play(gsap.timeline()
+      .to(ball, { scaleY: .72, scaleX: 1.22, duration: .07 })
+      .to({}, { duration: .08 })
+      .to(ball, { scaleY: 1, scaleX: 1, duration: .5, ease: "elastic.out(1.2,.35)" })
+      .fromTo(this._q(".gs2-ring"), { opacity: 1, scale: .4 }, { opacity: 0, scale: 1.8, duration: .6, ease: "power2.out" }, 0));
+    if (live()) await this._wait(350);
+  },
+  /* 幕 4：升級（每級一次 sting）／tease */
+  async _upgradeBall(ball, plan, live) {
+    const audio = this._audio(), size = ball.offsetWidth;
+    for (let i = 0; i < plan.ups.length; i++) {
+      this._hint(i === 0 ? "…!?" : "AGAIN…!?");
+      if (audio) audio.wobble(i + 1);
+      this._haptic([15, 30, 15]);
+      await this._play(gsap.timeline().to(ball, { rotate: 14, duration: .07, yoyo: true, repeat: 5, ease: "sine.inOut" }).to(ball, { rotate: 0, duration: .05 }));
+      if (!live()) return;
+      await this._wait(140);
+      const type = plan.ups[i], col = GachaTells.BALL_COL[type];
+      GachaFX.setBallType(ball, type);
+      if (audio) audio.upgradeSting(i + 1);
+      this._haptic(40);
+      this._flashOn(.85, .45);
+      this._shake(6 + i * 3);
+      const c = this._center(ball);
+      this._stageFx.burst(c.x, c.y, 40 + i * 30, [col, "#ffffff"], 7 + i * 2, { kind: "star", size: 3, life: 55 });
+      this._callout(type === "master" ? "MASTER BALL!!" : "UPGRADE!", col);
+      await this._play(gsap.timeline()
+        .fromTo(ball, { scale: 1.35 }, { scale: 1, duration: .55, ease: "elastic.out(1.3,.35)" })
+        .fromTo(ball.querySelector(".gfx-aura"), { opacity: 1, scale: .6 }, { opacity: .45, scale: 1.1, duration: .6 }, 0));
+      this._hint("");
+      if (!live()) return;
+      await this._wait(380);
+    }
+    if (plan.tease) {
+      this._hint("…!?");
+      if (audio) audio.wobble(1);
+      await this._play(gsap.timeline().to(ball, { rotate: 12, duration: .08, yoyo: true, repeat: 3 }).to(ball, { rotate: 0, duration: .05 }));
+      if (audio) audio.gachaFizz();
+      const c = this._center(ball);
+      this._stageFx.burst(c.x, c.y - size * .3, 12, ["rgba(200,200,220,.6)"], 2, { kind: "dust", g: -.02, life: 40, size: 6 });
+      this._hint("…");
+      await this._wait(500);
+      this._hint("");
+    }
+  },
+  /* 幕 5：撳 3 下開（球附近 1.1× 半徑都算；3 秒冇撳提示；用戶互動手感唔跟倍速） */
+  _tapPhase(ball, rarity, live) {
+    return new Promise((resolve) => {
+      if (!live()) return resolve();
+      const st = this._stage, audio = this._audio(), size = ball.offsetWidth, col = GACHA_BALL[rarity].ray;
+      ball.classList.add("idle-pulse");
+      const flo = gsap.to(ball, { y: -size * .12, duration: 1.1, ease: "sine.inOut", yoyo: true, repeat: -1 });
+      this._hint("TAP THE BALL ×3");
+      let n = 0, idle = 0;
+      const nudge = () => { clearTimeout(idle); idle = setTimeout(() => { if (n < 3) this._hint("TAP! TAP! TAP!"); }, 3000); };
+      const cleanup = () => { clearTimeout(idle); st.removeEventListener("pointerdown", onDown); window.removeEventListener("keydown", onKey, true); flo.kill(); gsap.set(ball, { y: 0 }); ball.classList.remove("idle-pulse"); this._hint(""); };
+      const onDown = (e) => {
+        if (e.target.closest(".gs2-skip")) return;
+        const c = this._center(ball), r = st.getBoundingClientRect();
+        if (Math.hypot(e.clientX - r.left - c.x, e.clientY - r.top - c.y) > size * 1.1) return;
+        tap();
+      };
+      /* 鍵盤（同捕捉一樣）：Space／Enter = 撳一下；焦點喺 SKIP 時 Enter 先係 SKIP */
+      const onKey = (e) => {
+        if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key !== " " && e.key !== "Enter") return;
+        if (e.key === "Enter" && e.target && e.target.closest && e.target.closest(".gs2-skip")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        tap();
+      };
+      const tap = () => {
+        if (n >= 3) return;
+        const c = this._center(ball);
+        n++;
+        if (audio) audio.gachaCrack(n - 1);
+        this._haptic(18 + n * 10);
+        ball.querySelectorAll(".c" + n).forEach((p) => { p.style.opacity = "1"; });
+        gsap.to(ball.querySelector(".gfx-leak"), { opacity: n / 3, duration: .2 });
+        gsap.to(ball.querySelector(".gfx-aura"), { opacity: .4 + n * .2, duration: .2 });
+        gsap.fromTo(ball.querySelectorAll(".gfx-hw"), { scaleY: .82, scaleX: 1.12 }, { scaleY: 1, scaleX: 1, duration: .35, ease: "elastic.out(1.5,.3)" });
+        this._shake(2 + n * 2, .3);
+        this._stageFx.burst(c.x, c.y, 10 + n * 8, [col, "#ffffff"], 3 + n, { life: 30 });
+        nudge();
+        if (n === 3) { this._tapCleanup = null; cleanup(); setTimeout(resolve, 120); }
+      };
+      this._tapCleanup = cleanup;   /* SKIP／abort 清場時移除 listener */
+      st.addEventListener("pointerdown", onDown);
+      window.addEventListener("keydown", onKey, true);
+      nudge();
+    });
+  },
+  /* 幕 6–8：riser（球越震越勁）→ 靜默 → 爆發 → 剪影 → 上色 → 星 → 名 → NEW／重複 */
+  async _burstReveal(ball, s, rarity, live) {
+    const audio = this._audio(), cfg = GACHA_BALL[rarity], col = cfg.ray;
+    const legend = rarity === "legend", epic = rarity === "epic", size = ball.offsetWidth, h = this._H();
+    const reveal = this._q(".gs2-reveal"), rays = this._q(".gs2-rays");
+    reveal.style.setProperty("--rc", col);
+    rays.style.setProperty("--rc", col);
+    const riseD = legend ? 1.3 : epic ? 1 : .7;
+    if (audio) audio.gachaRiser(riseD);
+    this._haptic([10, 40, 10, 40, 10]);
+    await this._play(gsap.timeline()
+      .to(ball, { rotate: 6, duration: .05, yoyo: true, repeat: Math.round(riseD / .05), ease: "none" }, 0)
+      .to(ball.querySelector(".gfx-aura"), { opacity: 1, scale: 1.6, duration: riseD }, 0)
+      .to(ball.querySelector(".gfx-leak"), { opacity: 1, scaleX: 1.4, scaleY: 2.5, duration: riseD }, 0)
+      .to(this._q(".gs2-dim"), { opacity: legend ? .85 : .6, duration: riseD, ease: "power2.in" }, 0));
+    if (!live()) return;
+    await this._wait(legend ? 420 : 240);   /* 靜默 beat */
+    if (!live()) return;
+
+    if (audio) audio.gachaBurst(rarity);
+    this._haptic(legend ? [60, 40, 120] : 60);
+    this._flashOn(1, legend ? 1.1 : .6);
+    this._shake(legend ? 18 : epic ? 12 : 7, legend ? .9 : .6);
+    const c = this._center(ball), fx = this._stageFx;
+    fx.burst(c.x, c.y, legend ? 140 : epic ? 90 : 50, [col, "#ffffff", legend ? "#ffd93c" : col], legend ? 13 : 10, { life: 70, g: .05 });
+    fx.burst(c.x, c.y, legend ? 60 : 24, [col, "#ffffff"], 8, { kind: "star", size: 4, life: 80, g: .02 });
+    if (legend || epic) fx.burst(c.x, c.y - 40, legend ? 90 : 40, ["#ff6b6b", "#ffd93c", "#6bff9b", "#6bc5ff", "#c77dff"], 9, { kind: "confetti", size: 4, life: 120, g: .09, up: 4, drag: .985 });
+    if (legend) rays.classList.add("rainbow");
+    this._track(gsap.timeline()
+      .to(ball.querySelector(".gfx-hw.top"), { y: -size * 1.1, x: -size * .4, rotate: -40, opacity: 0, duration: .7, ease: "power2.out" }, 0)
+      .to(ball.querySelector(".gfx-hw.bot"), { y: size * .5, x: size * .35, rotate: 25, opacity: 0, duration: .7, ease: "power2.out" }, 0)
+      .to(ball.querySelectorAll(".gfx-aura,.gfx-leak,.gfx-shadow"), { opacity: 0, duration: .3 }, 0)
+      .to(this._q(".gs2-dim"), { opacity: .35, duration: .6 }, 0)
+      .fromTo(rays, { opacity: 0, scale: .3 }, { opacity: legend ? .75 : .5, scale: 1, duration: .8, ease: "power2.out" }, 0)
+      .fromTo(this._q(".gs2-halo"), { opacity: 0, scale: .2 }, { opacity: .9, scale: 1, duration: .5, ease: "power2.out" }, 0)
+      .fromTo(this._q(".gs2-pillar"), { opacity: 0, height: 0 }, { opacity: .9, height: "80%", duration: .45, ease: "power3.out" }, 0)
+      .to(this._q(".gs2-pillar"), { opacity: 0, duration: .8 }, .5));
+
+    /* 剪影 */
+    const cur = entryCurrentSpecies(s.entry), dex = cur[0], mon = this._q(".gs2-mon");
+    mon.onerror = () => { mon.onerror = null; mon.src = spriteURL(dex); };
+    mon.src = artworkURL(dex);
+    mon.className = "gs2-mon sil";
+    await this._play(gsap.timeline().fromTo(mon, { opacity: 0, scale: .2, y: h * .07 }, { opacity: 1, scale: 1, y: 0, duration: legend ? .9 : .6, ease: "back.out(1.6)" }));
+    if (!live()) return;
+    if (audio) audio.gachaHeartbeat();
+    this._haptic([30, 120, 30]);
+    if (legend) { await this._wait(500); if (audio) audio.gachaHeartbeat(); }
+    await this._wait(legend ? 700 : epic ? 500 : 300);
+    if (!live()) return;
+
+    /* 上色 */
+    this._flashOn(.95, .5);
+    try { Pokedex.playCry(dex); } catch (e) { /* audio unavailable */ }
+    if (audio) audio.gachaFanfare(rarity);
+    mon.className = "gs2-mon";
+    this._track(gsap.fromTo(mon, { scale: 1.25 }, { scale: 1, duration: .6, ease: "elastic.out(1.2,.4)" }));
+    const mc = this._center(mon);
+    fx.burst(mc.x, mc.y, 40, [col, "#ffffff"], 6, { kind: "star", size: 3, life: 60 });
+
+    /* 星（同檢視卡一樣：rare ★／epic ★★／legend ★★★） */
+    const n = legend ? 3 : epic ? 2 : 1, starsEl = this._q(".gs2-stars");
+    starsEl.innerHTML = Array.from({ length: n }, () => "<span>★</span>").join("");
+    const spans = starsEl.querySelectorAll("span");
+    for (let i = 0; i < spans.length; i++) {
+      if (audio) audio.gachaStar(i);
+      this._haptic(12);
+      this._track(gsap.fromTo(spans[i], { opacity: 0, scale: 3, rotate: -90 }, { opacity: 1, scale: 1, rotate: 0, duration: .35, ease: "back.out(2)" }));
+      await this._wait(legend ? 190 : 140);
+      if (!live()) return;
+    }
+    this._q(".gs2-rlabel").textContent = cfg.label;
+    this._q(".gs2-rname").textContent = cur[1];
+    await this._play(gsap.fromTo(this._q(".gs2-name"), { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .35, ease: "power2.out" }));
+    if (!live()) return;
+
+    /* NEW 印章／重複 */
+    const stamp = this._q(".gs2-stamp");
+    stamp.className = "gs2-stamp" + (s.isDupe ? " dupe" : "");
+    stamp.textContent = s.isDupe ? "DUPLICATE → 🍬+1" : "NEW!";
+    if (audio) audio.impact();
+    this._haptic(30);
+    await this._play(gsap.fromTo(stamp, { opacity: 0, scale: 3, rotate: -30 }, { opacity: 1, scale: 1, rotate: -14, duration: .3, ease: "power4.in" }));
+    this._shake(4, .3);
+    await this._wait(800);
   },
 
   /* 檢視卡 overlay（lazy 建立，fixed 掛 body） */
@@ -382,9 +628,10 @@ Object.assign(Gacha, {
     /* 世代解鎖 stash 落 App，等用戶離開檢視卡時先彈慶祝窗（避免遮擋抽獎卡） */
     if (s.newlyUnlockedGen) App._pendingGenUnlock = s.newlyUnlockedGen;
 
-    /* 背景 A 退場 → 檢視卡登場 */
+    /* 演出 overlay（單抽：快龍空投；10 連：背景 A）退場 → 檢視卡登場 */
     const sc = this._sceneB;
     if (sc) sc.classList.remove("show");
+    this._stageClose(false);
     this._setT(() => {
       if (sc) sc.classList.add("hidden");
       insp.classList.remove("hidden");
@@ -399,7 +646,7 @@ Object.assign(Gacha, {
     App.renderHome();
   },
 
-  /* 檢視卡「×3 TO GO!」：執場後即刻再抽（手杆自動拉到底，同樣扣 3 寶石） */
+  /* 檢視卡「×3 TO GO!」：執場後即刻再抽（同樣扣 3 寶石） */
   _pullAgain() {
     if (this.busy || !this._canPull()) return;
     this._cleanupScene();
@@ -407,11 +654,10 @@ Object.assign(Gacha, {
     this._pendingEvolve = null;
     if (evo) App.showEvolveModal(evo);
     App.maybeShowGenUnlock();
-    this._setPull(1);
     this._triggerPull();
   },
 
-  /* 執場：overlay / 艙門 / 拖拽旗標全部還原（Prototype 教訓：旗標唔重置會卡死再抽） */
+  /* 執場：overlay／檢視卡／10 連格全部還原（Prototype 教訓：旗標唔重置會卡死再抽） */
   _cleanupScene() {
     this._spdEnd();
     const g = this._gsap();
@@ -434,31 +680,23 @@ Object.assign(Gacha, {
       sc.querySelector(".gsb-beam").classList.remove("rise");
       sc.querySelector(".gsb-prompt").textContent = "";
     }
+    this._stageClose(true);
     if (this._inspect) {
       this._inspect.classList.remove("show");
       this._inspect.classList.add("hidden");
     }
-    const machine = this._machine();
-    if (machine) machine.classList.remove("belly-open", "dragging", "stop-bob");
     const dz = document.getElementById("gacha-dropzone");
     if (dz) dz.innerHTML = "";
-    document.getElementById("view-gacha").classList.remove("playing");
-    this._cancelCharge();
+    const view = document.getElementById("view-gacha");
+    if (view) view.classList.remove("playing");
     if (this._multi) {
       this._multi.classList.remove("show");
       this._multi.classList.add("hidden");
     }
-    this._dragging = false;
-    this._triggered = false;
-    this._suppressClick = false;
-    this._holdMs = 0;
-    this._curP = 0;
-    this._setPull(0);
   },
 
   _resetStage() {
     this._cleanupScene();
-    this._setCostChip(false);
     this._prompt("");
     this.phase = "idle";
   }

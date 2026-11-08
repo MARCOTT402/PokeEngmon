@@ -679,6 +679,53 @@ const SupabaseAuth = {
     return this._rpc("gacha_pull_lucky", { p_gen: gen || 1 });
   },
 
+  /* ---------- RPC：孵化器（migration 20261108c；規則同 js/incubator/rules.js） ----------
+     業務錯誤（incubator_full／not_enough_diamonds／egg_ready／egg_not_ready／no_egg）回 { error: code }；
+     網絡／其他失敗 return null；匿名 return null */
+  INCUBATOR_ERRORS: ["incubator_full", "not_enough_diamonds", "egg_ready", "egg_not_ready", "no_egg"],
+  async _rpcCoded(name, payload) {
+    if (!this._session?.access_token) return null;
+    try {
+      const res = await this.authedFetch(`${this.URL}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify(payload || {})
+      }, { timeout: 12000, where: "rpc/" + name });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        const code = this.INCUBATOR_ERRORS.find((c) => body.includes(c));
+        if (code) return { error: code };
+        throw new Error(name + " RPC failed: " + res.status + " " + body);
+      }
+      const data = await res.json();
+      const out = Array.isArray(data) ? data[0] : data;
+      if (out && out.trainer && globalThis.TrainerLevel) {
+        try { globalThis.TrainerLevel.adopt(out.trainer); } catch (e) { console.warn("[TrainerLevel] adopt failed:", e && e.message); }
+      }
+      return out;
+    } catch (e) { console.warn("[Auth RPC]", name, "failed:", e.message); return null; }
+  },
+  async getIncubator() {
+    if (!this.currentUser()) return null;
+    return this._rpcCoded("get_incubator", {});
+  },
+  async claimEgg() {
+    if (!this.currentUser()) return null;
+    return this._rpcCoded("claim_egg", {});
+  },
+  async incubatorAdd(count) {
+    if (!this.currentUser()) return null;
+    return this._rpcCoded("incubator_add", { p_count: Math.max(0, Math.min(20, count | 0)) });
+  },
+  async hatchEgg(slot, gen) {
+    if (!this.currentUser()) return null;
+    return this._rpcCoded("hatch_egg", { p_slot: slot, p_gen: gen || 1 });
+  },
+  async discardEgg(slot) {
+    if (!this.currentUser()) return null;
+    return this._rpcCoded("discard_egg", { p_slot: slot });
+  },
+
   /* ---------- RPC：捕捉成功拎寵（只限 normal 稀有度） ----------
      回傳 {entry, is_dupe}；失敗 return null */
   async obtainCapture(chainKey, dexId) {

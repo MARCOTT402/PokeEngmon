@@ -320,6 +320,13 @@ window.Sync = (() => {
       if (Array.isArray(practiceDays) && typeof mergePracticeDaysFromCloud === "function") {
         mergePracticeDaysFromCloud(practiceDays);
       }
+      /* 孵化器（migration 20261108c）：server 權威蛋／Slot 2 → 本地；背景做、失敗唔改本地 */
+      const G = /** @type {any} */ (globalThis);
+      if (G.Incubator && G.Incubator.refresh) {
+        G.Incubator.refresh().then(() => {
+          if (G.IncubatorUI && G.IncubatorUI.refreshEntries) G.IncubatorUI.refreshEntries();
+        }).catch(() => {});
+      }
       /* 完整明細（記得每組分數）優先過「只有組數」的占位 */
       let recordsAdded = 0;
       if (Array.isArray(practiceRecords) && typeof mergeRecordsFromCloud === "function") {

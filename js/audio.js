@@ -329,6 +329,89 @@ class CaptureAudio {
     this._tone(300, { type: "sawtooth", dur: 0.5, gain: 0.1, slideTo: 1400 });
   }
 
+  /* ---------- 扭蛋「快龍空投」（spec .trae/specs/20261107-gacha-redesign.md §7） ---------- */
+  /* 拍翼「噗」：k = 遠近（0–1），遠細近大 */
+  gachaFlap(k = 1) {
+    this.ensure();
+    if (!this.ctx) return;
+    this._noiseHit({ freq: 380, q: 0.7, gain: 0.2 * k, dur: 0.17, type: "lowpass" });
+    this._tone(72, { type: "sine", dur: 0.13, gain: 0.12 * k, slideTo: 44 });
+  }
+
+  /* 飛掠過鏡頭：掃頻上去再落嚟 */
+  gachaFlyby(k = 1) {
+    this.ensure();
+    if (!this.ctx) return;
+    this._noiseSweep(420, 2600, 0.45, 0.32 * k);
+    this._noiseHit({ freq: 900, q: 0.9, gain: 0.18 * k, dur: 0.7, type: "bandpass", at: 0.4 });
+  }
+
+  /* 撳開球：玻璃裂聲，音高逐下升 */
+  gachaCrack(i) {
+    this.ensure();
+    if (!this.ctx) return;
+    const f = 1100 * Math.pow(1.26, i);
+    this._tone(f, { type: "triangle", dur: 0.22, gain: 0.18 });
+    this._tone(f * 2.01, { type: "sine", dur: 0.12, gain: 0.07 });
+    this._noiseHit({ freq: 3500, q: 0.7, gain: 0.2, dur: 0.04, type: "highpass" });
+  }
+
+  /* tease：震咗但冇升級 */
+  gachaFizz() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._noiseSweep(2200, 500, 0.45, 0.1);
+    this._tone(420, { type: "square", dur: 0.3, gain: 0.035, slideTo: 180 });
+  }
+
+  /* 爆發前漸強（之後由場景留一段靜默） */
+  gachaRiser(dur) {
+    this.ensure();
+    if (!this.ctx) return;
+    this._noiseSweep(180, 5200, dur, 0.26);
+    this._tone(110, { type: "sawtooth", dur, gain: 0.05, slideTo: 880 });
+  }
+
+  /* 爆發：rarity 越高越大聲、越低沉 */
+  gachaBurst(rarity) {
+    this.ensure();
+    if (!this.ctx) return;
+    const big = rarity === "legend" ? 1.25 : rarity === "epic" ? 1 : 0.8;
+    this._noiseHit({ freq: 6000, q: 0.5, gain: 0.45 * big, dur: 1.2, type: "lowpass" });
+    const root = rarity === "legend" ? 196 : rarity === "epic" ? 220 : 261.6;
+    [1, 1.5, 2, 2.52].forEach((m) => this._tone(root * m, { type: "triangle", dur: 1.6, gain: 0.07 }));
+    if (rarity !== "rare") this._tone(55, { type: "sine", dur: 1.3, gain: 0.4, slideTo: 40 });
+  }
+
+  /* 剪影：心跳 */
+  gachaHeartbeat() {
+    this.ensure();
+    if (!this.ctx) return;
+    this._tone(70, { type: "sine", dur: 0.16, gain: 0.45, slideTo: 42 });
+    this._tone(66, { type: "sine", dur: 0.2, gain: 0.35, slideTo: 40, at: 0.22 });
+  }
+
+  /* 星星逐粒「叮」（五聲音階） */
+  gachaStar(i) {
+    this.ensure();
+    if (!this.ctx) return;
+    const pent = [1046.5, 1174.7, 1318.5, 1568, 1760];
+    const f = pent[Math.min(i, pent.length - 1)];
+    this._tone(f, { type: "triangle", dur: 0.35, gain: 0.14 });
+    this._tone(f * 2, { type: "sine", dur: 0.15, gain: 0.04 });
+  }
+
+  /* 上色 fanfare：rare 短三和弦、epic 加七度、legend 上行＋長延音 */
+  gachaFanfare(rarity) {
+    this.ensure();
+    if (!this.ctx) return;
+    const seq = rarity === "legend" ? [523, 587, 659, 784, 880, 1046.5] : rarity === "epic" ? [523, 659, 784, 1046.5] : [523, 659, 784];
+    seq.forEach((f, i) => this._tone(f, { type: "square", dur: 0.28, gain: 0.05, at: i * 0.09 }));
+    const t = seq.length * 0.09;
+    const chord = rarity === "legend" ? [523, 659, 784, 988, 1046.5] : rarity === "epic" ? [523, 659, 784, 988] : [523, 659, 784];
+    chord.forEach((f) => this._tone(f, { type: "triangle", dur: rarity === "legend" ? 2 : 1.1, gain: 0.07, at: t }));
+  }
+
   breakFree() {
     this.ensure();
     if (!this.ctx) return;

@@ -190,9 +190,14 @@ Object.assign(App, {
     /* v99：diamonds/EXP/entries 已各自經 RPC 上雲；SM-2 cards/history 由 queueUpsert/
        queueHistory 批量 flush —— 唔再需要 pushState 全量推（會重複 insert history） */
 
+    /* 孵化器（js/incubator/*）：答啱嘅內置題加落蛋；唔 await（server 慢都唔阻結算頁），
+       夠數先喺結算頁 2.4 秒後逐隻彈孵蛋小視窗。答題途中唔顯示任何孵化器資訊。 */
+    const incuReady = (window.Incubator && Incubator.addRound) ? Incubator.addRound(data).catch(() => []) : null;
+
     rewards.evolving = !!(levelRes && levelRes.evolvedTo);
     this._renderSettlement(data, rewards);
     this.showView("view-settlement");
+    if (incuReady && window.IncubatorUI) IncubatorUI.afterRound(incuReady);
     if (levelRes) {
       if (levelRes.levelsGained > 0) {
         const whose = entryCurrentSpecies(entry)[1];

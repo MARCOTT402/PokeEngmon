@@ -125,51 +125,22 @@ Object.assign(Gacha, {
 
   /* 拉過閾值：扣 30 寶石 → 手臂回彈 → 開艙 → 等結算 → 10 球跌出 */
   async _triggerMultiPull() {
-    if (this._triggered) return;
+    if (this.busy) return;
     if (!this._beginMultiPull()) {
       this._refreshControls();
-      const g0 = this._gsap();
-      if (g0 && !this._rm()) {
-        const proxy0 = { p: this._curP };
-        g0.to(proxy0, { p: 0, duration: .5, ease: "elastic.out(1,.45)", onUpdate: () => this._setPull(proxy0.p) });
-      } else {
-        this._setPull(0);
-      }
+      this._prompt(`Need ${GAME_CONFIG.MULTI_PULL_COST} gems for 10×`);
       return;
     }
+    /* v2：10× 大掣觸發（手杆／充能已移除）；演出暫時沿用舊 10 連，球由大堂快龍手上跌出 */
     const flow = this._flow;
-    this._triggered = true;
-    this._dragging = false;
-    this._holdMs = 0;
-    this._suppressClick = true;
-    this._charging = false;
-    this._charged = false;
     this.phase = "opening";
-    this._setCostChip(true);
     document.getElementById("view-gacha").classList.add("playing");
     const fid = flow.id;
-    const machine = this._machine();
-    machine.classList.remove("dragging", "charging", "charged");
     this._prompt("");
     const audio = this._audio();
     if (audio) audio.pullSnap();
     this._haptic([20, 40, 20]);
-
-    const g = this._gsap();
-    if (g && !this._rm()) {
-      const proxy = { p: this._curP };
-      g.to(proxy, { p: 0, duration: .3, ease: "power3.out", onUpdate: () => this._setPull(proxy.p) });
-    } else {
-      this._setPull(0);
-    }
-
     this._spdBegin();
-    this._setT(() => {
-      if (fid !== this._flowId) return;
-      machine.classList.add("belly-open");
-      if (audio) audio.bellyOpen();
-      this._haptic([30, 40, 30]);
-    }, 180);
 
     let s = null;
     try {
@@ -182,7 +153,6 @@ Object.assign(Gacha, {
         this.busy = false;
         this._flow = null;
         this._resetStage();
-        this._setCostChip(false);
         this._refreshControls();
         this._prompt("Something went wrong — try again.");
       }
@@ -198,7 +168,7 @@ Object.assign(Gacha, {
     this.phase = "drop";
     const fid = flow.id;
     const dz = document.getElementById("gacha-dropzone");
-    const belly = document.getElementById("dm-belly");
+    const belly = document.getElementById("gacha-lobby-rig");   /* v2：由大堂快龍跌出 */
     if (!dz || !belly || !results.length) return;
 
     const bRect = belly.getBoundingClientRect();
@@ -523,7 +493,6 @@ Object.assign(Gacha, {
     this._cleanupScene();
     this._flushEvolves(evolves);
     App.maybeShowGenUnlock();
-    this._setPull(1);
     this._triggerMultiPull();
   },
 
@@ -534,7 +503,6 @@ Object.assign(Gacha, {
     this._pendingEvolve = null;
     if (evo) evolves.unshift(evo);
     this._cleanupScene();
-    this._setCostChip(false);
     this._prompt("");
     this.phase = "idle";
     this._refreshControls();

@@ -171,8 +171,11 @@ await ev("Quiz.quit ? Quiz.quit() : 0; return 1"); await home();
 /* 扭蛋：Enter 拉 → 結果卡焦點 → Esc 關 */
 await ev("if(location.hostname!=='localhost') throw 1; const st=loadState(); st.diamonds=99; saveState(st); App.renderHome(); return 1");
 await press("g"); await sleep(900);
-check("W24 gacha sheet focuses the arm", (await focusId()) === "dm-arm", await focusId());
+check("W24 gacha sheet focuses the single-pull button", (await focusId()) === "btn-gacha-1", await focusId());
 await press("Enter");
+/* 撳 3 下階段：Space ×3（同捕捉一樣） */
+await waitFor("!!Gacha._tapCleanup || Gacha.phase === 'inspect'", 20000);
+for (let i = 0; i < 3; i++) { await press(" "); await sleep(250); }
 await waitFor("Gacha.phase === 'inspect'", 20000); await sleep(1200);
 check("W25 result card: focus on Pull again", await inside("#gacha-inspect"), await focusId());
 await press("Escape"); await sleep(900);

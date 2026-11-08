@@ -138,6 +138,7 @@
   <!-- Net：統一網絡層（timeout／離線／錯誤提示；Rule 96），SupabaseAuth／Sync／PvP 都經佢 -->
   <script src="js/core/net.js?v=1.72.0"></script>
   <link rel="stylesheet" href="css/style.css?v=1.72.0">
+  <link rel="stylesheet" href="css/incubator.css?v=1.72.0">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -551,6 +552,12 @@
               <span class="ph-sitem-t">Bag <small class="ph-sitem-sub">landscape</small></span>
               <span class="ph-s-arrow">›</span>
             </button>
+            <!-- 孵化器（js/incubator/sheet.js）：蛋圖、副題由 IncubatorUI.refreshEntries 填 -->
+            <button class="ph-sitem" id="btn-home-incubator" type="button">
+              <span class="incu-ico" id="incu-sitem-ico" aria-hidden="true"></span>
+              <span class="ph-sitem-t">Incubator <small class="ph-sitem-sub" id="incu-sitem-sub"></small></span>
+              <span class="ph-s-arrow">›</span>
+            </button>
           </div>
         </div>
 
@@ -585,30 +592,57 @@
                 <span class="rarity-chip" style="background:#f3e5f5;color:#ab47bc">Legend 5%</span>
               </div>
               <p class="gacha-info-note">Duplicate pull → 🍬 Candy +1 ・ ⚡ EV point +1</p>
+              <!-- 孵化器 Claim（💎3）：js/incubator/sheet.js -->
+              <button class="gacha-incu-row" id="gacha-incu-row" type="button">
+                <span class="incu-ico" id="gacha-incu-ico" aria-hidden="true"></span>
+                <span class="g"><span id="gacha-incu-t">🥚 Claim an egg into the Incubator</span><small id="gacha-incu-s"></small></span>
+                <span class="gacha-incu-cost" id="gacha-incu-cost">💎×3</span>
+              </button>
+              <button class="gacha-incu-view" id="gacha-incu-view" type="button">View Incubator ›</button>
             </div>
             <div class="gacha-stage" id="gacha-stage">
               <div class="gacha-prompt" id="gacha-prompt"></div>
-              <span class="chip gacha-cost" id="gacha-cost">Cost: <svg class="gem-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="#062036" stroke-width="1.6"/><circle cx="12" cy="12" r="10" fill="url(#gem-blue-gt)"/><ellipse cx="8" cy="7.5" rx="4" ry="2.5" fill="#ffffff" opacity="0.55"/><ellipse cx="15" cy="5.5" rx="1.8" ry="1" fill="#ffffff" opacity="0.45"/><ellipse cx="12" cy="18" rx="6" ry="1.5" fill="#000000" opacity="0.2"/></svg> ×3</span>
-              <div class="gacha-machine dragonite-art" id="gacha-machine">
-                <img class="dm-art" src="assets/gacha/dragonite.png" alt="Dragonite" draggable="false" loading="lazy" decoding="async">
-                <div class="dm-belly" id="dm-belly">
-                  <span class="dm-cavity"></span>
-                  <span class="dm-door left"></span>
-                  <span class="dm-door right"></span>
-                </div>
-                <div class="dm-arm" id="dm-arm" role="slider" tabindex="0"
-                     aria-label="Pull Dragonite's hand" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                  <svg class="dm-charge" viewBox="0 0 100 100" aria-hidden="true">
-                    <circle class="dmc-track" cx="50" cy="50" r="44"/>
-                    <circle class="dmc-bar" cx="50" cy="50" r="44"/>
-                  </svg>
-                  <span class="dm-bracket"></span>
-                  <span class="dm-arm-upper"></span>
-                  <span class="dm-hand"><i></i><i></i><i></i></span>
-                  <span class="dm-10x" aria-hidden="true">10×</span>
-                </div>
-              </div>
+              <!-- v2 快龍空投：大堂 idle 快龍（js/scene/dragonite-rig.js；10 連嘅球由佢手上跌出） -->
+              <div class="gacha-lobby-rig" id="gacha-lobby-rig" role="img" aria-label="Dragonite"></div>
               <div class="gacha-dropzone" id="gacha-dropzone"></div>
+            </div>
+            <div class="gacha-cta">
+              <button class="gacha-pull-btn gp-1" id="btn-gacha-1" type="button"><b>1× PULL</b><span class="gp-cost">💎 ×3</span></button>
+              <button class="gacha-pull-btn gp-10" id="btn-gacha-10" type="button"><b>10× PULL</b><span class="gp-cost">💎 ×30</span></button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 孵化器 sheet（js/incubator/sheet.js；css/incubator.css）：同 #sheet-gacha 一樣佔滿白螢幕 -->
+        <div class="ph-sheet ph-sheet-down" id="sheet-incubator" hidden aria-label="Incubator">
+          <div class="ph-sheet-head"><span class="ph-sheet-t"><span>🥚 Incubator</span></span><button class="ph-sheet-x" id="incu-close" type="button" aria-label="Close">✕</button></div>
+          <section class="incu-view">
+            <div class="incu-slots" id="incu-slots"></div>
+            <div class="incu-scene" id="incu-scene" data-stage="0">
+              <div class="incu-stars" id="incu-stars"></div>
+              <div class="incu-rays"></div>
+              <div class="incu-ice"></div>
+              <canvas class="incu-fx" id="incu-fx"></canvas>
+              <div class="incu-chip" id="incu-chip"></div>
+              <div class="incu-tier" id="incu-tier"></div>
+              <div class="incu-banner" id="incu-banner"></div>
+              <div class="incu-stagebox">
+                <svg class="incu-ring" id="incu-ring" viewBox="0 0 200 200"></svg>
+                <div class="incu-glow"></div>
+                <div class="incu-nest-back"></div>
+                <div class="incu-egg" id="incu-egg" role="button" tabindex="0" aria-label="Tap the egg"><div class="leak"></div></div>
+                <div class="incu-nest-front"></div>
+                <div class="incu-bubble" id="incu-bubble"></div>
+              </div>
+              <div class="incu-count"><b id="incu-left">0</b><span id="incu-left-t"></span><small id="incu-sub"></small></div>
+              <div class="incu-track" id="incu-track"></div>
+              <div class="incu-empty" id="incu-empty" hidden></div>
+              <div class="incu-need" id="incu-need"><small>THIS EGG NEEDS</small><b id="incu-need-n">?</b><em id="incu-need-r"></em><small>CORRECT ANSWERS</small><p id="incu-need-cap"></p></div>
+            </div>
+            <div class="incu-bottom">
+              <div class="incu-hint" id="incu-hint"></div>
+              <button class="btn-big btn-primary" id="incu-go" type="button"></button>
+              <button class="incu-discard" id="incu-discard" type="button" hidden>Discard this egg</button>
             </div>
           </section>
         </div>
@@ -1271,6 +1305,14 @@
   <script src="js/avatars.js?v=1.72.0" type="module"></script>
   <script src="js/dex-sort.js?v=1.72.0" type="module"></script>
   <script src="js/trainer-level.js?v=1.72.0" type="module"></script>
+  <!-- 扭蛋重做（快龍空投）＋孵化器：純邏輯／rig，只喺 runtime 用 -->
+  <script src="js/scene/gacha-tells.js?v=1.72.0" type="module"></script>
+  <script src="js/scene/dragonite-rig.js?v=1.72.0" type="module"></script>
+  <script src="js/scene/gacha-fx.js?v=1.72.0" type="module"></script>
+  <script src="js/incubator/rules.js?v=1.72.0" type="module"></script>
+  <script src="js/incubator/incubator.js?v=1.72.0" type="module"></script>
+  <script src="js/incubator/egg-art.js?v=1.72.0" type="module"></script>
+  <script src="js/incubator/sheet.js?v=1.72.0" type="module"></script>
   <script src="js/battle/rng.js?v=1.72.0" type="module"></script>
   <script src="js/battle/energy.js?v=1.72.0" type="module"></script>
   <script src="js/battle/realtime.js?v=1.72.0" type="module"></script>
@@ -1312,9 +1354,7 @@
   <script src="js/gacha.js?v=1.72.0"></script>
   <script src="js/gacha/core.js?v=1.72.0"></script>
   <script src="js/gacha/pull.js?v=1.72.0"></script>
-  <script src="js/gacha/charge.js?v=1.72.0"></script>
   <script src="js/gacha/multi.js?v=1.72.0"></script>
-  <script src="js/gacha/arm.js?v=1.72.0"></script>
   <script src="js/gacha/scene.js?v=1.72.0"></script>
   <script src="js/pokedex.js?v=1.72.0"></script>
   <script src="js/gym.js?v=1.72.0"></script>
