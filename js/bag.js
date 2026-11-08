@@ -16,7 +16,8 @@ const BagUI = (() => {
   const S = { open: false, tab: "pokemon", sort: null, dir: 1, sel: null, from: "home", evPick: false, target: null, targetMode: null, itemFilter: "all", battle: null };
   let root = null, rotateEl = null;
   const $ = sel => root.querySelector(sel);
-  const esc = escapeHTML;
+  /* 用時先讀 escapeHTML：core/dom.js 係 ES module（Rule 119），會喺全部 classic script 之後先執行 */
+  const esc = (s) => escapeHTML(s);
 
   /* 第 1 段只讀顯示現有庫存（食物同藥）；樹果取代食物喺第 3 段 */
   function itemList() {

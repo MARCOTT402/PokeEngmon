@@ -220,3 +220,14 @@ if (!e.request.url.startsWith("http")) return;
 - 搬方法唔好人手剪貼：用 TypeScript AST（`node_modules/typescript`）攞成員範圍（`getFullStart()` 包埋前面嘅註解，再加後面嘅逗號）。陷阱：上一行**行尾**嘅註解會被計做下一個成員嘅前置註解，搬完要逐行比對，例如 `OVERLAY_EXIT_MS` 嘅註解試過跟咗去 `router.js`。
 - 新檔要同時加 `index.html`（`js/app.js` 之後）同 `sw.js` ASSETS；`sw-assets.test.js` 同 `deploy-manifest.test.js` 會擋。
 → `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
+
+### Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
+
+- 第一批（2026-11-08，總計劃 P2.3）：`js/core/dom.js`、`js/core/html.js`、`js/battle/rng.js`、`js/mega-data.js`、`js/dex-sort.js`、`js/store.js`。`index.html` 寫法係 `<script src="…?v=…" type="module">`，**`type` 放喺 `src` 後面**：好多工具／測試用 `<script src="` 搵 script。
+- module 嘅頂層 `const`／`function` 唔會變全域：檔尾要有 `Object.assign(globalThis, { 名… });`，其他檔用到嘅名一個都唔可以漏。
+- module 會 defer：喺**全部 classic script 執行完之後**、`DOMContentLoaded`（`App.init`）之前先行。所以 classic script 唔可以喺載入時用 module 嘅名，**IIFE 入面都唔得**，例如 `const BagUI = (() => { const esc = escapeHTML; … })()` 會即刻 ReferenceError，要改做 `const esc = (s) => escapeHTML(s)`。
+- 暫時唔加 `import`／`export`：`tests/unit/*`（`loadScripts`、舊 `runInContext`）同 `tools/prototype*.html` 仲係用 classic 方式載入呢啲檔。上層開始 `import` 嗰陣先一齊轉測試 loader。
+- `mega-data.js` 係 `tools/fetch_mega.py` 產生，bridge 行寫喺 generator 入面。
+- `tests/unit/esm-bridge.test.js` 會檢查：每個 module 嘅名有冇漏 bridge、classic script 載入時（包括 IIFE）有冇用到 module 嘅名、有冇 `import`／`export`、Guard 仲係第一個 classic script。
+- 轉下一個檔之前：跑 `npm test`（呢個測試會列出載入時用到嘅位置），再開瀏覽器睇 console 有冇 `is not defined`。
+→ 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

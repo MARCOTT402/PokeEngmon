@@ -490,3 +490,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 117 — `battle.js` 分喺 `js/battle/ui/*.js`：閉包狀態喺 `BattleUI._.S`、跨檔 call 用 `B.xxx`；改戰鬥邏輯前後跑固定 seed 重播測試
 
 → `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。
+
+## Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
+
+→ `.trae/skills/pokeengmon-workflow/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。

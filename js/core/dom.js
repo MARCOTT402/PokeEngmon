@@ -16,3 +16,6 @@ function escapeHTML(s) {
 function haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* 唔支援／未有用戶手勢 */ }
 }
+
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, { escapeHTML, haptic });

@@ -232,3 +232,14 @@ Skill: Rule 116 added
 - 拆檔 script 加咗「行尾註解會跟住下一個成員搬走」嘅自動警告，今次冇觸發。
 
 Skill: already covered by Rule 116（已擴展）
+
+## Rule 119 — ES module 過渡期：底層檔用 `type="module"` 載入、頂層名要 `Object.assign(globalThis, {…})`；classic script 唔可以喺載入時（包括 IIFE 入面）用 module 嘅名
+
+- 2026-11-08 總計劃 P2.3 第一批。轉之前用 TS AST 量度：6 個檔載入時都冇人用、冇被重新賦值嘅 `let`。
+- 事故：瀏覽器一開就 `ReferenceError: escapeHTML is not defined at bag.js:19`，背包模組成個開唔到。原因係 `bag.js` 喺 IIFE 入面 `const esc = escapeHTML;`，IIFE 載入時即刻執行，嗰陣 `core/dom.js`（module）未行。
+  - 量度 script 同第一版測試都將 IIFE 當成「function 入面＝之後先行」，所以冇捉到；單元測試全綠都冇用，係瀏覽器 console 先見到。
+  - 修正：測試將 IIFE 當載入時執行（修正後即刻列出 `js/bag.js:19 escapeHTML`）；`bag.js` 改做 `const esc = (s) => escapeHTML(s)`。
+- 驗證：416 個測試、lint 0、typecheck 0；刻意拎走 bridge 入面嘅 `haptic`，測試會紅；瀏覽器開主頁、背包、答題、扭蛋、戰鬥選單、`Store.update` 冇 error；e2e。
+- 另外：其他 chat 佔用咗 8080／8091／8094／8097，`autoPort` 改咗 port 但 python 參數仍然係舊 port，server 其實冇開到 → `.claude/launch.json` 加 `static-esm`（8102，`autoPort: false`）。
+
+Skill: Rule 119 added

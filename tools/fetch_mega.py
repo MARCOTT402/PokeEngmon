@@ -68,6 +68,8 @@ def main():
         fh.write("/* 自動產生：python tools/fetch_mega.py（PokéAPI *-mega 形態 + mega-stones）。唔好手改。\n"
                  "   背包第 4c 段：Gen 1–5 物種嘅 Mega 進化（包括 Legends Z-A 新 Mega）；key = Mega 石 slug */\n"
                  "const MEGA_STONES = {\n" + body + "\n};\n"
+                 "/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type=\"module\" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */\n"
+                 "Object.assign(globalThis, { MEGA_STONES });\n"
                  "if (typeof module !== \"undefined\" && module.exports) module.exports = MEGA_STONES;\n")
     print(len(out), "mega forms written", file=sys.stderr)
 

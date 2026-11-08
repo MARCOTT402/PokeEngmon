@@ -73,4 +73,6 @@ const MEGA_STONES = {
   "chandelurite": {"stone": "chandelurite", "stoneName": "Chandelurite", "dexId": 609, "species": "chandelure", "formId": 10291, "form": "chandelure-mega", "formName": "Mega Chandelure", "spriteKey": "609-mega", "types": ["ghost", "fire"], "baseStats": {"hp": 60, "atk": 75, "def": 110, "spa": 175, "spd": 110, "spe": 90}, "ability": "infiltrator"},
   "golurkite": {"stone": "golurkite", "stoneName": "Golurkite", "dexId": 623, "species": "golurk", "formId": 10313, "form": "golurk-mega", "formName": "Mega Golurk", "spriteKey": "623-mega", "types": ["ground", "ghost"], "baseStats": {"hp": 89, "atk": 159, "def": 105, "spa": 70, "spd": 105, "spe": 55}, "ability": "unseen-fist"}
 };
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, { MEGA_STONES });
 if (typeof module !== "undefined" && module.exports) module.exports = MEGA_STONES;
