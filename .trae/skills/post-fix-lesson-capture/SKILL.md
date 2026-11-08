@@ -1,24 +1,18 @@
 ---
 name: post-fix-lesson-capture
-description: HARD requirement — after ANY fix, correction, or second attempt at a problem, append the lesson to the right PokeEngmon topic skill (via the preop index) automatically, in the same turn, before reporting the fix as done. Includes process/workflow lessons, not just code gotchas. Also defines how skill files are structured.
+description: After the user corrects you, the same mistake recurs, or you hit an undocumented repo pitfall, add a short Rule to the right PokeEngmon topic skill (via the preop index) in the same turn. Ordinary bug fixes need no Rule. Also defines how skill files are structured.
 ---
 
 # Post-Fix Lesson Capture
 
-Whenever you finish fixing a bug, patching a regression, or completing a modification that exposed a **reusable pitfall** (a gotcha that would bite you again on the next similar change), append the lesson to the project skills — do not wait to be asked.
-
-**This is part of "done", not an optional extra.** A fix is not complete until the skill file is updated (or you can name the existing rule that already covers it). Report the rule number in the same message as the fix.
+慳 token（2026-11-08 用戶要求）：**普通 bug 修完唔使加 Rule**。只有下面 Trigger 先寫，而且寫得短。每加一條，之後每次讀 skill 都要多付 token，所以寧缺勿濫。
 
 ## Trigger
 
-Run this after a fix lands and passes verification, when any of these are true:
+Only when one of these is true:
 
-- The user had to correct you, or the same class of mistake happened a **second time** — this is the strongest signal; capture it immediately.
-- The bug was caused by a repo-specific assumption or ordering issue (e.g. a field derived before its data source loaded).
-- A "should have been obvious from the docs" fact was actually undocumented.
-- You had to read multiple files to learn a non-obvious constraint.
-- The fix involved a workaround that future you would need to remember.
-- The lesson is **process/workflow** level (e.g. "verify migration syntax by counting block terminators before running", "test X before claiming done") — process lessons count, and are usually the most valuable.
+- The user had to correct you, or the same class of mistake happened a **second time**.
+- You hit a repo-specific pitfall that is undocumented and would very likely bite again on the next similar change (not just "took a while to find").
 
 Do **not** capture:
 
@@ -30,7 +24,7 @@ Do **not** capture:
 
 - PokeEngmon repo（2026-11-06 起按題目拆咗 skill）：
   1. 喺 `.trae/skills/pokeengmon-preop-checklist/SKILL.md` 嘅索引表揀題目 skill（workflow／supabase／auth／game-data／battle／quiz／ui-sheets／responsive）。
-  2. 題目 skill 嘅 `references/incidents.md` 尾加 `### Rule N — 標題` ＋ 事故經過（背景、原因、修法）。
+  2. `references/incidents.md` **唔使寫**（用戶要求先寫事故經過）。
   3. 題目 skill 嘅 `SKILL.md` 加同一個 `### Rule N — 標題` ＋ 要點 bullet（觸發條件、必做、唔做嘅後果）；規則本身變咗就改現有要點。
   4. preop checklist 加 `## Rule N — 標題` ＋ 一行 `→` 指向，同埋更新索引表嘅 Rule 欄。
   5. 冇合適題目：加入最接近嗰份；真係新範疇先開新 skill（跟下面「Skill 檔案結構規範」），再加入索引表。
@@ -41,9 +35,9 @@ Do **not** capture:
 
 1. After the fix and its verification pass, identify the **one reusable lesson** (the single thing that, if known earlier, would have prevented the bug).
 2. Check the topic skill's `SKILL.md` (and the preop index) for an existing rule that already says it — if yes, do nothing (and cite it).
-3. If missing, add the new rule in all three places above. Use the next sequential `Rule N` number.
+3. If missing, add the new rule to the topic `SKILL.md` (2–4 bullets) and one heading line in the preop index. Use the next sequential `Rule N` number.
 4. Keep it executable: state the trigger condition, the mandatory action, and the failure mode if skipped.
-5. Write it **before** sending your "fixed" message, and end that message with `Skill: Rule N added` or `Skill: already covered by Rule N`.
+5. When you did add one, mention `Skill: Rule N added` at the end. No Rule added → no `Skill:` line needed.
 6. If the user says "you didn't add a skill" / "that's not the lesson" — the capture you made was too narrow. Widen it: record the workflow failure (e.g. "I only capture after being asked") as its own rule, not just the technical detail.
 7. No commit needed unless the user asks.
 

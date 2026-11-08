@@ -20,7 +20,8 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具、全鍵盤操作 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90、97 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
-- 新 Rule：編號接最大號；內容入題目 skill（要點入 `SKILL.md`、經過入 `references/incidents.md`），呢度只加標題＋指向，並更新上表（`post-fix-lesson-capture`）。
+- 慳 token：唔使成份讀呢個檔，讀到上表就夠；要搵某條 Rule 用 Grep 標題，再 Grep 題目 skill。
+- 新 Rule（只喺用戶糾正／同類錯第二次／未記錄陷阱時先加）：編號接最大號；要點入題目 skill 嘅 `SKILL.md`（`references/incidents.md` 用戶要求先寫），呢度只加標題＋指向，並更新上表（`post-fix-lesson-capture`）。
 
 ## Rule 標題（Grep 用）
 

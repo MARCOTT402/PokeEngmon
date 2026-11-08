@@ -2,14 +2,15 @@
 
 寶可夢主題英文學習 PWA。純前端（原生 HTML/CSS/JS，無框架、無 build step）+ Supabase（Postgres + Auth + RPC），deploy 去 GitHub Pages：push `main` → CI（lint／test／typecheck）→ semantic-release → `deploy` job 只發佈 `tools/deploy/site-files.json` 列明嘅檔（repo Settings → Pages → Source 要係「GitHub Actions」；Rule 113）。用戶以廣東話溝通，回覆用廣東話（技術詞可保留英文）。
 
-## 開工前必讀（按次序）
+## 開工前（按需讀，唔好成份讀大檔）
 
-1. `CODEBASE_INDEX.md` — 功能 → 檔案對照；用戶未指明檔案時先睇呢份，唔好一開始全 repo 盲掃。
-2. `arch.md` — 詳細架構（index 唔夠先睇）。
-3. `.trae/skills/pokeengmon-preop-checklist/SKILL.md` — **總索引（Rule 1–88+）**：按「做緊咩」揀題目 skill（workflow／supabase／auth／game-data／battle／quiz／ui-sheets／responsive），再讀嗰份 `SKILL.md`。改碼、改 SQL、改 UI、release 之前必做；可以 Grep Rule 編號或關鍵字。事故原文喺各題目 skill 嘅 `references/incidents.md`，要查來龍去脈先開。
-4. `.trae/skills/pokeengmon-responsive/SKILL.md` — **響應式／版面嘅唯一來源**（已整合原 `webapp-mobile-dev` 同 preop 嘅相關 Rule）。改版面、紅框、safe-area、sheet 定位、display-window overlay、modal／toast、轉機提示、觸控範圍，或者加新 view／sheet／overlay 之前必讀；附必跑嘅 `tools/responsive/` 測試。
-5. `.trae/skills/pokeengmon-prototype/SKILL.md` — **做任何 prototype／設計稿之前必讀**：喺真 app 上面植入（`tools/prototype/<名>/build.mjs`）、用遊戲現有素材同設定位置、反 AI 味同狀態清單、用 localhost URL 交付（Rule 118／121／122）。
-6. 產品需求：`prd.md`；功能 spec／tasks：`spec.md`、`tasks.md`、`.trae/specs/`；設計／計劃文件：`.trae/documents/`（最新 backlog：`backlog-20261104-items-1-16.md`）。
+慳 token 原則：**用 Grep／讀指定行數，唔好成份 Read 大檔**（`CODEBASE_INDEX.md` 18KB、`arch.md` 23KB、preop 36KB、workflow skill 44KB、responsive 29KB）。細 bug／小改動讀到夠用就停。
+
+1. 搵檔：用戶未指明檔案 → Grep `CODEBASE_INDEX.md` 嘅相關關鍵字（唔好全 repo 盲掃）；`arch.md` 只喺 index 唔夠先睇。
+2. 規則：讀 `.trae/skills/pokeengmon-preop-checklist/SKILL.md` **頭 25 行嘅索引表**揀題目 skill（workflow／supabase／auth／game-data／battle／quiz／ui-sheets／responsive），然後 Grep 嗰份 `SKILL.md` 嘅相關 Rule／關鍵字。大改動（新功能、跨模組重構）先讀成份。`references/incidents.md` 要查來龍去脈先開。
+3. 版面／sheet／overlay／modal／safe-area／觸控：`.trae/skills/pokeengmon-responsive/SKILL.md` 係唯一來源，同樣 Grep 相關段落；`tools/responsive/` 測試唔自動跑（見下面 TDD／驗證）。
+4. Prototype／設計稿：先讀 `.trae/skills/pokeengmon-prototype/SKILL.md`（Rule 118／121／122）。
+5. 產品需求：`prd.md`；spec／tasks：`spec.md`、`tasks.md`、`.trae/specs/`；設計／計劃：`.trae/documents/`——有需要先開。
 
 ## 永遠生效嘅規則（同 Cursor 共用）
 
@@ -18,9 +19,9 @@
 @.cursor/rules/git-sync.mdc
 @.cursor/rules/token-workflow.mdc
 
-## 修完 bug 之後（硬性要求）
+## 修完 bug 之後
 
-跟 `.trae/skills/post-fix-lesson-capture/SKILL.md`：每次修正／被用戶糾正／第二次先做啱，同一輪就要加新 `Rule N`（或引用已有 Rule）——要點寫入對應題目 skill 嘅 `SKILL.md`、經過寫入佢嘅 `references/incidents.md`、preop 總索引加標題指向；回覆結尾寫 `Skill: Rule N added` 或 `Skill: already covered by Rule N`。
+跟 `.trae/skills/post-fix-lesson-capture/SKILL.md`：**只有**用戶糾正咗我、同一類錯第二次出現、或者踩中咗未記錄嘅 repo 陷阱，先加新 `Rule N`——要點寫入題目 skill 嘅 `SKILL.md`，preop 總索引加一行標題指向；`references/incidents.md` 唔使寫（用戶要求先寫）。普通 bug 修完唔使加 Rule，亦唔使寫 `Skill:` 結尾。
 
 ## Superpowers 用法（本段優先於 Superpowers skills）
 
@@ -28,12 +29,12 @@
 - **文件位置**：spec／design 寫入 `.trae/specs/`，plan／task 寫入 `.trae/documents/`（檔名 `YYYYMMDD-<topic>.md`）；唔好開 `docs/superpowers/`。
 - **Commit**：plan 入面唔好有自動 commit 步驟；只喺用戶要求時用 `python tools/git_commit_push.py` commit，唔好手動 bump 版本（semantic-release 負責）。
 - **Worktree／分支**：預設直接喺 `main` 工作，唔開 worktree；只有用戶要求或大型實驗性改動先開。
-- **TDD／驗證**：單元測試用 Node 內建 `node:test`（零依賴，唔好加 Jest／Vitest 等 framework）。`npm test` 跑 `tests/unit/*.test.js`（用 `tests/helpers/load.js` 喺 vm 載入 global script）；新邏輯／修 bug 要加測試入 `tests/unit/`，唔好再開 `tools/_test_*.js` 一次性 script。`npm run lint`（ESLint，warning 只准減）。UI／版面用 `npm run test:e2e`（要先開 8080 static server）＋瀏覽器 preview、console 冇 error。CI 喺 release 前跑 lint + `npm test`，失敗唔會 release。verification-before-completion 照用，證據就係呢啲檢查結果。
-- **同現有規則嘅次序**：改碼前照讀 preop 總索引指向嘅題目 skill；修完 bug 照做 post-fix lesson capture（加 Rule N）。Superpowers 指引同本檔或 `.cursor/rules/*` 衝突時，以本檔為準。
+- **TDD／驗證**：單元測試用 Node 內建 `node:test`（零依賴，唔好加 Jest／Vitest 等 framework）。`npm test` 跑 `tests/unit/*.test.js`（用 `tests/helpers/load.js` 喺 vm 載入 global script）；新邏輯／修 bug 要加測試入 `tests/unit/`，唔好再開 `tools/_test_*.js` 一次性 script。`npm run lint`（ESLint，warning 只准減）。UI／版面驗證用瀏覽器 preview、console 冇 error；**`npm run test:e2e` 唔好自動跑**（又慢又食 token），只喺用戶明確要求時先跑，或者用 `--only <名>` 跑單一相關測試（都要用戶同意）。CI 喺 release 前跑 lint + `npm test`，失敗唔會 release。verification-before-completion 照用，證據就係呢啲檢查結果。
+- **同現有規則嘅次序**：改碼前照讀 preop 總索引表，再 Grep 指向嘅題目 skill；符合條件先做 post-fix lesson capture（見上面「修完 bug 之後」）。Superpowers 指引同本檔或 `.cursor/rules/*` 衝突時，以本檔為準。
 
 ## 常用指令
 
-- 測試：`npm test`（單元）、`npm run test:coverage`、`npm run lint`、`npm run test:e2e`（版面，要 8080 server）
+- 測試：`npm test`（單元）、`npm run test:coverage`、`npm run lint`、`npm run test:e2e`（版面，要 8080 server；只喺用戶要求時跑）
 - 本地 iPhone 外框預覽：`npm run preview:iphone`（`tools/device-preview.html`，基準 iPhone 17 Pro Max 440×956，見 Rule 30）
 - 本地改版本號預覽：改 `package.json` version → `npm run sync-version`（release 由 CI semantic-release 自動 bump，唔好手改 `js/app.js`／`sw.js`／`index.html` 版本）
 - Commit／push（只喺用戶要求時）：`python tools/git_commit_push.py --paths …`，Conventional Commits（`feat:`／`fix:`／`docs:`／`chore:`）

@@ -226,7 +226,7 @@ if (!e.request.url.startsWith("http")) return;
 - 起點：`<base href="../">` ＋ `<link href="css/style.css">`，開頁時 `fetch("index.html")` 用 DOMParser 攞 `#app`（刪晒 `<script>`）插入頁面；用 `<html data-layout>` 同 `App.layout()` 一樣嘅 media query。範例：`tools/prototype-ted.html`。
 - 現有畫面（`#view-quiz`、`#view-settlement`、外框）只填資料、唔重寫 CSS；新增 overlay 要抄 `#view-quiz-setup.active` 嗰套 `--frame-screen-*` 定位同 `.hub-bar` 覆寫。
 - 行為照搬，唔好自己發明：輸入格用 `.qb-cell`＋量度闊度（`cells.js`）、提示係 L1／L2 兩段＋`1/2`／`2/2`＋提示題重排（`hints.js`、`check.js`）、App 鍵盤只喺 `(pointer: coarse)` 先出（`keyboard.js`，Rule 107）、回饋字眼用 `_setAction` 嗰套。
-- 交俾用戶試之前，自己用 phone（440×956，觸控）同 desktop（1280×800）各行一次完整流程，逐張截圖檢查對齊、重疊、字級。
+- 交俾用戶試之前，自己用 phone（440×956，觸控）行一次主流程，只喺關鍵狀態截圖（唔使逐步截）；desktop（1280×800）只喺版面有分別時先睇一次。優先用 `read_page`／`get_page_text` 代替截圖。
 - 完整做法（真 app 植入、seed、遊戲素材清單、反 AI 味、狀態清單、交付）：`.trae/skills/pokeengmon-prototype/SKILL.md`（Rule 122）。
 → 事故原文 `.trae/skills/pokeengmon-workflow/references/incidents.md`。
 

@@ -198,7 +198,7 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 node tools/responsive/shots.mjs --out <dir> [--sizes S1,S2] [--scenes home,settlement-full]
 node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 ```
-- 改版面**之前**先影 baseline；每個 scene 重新載入；`settlement-full` 用真題＋假成績；`modal-*` scene 唔隱藏 modal；`quiz` 每次抽題唔同，diff 要睇圖。
+- 用嘅話（只限大改版面，見驗收清單）改**之前**先影 baseline；每個 scene 重新載入；`settlement-full` 用真題＋假成績；`modal-*` scene 唔隱藏 modal；`quiz` 每次抽題唔同，diff 要睇圖。
 - 用 CDP `Emulation.setDeviceMetricsOverride`；`--window-size` 出唔到細 viewport（new headless 最細約 516 闊、扣窗框），先讀 `innerWidth` 再斷症（Rule 26）。
 - headless 開過 touch emulation 之後 `(pointer: coarse)` 會黐住 true → 非觸控尺寸排先跑（工具已自動排序）（Rule 80）。
 
@@ -222,13 +222,17 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 - IDE／Browser pane：`resize_window` 可能唔派 `resize`／matchMedia 事件，即時切換用 headless 驗；自動化前先查 `innerWidth/innerHeight` 唔係 0（Rule 20）；改 state 嘅 JS 前 assert localhost（Rule 62）。
 - Guest 下 Friends 只 toast、Leaderboard 彈 z 9999 登入提示——測「overlay 開住撳左欄」用 `App.showView('view-friends')` 直接開。
 
-**每次改完驗收清單**：
-1. 440×956 rect diff = 0；其他尺寸 diff 有截圖解釋。
+**每次改完驗收清單**（慳 token：平時只做「平時」嗰欄；「大改版面」= 改斷點／外框／全域 CSS／新 view，或者用戶要求）：
+
+平時：Browser preview 開 440×956 睇改動嗰個畫面，用 `javascript_tool` 查 `scrollWidth === innerWidth`、受影響 overlay／CTA 嘅 rect，console 冇 error；改到 wide 規則先加睇一個 wide 尺寸。唔影 baseline、唔跑 `shots.mjs`、唔逐個尺寸截圖。
+
+大改版面先做：
+1. 440×956 rect diff = 0（`shots.mjs` baseline／compare，背景跑）；其他尺寸 diff 有截圖解釋。
 2. 所有尺寸冇橫向 scroll（`scrollWidth === innerWidth`）、console 冇 error。
 3. overlay rect 同目標白螢幕（phone `.pd-screen2`；wide `.ph-sheets`）四邊差 0。
 4. 底部 CTA／dock 完整可見；矮尺寸（S5、S9）都要。
 5. 觸控範圍 ≥44／48；安全區：iPhone SE 同 17 Pro Max 模擬器各一次。
-6. 相關互動測試只剩上表已知 fail。
+6. 互動測試（`npm run test:e2e`／單個 `test-*.mjs`）**唔自動跑**：慢又食 token，只喺用戶明確要求時先跑；跑嘅話只剩上表已知 fail。平時用 Browser preview + console 驗。
 
 ## 13. 改碼清單
 
