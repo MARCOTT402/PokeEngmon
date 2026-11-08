@@ -766,3 +766,6 @@ SupabaseAuth.init();
 /* 關鍵：top-level const 唔會自動掛上 window，必須手動暴露
    （app.js / sync.js 都用 window.SupabaseAuth 判斷） */
 window.SupabaseAuth = SupabaseAuth;
+
+/* ES module 過渡期（總計劃 P2.3；Rule 119）：index.html 用 type="module" 載入，頂層名唔會自動變全域 → 明確掛上 globalThis，classic script 照用 */
+Object.assign(globalThis, { SupabaseAuth });

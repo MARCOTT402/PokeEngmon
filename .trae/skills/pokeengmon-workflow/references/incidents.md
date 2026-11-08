@@ -251,6 +251,12 @@ Skill: Rule 119 added
 - 陷阱：`tools/gen_chain_sql.py` 用 `const EVOLUTION_CHAINS_G25 = (\[.*\]);\s*$` 讀 `gens-data.js`，檔尾加咗 bridge 就會讀唔到 → 改做 `(\[.*?\n\]);`。驗證時跑咗佢一次，佢會將 SQL 寫去 repo 根目錄（舊路徑），內容同 `supabase/migrations/` 嗰份一模一樣，已經刪走。
 - 重播測試原本直接讀 `MOVES`（冇公開）等資料載完 → 改用 `moveInfo('tackle').power`。
 
+### 2026-11-08 第三批：11 個服務檔
+
+- 量度：58 個剩低嘅 classic 檔入面，大部分逐個轉都冇問題；唔得嘅係 `battle/state.js`、`storage.js`（載入時俾其他 classic 檔用），同埋 `quiz.js`、`gacha.js`、`app.js`、`battle/battle.js`（mixin 檔載入時要用）。
+- 揀咗冇 UI 嘅服務檔（每個只公開一個物件），strict mode 解析冇問題，冇用 `document.currentScript`。
+- 驗證：467 個測試（`esm-bridge` 64 項）、lint 0、typecheck 0；瀏覽器 21 個 module 載入、登入畫面、Energy、開一場戰鬥（精靈、HP 框、招式）冇 error；e2e 連戰鬥重播。
+
 ## Rule 120 — 每次 deploy 都要有獨一無二嘅版本標記：`build-site.cjs` 將 commit id 加入 `sw.js` 快取名同 `index.html` 全部 `?v=`
 
 - 2026-11-08 push `88534eb`（ESM 第一批，`refactor`，冇出新版本）之後，打開正式網站第一次載入：7 個 `js/battle/ui/*.js` 全部 `Cannot read properties of undefined (reading 'S')`（舊 `battle.js` 冇 `BattleUI._`）、`bag.js` `escapeHTML is not defined`、登入畫面 `escapeHTML is not defined`（新 `index.html` 用 module 載入**舊** `dom.js`，舊版冇 bridge）。

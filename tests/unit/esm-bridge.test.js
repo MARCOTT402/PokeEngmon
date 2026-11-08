@@ -92,9 +92,11 @@ function usesOf(names, file) {
   return out;
 }
 
-test("index.html loads the converted base files as ES modules (batch 1 + 2)", () => {
+test("index.html loads the converted base files as ES modules (batches 1–3)", () => {
   for (const f of ["js/core/dom.js", "js/core/html.js", "js/battle/rng.js", "js/mega-data.js", "js/dex-sort.js", "js/store.js",
-    "js/sm2.js", "js/gens-data.js", "js/data.js", "js/pokemon.js"]) assert.ok(modules.includes(f), f);
+    "js/sm2.js", "js/gens-data.js", "js/data.js", "js/pokemon.js",
+    "js/supabase-auth.js", "js/sync.js", "js/qimg-db.js", "js/avatars.js", "js/genpack.js", "js/battle/energy.js",
+    "js/battle/realtime.js", "js/battle/pvp.js", "js/battle/engine.js", "js/battle/moveanim.js", "js/battle/sprites.js"]) assert.ok(modules.includes(f), f);
   assert.equal(classic[0], "js/core/guard.js", "Guard must stay the first classic script (Rule 94)");
 });
 
