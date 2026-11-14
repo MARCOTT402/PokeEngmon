@@ -178,26 +178,9 @@ Object.assign(Quiz, {
     /* 一打字就收返紅色「再試」回饋 */
     this._clearBadState();
 
-    const junior = this._isJunior();
     const val = this._norm(c.value);
-
-    if (junior) {
-      /* 小學生模式：ghost 跟這一格自己的 hintLevel／hintLetters，不跟整題。 */
-      const typedLen = val.length;
-      const level = Number(c.hintLevel) || 0;
-      if (level >= 1) {
-        c.ghost = this._juniorGhost(c, typedLen, c.hintLetters || 0);
-      } else {
-        c.ghost = "";
-      }
-      this._applyGhost(c);
-    } else {
-      /* 打字後 ghost 消失 */
-      if (c.ghost) {
-        c.ghost = "";
-        this._applyGhost(c);
-      }
-    }
+    /* 打任何字（含退格）都收起全部答案框的提示。已用過的 L1／L2 進度不重置。 */
+    if (this._dismissVisibleHints) this._dismissVisibleHints();
     /* 打多過答案長度 → 格自動加寬 */
     this._syncCellWidth(c, c.value);
 

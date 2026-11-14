@@ -61,4 +61,11 @@ description: PokeEngmon quiz rules: SM-2 due-card sessions, settlement exits and
 - 替換要逐個字元做、保持長度唔變：提示前綴（`ans.indexOf(val) === 0`）同小學生 ghost 都係用 index 比對。
 - regex 寫 `\u` escape，唔好直接放彎撇號字元，因為肉眼分唔到 `'`、`’`、`ʼ`。
 - 驗收：`tests/unit/quiz-answer.test.js`（撇號三種寫法、兩個方向、長度唔變）；瀏覽器開題「They ___(not be) hungry…」，第一格輸入 `weren’t`（U+2019）→ 兩格綠，顯示 Perfect。
-→ `.trae/skills/pokeengmon-quiz/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-quiz/references/incidents.md`。
+
+### Rule 126 — 提示進度係整題：第 1 下 L1，第 2 下起所有答案框同時顯示完整答案；打字收起提示但唔重置進度
+
+- 觸發：學校題同 World Class 的填空題，單格或多格，實體鍵盤或 App 鍵盤。
+- 必做：`hintCount` 跟整題。第 1 下只對目前格做原有 L1。第 2 下起每次把每一格的完整答案顯示成 ghost，不寫入 `value`。任何輸入（含退格）清掉所有格子的 ghost。已到 L2 之後，換格或打字都不會退回 L1。
+- 唔做：唔好再逐格、逐批揭字母。唔好把提示寫進作答，亦唔好清掉已輸入或已答對的文字。
+- 後果：連擊歸零、黃條、組內重排仍跟 `hintCount`。捕捉模式維持自己的兩次上限。
+- 驗收：`tests/unit/hint-reveal.test.js`。

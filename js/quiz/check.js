@@ -63,18 +63,22 @@ Object.assign(Quiz, {
         /* 第 1 次錯：閃紅但不扣 EF，再試一次 */
         this._focusCurrent();
       } else if (step === 2) {
-        /* 第 2 次錯：這一格出 L1 */
-        const ans = this._norm(c.primary);
-        const v = this._norm(c.value);
-        const isPrefix = v.length <= ans.length && ans.indexOf(v) === 0;
-        if (v && !isPrefix) this._clearCell(c);
-        this._showL1(c, v && isPrefix ? v.length : 0);
+        /* 第 2 次錯：這一格出 L1。整題已到 L2 就維持全部答案框的完整提示。 */
+        if ((Number(a.hintCount) || 0) >= 2) {
+          this._showFullL2();
+        } else {
+          const ans = this._norm(c.primary);
+          const v = this._norm(c.value);
+          const isPrefix = v.length <= ans.length && ans.indexOf(v) === 0;
+          if (v && !isPrefix) this._clearCell(c);
+          this._showL1(c, v && isPrefix ? v.length : 0);
+        }
       } else if (step === 3) {
         /* 第 3 次錯：再給一次機會，不出新提示 */
         this._focusCurrent();
       } else {
-        /* 第 4 次或以後錯：這一格出 L2，之後答對會重排 */
-        this._showL2(c);
+        /* 第 4 次或以後錯：所有答案框出完整 L2，之後答對會重排 */
+        this._showFullL2();
       }
       return;
     }
