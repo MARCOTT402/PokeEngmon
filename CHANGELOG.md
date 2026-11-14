@@ -1,3 +1,12 @@
+## [1.74.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.0...v1.74.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* block pinch zoom as well as double-tap zoom ([e17805e](https://github.com/MARCOTT402/PokeEngmon/commit/e17805e73621796ebd3cae64fb4543c8a5d2cb5d))
+* say when an L2 hint has revealed the whole blank ([256bb54](https://github.com/MARCOTT402/PokeEngmon/commit/256bb54fd507bae74e41b4c7d7c58af1a0e40b5f))
+* scroll topic setup inside the display and keep L2 hints repeatable ([7e19e00](https://github.com/MARCOTT402/PokeEngmon/commit/7e19e006999376c2d4a317c3c10f8d20719c018f))
+
 # [1.74.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.73.0...v1.74.0) (2026-11-14)
 
 
