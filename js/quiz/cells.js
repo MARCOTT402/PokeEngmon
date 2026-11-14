@@ -185,9 +185,7 @@ Object.assign(Quiz, {
       /* 小學生模式：ghost 跟這一格自己的 hintLevel／hintLetters，不跟整題。 */
       const typedLen = val.length;
       const level = Number(c.hintLevel) || 0;
-      if (level >= 2) {
-        c.ghost = this._juniorGhost(c, typedLen, 0);
-      } else if (level === 1) {
+      if (level >= 1) {
         c.ghost = this._juniorGhost(c, typedLen, c.hintLetters || 0);
       } else {
         c.ghost = "";

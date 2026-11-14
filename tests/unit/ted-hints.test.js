@@ -24,31 +24,47 @@ function arm(answer) {
   return q;
 }
 
-test("single blank still walks L1 then L2 and marks the question", () => {
+test("single blank walks L1 then keeps extending L2 without disabling the button", () => {
   const q = arm("healthy");
   Quiz.hint();
   assert.equal(Quiz.cells[0].hintLevel, 1);
+  assert.equal(Quiz.cells[0].ghost, "he");
   assert.equal(Quiz._focusedHintBadge().text, "1/2");
   assert.equal(Quiz._focusedHintBadge().disabled, false);
   assert.equal(Quiz.combo, 0);
-  Quiz.combo = 3;
-  Quiz.hint();
-  assert.equal(Quiz.cells[0].hintLevel, 2);
+  const seen = ["he"];
+  for (let i = 0; i < 12; i++) {
+    Quiz.combo = 3;
+    Quiz.hint();
+    const ghost = Quiz.cells[0].ghost;
+    assert.equal(Quiz.cells[0].hintLevel, 2);
+    assert.equal(Quiz._focusedHintBadge().text, "2/2");
+    assert.equal(Quiz._focusedHintBadge().disabled, false);
+    assert.equal(Quiz.combo, 0);
+    assert.ok(ghost.length >= seen[seen.length - 1].length);
+    assert.ok("healthy".startsWith(ghost));
+    seen.push(ghost);
+  }
   assert.equal(Quiz.cells[0].ghost, "healthy");
-  assert.equal(Quiz._focusedHintBadge().text, "2/2");
-  assert.equal(Quiz._focusedHintBadge().disabled, true);
+  assert.equal(Quiz.cells[0].hintLetters, 7);
+  assert.equal(Quiz.cells[0].value, "");
   assert.equal(Quiz._answerFor(q).hintCount, 2);
   assert.equal(Quiz._questionUsedHint(), true);
-  assert.equal(Quiz.combo, 0);
 });
 
-test("one cell at L2 does not block L1 or L2 on another cell", () => {
+test("one cell at L2 does not block L1 or further L2 on another cell", () => {
   const q = arm("for granted");
   assert.equal(Quiz.cells.length, 2);
   Quiz.hint();
   Quiz.hint();
   assert.equal(Quiz.cells[0].hintLevel, 2);
-  assert.equal(Quiz._focusedHintBadge().disabled, true);
+  assert.equal(Quiz.cells[0].ghost, "fo");
+  assert.equal(Quiz._focusedHintBadge().disabled, false);
+  Quiz.hint();
+  assert.equal(Quiz.cells[0].ghost, "for");
+  Quiz.hint();
+  assert.equal(Quiz.cells[0].ghost, "for");
+  assert.equal(Quiz.cells[0].value, "");
 
   Quiz.currentCell = 1;
   Quiz._paintHintBadge();
@@ -58,17 +74,24 @@ test("one cell at L2 does not block L1 or L2 on another cell", () => {
 
   Quiz.hint();
   assert.equal(Quiz.cells[1].hintLevel, 1);
+  assert.equal(Quiz.cells[1].ghost, "gr");
   assert.equal(Quiz.cells[0].hintLevel, 2);
+  assert.equal(Quiz.cells[0].ghost, "for");
   assert.equal(Quiz._focusedHintBadge().text, "1/2");
+
+  Quiz.hint();
+  assert.equal(Quiz.cells[1].hintLevel, 2);
+  assert.equal(Quiz.cells[1].hintLetters > 1, true);
+  assert.equal(Quiz._focusedHintBadge().text, "2/2");
   assert.equal(Quiz._focusedHintBadge().disabled, false);
   assert.equal(Quiz._answerFor(q).hintCount, 2);
   assert.equal(Quiz._questionUsedHint(), true);
 
-  Quiz.hint();
-  assert.equal(Quiz.cells[1].hintLevel, 2);
-  assert.equal(Quiz.cells[1].hintLetters, 0);
+  Quiz.currentCell = 0;
+  Quiz._paintHintBadge();
   assert.equal(Quiz._focusedHintBadge().text, "2/2");
-  assert.equal(Quiz.cells[0].hintLevel, 2);
+  assert.equal(Quiz._focusedHintBadge().disabled, false);
+  assert.equal(Quiz.cells[0].ghost, "for");
 });
 
 test("full sentence inserts the answer once", () => {

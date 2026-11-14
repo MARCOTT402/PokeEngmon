@@ -125,6 +125,51 @@
   background: #eef3ff;
   color: var(--blue);
 }
+/* 雙擊放大會擋操作。manipulation = 平移 + 雙指縮放，不含雙擊放大。
+   不設 user-scalable=no，避免把雙指縮放也關掉。 */
+html {
+  touch-action: manipulation;
+}
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[role="tab"],
+.qk-key,
+.quiz-tool {
+  touch-action: manipulation;
+}
+
+/* 選題頁本身不滾動，學校題單與 World Class 設定各自在畫面裡直向滾動。
+   pan-y pinch-zoom：直向滑動與雙指縮放保留，雙擊放大不在允許清單裡。 */
+#view-quiz-setup.active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#setup-school,
+#setup-world {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
+  padding-bottom: 96px;
+}
+#view-quiz-setup #setup-school .topic-list {
+  flex: none;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 0;
+  touch-action: pan-y pinch-zoom;
+}
+#view-quiz-setup .custom-q-count { margin-bottom: 12px; }
+
 #view-quiz .quiz-segs.is-long { gap: 1px; }
 #view-quiz .quiz-segs.is-long .qs-seg { border-radius: 2px; }
 #quiz-progress.is-count {
