@@ -1,3 +1,10 @@
+# [1.75.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.3...v1.75.0) (2026-11-14)
+
+
+### Features
+
+* show PokéEng and a Poké Ball on the phone home screen ([ad6ea1f](https://github.com/MARCOTT402/PokeEngmon/commit/ad6ea1f6cee629d2f5de196bb685c53f02a56b94))
+
 ## [1.74.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.2...v1.74.3) (2026-11-14)
 
 
