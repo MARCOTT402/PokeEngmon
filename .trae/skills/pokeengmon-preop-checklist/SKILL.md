@@ -17,7 +17,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 | 答題、SM-2、結算、鍵盤 | `.trae/skills/pokeengmon-quiz/` | 7、44、71、74、77、93 |
 | home sheet、binder、overlay 點擊、手勢、按鈕、icon、場景動畫倍速 | `.trae/skills/pokeengmon-ui-sheets/` | 17、23、28、29、31、32、34、35、36、40、41、49、52、53、56、58、60、64、65、91、95、100 |
 | prototype／設計稿／mock-up（`tools/prototype/*`）、俾用戶睇樣 | `.trae/skills/pokeengmon-prototype/` | 118、121、122 |
-| 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具、全鍵盤操作 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90、97 |
+| 版面、紅框、safe-area、斷點、overlay 定位、modal／toast、轉機、觸控範圍、版面驗證工具、全鍵盤操作 | `.trae/skills/pokeengmon-responsive/` | 20、26、27、30、37、38、39、42、43、45、46、47、59、67、72、80–90、97、125 |
 
 - 一份改動跨幾個題目（例如新 overlay＝ui-sheets＋responsive），每份都要讀。
 - 慳 token：唔使成份讀呢個檔，讀到上表就夠；要搵某條 Rule 用 Grep 標題，再 Grep 題目 skill。
@@ -520,3 +520,7 @@ description: Pre-operation index for PokeEngmon. Read first before any edit, SQL
 ## Rule 124 — 改開戰流程（例如跳過揀隊頁）：重播測試嘅記錄鈎要喺「觸發開戰嗰下」之前裝；隊伍來源改咗要令開戰隊伍對返舊 fixture
 
 → `.trae/skills/pokeengmon-battle/SKILL.md`（要點）；事故原文 `.trae/skills/pokeengmon-battle/references/incidents.md`。
+
+## Rule 125 — 紅框顯示時頁面本身唔可以捲：鎖 html／body，只准 display window 入面捲
+
+→ `.trae/skills/pokeengmon-responsive/SKILL.md`。

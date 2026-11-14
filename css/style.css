@@ -4378,6 +4378,31 @@ body.capture-mode { overflow: hidden; background: #07110d; }
   background: #f8fbff; border: 2px solid #e2e7ef; border-radius: 12px; padding: 8px 10px;
 }
 
+/* 紅框在畫面上時，頁面本身不是滾動容器（Rule 125）。
+   #app 的 min-height:100vh 會比視窗高出一截，拖動紅框／選題區邊界會捲動 document。
+   iOS 的回彈同 scroll chaining 會把 position:fixed 的紅框一起拉開。
+   只在 #view-home.active（紅框留喺後面）時鎖；圖鑑、日曆、任務板離開紅框後仍用頁面滾動。
+   唔聽 touchmove：內層 overflow 自己捲。 */
+html:has(#view-home.active) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html:has(#view-home.active) body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html:has(#view-home.active) #app {
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* ================================================================
    PokeEngmon Home P1 — Pokedex shell + Console+ IA
    移植自 prototype/home-p1.html；唔碰正式碼邏輯只換 Home 版面
@@ -4397,6 +4422,7 @@ body.capture-mode { overflow: hidden; background: #07110d; }
 .pd-shell {
   /* 頂部讓出 --frame-inset-top，令紅框頂邊完整可見；螢幕列（1fr）自動吸收呢段空間 */
   position: fixed; top: var(--frame-inset-top); left: 0; right: 0; bottom: 0;
+  overscroll-behavior: none;
   height: calc(100dvh - var(--frame-inset-top));
   max-width: var(--frame-w); margin: 0 auto;
   background: linear-gradient(180deg, #f0524a 0%, #e03a32 55%, #d42f28 100%);

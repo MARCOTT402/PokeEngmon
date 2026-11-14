@@ -39,6 +39,7 @@ Spec：`.trae/specs/20261106-responsive-layout.md`（§13 已知未處理、§14
 | iPhone SE | 375 × 667 | 2 | 0 / 0 |
 
 - 主佈局用 `100dvh`（唔用 `100vh`）；手機版「剛好塞滿 956」，細機只可以自適應收縮，唔可以出滾動或切底；唔准為細機另做一套。
+- 紅框顯示時頁面本身唔可以捲（Rule 125）：`html:has(#view-home.active)` 鎖 `overflow`／`overscroll-behavior`，body `position: fixed`。只准 display window、sheet 入面捲。
 - `.pd-shell` 最闊 `var(--frame-w)`（手機 440），**必須 ≥ 440**，否則 440 闊機兩邊露底色。
 
 **驗收矩陣**（每次改版面都用）：
@@ -264,3 +265,10 @@ node tools/responsive/shots.mjs --compare <baselineDir> <newDir>
 - 局部層（喺自己 stacking context 入面，例如 `.catch-ball.grabbed`）照寫數字；要喺 `tests/unit/z-tokens.test.js` 同 `tools/audit/check-z-tokens.mjs` 嘅 `LOCAL_OK` 白名單登記。
 - `index.html` `<head>` 內聯兜底樣式（loading、`#fatal-screen`、`#guard-recover`、offline pill）**唔用 token**，因為 `style.css` 載唔到嗰陣都要顯示得到（Rule 94）。
 - 驗收：`node tools/audit/check-z-tokens.mjs [ref]`（同 git 版本逐條比較，兩邊各自用自己 `:root` 嘅 token 解析，數值要一樣；乾淨 tree 對 HEAD 一定 exit 0，`compareZ()` 有單元測試）＋ `npm test`（`z-tokens.test.js`：冇字面值、token 齊、toast 只低過三個刻意最頂嘅層）＋ `shots --compare`。
+
+### Rule 125 — 紅框顯示時頁面本身唔可以捲：鎖 html／body，只准 display window 入面捲
+
+- 觸發：紅框（`.pd-shell`）留喺畫面（`#view-home.active`，包括選題／答題等 overlay）。手機拖動唔可以帶動頁面，否則 iOS 回彈／scroll chaining 會把 `position: fixed` 紅框拉開。
+- 必做：`html:has(#view-home.active)` 同 body 設 `overflow: hidden`、`overscroll-behavior: none`；body 再 `position: fixed; inset: 0; height: 100%`。選題、`#quiz-scroll`、sheet 維持自己嘅 `overflow-y: auto`。
+- 唔做：唔好全域 `touchmove` `preventDefault`（內層捲動會死）。圖鑑、日曆、任務板等離開紅框嘅頁唔好鎖 body。
+- 後果：document 一有得捲，拖紅框或捲到內層邊界，外框會跟頁面走。
