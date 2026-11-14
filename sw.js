@@ -36,6 +36,7 @@ const ASSETS = [
   "./data/abilities.json",
   "./css/style.css",
   "./css/incubator.css",
+  "./css/ted.css",
   "./js/data.js",
   "./js/qimg-db.js",
   "./js/gens-data.js",
@@ -61,6 +62,7 @@ const ASSETS = [
   "./js/bag.js",
   "./js/battle/landscape.js",
   "./js/explain.js",
+  "./js/ted.js",
   "./js/quiz.js",
   "./js/quiz/session.js",
   "./js/quiz/hud.js",
@@ -204,7 +206,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => !swCacheKeep(k)).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -212,6 +214,8 @@ self.addEventListener("activate", (e) => {
 /* ---------- fetch 策略（Rule 102） ----------
    - 跨域：只 cache 圖片／音效／字型（精靈 CDN 等）。Supabase REST／RPC 等 API **一律唔經 SW**：
      舊做法跨域全部 cache-first，`user_account?select=*` 等 GET 會返上次（甚至上一個帳號）嘅資料。
+   - 例外：公開 TED MP3（storage 公開路徑、無 query、.mp3）走獨立 cache-first，並限制則數。
+     不快取帶 query 的網址、POST、RPC 或登入寫入。
    - 頁面（navigate／index.html）：network-first，3 秒冇回應先用 cache（慢網唔使白等）。
    - 帶 `?v=<本 SW 版本>` 嘅檔案：版本化 → cache-first（precache key 冇 query，用 ignoreSearch 對返）。
      版本唔同（新 index 配舊 SW 嘅過渡期）就照行 network-first。
@@ -220,12 +224,36 @@ self.addEventListener("activate", (e) => {
 const SW_VERSION = CACHE_NAME.slice("pokeengmon-".length);
 const NET_TIMEOUT_MS = 3000;
 const IS_DEV = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(self.location.hostname);
+const TED_AUDIO_CACHE = "pokeengmon-ted-audio-v1";
+const TED_AUDIO_MAX = 40;
+const TED_AUDIO_ORIGIN = "https://gcfoeaxxeerqixaistaf.supabase.co";
+
+function isPublicTedAudio(url) {
+  return url.protocol === "https:"
+    && url.origin === TED_AUDIO_ORIGIN
+    && url.pathname.indexOf("/storage/v1/object/public/ted-audio/") === 0
+    && /\.mp3$/i.test(url.pathname)
+    && !url.search;
+}
+
+/* keys() 依插入順序；超過上限時刪最舊的。 */
+function tedAudioEvictKeys(keys, max) {
+  const cap = Math.max(0, max | 0);
+  const list = keys || [];
+  if (list.length <= cap) return [];
+  return list.slice(0, list.length - cap);
+}
+
+function swCacheKeep(name) {
+  return name === CACHE_NAME || name === TED_AUDIO_CACHE;
+}
 
 function swRoute(req) {
   if (req.method !== "GET") return "skip";
   /* 非 http(s) scheme（例如 chrome-extension://）Cache API 唔支援（Rule 10） */
   if (!req.url.startsWith("http")) return "skip";
   const url = new URL(req.url);
+  if (isPublicTedAudio(url)) return "ted-audio";
   if (url.origin !== self.location.origin) {
     return /^(image|audio|font|video)$/.test(req.destination || "") ? "cache-first" : "skip";
   }
@@ -253,6 +281,22 @@ async function cacheFirst(req, loose) {
   if (hit) return hit;
   const res = await fetch(req);
   _put(req, res);
+  return res;
+}
+
+async function tedAudioCacheFirst(req) {
+  const cache = await caches.open(TED_AUDIO_CACHE);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res && res.ok && res.type !== "opaque") {
+    try {
+      await cache.put(req, res.clone());
+      const keys = await cache.keys();
+      const drop = tedAudioEvictKeys(keys, TED_AUDIO_MAX);
+      await Promise.all(drop.map(k => cache.delete(k)));
+    } catch (e) { /* 配額不足就只用這次的網路回應 */ }
+  }
   return res;
 }
 
@@ -290,6 +334,8 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(cacheFirst(req, true).catch(() => networkFirst(req, req)));
   } else if (kind === "cache-first") {
     e.respondWith(cacheFirst(req, false).catch(() => _fromCache(req, true).then(h => h || Response.error())));
+  } else if (kind === "ted-audio") {
+    e.respondWith(tedAudioCacheFirst(req).catch(() => caches.open(TED_AUDIO_CACHE).then(c => c.match(req)).then(h => h || Response.error())));
   } else {
     e.respondWith(networkFirst(req, new Request(req, { cache: "no-cache" })));
   }

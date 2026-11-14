@@ -157,6 +157,204 @@ Object.assign(App, {
     if (siteN > 0) parts.push(`Site questions: ${siteN}`);
     if (customN > 0) parts.push(`Custom: ${customN}`);
     document.getElementById("custom-q-count").textContent = parts.join(" ・ ");
+    this._syncSetupTrack();
+  },
+
+  setSetupTrack(track) {
+    this._setupTrack = track === "world" ? "world" : "school";
+    this._syncSetupTrack();
+    if (this._setupTrack === "school") this.renderSetup();
+  },
+
+  _syncSetupTrack() {
+    const world = this._setupTrack === "world";
+    const schoolPane = document.getElementById("setup-school");
+    const worldPane = document.getElementById("setup-world");
+    const schoolTab = document.getElementById("btn-track-school");
+    const worldTab = document.getElementById("btn-track-world");
+    if (schoolPane) schoolPane.hidden = world;
+    if (worldPane) worldPane.hidden = !world;
+    if (schoolTab) {
+      schoolTab.classList.toggle("is-on", !world);
+      schoolTab.setAttribute("aria-selected", world ? "false" : "true");
+    }
+    if (worldTab) {
+      worldTab.classList.toggle("is-on", world);
+      worldTab.setAttribute("aria-selected", world ? "true" : "false");
+    }
+    if (world) this._renderWorldSetup();
+  },
+
+  setTedStatus(kind, result) {
+    this._tedStatus = kind ? { kind, result: result || null } : null;
+    const el = document.getElementById("ted-status");
+    const retry = document.getElementById("ted-retry");
+    if (!el) return;
+    el.classList.remove("is-loading");
+    if (!kind) {
+      el.hidden = true;
+      el.textContent = "";
+      if (retry) retry.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    if (kind === "loading") {
+      el.classList.add("is-loading");
+      el.textContent = "正在載入題目…";
+      if (retry) retry.hidden = true;
+      return;
+    }
+    if (kind === "empty") {
+      el.textContent = "這個範圍目前沒有題目。請改選其他等級。";
+      if (retry) retry.hidden = true;
+      return;
+    }
+    if (kind === "short") {
+      const got = result && result.got != null ? result.got : 0;
+      const expected = result && result.expected != null ? result.expected : "";
+      el.textContent = "只取得 " + got + " 題，少於所選的 " + expected + " 題。沒有開始作答。請再試一次，或改選較少題數。";
+      if (retry) retry.hidden = false;
+      return;
+    }
+    const code = result && result.error ? String(result.error) : "network";
+    const detail = result && result.detail ? String(result.detail) : "";
+    el.textContent = "無法載入題目（" + code + "）。請檢查網路後再試。" + (detail ? "\n" + detail : "");
+    if (retry) retry.hidden = false;
+  },
+
+  _renderWorldSetup() {
+    const host = document.getElementById("setup-world");
+    const startBtn = document.getElementById("btn-setup-start");
+    if (!host || !globalThis.TedWorld) {
+      if (startBtn && this._setupTrack === "world") {
+        startBtn.disabled = true;
+        startBtn.textContent = "World Class 無法使用";
+      }
+      return;
+    }
+    const pref = TedWorld.loadPref();
+    host.innerHTML = "";
+    const panel = document.createElement("div");
+    panel.className = "ted-panel";
+
+    const card = document.createElement("div");
+    card.className = "ted-card is-on";
+    const head = document.createElement("div");
+    head.className = "ted-card-head";
+    const headLabel = document.createElement("b");
+    headLabel.textContent = "選擇程度（A1–C2）";
+    const headMeta = document.createElement("span");
+    const shown = pref.mode === "adaptive" ? pref.ability : pref.level;
+    const shownBand = TedWorld.bandOf(shown);
+    headMeta.textContent = pref.mode === "band"
+      ? (shownBand.cefr + " · Lv." + shownBand.min + "–" + shownBand.max)
+      : (shownBand.cefr + " · Lv." + shown);
+    head.append(headLabel, headMeta);
+    card.appendChild(head);
+
+    const cefr = document.createElement("div");
+    cefr.className = "ted-cefr";
+    TedWorld.BANDS.forEach(band => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ted-cefr-btn" + (pref.mode === "band" && TedWorld.bandOf(pref.level).cefr === band.cefr ? " is-on" : "");
+      const name = document.createElement("div");
+      name.textContent = band.cefr;
+      const range = document.createElement("small");
+      range.textContent = "Lv." + band.min + "–" + band.max;
+      b.append(name, range);
+      b.onclick = () => {
+        TedWorld.savePref({ level: band.min + 2, ability: pref.ability, mode: "band" });
+        this._renderWorldSetup();
+      };
+      cefr.appendChild(b);
+    });
+    card.appendChild(cefr);
+
+    const adaptive = document.createElement("button");
+    adaptive.type = "button";
+    adaptive.className = "ted-adaptive" + (pref.mode === "adaptive" ? " is-on" : "");
+    adaptive.textContent = "全部 A1–C2 自動適應（目前能力 Lv." + pref.ability + "）";
+    adaptive.onclick = () => {
+      TedWorld.savePref({ level: pref.ability, ability: pref.ability, mode: "adaptive" });
+      this._renderWorldSetup();
+    };
+    card.appendChild(adaptive);
+
+    const levels = document.createElement("div");
+    levels.className = "ted-levels";
+    for (let lv = 1; lv <= 30; lv++) {
+      const band = TedWorld.bandOf(lv);
+      const inZone = pref.mode === "adaptive" || pref.mode === "level" || band.cefr === shownBand.cefr;
+      const current = pref.mode === "adaptive" ? lv === pref.ability : lv === pref.level && pref.mode !== "band";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ted-lv" + (current ? " is-on" : "") + (inZone ? "" : " is-dim");
+      btn.textContent = "L" + lv;
+      btn.onclick = () => {
+        TedWorld.savePref({ level: lv, ability: pref.ability, mode: "level" });
+        this._renderWorldSetup();
+      };
+      levels.appendChild(btn);
+    }
+    card.appendChild(levels);
+    panel.appendChild(card);
+
+    const sizeCard = document.createElement("div");
+    sizeCard.className = "ted-card";
+    const sizeLabel = document.createElement("div");
+    sizeLabel.className = "ted-card-head";
+    const sizeTitle = document.createElement("b");
+    sizeTitle.textContent = "每次題數（10–100）";
+    sizeCard.appendChild(sizeLabel);
+    sizeLabel.appendChild(sizeTitle);
+    const sizeGrid = document.createElement("div");
+    sizeGrid.className = "ted-sizes";
+    TedWorld.SIZES.forEach((n) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ted-size" + (pref.size === n ? " is-on" : "");
+      b.textContent = String(n);
+      b.setAttribute("aria-pressed", pref.size === n ? "true" : "false");
+      b.onclick = () => {
+        TedWorld.savePref({ level: pref.level, ability: pref.ability, mode: pref.mode, size: n });
+        this._renderWorldSetup();
+      };
+      sizeGrid.appendChild(b);
+    });
+    sizeCard.appendChild(sizeGrid);
+    panel.appendChild(sizeCard);
+
+    const note = document.createElement("p");
+    note.className = "ted-note";
+    const q = TedWorld.sessionQuery(pref);
+    note.textContent = "World Class · " + (pref.mode === "adaptive"
+      ? ("自動 Lv." + q.min_lv + "–" + q.max_lv)
+      : (pref.mode === "band" ? (shownBand.cefr + " Lv." + q.min_lv + "–" + q.max_lv) : (shownBand.cefr + " Lv." + pref.level)))
+      + " · " + q.lim + " 題 · 答完後自動朗讀完整英文句子";
+    panel.appendChild(note);
+
+    const status = document.createElement("p");
+    status.id = "ted-status";
+    status.className = "ted-status";
+    status.hidden = true;
+    panel.appendChild(status);
+    const retry = document.createElement("button");
+    retry.id = "ted-retry";
+    retry.type = "button";
+    retry.className = "ted-retry";
+    retry.hidden = true;
+    retry.textContent = "再試一次";
+    panel.appendChild(retry);
+    host.appendChild(panel);
+
+    if (this._tedStatus) this.setTedStatus(this._tedStatus.kind, this._tedStatus.result);
+
+    if (startBtn) {
+      const loading = this._tedStatus && this._tedStatus.kind === "loading";
+      startBtn.disabled = !!loading;
+      startBtn.textContent = loading ? "載入中…" : "▶ 開始";
+    }
   },
 
   /* ---------- App 內新增句子題 ---------- */

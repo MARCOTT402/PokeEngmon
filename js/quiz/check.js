@@ -49,31 +49,31 @@ Object.assign(Quiz, {
     if (junior) {
       const a = this._answerFor(item.q);
       a.attemptCount++;
-      /* 小學生所有答錯都閃紅，但第 1 次唔扣 EF */
+      c.tries = (Number(c.tries) || 0) + 1;
+      const step = c.tries;
+      /* 小學生所有答錯都閃紅，但第 1 次不扣 EF。提示階梯跟目前這一格。 */
       this._flashWrong();
       this._vibrate(50);
       this.wrongTries = (this.wrongTries || 0) + 1;
       this._setCombo(0);
       const juniorMsg = ["Almost! Try once more 💪", "Here's a little help ↑", "Keep going — you can do it!", "Copy the grey letters ↑"];
-      this._setAction("bad", "✕", juniorMsg[Math.min(a.attemptCount, 4) - 1], "");
+      this._setAction("bad", "✕", juniorMsg[Math.min(step, 4) - 1], "");
       if (c.cellEl) c.cellEl.classList.add("badc");
-      if (a.attemptCount === 1) {
-        /* 第 1 次錯：閃紅但唔扣 EF，畀小朋友再試一次 */
+      if (step === 1) {
+        /* 第 1 次錯：閃紅但不扣 EF，再試一次 */
         this._focusCurrent();
-      } else if (a.attemptCount === 2) {
-        /* 第 2 次錯：出 L1 引導思考 */
-        a.hintCount = 1;
+      } else if (step === 2) {
+        /* 第 2 次錯：這一格出 L1 */
         const ans = this._norm(c.primary);
         const v = this._norm(c.value);
         const isPrefix = v.length <= ans.length && ans.indexOf(v) === 0;
         if (v && !isPrefix) this._clearCell(c);
         this._showL1(c, v && isPrefix ? v.length : 0);
-      } else if (a.attemptCount === 3) {
-        /* 第 3 次錯：再畀一次機會，唔出新提示 */
+      } else if (step === 3) {
+        /* 第 3 次錯：再給一次機會，不出新提示 */
         this._focusCurrent();
       } else {
-        /* 第 4 次或以後錯：出 L2（顯示完整答案），之後答對會重排 */
-        a.hintCount = 2;
+        /* 第 4 次或以後錯：這一格出 L2，之後答對會重排 */
         this._showL2(c);
       }
       return;
@@ -128,7 +128,7 @@ Object.assign(Quiz, {
     const item = this.queue[0];
     const q = item.q;
     const a = this._answerFor(q);
-    const usedHint = a.hintCount > 0;
+    const usedHint = this._questionUsedHint ? this._questionUsedHint() : a.hintCount > 0;
     const now = Date.now();
     const responseMs = Math.max(0, now - (this._curQuestionStart || now));
 
@@ -247,6 +247,9 @@ Object.assign(Quiz, {
 
     /* Chip：重排維持「Review in 5 minutes」原字眼；強制完結顯示明日再試 */
     this._renderChip(q, nextLabel);
+
+    this._showCompletedNote(q);
+    this._speakCompleted(q);
 
     this._updateProgress();
     if (segIdx >= 0) this._popSeg(segIdx);

@@ -142,7 +142,10 @@ Object.assign(App, {
     /* Diamonds：防金手指走 RPC（登入時由 server 計算 + 權威 balance）
        RPC 失敗（null）→ fallback 本地計算，離線都唔會變 0 粒 */
     let serverRes = null;
-    if (window.SupabaseAuth && SupabaseAuth.isLoggedIn()) {
+    const loggedIn = !!(window.SupabaseAuth && SupabaseAuth.isLoggedIn());
+    /* award_round_diamonds 拒絕 total > 50。不改正式函式；超過就不要送，並在結算說明。 */
+    const overCloudCap = loggedIn && Number(data.total) > 50;
+    if (loggedIn && !overCloudCap) {
       serverRes = await SupabaseAuth.awardRoundDiamonds(data.score, data.total);
     }
     /* v139：本地 fallback 跟 award_round_diamonds 相對門檻（score==total→3, >=total-2→2, >=total-3→1）
@@ -157,10 +160,14 @@ Object.assign(App, {
     if (serverRes && typeof serverRes.bonus === "number") {
       rewards.diamonds = serverRes.bonus;
       st.diamonds = serverRes.balance;   // server 權威，唔係本地 +=
-    } else if (!(window.SupabaseAuth && SupabaseAuth.isLoggedIn())) {
+    } else if (!loggedIn) {
       /* 匿名／離線：本地計鑽 */
       rewards.diamonds = localDiamondBonus;
       st.diamonds += rewards.diamonds;
+    } else if (overCloudCap) {
+      rewards.diamonds = 0;
+      rewards.cloudDiamondNote = "雲端鑽石結算只接受 50 題以內（award_round_diamonds 在 total > 50 時拒絕）。這組有 " + data.total + " 題，鑽石沒有寫入雲端。";
+      this.toast(rewards.cloudDiamondNote);
     } else {
       /* v140：已登入但 RPC 失敗 → 唔本地加鑽（避免同雲端脫節後 pull 打回） */
       rewards.diamonds = 0;
@@ -239,6 +246,10 @@ Object.assign(App, {
     document.getElementById("settle-sub").textContent = perfect
       ? "No mistakes, no hints. Legendary trainer!"
       : `${toPolish} to polish — they'll come back for review.`;
+    if (rewards && rewards.cloudDiamondNote) {
+      const sub = document.getElementById("settle-sub");
+      sub.textContent = sub.textContent + " " + rewards.cloudDiamondNote;
+    }
 
     /* 分數圈：clean 題數 / 總數，動畫填色 */
     const R = 66, C = 2 * Math.PI * R;

@@ -28,6 +28,9 @@ Object.assign(Quiz, {
         green: false,
         ghost: "",
         empty: t === "",
+        hintLevel: 0,
+        hintLetters: 0,
+        tries: 0,
         cellEl: null,
         textEl: null,
         ghostEl: null,
@@ -176,18 +179,16 @@ Object.assign(Quiz, {
     this._clearBadState();
 
     const junior = this._isJunior();
-    const a = this._answerFor(this.queue[0] && this.queue[0].q);
     const val = this._norm(c.value);
 
     if (junior) {
-      /* 小學生模式：ghost 用實際輸入長度計算（唔理啱錯）
-         底線數量 = 總長度 − 已輸入長度
-         揭示字母只喺未輸入到嘅位置顯示 */
+      /* 小學生模式：ghost 跟這一格自己的 hintLevel／hintLetters，不跟整題。 */
       const typedLen = val.length;
-      if (a.hintCount >= 2) {
+      const level = Number(c.hintLevel) || 0;
+      if (level >= 2) {
         c.ghost = this._juniorGhost(c, typedLen, 0);
-      } else if (a.hintCount === 1) {
-        c.ghost = this._juniorGhost(c, typedLen, a.hintLetters || 0);
+      } else if (level === 1) {
+        c.ghost = this._juniorGhost(c, typedLen, c.hintLetters || 0);
       } else {
         c.ghost = "";
       }
@@ -220,6 +221,7 @@ Object.assign(Quiz, {
       this.currentCell = next;
       this._vibrate(8);
       this._focusCurrent();
+      if (this._paintHintBadge) this._paintHintBadge();
     }
     this._syncCheckBtn();
   },

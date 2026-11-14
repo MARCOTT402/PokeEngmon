@@ -33,16 +33,55 @@ Object.assign(Quiz, {
     return ghost;
   },
 
-  /* L1：揭示前 k 個字母（固定數量，唔會隨輸入增加）
-     小學生模式：提示字母 + 分開嘅下劃線 */
+  /* 目前焦點那一格的提示徽章。捕捉模式仍看整題 hintCount。 */
+  _focusedHintBadge() {
+    if (this._isCatchMode()) {
+      const a = this._answerFor(this.queue[0] && this.queue[0].q);
+      const level = Number(a && a.hintCount) || 0;
+      return { level, disabled: level >= 2, text: level >= 2 ? "2/2" : level === 1 ? "1/2" : "" };
+    }
+    const c = this.cells && this.cells[this.currentCell];
+    const level = c ? (Number(c.hintLevel) || 0) : 0;
+    return { level, disabled: level >= 2, text: level >= 2 ? "2/2" : level === 1 ? "1/2" : "" };
+  },
+
+  /* 任一格用過提示，整題 hintCount 取最高級，供連擊、黃條、重排與計分。 */
+  _bumpQuestionHint(level) {
+    const item = this.queue && this.queue[0];
+    if (!item) return 0;
+    const a = this._answerFor(item.q);
+    a.hintCount = Math.max(Number(a.hintCount) || 0, Number(level) || 0);
+    return a.hintCount;
+  },
+
+  _questionUsedHint() {
+    const item = this.queue && this.queue[0];
+    const a = item ? this._answerFor(item.q) : null;
+    if (a && Number(a.hintCount) > 0) return true;
+    return (this.cells || []).some(c => (Number(c.hintLevel) || 0) > 0);
+  },
+
+  _paintHintBadge() {
+    const badge = this._focusedHintBadge();
+    const cnt = document.getElementById("quiz-hint-count");
+    if (cnt) {
+      cnt.hidden = !badge.text;
+      cnt.textContent = badge.text;
+    }
+    const btn = document.getElementById("btn-quiz-hint");
+    if (btn && !this.answered) btn.disabled = !!badge.disabled;
+    if (this._syncCheckBtn) this._syncCheckBtn();
+  },
+
+  /* L1：揭示前 k 個字母（固定數量，不會隨輸入增加）
+     小學生模式：提示字母 + 分開的底線。狀態記在這一格。 */
   _showL1(c, prefixLen) {
     const ans = String(c.primary || "");
-    const a = this._answerFor(this.queue[0] && this.queue[0].q);
-    if (a) {
-      a.hintLetters = this._hintCount(Math.max(0, ans.length)); /* 固定揭示字母數 */
-    }
+    c.hintLevel = 1;
+    c.hintLetters = this._hintCount(Math.max(0, ans.length));
+    this._bumpQuestionHint(1);
     if (this._isJunior()) {
-      c.ghost = this._juniorGhost(c, prefixLen, a ? a.hintLetters : 0);
+      c.ghost = this._juniorGhost(c, prefixLen, c.hintLetters || 0);
     } else {
       const rest = Math.max(0, ans.length - prefixLen);
       const k = this._hintCount(rest);
@@ -53,11 +92,11 @@ Object.assign(Quiz, {
     this._focusCurrent();
   },
 
-  /* L2：清空該格，直接顯示整個答案做提示
-     小學生模式：顯示整個答案，但一輸入就變成下劃線（hintLetters=0）*/
+  /* L2：清空該格，直接顯示整個答案。只鎖定這一格，不鎖定其他格。 */
   _showL2(c) {
-    const a = this._answerFor(this.queue[0] && this.queue[0].q);
-    if (a) a.hintLetters = 0;
+    c.hintLevel = 2;
+    c.hintLetters = 0;
+    this._bumpQuestionHint(2);
     this._clearCell(c);
     c.ghost = String(c.primary || "");
     this._applyGhost(c);
@@ -89,17 +128,15 @@ Object.assign(Quiz, {
 
     if (c.empty) { this._vibrate(20); return; }
 
-    /* 同一條題用過一次提示之後，再按一律當第 2 次 → 直接出 L2 */
-    const used = Number(a.hintCount) || 0;
-    if (used >= 1) {
-      a.hintCount = 2;
+    /* 每一格自己的 L1／L2。這一格已到 L1，再按才升到 L2。 */
+    const level = Number(c.hintLevel) || 0;
+    if (level >= 1) {
       this._showL2(c);
       this._hintUI(2);
       return;
     }
 
-    /* 第 1 次：L1；已輸入唔係正確前綴就先清空 */
-    a.hintCount = 1;
+    /* 第 1 次：L1；已輸入不是正確前綴就先清空 */
     const ans = this._norm(c.primary);
     const val = this._norm(c.value);
     const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
@@ -108,18 +145,15 @@ Object.assign(Quiz, {
     this._hintUI(1);
   },
 
-  /* 提示後：底部黃色說明 + 計數 + combo 歸零（同一題用過提示會重排） */
+  /* 提示後：底部黃色說明 + 目前這一格的 1/2 或 2/2 + combo 歸零。
+     任一格用過提示，整題仍會重排。 */
   _hintUI(level) {
-    const cnt = document.getElementById("quiz-hint-count");
-    if (cnt) { cnt.hidden = false; cnt.textContent = level >= 2 ? "2/2" : "1/2"; }
-    const btn = document.getElementById("btn-quiz-hint");
-    if (btn) btn.disabled = level >= 2;
     this.cells.forEach(x => { if (x.cellEl) x.cellEl.classList.remove("badc"); });
     this._setCombo(0);
     const catchMode = this._isCatchMode();
     this._setAction("hinted", "💡",
       level >= 2 ? (catchMode ? "Grab the Master Ball!" : "Here's the full answer") : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
       this.queue.length > 1 ? "This one will come back later in the set." : "");
-    this._syncCheckBtn();
+    this._paintHintBadge();
   }
 });

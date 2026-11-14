@@ -499,7 +499,21 @@ Object.assign(App, {
   /* 開機步驟：選題、答題（確認／提示／下一題／設定）、結算 Continue、圖片題聽聲 */
   _bootQuizControls() {
     /* 題型選擇畫面 */
-    document.getElementById("btn-setup-start").onclick = () => Quiz.start([...this.selectedTopics]);
+    document.getElementById("btn-setup-start").onclick = () => {
+      if (this._setupTrack === "world") Quiz.startWorld();
+      else Quiz.start([...this.selectedTopics]);
+    };
+    const schoolTab = document.getElementById("btn-track-school");
+    const worldTab = document.getElementById("btn-track-world");
+    if (schoolTab) schoolTab.onclick = () => this.setSetupTrack("school");
+    if (worldTab) worldTab.onclick = () => this.setSetupTrack("world");
+    if (!this._tedRetryBound) {
+      this._tedRetryBound = true;
+      document.addEventListener("click", (e) => {
+        const retry = e.target && e.target.closest && e.target.closest("#ted-retry");
+        if (retry && window.Quiz) Quiz.startWorld();
+      });
+    }
     document.getElementById("btn-topic-all").onclick = () => {
       this.selectedTopics = new Set(this._allTopicKeys());
       this.renderSetup();
@@ -793,8 +807,9 @@ Object.assign(App, {
           "button, [role=button], .chip-btn, .pd-menu-btn, .icon-btn, .entry-gate-btn, .footer-link, .guide-link, .reset-link, .move-choice, .curve-mode-opt"
         );
         if (!btn || btn.disabled || btn.getAttribute("aria-disabled") === "true") return;
-        /* 1. UI tap SFX */
-        if (window.CaptureScene && CaptureScene.audio && CaptureScene.audio.uiTap) {
+        /* 1. UI tap SFX。換下一題不播這聲短音，避免蓋過答完後的整句朗讀。 */
+        const skipTap = btn.id === "btn-quiz-next" || (btn.id === "qk-go" && btn.classList.contains("is-next"));
+        if (!skipTap && window.CaptureScene && CaptureScene.audio && CaptureScene.audio.uiTap) {
           CaptureScene.audio.uiTap();
         }
         /* 2. pressed 彈出動畫（防抖動：remove 再 add 重啟 animation） */

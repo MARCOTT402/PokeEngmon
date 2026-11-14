@@ -7,9 +7,18 @@
 
 Object.assign(Quiz, {
   /* ---------- 進度 ---------- */
+  /* World Class 超過 10 題才加密進度條並顯示數字。學校題維持原本 10 格。 */
+  _tedLongSet() {
+    return this.mode === "ted" && (Number(this.total) || 0) > 10;
+  },
+
   _updateProgress() {
     const shown = this.seenQids.size;
-    document.getElementById("quiz-progress").textContent = `${shown} / ${this.total}`;
+    const el = document.getElementById("quiz-progress");
+    if (el) {
+      el.textContent = `${shown} / ${this.total}`;
+      el.classList.toggle("is-count", this._tedLongSet());
+    }
     this._renderSegs();
   },
 
@@ -17,6 +26,7 @@ Object.assign(Quiz, {
   _renderSegs() {
     const host = document.getElementById("quiz-segs");
     if (!host) return;
+    host.classList.toggle("is-long", !!(this._tedLongSet && this._tedLongSet()));
     const runner = document.getElementById("quiz-bar-runner");
     const segs = this.segs || [];
     let els = host.querySelectorAll(".qs-seg");

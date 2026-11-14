@@ -1,0 +1,185 @@
+/* World Class / TED。只加新元件，不改既有 440 題型版面。
+   桌面加寬規則放在 min-width: 700px。 */
+
+.setup-track {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 4px;
+  background: #eef3ff;
+  border: 2px solid #dbe2ee;
+  border-radius: 14px;
+}
+.setup-track-btn {
+  min-height: 44px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #5a6478;
+  font-weight: 800;
+  font-size: .92rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.setup-track-btn.is-on {
+  border-color: var(--blue);
+  background: #fff;
+  color: var(--blue);
+}
+
+.ted-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ted-card {
+  background: #fff;
+  border: 3px solid #dbe2ee;
+  border-radius: 16px;
+  padding: 12px;
+}
+.ted-card.is-on { border-color: var(--blue); background: #f7faff; }
+.ted-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+.ted-card-head span { color: var(--blue); font-size: .85rem; }
+.ted-cefr {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.ted-cefr-btn, .ted-adaptive, .ted-lv, .ted-retry {
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ted-cefr-btn {
+  min-height: 44px;
+  border: 2px solid #dbe2ee;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+.ted-cefr-btn small, .ted-note, .ted-status {
+  display: block;
+  font-weight: 700;
+}
+.ted-cefr-btn small { color: #7a8299; font-size: .72rem; }
+.ted-cefr-btn.is-on, .ted-adaptive.is-on, .ted-lv.is-on {
+  border-color: var(--blue);
+  background: #eef3ff;
+  color: var(--blue);
+}
+.ted-lv.is-on { background: var(--blue); color: #fff; }
+.ted-adaptive {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  border: 2px solid #dbe2ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #5a6478;
+  font-size: .85rem;
+}
+.ted-levels {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+}
+.ted-lv {
+  min-height: 40px;
+  border: 1.5px solid #e2e8f4;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-size: .78rem;
+  padding: 0;
+}
+.ted-lv.is-dim { opacity: .4; }
+.ted-sizes {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.ted-size {
+  min-height: 44px;
+  border: 2px solid #dbe2ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #5a6478;
+  font-family: inherit;
+  font-size: .85rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+.ted-size.is-on {
+  border-color: var(--blue);
+  background: #eef3ff;
+  color: var(--blue);
+}
+#view-quiz .quiz-segs.is-long { gap: 1px; }
+#view-quiz .quiz-segs.is-long .qs-seg { border-radius: 2px; }
+#quiz-progress.is-count {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 0 0 4px;
+  overflow: visible !important;
+  clip: auto !important;
+  font-size: 12px;
+  font-weight: 800;
+  color: #5a6478;
+}
+.ted-note {
+  margin: 0;
+  color: #2e7d32;
+  font-size: .8rem;
+  text-align: center;
+  line-height: 1.45;
+}
+.ted-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff4f4;
+  color: #8c1d22;
+  font-size: .85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ted-status.is-loading { background: #eef3ff; color: var(--blue); }
+.ted-retry {
+  min-height: 44px;
+  border: 2px solid var(--blue);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--blue);
+}
+
+.quiz-zh, .quiz-talk, .quiz-note {
+  margin: 0 0 8px;
+  text-align: center;
+  line-height: 1.45;
+}
+.quiz-zh { font-size: .95rem; font-weight: 800; color: #3f4a63; }
+.quiz-talk { font-size: .78rem; font-weight: 700; color: #6b7489; }
+.quiz-note {
+  margin: 10px 0 0;
+  font-size: .85rem;
+  font-weight: 700;
+  color: #7a4b00;
+}
+
+@media (min-width: 700px) {
+  .ted-levels { grid-template-columns: repeat(10, 1fr); }
+  .quiz-zh { font-size: 1.05rem; }
+}
