@@ -1,3 +1,11 @@
+# [1.74.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.73.0...v1.74.0) (2026-11-14)
+
+
+### Features
+
+* add World Class TED sessions to the quiz ([263d85c](https://github.com/MARCOTT402/PokeEngmon/commit/263d85c6a5d0c01d1be187aab081b50df5874f57))
+* let World Class sessions run from 10 to 100 questions ([5c22359](https://github.com/MARCOTT402/PokeEngmon/commit/5c2235999484c76455033e4bf12362b952686be5))
+
 # [1.73.0](https://github.com/MARCOTT402/PokeEngmon/compare/v1.72.0...v1.73.0) (2026-11-08)
 
 
