@@ -42,7 +42,8 @@ Object.assign(Quiz, {
     }
     const c = this.cells && this.cells[this.currentCell];
     const level = c ? (Number(c.hintLevel) || 0) : 0;
-    return { level, disabled: level >= 2, text: level >= 2 ? "2/2" : level === 1 ? "1/2" : "" };
+    /* L2 之後按鈕保持可按。捕捉模式仍在第二次後停用。 */
+    return { level, disabled: false, text: level >= 2 ? "2/2" : level === 1 ? "1/2" : "" };
   },
 
   /* 任一格用過提示，整題 hintCount 取最高級，供連擊、黃條、重排與計分。 */
@@ -92,15 +93,29 @@ Object.assign(Quiz, {
     this._focusCurrent();
   },
 
-  /* L2：清空該格，直接顯示整個答案。只鎖定這一格，不鎖定其他格。 */
+  /* L2：每次再揭一批尚未顯示的字母（步長同 L1 的 _hintCount）。
+     不清除已打對或已揭開的部分。全部揭完之後再按只維持現況。 */
   _showL2(c) {
     c.hintLevel = 2;
-    c.hintLetters = 0;
     this._bumpQuestionHint(2);
-    this._clearCell(c);
-    c.ghost = String(c.primary || "");
+    const ans = String(c.primary || "");
+    const normAns = this._norm(ans);
+    const val = this._norm(c.value);
+    const isPrefix = !!val && val.length <= normAns.length && normAns.indexOf(val) === 0;
+    if (val && !isPrefix) this._clearCell(c);
+    const prefixLen = isPrefix ? val.length : 0;
+    const shown = Math.max(prefixLen, Number(c.hintLetters) || 0);
+    const next = shown >= ans.length
+      ? ans.length
+      : Math.min(ans.length, shown + this._hintCount(ans.length - shown));
+    c.hintLetters = next;
+    if (this._isJunior()) {
+      c.ghost = this._juniorGhost(c, prefixLen, next);
+    } else {
+      c.ghost = next > prefixLen ? ans.slice(prefixLen, next) : "";
+    }
     this._applyGhost(c);
-    this._syncCellWidth(c, "");
+    this._syncCellWidth(c, c.value);
     this._focusCurrent();
   },
 
@@ -151,8 +166,12 @@ Object.assign(Quiz, {
     this.cells.forEach(x => { if (x.cellEl) x.cellEl.classList.remove("badc"); });
     this._setCombo(0);
     const catchMode = this._isCatchMode();
+    const cell = this.cells && this.cells[this.currentCell];
+    const revealed = cell ? (Number(cell.hintLetters) || 0) : 0;
+    const complete = cell && revealed >= String(cell.primary || "").length && String(cell.primary || "").length > 0;
+    const l2Title = catchMode ? "Grab the Master Ball!" : (complete ? "Here's the full answer" : "Here's a little more");
     this._setAction("hinted", "💡",
-      level >= 2 ? (catchMode ? "Grab the Master Ball!" : "Here's the full answer") : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
+      level >= 2 ? l2Title : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
       this.queue.length > 1 ? "This one will come back later in the set." : "");
     this._paintHintBadge();
   }
