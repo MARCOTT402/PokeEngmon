@@ -21,6 +21,14 @@
   const RECOVER_GAP_MS = 30 * 1000;
   const TOAST_MSG = "Something went wrong — please try again.";
 
+  /* Safari 多指縮放會發 gesture*。只擋這類事件，不聽 touchmove，單指捲動不受影響。
+     iOS「輔助使用 > 縮放」與部分瀏覽器選單縮放無法由網頁關掉。 */
+  function blockGestureZoom(e) {
+    if (e.cancelable) e.preventDefault();
+  }
+  document.addEventListener("gesturestart", blockGestureZoom, { passive: false });
+  document.addEventListener("gesturechange", blockGestureZoom, { passive: false });
+
   const version = (() => {
     try {
       const s = document.currentScript && /** @type {HTMLScriptElement} */ (document.currentScript).src;

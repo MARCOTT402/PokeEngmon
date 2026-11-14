@@ -125,10 +125,10 @@
   background: #eef3ff;
   color: var(--blue);
 }
-/* 雙擊放大會擋操作。manipulation = 平移 + 雙指縮放，不含雙擊放大。
-   不設 user-scalable=no，避免把雙指縮放也關掉。 */
+/* 頁面手勢只留平移：pan-x pan-y 不含雙指縮放，也不含雙擊放大。
+   不寫 user-scalable=no。iOS 10 起會忽略它，也擋不住系統輔助使用的縮放。 */
 html {
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
 }
 button,
 a,
@@ -139,11 +139,11 @@ select,
 [role="tab"],
 .qk-key,
 .quiz-tool {
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
 }
 
 /* 選題頁本身不滾動，學校題單與 World Class 設定各自在畫面裡直向滾動。
-   pan-y pinch-zoom：直向滑動與雙指縮放保留，雙擊放大不在允許清單裡。 */
+   pan-y：單指直向捲動保留；雙指縮放與雙擊放大都不在允許清單裡。 */
 #view-quiz-setup.active {
   display: flex;
   flex-direction: column;
@@ -157,7 +157,7 @@ select,
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y pinch-zoom;
+  touch-action: pan-y;
   padding-bottom: 96px;
 }
 #view-quiz-setup #setup-school .topic-list {
@@ -166,7 +166,7 @@ select,
   max-height: none;
   overflow: visible;
   padding-bottom: 0;
-  touch-action: pan-y pinch-zoom;
+  touch-action: pan-y;
 }
 #view-quiz-setup .custom-q-count { margin-bottom: 12px; }
 
