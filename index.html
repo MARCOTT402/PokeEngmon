@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -139,6 +139,7 @@
   <script src="js/core/net.js?v=1.73.0" type="module"></script>
   <link rel="stylesheet" href="css/style.css?v=1.73.0">
   <link rel="stylesheet" href="css/incubator.css?v=1.73.0">
+  <link rel="stylesheet" href="css/ted.css?v=1.73.0">
 </head>
 <body>
   <!-- 首屏 Loading overlay：必須放喺 #app 外面（避免祖先 transform 令 fixed 定位失效） -->
@@ -724,12 +725,19 @@
     <!-- ============ 題型選擇（做題前） ============ -->
     <section id="view-quiz-setup" class="view">
       <h2 class="setup-title">📚 Choose Categories & Topics</h2>
-      <div class="setup-mini-row">
-        <button id="btn-topic-all" class="btn-mini">Select all</button>
-        <button id="btn-topic-none" class="btn-mini">Clear all</button>
+      <div class="setup-track" role="tablist" aria-label="題庫">
+        <button id="btn-track-school" class="setup-track-btn is-on" type="button" role="tab" aria-selected="true">學校基礎</button>
+        <button id="btn-track-world" class="setup-track-btn" type="button" role="tab" aria-selected="false">World Class</button>
       </div>
-      <div id="topic-list" class="topic-list"></div>
-      <div id="custom-q-count" class="custom-q-count"></div>
+      <div id="setup-school">
+        <div class="setup-mini-row">
+          <button id="btn-topic-all" class="btn-mini">Select all</button>
+          <button id="btn-topic-none" class="btn-mini">Clear all</button>
+        </div>
+        <div id="topic-list" class="topic-list"></div>
+        <div id="custom-q-count" class="custom-q-count"></div>
+      </div>
+      <div id="setup-world" hidden></div>
       <div class="hub-spacer"></div>
       <div class="hub-bar">
         <button id="btn-setup-start" class="btn-big btn-primary">▶ Start</button>
@@ -776,7 +784,10 @@
       </div>
       <div class="quiz-card" id="quiz-card">
         <div class="quiz-chip" id="quiz-chip"></div>
+        <p id="quiz-zh" class="quiz-zh" hidden></p>
+        <p id="quiz-talk" class="quiz-talk" hidden></p>
         <div class="quiz-sentence" id="quiz-sentence"></div>
+        <p id="quiz-note" class="quiz-note" hidden></p>
         <button id="btn-quiz-more" class="quiz-more-arrow" type="button" aria-label="More options" aria-expanded="false">▾</button>
       </div>
       <div class="quiz-card-drawer hidden" id="quiz-card-drawer">
@@ -1341,6 +1352,7 @@
   <script src="js/bag.js?v=1.73.0" type="module"></script>
   <script src="js/battle/landscape.js?v=1.73.0" type="module"></script>
   <script src="js/explain.js?v=1.73.0" type="module"></script>
+  <script src="js/ted.js?v=1.73.0" type="module"></script>
   <script src="js/quiz.js?v=1.73.0" type="module"></script>
   <script src="js/quiz/session.js?v=1.73.0" type="module"></script>
   <script src="js/quiz/hud.js?v=1.73.0" type="module"></script>

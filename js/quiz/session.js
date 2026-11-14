@@ -73,6 +73,46 @@ Object.assign(Quiz, {
     this._begin(set);
   },
 
+  /* World Class：有上限的 get_ted_session。失敗留在選題頁，不進入空白答題。 */
+  async startWorld() {
+    if (this._tedLoading) return;
+    this._tedLoading = true;
+    const btn = document.getElementById("btn-setup-start");
+    if (btn) { btn.disabled = true; btn.textContent = "載入中…"; }
+    if (window.App && App.setTedStatus) App.setTedStatus("loading");
+    try {
+      if (!globalThis.TedWorld) {
+        if (window.App && App.setTedStatus) App.setTedStatus("error", { error: "config", detail: "TedWorld unavailable" });
+        return;
+      }
+      const pref = TedWorld.loadPref();
+      const query = TedWorld.sessionQuery(pref);
+      const result = await TedWorld.fetchSession(query);
+      if (!result.ok) {
+        if (window.App && App.setTedStatus) App.setTedStatus("error", result);
+        return;
+      }
+      if (result.empty || !result.questions.length) {
+        if (window.App && App.setTedStatus) App.setTedStatus("empty");
+        return;
+      }
+      TedWorld.remember(result.questions);
+      if (window.App && App.setTedStatus) App.setTedStatus("");
+      this.mode = "ted";
+      this.gymMilestone = 0;
+      this._begin(result.questions);
+    } catch (e) {
+      if (window.App && App.setTedStatus) {
+        App.setTedStatus("error", { error: (e && e.kind) || "network", detail: e && e.message });
+      }
+    } finally {
+      this._tedLoading = false;
+      if (window.App && App._setupTrack === "world" && App._renderWorldSetup && document.getElementById("view-quiz-setup") && document.getElementById("view-quiz-setup").classList.contains("active")) {
+        App._renderWorldSetup();
+      }
+    }
+  },
+
   _begin(set) {
     /* 一 set 做完就係捕捉場景：而家開始背景載 three.js（Rule 103），做完題已經載好 */
     try { if (window.CaptureScene && CaptureScene.preload) CaptureScene.preload(1500); } catch (e) {}
@@ -97,6 +137,7 @@ Object.assign(Quiz, {
 
   /* ---------- 題目 key ---------- */
   _key(q) {
+    if (q && q.source === "ted" && q.id) return String(q.id);
     if (q.type === "word") return "w:" + String(q.word || "").toLowerCase();
     return `${q.no || ""}|${q.sentence || ""}|${q.answer || ""}`;
   },
@@ -120,6 +161,7 @@ Object.assign(Quiz, {
     if (!item) { this.finish(); return; }
     const q = item.q;
 
+    this.stopSpeech();
     this.answered = false;
     this.currentCell = 0;
     this._curQuestionStart = Date.now();
@@ -169,6 +211,7 @@ Object.assign(Quiz, {
 
     /* 圖片（句子題專用）*/
     this._renderImage(q);
+    this._renderTedMeta(q);
     this._preloadNext();
 
     /* 空格格數＝第一個答案寫法嘅字數 */
@@ -177,7 +220,11 @@ Object.assign(Quiz, {
 
     /* 題型 chip + 指示語 */
     const typeChip = document.getElementById("quiz-type-chip");
-    if (typeChip) typeChip.textContent = isWord ? "Picture word" : (q.topic || q.unit || q.category || "");
+    if (typeChip) {
+      typeChip.textContent = q && q.source === "ted"
+        ? ("World Class · " + (q.cefr || "") + " Lv." + (q.level || "")).replace(/\s+/g, " ").trim()
+        : (isWord ? "Picture word" : (q.topic || q.unit || q.category || ""));
+    }
     const prompt = document.getElementById("quiz-prompt");
     if (prompt) {
       prompt.textContent = item.requeued ? "Let's try this one again"
@@ -221,6 +268,7 @@ Object.assign(Quiz, {
 
   next() {
     if (!this.answered) return;
+    this.stopSpeech();
     this.queue.shift();
     this.answered = false;
     if (this.queue.length === 0) { this.finish(); return; }
@@ -228,6 +276,7 @@ Object.assign(Quiz, {
   },
 
   quit() {
+    this.stopSpeech();
     this.queue = [];
     this.set = [];
     this.cells = [];
@@ -252,6 +301,9 @@ Object.assign(Quiz, {
       };
     });
     const score = results.filter(r => r.correct).length;
+    if (this.mode === "ted" && globalThis.TedWorld && TedWorld.noteResult) {
+      try { TedWorld.noteResult(score, this.total); } catch (e) {}
+    }
     const data = {
       results,
       score,

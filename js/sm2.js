@@ -256,6 +256,7 @@ window.SM2 = (() => {
   function _cardId(q) {
     const mode = _currentMode;
     const prefix = mode === "standard" ? "" : mode + "\u0001";
+    if (q && q.source === "ted" && q.id) return `${prefix}ted\u0001${q.id}`;
     if (q && q.type === "word") return `${prefix}w\u0001${String(q.word).toLowerCase()}`;
     return `${prefix}${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
   }

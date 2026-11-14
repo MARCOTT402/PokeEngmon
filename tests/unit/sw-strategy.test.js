@@ -35,7 +35,7 @@ function load(host) {
     fetch: (...a) => fetchImpl(...a)
   };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "../..", "sw.js"), "utf8") + "\n;this.__swRoute = swRoute; this.__ver = SW_VERSION; this.__nf = networkFirst;", ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "../..", "sw.js"), "utf8") + "\n;this.__swRoute = swRoute; this.__ver = SW_VERSION; this.__nf = networkFirst; this.__evict = tedAudioEvictKeys; this.__keep = swCacheKeep; this.__tedCache = TED_AUDIO_CACHE; this.__max = TED_AUDIO_MAX;", ctx);
   return { ctx, store, setFetch: f => { fetchImpl = f; } };
 }
 
@@ -55,7 +55,14 @@ const R = (url, o = {}) => ({ url, method: o.method || "GET", mode: o.mode || "c
   ok(route(R(O + "Q_folder/grammar/grammar.csv")) === "network-first", "csv → network-first");
   ok(route(R(O + "sw.js")) === "skip", "sw.js skipped");
   ok(route(R("https://gcfoeaxxeerqixaistaf.supabase.co/rest/v1/user_account?select=*")) === "skip", "Supabase REST GET skipped");
+  ok(route(R("https://gcfoeaxxeerqixaistaf.supabase.co/rest/v1/rpc/get_ted_session", { method: "POST" })) === "skip", "TED RPC POST skipped");
   ok(route(R("https://gcfoeaxxeerqixaistaf.supabase.co/rest/v1/rpc/x", { method: "POST" })) === "skip", "POST skipped");
+  ok(route(R("https://gcfoeaxxeerqixaistaf.supabase.co/storage/v1/object/public/ted-audio/abc.mp3")) === "ted-audio", "public TED mp3 → ted-audio cache-first");
+  ok(route(R("https://gcfoeaxxeerqixaistaf.supabase.co/storage/v1/object/public/ted-audio/abc.mp3?token=secret")) === "skip", "TED mp3 with query is not cached");
+  ok(route(R("https://gcfoeaxxeerqixaistaf.supabase.co/storage/v1/object/public/ted-audio/note.txt")) === "skip", "non-mp3 TED storage skipped");
+  ok(P.ctx.__keep(P.ctx.__tedCache) && P.ctx.__keep("pokeengmon-" + V) && !P.ctx.__keep("pokeengmon-old"), "app update keeps TED audio cache and drops other caches");
+  ok(P.ctx.__evict(["a", "b", "c", "d"], 2).join() === "a,b", "TED cache evicts oldest keys past the cap");
+  ok(P.ctx.__evict(["a", "b"], P.ctx.__max).length === 0, "TED cache under the cap evicts nothing");
   ok(route(R("https://raw.githubusercontent.com/x/1.png", { destination: "image" })) === "cache-first", "CDN image → cache-first");
   ok(route(R("https://raw.githubusercontent.com/x/data.json")) === "skip", "CDN fetch() json (no destination) skipped");
   ok(route(R("chrome-extension://abc/x.js")) === "skip", "non-http skipped (Rule 10)");

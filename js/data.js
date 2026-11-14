@@ -576,6 +576,10 @@ async function deleteCustomQuestion(id) {
 
 /* 用 qid 搵題目（錯題回顧 / Power Up Zone / 日曆用） */
 function findQuestion(qid) {
+  if (qid && String(qid).indexOf("ted:") === 0 && globalThis.TedWorld && TedWorld.recall) {
+    const hit = TedWorld.recall(qid);
+    if (hit) return hit;
+  }
   const w = PICTURE_WORDS.find(x => x.id === qid);
   if (w) return w;
   const q = getAllQuestions().find(x => x.id === qid) || null;

@@ -81,14 +81,15 @@ Object.assign(Quiz, {
     if (!nx) return;
     setTimeout(() => {
       try {
+        const audio = window.CaptureScene && CaptureScene.audio;
         if (nx.type === "word") {
           if (nx.image) { const im = new Image(); im.decoding = "async"; im.src = nx.image; }
-          const audio = window.CaptureScene && CaptureScene.audio;
           if (audio && audio.preloadWord && typeof wordAudioURL === "function") audio.preloadWord(wordAudioURL(nx.word));
         } else if (nx.no && typeof findQuestionImage === "function") {
           findQuestionImage(nx.no).then(url => { if (url) { const im = new Image(); im.decoding = "async"; im.src = url; } }).catch(() => {});
         }
-      } catch (e) { /* 預載唔可以影響答題 */ }
+        if (nx.source === "ted" && nx.hasAudio && nx.audioUrl && audio && audio.preloadWord) audio.preloadWord(nx.audioUrl);
+      } catch (e) { /* 預載不可以影響答題 */ }
     }, 400);
   },
 
@@ -157,21 +158,101 @@ Object.assign(Quiz, {
     this._focusCurrent();
   },
 
-  /* 答完後 🔊：圖片單字題播錄音；句子題用系統語音讀出完整句子（跟 Voice 音量） */
+  /* 中文、講題、筆記只用 textContent。講題空白就不顯示，不補假標題。 */
+  _renderTedMeta(q) {
+    const zh = document.getElementById("quiz-zh");
+    const talk = document.getElementById("quiz-talk");
+    const note = document.getElementById("quiz-note");
+    const isTed = !!(q && q.source === "ted");
+    if (zh) {
+      const text = isTed ? String(q.zh || "").trim() : "";
+      zh.textContent = text;
+      zh.hidden = !text;
+    }
+    if (talk) {
+      const text = isTed ? String(q.talkTitle || "").trim() : "";
+      talk.textContent = text;
+      talk.hidden = !text;
+    }
+    if (note) {
+      note.textContent = "";
+      note.hidden = true;
+    }
+  },
+
+  _showCompletedNote(q) {
+    const note = document.getElementById("quiz-note");
+    if (!note) return;
+    const text = q && q.source === "ted" ? String(q.note || "").trim() : "";
+    note.textContent = text;
+    note.hidden = !text;
+  },
+
+  /* 把第一個 ___ 換成答案，得到完整英文句。 */
+  _fullSentence(q) {
+    if (!q) return "";
+    if (q.type === "word") return String(q.word || "").trim();
+    if (globalThis.TedWorld && TedWorld.fullSentence) return TedWorld.fullSentence(q);
+    const sentence = String(q.sentence || "");
+    const answer = String(q.answer || "");
+    if (sentence.indexOf("___") < 0) return sentence.trim();
+    return sentence.replace(/_{3,}/, answer).trim();
+  },
+
+  stopSpeech() {
+    this._speakToken = (this._speakToken || 0) + 1;
+    try {
+      const audio = window.CaptureScene && CaptureScene.audio;
+      if (audio && audio.stopVoice) audio.stopVoice();
+      else if (window.speechSynthesis) speechSynthesis.cancel();
+    } catch (e) {}
+  },
+
+  /* 答完後朗讀完整英文句。有預先產生的 MP3 就走 WebAudio，否則或失敗時改 en-US 系統語音。
+     句子題出題時不播提示音。 */
+  _speakCompleted(q) {
+    if (!q) return;
+    const token = (this._speakToken = (this._speakToken || 0) + 1);
+    const alive = () => token === this._speakToken;
+    if (q.type === "word") {
+      try {
+        const audio = window.CaptureScene && CaptureScene.audio;
+        if (audio && audio.stopVoice) audio.stopVoice();
+      } catch (e) {}
+      this.playWordAudio();
+      return;
+    }
+    const full = this._fullSentence(q);
+    if (!full) return;
+    const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : null;
+    const voice = prefs && prefs.voice != null ? Number(prefs.voice) : 1;
+    if (!(voice > 0)) {
+      this.stopSpeech();
+      return;
+    }
+    try { if (window.CaptureScene && CaptureScene.primeAudio) CaptureScene.primeAudio(); } catch (e) {}
+    const audio = window.CaptureScene && CaptureScene.audio;
+    const url = (q.hasAudio && q.audioUrl) ? q.audioUrl : "";
+    if (audio && audio.playSentence) {
+      audio.playSentence(url, full, { alive });
+      return;
+    }
+    try {
+      if (!window.speechSynthesis || !alive()) return;
+      const u = new SpeechSynthesisUtterance(full);
+      u.lang = "en-US";
+      u.rate = 0.9;
+      u.volume = Math.max(0, Math.min(1, voice));
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  },
+
+  /* 答完後 🔊：圖片單字題播錄音；句子題朗讀完整句子（MP3 優先）。 */
   pronounce() {
     const cur = (this.queue[0] && this.queue[0].q) || null;
     if (!cur) return;
     if (cur.type === "word") { this.playWordAudio(); return; }
-    try {
-      if (!window.speechSynthesis) return;
-      const full = String(cur.sentence || "").replace(/_{3,}/, String(cur.answer || "")).replace(/_{3,}/g, "");
-      const u = new SpeechSynthesisUtterance(full);
-      u.lang = "en-US";
-      u.rate = 0.9;
-      const prefs = (typeof loadAudioPrefs === "function") ? loadAudioPrefs() : null;
-      if (prefs && prefs.voice != null) u.volume = Math.max(0, Math.min(1, Number(prefs.voice)));
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    } catch (e) {}
+    this._speakCompleted(cur);
   }
 });

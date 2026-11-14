@@ -841,6 +841,113 @@ class CaptureAudio {
     }
   }
 
+  /* 停掉正在播的單字／句子，並取消系統語音。不疊句。 */
+  _cutVoiceGraph() {
+    if (this._wordSrc) {
+      try { this._wordSrc.stop(); } catch (e) {}
+      this._wordSrc = null;
+    }
+    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+  }
+  stopVoice() {
+    this._voiceToken = (this._voiceToken || 0) + 1;
+    this._cutVoiceGraph();
+  }
+
+  /* 完整英文句：先播預先產生的 MP3（decodeAudioData → wordBus），失敗或沒有檔案就改 en-US 系統語音。
+     opts.alive() 為 false 時放棄，避免快速換題後舊請求才回來。 */
+  playSentence(url, text, opts) {
+    opts = opts || {};
+    this.ensure();
+    this._voiceToken = (this._voiceToken || 0) + 1;
+    const token = this._voiceToken;
+    this._cutVoiceGraph();
+    const still = () => token === this._voiceToken && (typeof opts.alive !== "function" || opts.alive());
+    const spoken = String(text || "").trim();
+    if (!(this._voiceScale > 0) || !spoken) return;
+    const fallback = () => { if (still()) this._speakEn(spoken, still); };
+    const start = (buf) => {
+      if (!still()) return;
+      try {
+        if (!this.ctx) { fallback(); return; }
+        if (this.ctx.state === "suspended") {
+          const resumed = this.ctx.resume();
+          if (resumed && resumed.then) {
+            resumed.then(() => { if (still()) start(buf); }).catch(() => fallback());
+          } else fallback();
+          return;
+        }
+        this._cutVoiceGraph();
+        const g = this.ctx.createGain();
+        g.gain.value = 1;
+        g.connect(this.wordBus || this.ctx.destination);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(0);
+        this._wordSrc = src;
+        src.onended = () => {
+          try { src.disconnect(); g.disconnect(); } catch (e) {}
+          if (this._wordSrc === src) this._wordSrc = null;
+        };
+      } catch (e) { fallback(); }
+    };
+    if (!url || !this.ctx) { fallback(); return; }
+    if (!this._oneShotBufs) this._oneShotBufs = {};
+    const cached = this._oneShotBufs[url];
+    if (cached && cached.buf) { start(cached.buf); return; }
+    if (cached && cached.loading) {
+      cached.waiters.push(start);
+      cached.failers.push(fallback);
+      return;
+    }
+    const rec = { buf: null, loading: true, waiters: [start], failers: [fallback] };
+    this._oneShotBufs[url] = rec;
+    this._loadOneShot(url, rec);
+  }
+
+  /* 系統語音：優先 en-US。still() 在真正 speak 前再查一次，避免過期句。 */
+  _speakEn(text, still) {
+    try {
+      if (!("speechSynthesis" in window)) return false;
+      const synth = window.speechSynthesis;
+      let said = false;
+      const speak = () => {
+        if (said) return;
+        if (typeof still === "function" && !still()) return;
+        said = true;
+        try {
+          const voices = synth.getVoices() || [];
+          const u = new SpeechSynthesisUtterance(text);
+          const enUS = voices.find(v => /^en[-_]US$/i.test(v.lang))
+            || voices.find(v => /^en[-_]/i.test(v.lang))
+            || null;
+          if (enUS) u.voice = enUS;
+          u.lang = "en-US";
+          u.rate = 0.9;
+          u.pitch = 1;
+          u.volume = Math.max(0, Math.min(1, this._voiceScale == null ? 1 : this._voiceScale));
+          synth.cancel();
+          synth.speak(u);
+        } catch (e) {}
+      };
+      if ((synth.getVoices() || []).length === 0 && typeof synth.addEventListener === "function") {
+        const onLoaded = () => { synth.removeEventListener("voiceschanged", onLoaded); speak(); };
+        synth.addEventListener("voiceschanged", onLoaded);
+        setTimeout(() => speak(), 1500);
+      } else if ((synth.getVoices() || []).length === 0) {
+        const onLoaded = () => { synth.onvoiceschanged = null; speak(); };
+        synth.onvoiceschanged = onLoaded;
+        setTimeout(() => {
+          if (synth.onvoiceschanged === onLoaded) { synth.onvoiceschanged = null; speak(); }
+        }, 1500);
+      } else {
+        speak();
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
   /* 圖片單字題：無限重播，重播會先停上一段（避免疊聲）。
      onFail 會喺檔案載入／解碼失敗時叫（例如語音檔仲未生成）。
      檔案缺失時先用 speechSynthesis 頂住（fallback，好過靜音），
