@@ -13,7 +13,7 @@
 | 型別檢查（`npm run typecheck` = `tsc` noEmit；classic script 共用 global；逐檔 `// @ts-check`，清單只准加；CI release 前跑；Rule 109） | `tsconfig.json`, `types/globals.d.ts`（`window.X` 模組＋`module.exports` 檔；頂層已有 `const X` 嘅唔可以再 declare，TS2451）, `types/ts-check-files.json`, `tests/unit/ts-check-ratchet.test.js`, 總計劃 P1.1 |
 | z-index 層級 token（全域層 `--z-*`，數值同註解集中喺 `:root`；Rule 110） | `css/style.css`（`:root`）, `tests/unit/z-tokens.test.js`, `tools/audit/check-z-tokens.mjs`（同 git 版本逐條比較） |
 | 題庫 / 答題 / feedback（Quiz v2：分段進度、combo、底部回饋、App 鍵盤、≥600px 全螢幕） | `js/quiz.js`（狀態）＋`js/quiz/*.js`（`session`、`hud`、`cells`、`keyboard`、`hints`、`catch`、`check`、`media`、`dialogs`；Rule 116）, `css/style.css`（尾段「Quiz v2」）, `Q_folder/` |
-| World Class（TED）：選題頁分頁、`get_ted_session` 有上限取題、整題 L1 後一次顯示全部答案框、答完朗讀整句、公開 MP3 獨立快取 | `js/ted.js`, `css/ted.css`, `js/quiz/session.js`（`startWorld`）, `js/quiz/hints.js`, `js/quiz/media.js`, `js/audio.js`（`playSentence`）, `sw.js`（`ted-audio`） |
+| World Class（TED）：選題頁分頁、容易／普通／困難（只影響預填、格寬同 SM-2 卡，唔篩題）、`get_ted_session` 有上限取題、整題 L1 後一次顯示全部答案框、答完朗讀整句、公開 MP3 獨立快取 | `js/ted.js`, `css/ted.css`, `js/sm2.js`（`setTedPlay`）, `js/app/setup-custom.js`, `js/quiz/session.js`（`startWorld`）, `js/quiz/cells.js`, `js/quiz/hints.js`, `js/quiz/media.js`, `js/audio.js`（`playSentence`）, `sw.js`（`ted-audio`） |
 | 結算畫面（分數圈／stat／錯題預覽） | `js/app/settlement.js` `_renderSettlement`, `css/style.css`（「結算 v2」） |
 | 答題 UI prototype／計劃 | `tools/prototype-quiz.html`, `.trae/documents/plan-quiz-ux-20261105.md` |
 | 戰鬥特效 prototype（兩邊用 App 真正嘅戰鬥 HTML＋`css/style.css`＋`PokeSprite`＋`MoveAnim`；右邊背景同精靈改由 PixiJS 7 畫，命中先加 hit-stop、白閃、震屏、粒子、傷害數字、HP 殘影、bloom、暴擊推近；總計劃 P1.4，唔部署） | `tools/prototype-battle-fx.html`（要經 http：本地 8080 開 `/tools/prototype-battle-fx.html`；PixiJS／pixi-filters 由 jsDelivr 載入） |

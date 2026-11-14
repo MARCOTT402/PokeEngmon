@@ -50,7 +50,7 @@ const TedWorld = {
     const level = this.clampLevel(raw && raw.level);
     const ability = this.clampLevel(raw && raw.ability != null ? raw.ability : level);
     const mode = raw && (raw.mode === "band" || raw.mode === "adaptive" || raw.mode === "level") ? raw.mode : "level";
-    return { level, ability, mode, size: this.clampSize(raw && raw.size) };
+    return { level, ability, mode, size: this.clampSize(raw && raw.size), diff: this.normalizeDiff(raw && raw.diff) };
   },
 
   savePref(pref) {
@@ -59,13 +59,25 @@ const TedWorld = {
       level: this.clampLevel(pref && pref.level != null ? pref.level : prev.level),
       ability: this.clampLevel(pref && pref.ability != null ? pref.ability : prev.ability),
       mode: pref && (pref.mode === "band" || pref.mode === "adaptive" || pref.mode === "level") ? pref.mode : prev.mode,
-      size: this.clampSize(pref && pref.size != null ? pref.size : prev.size)
+      size: this.clampSize(pref && pref.size != null ? pref.size : prev.size),
+      diff: this.normalizeDiff(pref && pref.diff != null ? pref.diff : prev.diff)
     };
     try { localStorage.setItem(TED_PREF_KEY, JSON.stringify(next)); } catch (e) {}
     return next;
   },
 
-  /* 一組題的等級範圍與所選題數。lim 只會是 10–100 的十的倍數。 */
+  normalizeDiff(diff) {
+    return diff === "easy" || diff === "hard" ? diff : "normal";
+  },
+
+  /* 容易：3 個字母以上預填前 2 個；1 或 2 個字母只預填第 1 個。不當提示。 */
+  easyLead(word) {
+    const s = String(word || "");
+    if (!s) return "";
+    return s.length <= 2 ? s.slice(0, 1) : s.slice(0, 2);
+  },
+
+  /* 一組題的等級範圍與所選題數。lim 只會是 10–100 的十的倍數。難度不進 RPC。 */
   sessionQuery(pref) {
     const p = pref || this.loadPref();
     const lv = this.clampLevel(p.level);

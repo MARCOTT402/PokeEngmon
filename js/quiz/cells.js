@@ -59,7 +59,9 @@ Object.assign(Quiz, {
 
     /* 格寬＝答案文字實際寬度，令用戶可以從寬度推算要填幾長 */
     this.cells.forEach(c => {
-      c.baseWidth = c.empty ? 92 : Math.max(40, Math.ceil(this._measureText(c.primary)) + 20);
+      c.baseWidth = this._isHardTed()
+        ? this._oneLetterWidth()
+        : (c.empty ? 92 : Math.max(40, Math.ceil(this._measureText(c.primary)) + 20));
       this._syncCellWidth(c, "");
     });
   },
@@ -79,14 +81,52 @@ Object.assign(Quiz, {
     return w;
   },
 
-  /* 格寬：最少要容納已輸入文字；超出答案長度時自動加寬 */
+  _isHardTed() {
+    return this.mode === "ted" && this._tedPlay === "hard";
+  },
+
+  /* 困難：所有空格一開始同闊，只夠一個字母，不按答案長短分開。 */
+  _oneLetterWidth() {
+    return Math.max(40, Math.ceil(this._measureText("n")) + 20);
+  },
+
+  /* 容易的開頭字母。3 個字母以上兩個；1 或 2 個字母只給第一個。 */
+  _easyLead(word) {
+    if (globalThis.TedWorld && TedWorld.easyLead) return TedWorld.easyLead(word);
+    const s = String(word || "");
+    if (!s) return "";
+    return s.length <= 2 ? s.slice(0, 1) : s.slice(0, 2);
+  },
+
+  /* 預填開頭，不觸發答對、不計提示。 */
+  _seedEasyCells() {
+    (this.cells || []).forEach(c => {
+      if (!c || c.empty) return;
+      const lead = this._easyLead(c.primary);
+      c.value = lead;
+      if (c.input) c.input.value = lead;
+      if (c.textEl) c.textEl.textContent = lead;
+      c.ghost = "";
+      this._applyGhost(c);
+      this._syncCellWidth(c, lead);
+    });
+    const a = this.queue && this.queue[0] ? this._answerFor(this.queue[0].q) : null;
+    if (a) a.hintCount = 0;
+  },
+
+  /* 格寬：最少要容納已輸入文字；超出答案長度時自動加寬。
+     困難模式只跟已輸入文字，提示 ghost 不參與闊度。 */
   _syncCellWidth(c, typed) {
     if (!c || !c.cellEl) return;
-    const text = (typed == null ? (c.value || "") : String(typed)) + (c.ghost || "");
+    const typedStr = typed == null ? (c.value || "") : String(typed);
+    const hard = this._isHardTed();
+    const text = hard ? typedStr : typedStr + (c.ghost || "");
     const pad = 20;
     const need = text ? Math.ceil(this._measureText(text)) + pad : 0;
-    const min = c.empty ? 92 : 40;
-    const target = Math.max(min, c.baseWidth || 0, need);
+    const one = hard ? this._oneLetterWidth() : 0;
+    const min = hard ? one : (c.empty ? 92 : 40);
+    const base = hard ? one : (c.baseWidth || 0);
+    const target = Math.max(min, base, need);
     c.cellEl.style.width = target + "px";
   },
 

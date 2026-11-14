@@ -103,6 +103,11 @@
   padding: 0;
 }
 .ted-lv.is-dim { opacity: .4; }
+.ted-diffs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
 .ted-sizes {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

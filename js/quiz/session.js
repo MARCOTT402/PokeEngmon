@@ -9,6 +9,8 @@ Object.assign(Quiz, {
   /* topics: 揀咗嘅題型（空陣列＝全部）；圖片單字題會混合抽 */
   start(topics) {
     this.mode = null;
+    this._tedPlay = "normal";
+    try { if (window.SM2 && SM2.setTedPlay) SM2.setTedPlay("normal"); } catch (e) {}
     this.gymMilestone = 0;
     const set = drawMixedSet(GAME_CONFIG.SET_SIZE, topics);
     /* 題庫載唔到（網絡問題）→ 話用戶知＋Retry，唔好扮「All caught up」（Rule 94） */
@@ -58,6 +60,8 @@ Object.assign(Quiz, {
 
   /* Gym：全題庫隨機 10 題 */
   startGym(milestone) {
+    this._tedPlay = "normal";
+    try { if (window.SM2 && SM2.setTedPlay) SM2.setTedPlay("normal"); } catch (e) {}
     const all = (typeof getAllQuestions === "function" ? getAllQuestions() : []).slice();
     for (let i = all.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -101,6 +105,8 @@ Object.assign(Quiz, {
       TedWorld.remember(result.questions);
       if (window.App && App.setTedStatus) App.setTedStatus("");
       this.mode = "ted";
+      this._tedPlay = TedWorld.normalizeDiff(pref.diff);
+      try { if (window.SM2 && SM2.setTedPlay) SM2.setTedPlay(this._tedPlay); } catch (e) {}
       this.gymMilestone = 0;
       this._begin(result.questions);
     } catch (e) {
@@ -185,7 +191,10 @@ Object.assign(Quiz, {
     const cardEl = document.getElementById("quiz-card");
     /* 圖片題版面（圖片自動縮放，輸入格永遠喺畫面內） */
     const viewEl = document.getElementById("view-quiz");
-    if (viewEl) viewEl.classList.toggle("is-word", isWord);
+    if (viewEl) {
+      viewEl.classList.toggle("is-word", isWord);
+      viewEl.classList.toggle("ted-hard", !!(q && q.source === "ted" && this._tedPlay === "hard"));
+    }
     const imageBox = document.getElementById("quiz-image-box");
 
     /* 圖片題：清走上一題殘留嘅句子圖 */
@@ -219,6 +228,7 @@ Object.assign(Quiz, {
     /* 空格格數＝第一個答案寫法嘅字數 */
     this.cells = this._buildCells(q);
     this._renderCells(q);
+    if (q && q.source === "ted" && this._tedPlay === "easy" && this._seedEasyCells) this._seedEasyCells();
 
     /* 題型 chip + 指示語 */
     const typeChip = document.getElementById("quiz-type-chip");

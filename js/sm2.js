@@ -83,13 +83,20 @@ window.SM2 = (() => {
   const CHECK_FAIL_Q  = 3;   // ✓ 錯誤（只扣 EF，唔寫 history）
   const HINT_Q        = 0;   // 用提示答對
 
-  /* 當前模式（標準模式唔加 card_id 前綴，向後兼容）*/
+  /* 當前曲線模式（標準模式唔加 card_id 前綴，向後兼容）*/
   let _currentMode = "standard";
+  /* World Class 作答難度。normal 不加後綴，舊 TED 卡維持普通。easy／hard 各自一張卡。 */
+  let _tedPlay = "normal";
 
   function getMode() { return _currentMode; }
   function setMode(mode) {
     if (SM2_PROFILES[mode]) _currentMode = mode;
   }
+  function setTedPlay(play) {
+    _tedPlay = play === "easy" || play === "hard" ? play : "normal";
+    return _tedPlay;
+  }
+  function getTedPlay() { return _tedPlay; }
   function profile() { return SM2_PROFILES[_currentMode] || SM2_PROFILES.standard; }
 
   /* ============ 小工具 ============ */
@@ -256,7 +263,9 @@ window.SM2 = (() => {
   function _cardId(q) {
     const mode = _currentMode;
     const prefix = mode === "standard" ? "" : mode + "\u0001";
-    if (q && q.source === "ted" && q.id) return `${prefix}ted\u0001${q.id}`;
+    const tedPlay = q && q.source === "ted" && (_tedPlay === "easy" || _tedPlay === "hard")
+      ? "\u0001" + _tedPlay : "";
+    if (q && q.source === "ted" && q.id) return `${prefix}ted\u0001${q.id}${tedPlay}`;
     if (q && q.type === "word") return `${prefix}w\u0001${String(q.word).toLowerCase()}`;
     return `${prefix}${q.topic}\u0001${q.sentence}\u0001${q.answer}`;
   }
@@ -496,7 +505,7 @@ window.SM2 = (() => {
   /* ============ Public API ============ */
   return {
     /* 模式 */
-    getMode, setMode, SM2_PROFILES, profile,
+    getMode, setMode, getTedPlay, setTedPlay, SM2_PROFILES, profile,
     /* 演算法（純函數，方便測試）*/
     efForClean, efForHint, efForCheckFail, efByFormula, intervalForClean,
     applyClean, applyJunior, applyHint, applyCheckFail,

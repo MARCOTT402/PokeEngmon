@@ -679,7 +679,8 @@ img.sprite, .dex-cell img, .gacha-pokemon img, .hero-sprite, .evo-node img { ima
   /* 文字同浮標都貼左邊開始（唔跟句子嘅居中對齊） */
   text-align: left;
   line-height: 1.3;
-  /* 寬度由 JS 按答案文字實際寬度設定；打多過答案時會自動加寬 */
+  /* 寬度由 JS 按答案文字實際寬度設定；打多過答案時會自動加寬。
+     困難模式改由 JS 只跟已輸入字數，唔好喺 CSS 設會洩露答案長度的 min-width。 */
 }
 .qb-text {
   display: inline;

@@ -300,6 +300,33 @@ Object.assign(App, {
     card.appendChild(levels);
     panel.appendChild(card);
 
+    const diffCard = document.createElement("div");
+    diffCard.className = "ted-card";
+    const diffLabel = document.createElement("div");
+    diffLabel.className = "ted-card-head";
+    const diffTitle = document.createElement("b");
+    diffTitle.textContent = "作答難度";
+    diffLabel.appendChild(diffTitle);
+    diffCard.appendChild(diffLabel);
+    const diffGrid = document.createElement("div");
+    diffGrid.className = "ted-diffs";
+    diffGrid.setAttribute("role", "group");
+    diffGrid.setAttribute("aria-label", "作答難度");
+    [["easy", "容易"], ["normal", "普通"], ["hard", "困難"]].forEach(([id, label]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ted-size" + (pref.diff === id ? " is-on" : "");
+      b.textContent = label;
+      b.setAttribute("aria-pressed", pref.diff === id ? "true" : "false");
+      b.onclick = () => {
+        TedWorld.savePref({ level: pref.level, ability: pref.ability, mode: pref.mode, size: pref.size, diff: id });
+        this._renderWorldSetup();
+      };
+      diffGrid.appendChild(b);
+    });
+    diffCard.appendChild(diffGrid);
+    panel.appendChild(diffCard);
+
     const sizeCard = document.createElement("div");
     sizeCard.className = "ted-card";
     const sizeLabel = document.createElement("div");
@@ -331,7 +358,8 @@ Object.assign(App, {
     note.textContent = "World Class · " + (pref.mode === "adaptive"
       ? ("自動 Lv." + q.min_lv + "–" + q.max_lv)
       : (pref.mode === "band" ? (shownBand.cefr + " Lv." + q.min_lv + "–" + q.max_lv) : (shownBand.cefr + " Lv." + pref.level)))
-      + " · " + q.lim + " 題 · 答完後自動朗讀完整英文句子";
+      + " · " + q.lim + " 題 · " + (pref.diff === "easy" ? "容易" : pref.diff === "hard" ? "困難" : "普通")
+      + " · 答完後自動朗讀完整英文句子";
     panel.appendChild(note);
 
     const status = document.createElement("p");
