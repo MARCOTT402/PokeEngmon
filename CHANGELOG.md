@@ -1,3 +1,10 @@
+## [1.74.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.1...v1.74.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* stop the page from scrolling the red frame ([ba53588](https://github.com/MARCOTT402/PokeEngmon/commit/ba5358834ed16b5d8c8fad86f4f479d6f6ce8270))
+
 ## [1.74.1](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.0...v1.74.1) (2026-11-14)
 
 
