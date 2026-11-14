@@ -33,16 +33,13 @@ Object.assign(Quiz, {
     return ghost;
   },
 
-  /* 目前焦點那一格的提示徽章。捕捉模式仍看整題 hintCount。 */
+  /* 整題共用的提示進度。換格不會降級。捕捉模式第二次後停用。 */
   _focusedHintBadge() {
+    const a = this._answerFor(this.queue[0] && this.queue[0].q);
+    const level = Number(a && a.hintCount) || 0;
     if (this._isCatchMode()) {
-      const a = this._answerFor(this.queue[0] && this.queue[0].q);
-      const level = Number(a && a.hintCount) || 0;
       return { level, disabled: level >= 2, text: level >= 2 ? "2/2" : level === 1 ? "1/2" : "" };
     }
-    const c = this.cells && this.cells[this.currentCell];
-    const level = c ? (Number(c.hintLevel) || 0) : 0;
-    /* L2 之後按鈕保持可按。捕捉模式仍在第二次後停用。 */
     return { level, disabled: false, text: level >= 2 ? "2/2" : level === 1 ? "1/2" : "" };
   },
 
@@ -93,30 +90,41 @@ Object.assign(Quiz, {
     this._focusCurrent();
   },
 
-  /* L2：每次再揭一批尚未顯示的字母（步長同 L1 的 _hintCount）。
-     不清除已打對或已揭開的部分。全部揭完之後再按只維持現況。 */
-  _showL2(c) {
-    c.hintLevel = 2;
-    this._bumpQuestionHint(2);
+  /* 已輸入若是正確前綴，ghost 只接剩餘字母，拼起來就是完整答案。
+     不是前綴就在原文字後面顯示完整答案。不改 input，已答對的格子保持原樣。 */
+  _fullAnswerGhost(c) {
     const ans = String(c.primary || "");
+    if (!ans || c.green || c.empty) return "";
     const normAns = this._norm(ans);
     const val = this._norm(c.value);
     const isPrefix = !!val && val.length <= normAns.length && normAns.indexOf(val) === 0;
-    if (val && !isPrefix) this._clearCell(c);
-    const prefixLen = isPrefix ? val.length : 0;
-    const shown = Math.max(prefixLen, Number(c.hintLetters) || 0);
-    const next = shown >= ans.length
-      ? ans.length
-      : Math.min(ans.length, shown + this._hintCount(ans.length - shown));
-    c.hintLetters = next;
-    if (this._isJunior()) {
-      c.ghost = this._juniorGhost(c, prefixLen, next);
-    } else {
-      c.ghost = next > prefixLen ? ans.slice(prefixLen, next) : "";
-    }
-    this._applyGhost(c);
-    this._syncCellWidth(c, c.value);
+    if (!val) return ans;
+    if (isPrefix) return val.length >= ans.length ? "" : ans.slice(val.length);
+    return ans;
+  },
+
+  /* L2：同一題的每一個答案框同時顯示完整答案。只是暫時的 ghost，不寫入作答。 */
+  _showFullL2() {
+    this._bumpQuestionHint(2);
+    (this.cells || []).forEach(c => {
+      if (!c || c.empty) return;
+      c.hintLevel = 2;
+      c.hintLetters = String(c.primary || "").length;
+      c.ghost = this._fullAnswerGhost(c);
+      this._applyGhost(c);
+      this._syncCellWidth(c, c.value);
+    });
     this._focusCurrent();
+  },
+
+  /* 任何輸入都收起所有格子上的提示。進度（hintCount）留在題上。 */
+  _dismissVisibleHints() {
+    (this.cells || []).forEach(c => {
+      if (!c || !c.ghost) return;
+      c.ghost = "";
+      this._applyGhost(c);
+      this._syncCellWidth(c, c.value);
+    });
   },
 
   hint() {
@@ -143,20 +151,18 @@ Object.assign(Quiz, {
 
     if (c.empty) { this._vibrate(20); return; }
 
-    /* 每一格自己的 L1／L2。這一格已到 L1，再按才升到 L2。 */
-    const level = Number(c.hintLevel) || 0;
+    /* 整題進度：第 1 下是目前這格的 L1；第 2 下起每次都是所有答案框的完整 L2。 */
+    const level = Number(a.hintCount) || 0;
     if (level >= 1) {
-      this._showL2(c);
+      this._showFullL2();
       this._hintUI(2);
       return;
     }
 
-    /* 第 1 次：L1；已輸入不是正確前綴就先清空 */
     const ans = this._norm(c.primary);
     const val = this._norm(c.value);
-    const isPrefix = val.length <= ans.length && ans.indexOf(val) === 0;
-    if (val && !isPrefix) this._clearCell(c);
-    this._showL1(c, val && isPrefix ? val.length : 0);
+    const isPrefix = !!val && val.length <= ans.length && ans.indexOf(val) === 0;
+    this._showL1(c, isPrefix ? val.length : 0);
     this._hintUI(1);
   },
 
@@ -166,10 +172,7 @@ Object.assign(Quiz, {
     this.cells.forEach(x => { if (x.cellEl) x.cellEl.classList.remove("badc"); });
     this._setCombo(0);
     const catchMode = this._isCatchMode();
-    const cell = this.cells && this.cells[this.currentCell];
-    const revealed = cell ? (Number(cell.hintLetters) || 0) : 0;
-    const complete = cell && revealed >= String(cell.primary || "").length && String(cell.primary || "").length > 0;
-    const l2Title = catchMode ? "Grab the Master Ball!" : (complete ? "Here's the full answer" : "Here's a little more");
+    const l2Title = catchMode ? "Grab the Master Ball!" : "Here's the full answer";
     this._setAction("hinted", "💡",
       level >= 2 ? l2Title : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
       this.queue.length > 1 ? "This one will come back later in the set." : "");
