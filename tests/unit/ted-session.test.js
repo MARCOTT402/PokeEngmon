@@ -49,18 +49,31 @@ test("missing audio and empty talk title are not invented", () => {
 
 test("sessionQuery stays inside one level, one band, or a small adaptive window", () => {
   const plain = (v) => JSON.parse(JSON.stringify(v));
-  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 4, ability: 4, mode: "level" })), {
+  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 4, ability: 4, mode: "level", size: 10 })), {
     min_lv: 4, max_lv: 4, lim: 10, prefer_audio: true
   });
-  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 8, ability: 3, mode: "band" })), {
-    min_lv: 6, max_lv: 10, lim: 10, prefer_audio: true
+  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 8, ability: 3, mode: "band", size: 50 })), {
+    min_lv: 6, max_lv: 10, lim: 50, prefer_audio: true
   });
-  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 1, ability: 1, mode: "adaptive" })), {
-    min_lv: 1, max_lv: 2, lim: 10, prefer_audio: true
+  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 1, ability: 1, mode: "adaptive", size: 100 })), {
+    min_lv: 1, max_lv: 2, lim: 100, prefer_audio: true
   });
-  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 30, ability: 30, mode: "adaptive" })), {
-    min_lv: 29, max_lv: 30, lim: 10, prefer_audio: true
+  assert.deepEqual(plain(TedWorld.sessionQuery({ level: 30, ability: 30, mode: "adaptive", size: 20 })), {
+    min_lv: 29, max_lv: 30, lim: 20, prefer_audio: true
   });
+});
+
+test("size selection clamps to 10, 20, ... 100", () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(TedWorld.SIZES)), [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  assert.equal(TedWorld.clampSize(10), 10);
+  assert.equal(TedWorld.clampSize(50), 50);
+  assert.equal(TedWorld.clampSize(100), 100);
+  assert.equal(TedWorld.clampSize(0), 10);
+  assert.equal(TedWorld.clampSize(7), 10);
+  assert.equal(TedWorld.clampSize(15), 20);
+  assert.equal(TedWorld.clampSize(101), 100);
+  assert.equal(TedWorld.clampSize("nope"), 10);
+  assert.equal(TedWorld.clampSize(undefined), 10);
 });
 
 test("fetchSession reports HTTP errors and does not return rows", async () => {
@@ -86,7 +99,27 @@ test("fetchSession reports offline without throwing", async () => {
   assert.match(result.detail, /offline/);
 });
 
-test("fetchSession maps usable rows, drops rows without a cloze, and caps lim", async () => {
+function tedRow(i) {
+  return { id: i, level: 2, cefr: "A1", sentence: "A ___ b.", answer: "x" + i, accept: [], zh: "甲", has_audio: false };
+}
+
+test("fetchSession sends 10, 50 and 100 and keeps that session length", async () => {
+  for (const lim of [10, 50, 100]) {
+    let sent = null;
+    const result = await TedWorld.fetchSession({ min_lv: 1, max_lv: 5, lim }, async (body) => {
+      sent = body;
+      return { ok: true, json: async () => Array.from({ length: lim }, (_, i) => tedRow(i + 1)) };
+    });
+    assert.equal(sent.lim, lim);
+    assert.equal(result.ok, true);
+    assert.equal(result.empty, false);
+    assert.equal(result.questions.length, lim);
+    assert.equal(result.expected, lim);
+    assert.equal(result.got, lim);
+  }
+});
+
+test("a short RPC payload does not become a shorter session", async () => {
   let sent = null;
   const result = await TedWorld.fetchSession({ min_lv: 1, max_lv: 5, lim: 500 }, async (body) => {
     sent = body;
@@ -98,14 +131,13 @@ test("fetchSession maps usable rows, drops rows without a cloze, and caps lim", 
       ]
     };
   });
-  assert.equal(sent.lim, 30);
+  assert.equal(sent.lim, 100);
   assert.equal(sent.prefer_audio, true);
-  assert.equal(sent.min_lv, 1);
-  assert.equal(result.ok, true);
-  assert.equal(result.empty, false);
-  assert.equal(result.questions.length, 1);
-  assert.equal(result.questions[0].id, "ted:1");
-  assert.equal(result.questions[0].zh, "甲");
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "short");
+  assert.equal(result.expected, 100);
+  assert.equal(result.got, 1);
+  assert.equal(result.questions.length, 0);
 });
 
 test("empty RPC payload is an empty session, not a hang", async () => {

@@ -49,3 +49,34 @@ test("anonymous get_ted_session and one public MP3", async (t) => {
   assert.match(audioRes.headers.get("content-type") || "", /audio\/mpeg/i);
   if (audioRes.body && audioRes.body.cancel) await audioRes.body.cancel();
 });
+
+test("get_ted_session returns exactly 10, 50 and 100 rows", async (t) => {
+  assert.ok(url && anonKey, "supabase config missing");
+  for (const lim of [10, 50, 100]) {
+    let res;
+    try {
+      res = await fetch(url + "/rest/v1/rpc/get_ted_session", {
+        method: "POST",
+        headers: {
+          apikey: anonKey,
+          Authorization: "Bearer " + anonKey,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ min_lv: 1, max_lv: 1, lim, prefer_audio: true }),
+        signal: AbortSignal.timeout(25000)
+      });
+    } catch (e) {
+      t.skip("network unavailable: " + (e && e.message));
+      return;
+    }
+    const text = await res.text();
+    assert.equal(res.status, 200, text.slice(0, 200));
+    const rows = JSON.parse(text);
+    assert.equal(rows.length, lim, "lim " + lim + " returned " + rows.length);
+    rows.forEach((row) => {
+      assert.equal(row.level, 1);
+      assert.ok(String(row.sentence || "").includes("___"));
+    });
+  }
+});

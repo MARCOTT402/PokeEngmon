@@ -209,6 +209,13 @@ Object.assign(App, {
       if (retry) retry.hidden = true;
       return;
     }
+    if (kind === "short") {
+      const got = result && result.got != null ? result.got : 0;
+      const expected = result && result.expected != null ? result.expected : "";
+      el.textContent = "只取得 " + got + " 題，少於所選的 " + expected + " 題。沒有開始作答。請再試一次，或改選較少題數。";
+      if (retry) retry.hidden = false;
+      return;
+    }
     const code = result && result.error ? String(result.error) : "network";
     const detail = result && result.detail ? String(result.detail) : "";
     el.textContent = "無法載入題目（" + code + "）。請檢查網路後再試。" + (detail ? "\n" + detail : "");
@@ -292,6 +299,31 @@ Object.assign(App, {
     }
     card.appendChild(levels);
     panel.appendChild(card);
+
+    const sizeCard = document.createElement("div");
+    sizeCard.className = "ted-card";
+    const sizeLabel = document.createElement("div");
+    sizeLabel.className = "ted-card-head";
+    const sizeTitle = document.createElement("b");
+    sizeTitle.textContent = "每次題數（10–100）";
+    sizeCard.appendChild(sizeLabel);
+    sizeLabel.appendChild(sizeTitle);
+    const sizeGrid = document.createElement("div");
+    sizeGrid.className = "ted-sizes";
+    TedWorld.SIZES.forEach((n) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ted-size" + (pref.size === n ? " is-on" : "");
+      b.textContent = String(n);
+      b.setAttribute("aria-pressed", pref.size === n ? "true" : "false");
+      b.onclick = () => {
+        TedWorld.savePref({ level: pref.level, ability: pref.ability, mode: pref.mode, size: n });
+        this._renderWorldSetup();
+      };
+      sizeGrid.appendChild(b);
+    });
+    sizeCard.appendChild(sizeGrid);
+    panel.appendChild(sizeCard);
 
     const note = document.createElement("p");
     note.className = "ted-note";

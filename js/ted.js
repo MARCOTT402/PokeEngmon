@@ -18,11 +18,20 @@ const TED_BANDS = [
 
 const TED_PREF_KEY = "pokeengmon_ted_pref_v1";
 const TED_RECALL_KEY = "pokeengmon_ted_recent_v1";
-const TED_RECALL_MAX = 40;
-const TED_LIM_CAP = 30;
+const TED_RECALL_MAX = 100;
+const TED_SIZES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
 const TedWorld = {
   BANDS: TED_BANDS,
+  SIZES: TED_SIZES,
+
+  /* 10、20、…、100。非法值收斂到這個刻度，不超出伺服器 LIMIT 100。 */
+  clampSize(size) {
+    const n = Math.round(Number(size));
+    if (!Number.isFinite(n)) return 10;
+    const snapped = Math.round(n / 10) * 10;
+    return Math.min(100, Math.max(10, snapped));
+  },
 
   clampLevel(level) {
     const n = Math.round(Number(level));
@@ -41,20 +50,22 @@ const TedWorld = {
     const level = this.clampLevel(raw && raw.level);
     const ability = this.clampLevel(raw && raw.ability != null ? raw.ability : level);
     const mode = raw && (raw.mode === "band" || raw.mode === "adaptive" || raw.mode === "level") ? raw.mode : "level";
-    return { level, ability, mode };
+    return { level, ability, mode, size: this.clampSize(raw && raw.size) };
   },
 
   savePref(pref) {
+    const prev = this.loadPref();
     const next = {
-      level: this.clampLevel(pref && pref.level),
-      ability: this.clampLevel(pref && pref.ability != null ? pref.ability : (pref && pref.level)),
-      mode: pref && (pref.mode === "band" || pref.mode === "adaptive" || pref.mode === "level") ? pref.mode : "level"
+      level: this.clampLevel(pref && pref.level != null ? pref.level : prev.level),
+      ability: this.clampLevel(pref && pref.ability != null ? pref.ability : prev.ability),
+      mode: pref && (pref.mode === "band" || pref.mode === "adaptive" || pref.mode === "level") ? pref.mode : prev.mode,
+      size: this.clampSize(pref && pref.size != null ? pref.size : prev.size)
     };
     try { localStorage.setItem(TED_PREF_KEY, JSON.stringify(next)); } catch (e) {}
     return next;
   },
 
-  /* 一組題的等級範圍。lim 上限 30，避免一次拉太多列。 */
+  /* 一組題的等級範圍與所選題數。lim 只會是 10–100 的十的倍數。 */
   sessionQuery(pref) {
     const p = pref || this.loadPref();
     const lv = this.clampLevel(p.level);
@@ -69,9 +80,7 @@ const TedWorld = {
       minLv = Math.max(1, ability - 1);
       maxLv = Math.min(30, ability + 1);
     }
-    const setSize = (typeof GAME_CONFIG !== "undefined" && GAME_CONFIG.SET_SIZE) ? GAME_CONFIG.SET_SIZE : 10;
-    const lim = Math.min(TED_LIM_CAP, Math.max(1, setSize | 0));
-    return { min_lv: minLv, max_lv: maxLv, lim, prefer_audio: true };
+    return { min_lv: minLv, max_lv: maxLv, lim: this.clampSize(p.size), prefer_audio: true };
   },
 
   /* 把 ___ 換成答案，還原完整英文句。只替換第一個空格。 */
@@ -132,7 +141,7 @@ const TedWorld = {
     const body = {
       min_lv: this.clampLevel(query && query.min_lv),
       max_lv: this.clampLevel(query && query.max_lv),
-      lim: Math.min(TED_LIM_CAP, Math.max(1, Number(query && query.lim) || 10)),
+      lim: this.clampSize(query && query.lim),
       prefer_audio: !(query && query.prefer_audio === false)
     };
     if (body.min_lv > body.max_lv) {
@@ -158,8 +167,24 @@ const TedWorld = {
       if (!Array.isArray(data)) {
         return { ok: false, empty: false, error: "bad-payload", detail: "", questions: [] };
       }
-      const questions = data.map(row => this.mapRow(row)).filter(q => this._usable(q));
-      return { ok: true, empty: questions.length === 0, error: "", detail: "", questions };
+      let questions = data.map(row => this.mapRow(row)).filter(q => this._usable(q));
+      const expected = body.lim;
+      if (questions.length > expected) questions = questions.slice(0, expected);
+      if (questions.length === 0) {
+        return { ok: true, empty: true, error: "", expected, got: 0, detail: "", questions: [] };
+      }
+      if (questions.length !== expected) {
+        return {
+          ok: false,
+          empty: false,
+          error: "short",
+          expected,
+          got: questions.length,
+          detail: "",
+          questions: []
+        };
+      }
+      return { ok: true, empty: false, error: "", expected, got: questions.length, detail: "", questions };
     } catch (e) {
       const kind = (e && e.kind) || "network";
       return {
@@ -187,7 +212,7 @@ const TedWorld = {
         Prefer: "return=representation"
       },
       body: JSON.stringify(body)
-    }, { timeout: 12000, quiet: true, where: "rpc/get_ted_session" });
+    }, { timeout: 20000, quiet: true, where: "rpc/get_ted_session" });
   },
 
   remember(questions) {

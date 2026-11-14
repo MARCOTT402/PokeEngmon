@@ -89,7 +89,9 @@ Object.assign(Quiz, {
       const query = TedWorld.sessionQuery(pref);
       const result = await TedWorld.fetchSession(query);
       if (!result.ok) {
-        if (window.App && App.setTedStatus) App.setTedStatus("error", result);
+        if (window.App && App.setTedStatus) {
+          App.setTedStatus(result.error === "short" ? "short" : "error", result);
+        }
         return;
       }
       if (result.empty || !result.questions.length) {
