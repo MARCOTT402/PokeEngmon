@@ -166,8 +166,12 @@ Object.assign(Quiz, {
     this.cells.forEach(x => { if (x.cellEl) x.cellEl.classList.remove("badc"); });
     this._setCombo(0);
     const catchMode = this._isCatchMode();
+    const cell = this.cells && this.cells[this.currentCell];
+    const revealed = cell ? (Number(cell.hintLetters) || 0) : 0;
+    const complete = cell && revealed >= String(cell.primary || "").length && String(cell.primary || "").length > 0;
+    const l2Title = catchMode ? "Grab the Master Ball!" : (complete ? "Here's the full answer" : "Here's a little more");
     this._setAction("hinted", "💡",
-      level >= 2 ? (catchMode ? "Grab the Master Ball!" : "Here's the full answer") : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
+      level >= 2 ? l2Title : (catchMode ? "One wrong ball is gone" : "Here's a head start"),
       this.queue.length > 1 ? "This one will come back later in the set." : "");
     this._paintHintBadge();
   }
