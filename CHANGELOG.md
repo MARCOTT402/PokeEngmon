@@ -1,3 +1,10 @@
+## [1.74.3](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.2...v1.74.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* reveal every blank on the second hint ([cf10870](https://github.com/MARCOTT402/PokeEngmon/commit/cf108704a18ec20b150b949599f9a92f73800de4))
+
 ## [1.74.2](https://github.com/MARCOTT402/PokeEngmon/compare/v1.74.1...v1.74.2) (2026-11-14)
 
 
